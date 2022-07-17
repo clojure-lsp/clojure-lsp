@@ -46,22 +46,24 @@
        (reductions +)
        (take 15)))
 
-(defmacro process-after-changes [task-id uri & body]
+(defmacro process-after-all-changes [task-id uris & body]
   (let [waiting-start-sym (gensym "waiting-start-time")
         start-sym (gensym "start-time")
         backoff-sym (gensym "backoff")
+        uris-sym (gensym "uris")
         process-msg (str task-id " %s")
         wait-and-process-msg (str task-id " %s - waited %s")]
     `(let [~waiting-start-sym (System/nanoTime)]
-       (loop [~backoff-sym backoff-start]
+       (loop [~backoff-sym backoff-start
+              ~uris-sym ~uris]
          (if (> (quot (- (System/nanoTime) ~waiting-start-sym) 1000000) 60000) ; one minute timeout
            ~(with-meta
-              `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id ~uri))
+              `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id (first ~uris-sym)))
               (meta &form))
-           (if (contains? (:processing-changes @db/db*) ~uri)
+           (if-let [processing-uris# (seq (filter (:processing-changes @db/db*) ~uris-sym))]
              (do
                (Thread/sleep ~backoff-sym)
-               (recur (min backoff-max (* backoff-mult ~backoff-sym))))
+               (recur (min backoff-max (* backoff-mult ~backoff-sym)) processing-uris#))
              (let [~start-sym (System/nanoTime)
                    result# (do ~@body)]
                ~(with-meta
@@ -73,6 +75,9 @@
                                (shared/format-time-delta-ms ~waiting-start-sym ~start-sym))))
                   (meta &form))
                result#)))))))
+
+(defmacro process-after-changes [task-id uri & body]
+  `(process-after-all-changes ~task-id [~uri] ~@body))
 
 (defn ^:private analyze-test-paths! [{:keys [db* producer]}]
   (clojure-producer/refresh-test-tree producer (dep-graph/internal-uris @db*)))
@@ -473,8 +478,9 @@
       (f.linked-editing-range/ranges textDocument row col db))))
 
 (defn will-rename-files [{:keys [files]} {:keys [db*]}]
-  (shared/logging-task
+  (process-after-all-changes
     :will-rename-files
+    (map :oldUri files)
     (f.file-management/will-rename-files files @db*)))
 
 (defrecord ClojureLSPFeatureHandler [components*]

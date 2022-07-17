@@ -176,10 +176,13 @@
 
 (def default-uri (file-uri "file:///a.clj"))
 
+(defn load-code [code & [uri]]
+  (let [uri (or uri default-uri)]
+    (handlers/did-open {:textDocument {:uri uri :text code}} components)))
+
 (defn load-code-and-locs [code & [uri]]
-  (let [[code positions] (positions-from-text code)
-        uri (or uri default-uri)]
-    (handlers/did-open {:textDocument {:uri uri :text code}} components)
+  (let [[code positions] (positions-from-text code)]
+    (load-code code uri)
     positions))
 
 (defn ->position [[row col]]

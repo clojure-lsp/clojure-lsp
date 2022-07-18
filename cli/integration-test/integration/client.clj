@@ -74,7 +74,7 @@
   (start [this context]
     (protocols.endpoint/log this :white "lifecycle:" "starting")
     (let [pipeline (async/pipeline-blocking
-                     4
+                     1 ;; no parallelism preserves server message order
                      output
                      ;; TODO: return error until initialize request is received? https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
                      ;; `keep` means we do not reply to responses and notifications

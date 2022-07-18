@@ -9,11 +9,6 @@
   <dependencies>
     <dependency>
       <groupId>org.clojure</groupId>
-      <artifactId>data.json</artifactId>
-      <version>2.4.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.11.1</version>
     </dependency>
@@ -23,34 +18,9 @@
       <version>1.0.206</version>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.lsp4j</groupId>
-      <artifactId>org.eclipse.lsp4j</artifactId>
-      <version>0.12.0</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.eclipse.xtend</groupId>
-          <artifactId>org.eclipse.xtend.lib</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.google.code.gson</groupId>
-          <artifactId>gson</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.xtend</groupId>
-      <artifactId>org.eclipse.xtend.lib</artifactId>
-      <version>2.27.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.clojure-lsp</groupId>
-      <artifactId>lsp4clj-server</artifactId>
-      <version>0.4.1</version>
-    </dependency>
-    <dependency>
       <groupId>borkdude</groupId>
       <artifactId>dynaload</artifactId>
-      <version>0.2.2</version>
+      <version>0.3.5</version>
     </dependency>
     <dependency>
       <groupId>com.taoensso</groupId>
@@ -58,19 +28,9 @@
       <version>5.2.1</version>
     </dependency>
     <dependency>
-      <groupId>org.clojure</groupId>
-      <artifactId>java.data</artifactId>
-      <version>1.0.95</version>
-    </dependency>
-    <dependency>
       <groupId>nrepl</groupId>
       <artifactId>bencode</artifactId>
       <version>1.1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-      <version>2.9.0</version>
     </dependency>
   </dependencies>
   <repositories>

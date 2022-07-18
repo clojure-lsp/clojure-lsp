@@ -45,7 +45,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2022.06.22</version>
+      <version>2022.06.23-20220704.194013-4</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>
@@ -61,11 +61,6 @@
       <groupId>anonimitoraf</groupId>
       <artifactId>clj-flx</artifactId>
       <version>1.2.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.clojure-lsp</groupId>
-      <artifactId>lsp4clj-protocols</artifactId>
-      <version>0.4.1</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>

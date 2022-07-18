@@ -5,7 +5,9 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [are deftest is testing]]
-   [medley.core :as medley]))
+   [medley.core :as medley]
+   [clojure-lsp.feature.rename :as f.rename]
+   [clojure-lsp.queries :as q]))
 
 (h/reset-db-after-test)
 
@@ -117,7 +119,16 @@
         [{:type :created
           :uri h/default-uri}]
         db/db*)
-      (is (= h/default-uri (h/take-or-timeout mock-created-chan 500))))))
+      (is (= h/default-uri (h/take-or-timeout mock-created-chan 500)))))
+  (testing "deleted file"
+    (h/let-mock-chans
+      [mock-diagnostics-chan #'db/diagnostics-chan]
+      (f.file-management/did-change-watched-files
+        [{:type :deleted
+          :uri h/default-uri}]
+        db/db*)
+      (is (= {:uri h/default-uri, :diagnostics []}
+             (h/take-or-timeout mock-diagnostics-chan 500))))))
 
 (deftest var-dependency-reference-filenames
   (swap! db/db* medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
@@ -261,3 +272,40 @@
                   "(def a)"
                   "(def b)"
                   "(def d)"))))
+
+(deftest will-rename-files
+  (testing "when namespace matches old file"
+    (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src")}}
+                                     :project-root-uri (h/file-uri "file:///user/project")
+                                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+
+    (let [old-uri (h/file-uri "file:///user/project/src/my/ns.clj")
+          new-uri (h/file-uri "file:///user/project/src/my/new/ns.clj")]
+      (h/load-code (h/code "(ns my.ns)") old-uri)
+      (let [db @db/db*]
+        (is (= {:document-changes
+                [{:text-document
+                  {:version 0, :uri "file:///user/project/src/my/ns.clj"},
+                  :edits
+                  [{:range
+                    {:start {:line 0, :character 4}, :end {:line 0, :character 9}},
+                    :new-text "my.new.ns"}]}]}
+               (f.file-management/will-rename-files
+                 [{:oldUri old-uri
+                   :newUri new-uri}]
+                 db))))))
+  (testing "when namespace matches new file"
+    ;; This happens when namespace was already changed by textDocument/rename
+    (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src")}}
+                                     :project-root-uri (h/file-uri "file:///user/project")
+                                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+
+    (let [old-uri (h/file-uri "file:///user/project/src/my/ns.clj")
+          new-uri (h/file-uri "file:///user/project/src/my/new/ns.clj")]
+      (h/load-code (h/code "(ns my.new.ns)") old-uri)
+      (let [db @db/db*]
+        (is (= {:document-changes []}
+               (f.file-management/will-rename-files
+                 [{:oldUri old-uri
+                   :newUri new-uri}]
+                 db)))))))

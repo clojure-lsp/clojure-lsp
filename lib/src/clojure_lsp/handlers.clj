@@ -477,5 +477,5 @@
 (defn will-rename-files [{:keys [db*]} {:keys [files]}]
   (process-after-all-changes
     :will-rename-files
-    (map :oldUri files) db*
+    (map :old-uri files) db*
     (f.file-management/will-rename-files files @db*)))

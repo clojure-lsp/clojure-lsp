@@ -291,8 +291,8 @@
                     {:start {:line 0, :character 4}, :end {:line 0, :character 9}},
                     :new-text "my.new.ns"}]}]}
                (f.file-management/will-rename-files
-                 [{:oldUri old-uri
-                   :newUri new-uri}]
+                 [{:old-uri old-uri
+                   :new-uri new-uri}]
                  db))))))
   (testing "when namespace matches new file"
     ;; This happens when namespace was already changed by textDocument/rename
@@ -306,6 +306,6 @@
       (let [db @db/db*]
         (is (= {:document-changes []}
                (f.file-management/will-rename-files
-                 [{:oldUri old-uri
-                   :newUri new-uri}]
+                 [{:old-uri old-uri
+                   :new-uri new-uri}]
                  db)))))))

@@ -17,7 +17,7 @@
         org.benf/cfr {:mvn/version "0.152"}
         babashka/fs {:mvn/version "0.1.6"}
         ;; com.github.clojure-lsp/lsp4clj {:mvn/version "1.0.0"}
-        com.github.clojure-lsp/lsp4clj {:git/sha "68a5862347b269a58ba7adc0e56d75f5acbfc158"}
+        com.github.clojure-lsp/lsp4clj {:git/sha "baa344fadce2e3c0abdb5a3a2a138e133f5e2a38"}
         ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
         }
  :paths ["src" "resources"]

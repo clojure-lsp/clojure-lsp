@@ -494,7 +494,7 @@
           log-path (logger/setup timbre-logger)
           db (assoc db/initial-db :log-path log-path)
           db* (atom db)
-          server (lsp.server/stdio-server {:trace? true
+          server (lsp.server/stdio-server {:trace? false
                                            :in System/in
                                            :out System/out})
           producer (ClojureLspProducer. server db*)

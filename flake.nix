@@ -17,7 +17,8 @@
         cljpkgs = clj-nix.packages."${system}";
       in
       {
-        packages = {
+        packages = rec {
+          default = clojure-lsp;
 
           clojure-lsp-jdk = cljpkgs.mkCljBin {
             projectSrc = ./.;
@@ -57,6 +58,10 @@
           };
 
         };
-      });
+      }) // {
+        overlays.default = (final: prev: {
+          clojure-lsp = self.packages.${final.system}.default;
+        });
+      };
 
 }

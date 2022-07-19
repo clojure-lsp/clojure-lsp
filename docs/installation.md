@@ -38,9 +38,16 @@ nix-shell -p clojure-lsp
 or if using flakes:
 
 ```bash
-nix run github:clojure-lsp/clojure-lsp#clojure-lsp
-# or 
-nix shell github:clojure-lsp/clojure-lsp#clojure-lsp
+nix run github:clojure-lsp/clojure-lsp
+# or
+nix shell github:clojure-lsp/clojure-lsp
+```
+
+or consume the flake overlay:
+
+```nix
+inputs.clojure-lsp.url = "github:clojure-lsp/clojure-lsp";
+nixpkgs.overlays = [ inputs.clojure-lsp.overlays.default ];
 ```
 
 ## Arch Linux

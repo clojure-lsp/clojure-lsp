@@ -687,9 +687,13 @@ sudo ./install --version nightly
 <div class="highlight"><pre><span></span><code>nix-shell -p clojure-lsp
 </code></pre></div>
 <p>or if using flakes:</p>
-<div class="highlight"><pre><span></span><code>nix run github:clojure-lsp/clojure-lsp#clojure-lsp
-<span class="c1"># or </span>
-nix shell github:clojure-lsp/clojure-lsp#clojure-lsp
+<div class="highlight"><pre><span></span><code>nix run github:clojure-lsp/clojure-lsp
+<span class="c1"># or</span>
+nix shell github:clojure-lsp/clojure-lsp
+</code></pre></div>
+<p>or consume the flake overlay:</p>
+<div class="highlight"><pre><span></span><code>inputs<span class="o">.</span>clojure-lsp<span class="o">.</span><span class="ss">url =</span> <span class="s2">&quot;github:clojure-lsp/clojure-lsp&quot;</span><span class="p">;</span>
+nixpkgs<span class="o">.</span><span class="ss">overlays =</span> <span class="p">[</span> inputs<span class="o">.</span>clojure-lsp<span class="o">.</span>overlays<span class="o">.</span>default <span class="p">];</span>
 </code></pre></div>
 <h2 id="arch-linux">Arch Linux<a class="headerlink" href="#arch-linux" title="Permanent link">#</a></h2>
 <p><code>clojure-lsp</code> is
@@ -722,7 +726,7 @@ nix shell github:clojure-lsp/clojure-lsp#clojure-lsp
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">July 17, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">July 19, 2022</span>
     
   </small>
 </div>

@@ -2,7 +2,7 @@
  :min-bb-version "0.4.0"
  :deps {medley/medley {:mvn/version "1.4.0"}
         ;; com.github.clojure-lsp/lsp4clj {:mvn/version "1.0.0"}
-        com.github.clojure-lsp/lsp4clj {:git/sha "a3595e1b8542c6a0222436dead8edd369e1bd2a3"}
+        com.github.clojure-lsp/lsp4clj {:git/sha "e58eda1f0db4d40a0db75a240a3729003965a20c"}
         ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
         org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
                                  :git/sha "1a841c4cc1d4f6dab7505a98ed2d532dd9d56b78"}}

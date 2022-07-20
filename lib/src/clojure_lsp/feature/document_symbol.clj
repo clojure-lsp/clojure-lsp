@@ -13,9 +13,9 @@
     (#{:var-definitions :var-usages} (:bucket el)) :variable
     :else :null))
 
-(defn element->name [{elem-name :name :keys [dispatch-val]}]
+(defn element->name [{elem-name :name :keys [dispatch-val-str]}]
   (cond-> (name elem-name)
-    dispatch-val (str " " dispatch-val)))
+    dispatch-val-str (str " " dispatch-val-str)))
 
 (defn ^:private element->document-symbol [e]
   (shared/assoc-some

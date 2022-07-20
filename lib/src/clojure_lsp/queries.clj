@@ -704,6 +704,12 @@
           (xf-var-defs false))
         (:analysis db)))
 
+(defn find-defmethods [db filename]
+  (into []
+        (comp (filter :defmethod)
+              (medley/distinct-by (juxt :to :name :name-row :name-col)))
+        (get-in db [:analysis filename :var-usages])))
+
 (defn find-keyword-definitions [db filename]
   (into []
         (medley/distinct-by (juxt :ns :name :row :col))

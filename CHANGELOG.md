@@ -23,7 +23,7 @@
   - Improve accuracy of progress reporting during uncached startup. #1134
   - Add refactoring `Destructure keys` to destructure keywords. #905
   - Add refactoring `Extract to def` to create a `def` from the thing under the cursor. #1136
-  - Include defmethods in document symbols. #1016
+  - Include defmethods in document and workspace symbols. #1016
 
 ## 2022.06.29-19.32.13
 

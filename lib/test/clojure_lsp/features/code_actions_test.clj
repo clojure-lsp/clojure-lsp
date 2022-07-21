@@ -388,6 +388,19 @@
                           [] {}
                           @db/db*))))
 
+(deftest extract-definition-code-action
+  (h/load-code-and-locs "{:a 1}"
+                        (h/file-uri "file:///a.clj"))
+  (h/assert-contains-submaps
+    [{:title "Extract definition"
+      :command {:command "extract-definition"}}]
+    (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                        (h/file-uri "file:///a.clj")
+                        1
+                        1
+                        [] {}
+                        @db/db*)))
+
 (deftest create-private-function-code-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
                                 "(def foo (+ 1 2))"

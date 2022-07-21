@@ -33,6 +33,7 @@
                                             "move-to-let"
                                             "clean-ns"
                                             "suppress-diagnostic"
+                                            "extract-definition"
                                             "move-coll-entry-down"
                                             "thread-last"
                                             "resolve-macro-as"

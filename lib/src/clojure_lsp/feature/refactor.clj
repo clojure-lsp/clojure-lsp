@@ -62,6 +62,9 @@
 (defmethod refactor :extract-function [{:keys [loc uri args db]}]
   (apply r.transform/extract-function loc uri (concat args [db])))
 
+(defmethod refactor :extract-definition [{:keys [loc args]}]
+  (apply r.transform/extract-definition loc args))
+
 (defmethod refactor :inline-symbol [{:keys [uri row col db]}]
   (r.transform/inline-symbol uri row col db))
 

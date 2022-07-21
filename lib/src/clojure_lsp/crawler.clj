@@ -208,7 +208,7 @@
           (publish-task-progress producer (:copying-kondo fast-tasks) progress-token)
           (copy-configs-from-classpath! classpath settings @db*))
         (do
-          (publish-task-progress producer (:discovering-classpath task-list) progress-token)
+          (publish-task-progress producer (:discovering-classpath slow-tasks) progress-token)
           (when-let [classpath (classpath/scan-classpath! components)]
             (swap! db* assoc
                    :project-hash project-hash
@@ -216,10 +216,10 @@
                    :classpath classpath
                    :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
 
-            (publish-task-progress producer (:copying-kondo task-list) progress-token)
+            (publish-task-progress producer (:copying-kondo slow-tasks) progress-token)
             (copy-configs-from-classpath! classpath settings @db*)
             (when (= :project-and-deps (:project-analysis-type @db*))
-              (publish-task-progress producer (:analyzing-deps task-list) progress-token)
+              (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
             (logger/info "Caching db for next startup...")
             (upsert-db-cache! @db*))))

@@ -391,7 +391,7 @@
     parent-node))
 
 (defn ^:private clean-imports
-  [ns-loc {:keys [ns-inner-blocks-indentation unused-imports] :as clean-ctx} settings]
+  [ns-loc {:keys [unused-imports] :as clean-ctx} settings]
   (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
     (let [col (ns-inner-blocks-indentation-parent-col import-loc clean-ctx)
           keep-first-line-spacing (calc-keep-first-line-spacing import-loc)

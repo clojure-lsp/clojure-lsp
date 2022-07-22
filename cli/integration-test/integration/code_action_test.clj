@@ -26,6 +26,8 @@
         :kind "refactor.rewrite"}
        {:title "Extract function"
         :kind "refactor.extract"}
+       {:title "Extract to def"
+        :kind "refactor.extract"}
        {:title "Sort map"
         :kind "refactor.rewrite"}
        {:title "Drag backward"

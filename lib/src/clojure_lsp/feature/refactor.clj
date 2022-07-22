@@ -62,6 +62,9 @@
 (defmethod refactor :extract-function [{:keys [loc uri args db]}]
   (apply r.transform/extract-function loc uri (concat args [db])))
 
+(defmethod refactor :extract-to-def [{:keys [loc args]}]
+  (apply r.transform/extract-to-def loc args))
+
 (defmethod refactor :inline-symbol [{:keys [uri row col db]}]
   (r.transform/inline-symbol uri row col db))
 
@@ -120,6 +123,7 @@
        methods
        keys
        (map name)
+       sort
        vec))
 
 (defn refactor-client-seq-changes [uri version result db]

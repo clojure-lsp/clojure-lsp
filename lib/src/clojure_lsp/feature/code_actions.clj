@@ -163,6 +163,13 @@
              :command   "extract-function"
              :arguments [uri line character "new-function"]}})
 
+(defn ^:private extract-to-def-action [uri line character]
+  {:title   "Extract to def"
+   :kind    :refactor-extract
+   :command {:title     "Extract to def"
+             :command   "extract-to-def"
+             :arguments [uri line character nil]}})
+
 (defn ^:private clean-ns-action [uri line character]
   {:title   "Clean namespace"
    :kind    :source-organize-imports
@@ -284,6 +291,7 @@
         can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
         can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
         can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
+        can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
         definition (q/find-definition-from-cursor db (shared/uri->filename uri) row col)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
         can-add-let? (or (z/skip-whitespace z/right zloc)
@@ -325,6 +333,9 @@
 
       @can-destructure-keys?*
       (conj (destructure-keys-action uri line character))
+
+      @can-extract-to-def?*
+      (conj (extract-to-def-action uri line character))
 
       @can-thread?*
       (conj (thread-first-all-action uri line character)

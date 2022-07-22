@@ -38,6 +38,7 @@
                                             "resolve-macro-as"
                                             "introduce-let"
                                             "add-missing-import"
+                                            "destructure-keys"
                                             "move-form"
                                             "sort-map"
                                             "unwind-thread"

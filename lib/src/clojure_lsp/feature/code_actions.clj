@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.code-actions
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
+   [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.sort-map :as f.sort-map]
@@ -129,6 +130,13 @@
    :kind    :refactor-rewrite
    :command {:title     "Cycle privacy"
              :command   "cycle-privacy"
+             :arguments [uri line character]}})
+
+(defn ^:private destructure-keys-action [uri line character]
+  {:title   "Destructure keys"
+   :kind    :refactor-rewrite
+   :command {:title     "Destructure keys"
+             :command   "destructure-keys"
              :arguments [uri line character]}})
 
 (defn ^:private demote-fn-action [uri line character]
@@ -275,6 +283,7 @@
         allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
         can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
         can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
+        can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
         definition (q/find-definition-from-cursor db (shared/uri->filename uri) row col)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
         can-add-let? (or (z/skip-whitespace z/right zloc)
@@ -313,6 +322,9 @@
 
       @can-demote-fn?*
       (conj (demote-fn-action uri line character))
+
+      @can-destructure-keys?*
+      (conj (destructure-keys-action uri line character))
 
       @can-thread?*
       (conj (thread-first-all-action uri line character)

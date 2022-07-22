@@ -21,6 +21,7 @@
   - Fix to correctly rename namespaces. #1121
   - Fix to correctly :keep require and import indent spacing. #1141
   - Improve accuracy of progress reporting during uncached startup. #1134
+  - Add refactoring to destructure keywords. #905
 
 ## 2022.06.29-19.32.13
 

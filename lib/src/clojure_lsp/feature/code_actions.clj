@@ -164,9 +164,9 @@
              :arguments [uri line character "new-function"]}})
 
 (defn ^:private extract-definition-action [uri line character]
-  {:title   "Extract definition"
+  {:title   "Extract to def"
    :kind    :refactor-extract
-   :command {:title     "Extract definition"
+   :command {:title     "Extract to def"
              :command   "extract-definition"
              :arguments [uri line character nil]}})
 

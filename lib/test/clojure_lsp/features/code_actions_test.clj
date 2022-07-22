@@ -392,7 +392,7 @@
   (h/load-code-and-locs "{:a 1}"
                         (h/file-uri "file:///a.clj"))
   (h/assert-contains-submaps
-    [{:title "Extract definition"
+    [{:title "Extract to def"
       :command {:command "extract-definition"}}]
     (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                         (h/file-uri "file:///a.clj")

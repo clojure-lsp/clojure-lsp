@@ -26,7 +26,7 @@
         :kind "refactor.rewrite"}
        {:title "Extract function"
         :kind "refactor.extract"}
-       {:title "Extract definition"
+       {:title "Extract to def"
         :kind "refactor.extract"}
        {:title "Sort map"
         :kind "refactor.rewrite"}

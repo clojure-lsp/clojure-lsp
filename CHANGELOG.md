@@ -20,6 +20,11 @@
   - Fix to navigate to var defined by declare, when there aren't any later defs. #1107
   - Fix to always go to the definition of the correct var imported by potemkin. #1020
   - Fix to correctly rename namespaces. #1121
+  - Fix to correctly :keep require and import indent spacing. #1141
+  - Improve accuracy of progress reporting during uncached startup. #1134
+  - Add refactoring `Destructure keys` to destructure keywords. #905
+  - Add refactoring `Extract to def` to create a `def` from the thing under the cursor. #1136
+  - Include defmethods in document and workspace symbols. #1016
 
 ## 2022.06.29-19.32.13
 
@@ -79,7 +84,7 @@
   - Fix find definition of macros required by :require-macros on cljs files. #980
   - Add support to completion keywords found on function definition `:keys` destructuring, improving completion on api calls.
   - Avoid duplicate parens when inserting snippets during completion. #982
-  
+
 - CLI/API
   - Make all cli features open files faster, improving speed of all CLI/API features. Fixes #985
 
@@ -102,7 +107,7 @@
 
 - CLI/API
   - Bump lsp4clj to `0.3.0`.
-  
+
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 
 ## 2022.04.18-00.59.32
@@ -139,17 +144,17 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 
 - CLI
   - Reduce CPU and wall-clock time in cli commands clean-ns and diagnostics
-  
+
 This release was supported by [Clojurists Together](https://www.clojuriststogether.org/)
 
 ## 2022.03.31-20.00.20
 
 - Fix URI resolver on java JDK logic.
-- Fix zipfile scheme when finding external deps. 
+- Fix zipfile scheme when finding external deps.
 
 ## 2022.03.31-14.21.14
 
-- Add java class find-definition support, decompiling .class files when available. #762 
+- Add java class find-definition support, decompiling .class files when available. #762
 - Add JDK source discoverability feature, searching for installed JDK for later analyze with clj-kondo and support java classes interop.
 - Add `:java :download-jdk-source?` setting to download JDK source after startup if not cached before globally or found locally. Disabled by default.
 - Avoid high CPU usage and freezes by more efficiently finding referenced files to notify on file change. #844 @mainej

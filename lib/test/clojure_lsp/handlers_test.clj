@@ -65,7 +65,7 @@
       (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))
 
 (deftest document-symbol
-  (let [code "(ns a) (def bar ::bar) (def ^:m baz 1)"
+  (let [code "(ns a) (def bar ::bar) (def ^:m baz 1) (defmulti mult identity) (defmethod mult \"foo\")"
         result [{:name "a"
                  :kind :namespace
                  :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
@@ -77,7 +77,17 @@
                             {:name "baz"
                              :kind :variable
                              :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
-                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}}]}]]
+                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}}
+                            ;; defmulti
+                            {:name "mult",
+                             :kind :variable,
+                             :range {:start {:line 0, :character 39}, :end {:line 0, :character 63}},
+                             :selection-range {:start {:line 0, :character 49}, :end {:line 0, :character 53}}}
+                            ;; defmethod
+                            {:name "mult \"foo\"",
+                             :kind :variable,
+                             :range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},
+                             :selection-range {:start {:line 0, :character 75}, :end {:line 0, :character 79}}}]}]]
     (testing "clj files"
       (h/load-code-and-locs code)
       (h/assert-submaps result

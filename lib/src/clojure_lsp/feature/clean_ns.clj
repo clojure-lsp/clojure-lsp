@@ -47,7 +47,7 @@
       new-node)))
 
 (defn ^:private process-clean-ns
-  [ns-loc removed-nodes col form-type clean-ctx]
+  [ns-loc removed-nodes col keep-first-line-spacing form-type clean-ctx]
   (let [removed-nodes (edit/map-children removed-nodes remove-empty-reader-conditional)
         sep (n/whitespace-node (apply str (repeat col " ")))
         single-space (n/whitespace-node " ")
@@ -113,6 +113,12 @@
                          (and (= :same-line (:ns-inner-blocks-indentation clean-ctx))
                               (= idx 0))
                          [single-space node]
+
+                         (and (= :keep (:ns-inner-blocks-indentation clean-ctx))
+                              keep-first-line-spacing
+                              (= idx 0))
+                         [(n/whitespace-node (apply str (repeat keep-first-line-spacing " ")))
+                          node]
 
                          (some-> (nth forms-w-comments (dec idx) nil)
                                  n/comment?)
@@ -274,14 +280,24 @@
         :else nil)
       2))
 
+(defn ^:private calc-keep-first-line-spacing
+  "Difference between end of :require/:import and start of next node,
+   nil if they are not on the same line."
+  [form-type-loc]
+  (let [require-meta (-> form-type-loc z/node meta)
+        right-meta (-> form-type-loc z/right z/node meta)]
+    (when (= (:row require-meta) (:row right-meta))
+      (- (:col right-meta) (:end-col require-meta)))))
+
 (defn ^:private clean-requires
   [ns-loc clean-ctx]
   (if-let [require-loc (z/find-value (zsub/subzip ns-loc) z/next :require)]
     (let [col (ns-inner-blocks-indentation-parent-col require-loc clean-ctx)
+          keep-first-line-spacing (calc-keep-first-line-spacing require-loc)
           removed-nodes (-> require-loc
                             z/remove
                             (remove-unused-requires clean-ctx col))]
-      (process-clean-ns ns-loc removed-nodes col :require clean-ctx))
+      (process-clean-ns ns-loc removed-nodes col keep-first-line-spacing :require clean-ctx))
     ns-loc))
 
 (defn ^:private package-import?
@@ -375,17 +391,14 @@
     parent-node))
 
 (defn ^:private clean-imports
-  [ns-loc {:keys [ns-inner-blocks-indentation unused-imports] :as clean-ctx} settings]
+  [ns-loc {:keys [unused-imports] :as clean-ctx} settings]
   (if-let [import-loc (z/find-value (zsub/subzip ns-loc) z/next :import)]
-    (let [col (if import-loc
-                (if (= :same-line ns-inner-blocks-indentation)
-                  (-> import-loc z/node meta :end-col)
-                  (-> import-loc z/node meta :col dec))
-                2)
+    (let [col (ns-inner-blocks-indentation-parent-col import-loc clean-ctx)
+          keep-first-line-spacing (calc-keep-first-line-spacing import-loc)
           removed-nodes (-> import-loc
                             z/remove
                             (edit/map-children #(remove-unused-import % import-loc unused-imports clean-ctx settings)))]
-      (process-clean-ns ns-loc removed-nodes col :import clean-ctx))
+      (process-clean-ns ns-loc removed-nodes col keep-first-line-spacing :import clean-ctx))
     ns-loc))
 
 (defn ^:private sort-ns-children

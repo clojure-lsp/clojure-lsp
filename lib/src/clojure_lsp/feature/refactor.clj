@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
@@ -40,6 +41,9 @@
 (defmethod refactor :cycle-privacy [{:keys [loc db]}]
   (r.transform/cycle-privacy loc db))
 
+(defmethod refactor :destructure-keys [{:keys [loc uri db]}]
+  (f.destructure-keys/destructure-keys loc uri db))
+
 (defmethod refactor :promote-fn [{:keys [loc uri db args]}]
   (apply r.transform/promote-fn loc uri db args))
 
@@ -57,6 +61,9 @@
 
 (defmethod refactor :extract-function [{:keys [loc uri args db]}]
   (apply r.transform/extract-function loc uri (concat args [db])))
+
+(defmethod refactor :extract-to-def [{:keys [loc args]}]
+  (apply r.transform/extract-to-def loc args))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col db]}]
   (r.transform/inline-symbol uri row col db))
@@ -116,6 +123,7 @@
        methods
        keys
        (map name)
+       sort
        vec))
 
 (defn refactor-client-seq-changes [uri version result db]

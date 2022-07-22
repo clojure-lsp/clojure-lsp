@@ -54,7 +54,7 @@
   ((requiring-resolve 'deps-bin.impl.bin/build-bin)
    {:jar uber-file
     :name "clojure-lsp"
-    :jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server" "-Dclojure.core.async.go-checking=true"])
+    :jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server"])
     :skip-realign true}))
 
 (def prod-jar uber-aot)
@@ -65,7 +65,8 @@
 (defn debug-cli [opts]
   (uber-aot (merge opts {:extra-aliases [:debug :test]
                          :extra-dirs ["dev"]}))
-  (bin {:jvm-opts ["-Djdk.attach.allowAttachSelf=true"]}))
+  (bin {:jvm-opts ["-Djdk.attach.allowAttachSelf=true"
+                   "-Dclojure.core.async.go-checking=true"]}))
 
 (defn prod-cli [opts]
   (prod-jar opts)

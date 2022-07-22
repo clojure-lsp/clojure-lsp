@@ -704,6 +704,27 @@
           (xf-var-defs false))
         (:analysis db)))
 
+(def ^:private xf-defmethods
+  (comp (filter :defmethod)
+        (medley/distinct-by (juxt :to :name :name-row :name-col))))
+
+(defn find-defmethods [db filename]
+  (into []
+        xf-defmethods
+        (get-in db [:analysis filename :var-usages])))
+
+(defn find-internal-definitions
+  "All ns definitions, var definitions and defmethods."
+  [db]
+  (let [analysis (internal-analysis db)]
+    (concat (into []
+                  (xf-analysis->buckets-elems :namespace-definitions :var-definitions)
+                  analysis)
+            (into []
+                  (comp xf-analysis->var-usages
+                        xf-defmethods)
+                  analysis))))
+
 (defn find-keyword-definitions [db filename]
   (into []
         (medley/distinct-by (juxt :ns :name :row :col))

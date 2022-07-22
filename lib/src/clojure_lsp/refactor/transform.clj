@@ -454,6 +454,32 @@
            {:loc   expr-edit
             :range expr-meta}])))))
 
+(defn ^:private extract-to-def-params [zloc]
+  ;; the expression that will be extracted
+  (when-let [zloc (or (z/skip-whitespace z/right zloc)
+                      (z/skip-whitespace z/up zloc))]
+    ;; the top-level form it will be extracted from (possibly the same as zloc)
+    (when-let [form-loc (edit/to-top zloc)]
+      {:zloc zloc
+       :form-loc form-loc})))
+
+(defn can-extract-to-def? [zloc]
+  (boolean (extract-to-def-params zloc)))
+
+(defn extract-to-def [zloc def-name]
+  (when-let [{:keys [zloc form-loc]} (extract-to-def-params zloc)]
+    (let [expr-node (z/node zloc)
+          expr-meta (meta expr-node)
+
+          def-name (or def-name "new-value")
+          expr-edit (z/of-node (symbol def-name))
+          def-loc (-> (format "(def ^:private %s\n  )" def-name)
+                      z/of-string
+                      (z/append-child* expr-node))]
+      [(prepend-preserving-comment form-loc def-loc)
+       {:loc   expr-edit
+        :range expr-meta}])))
+
 (defn ^:private replace-sexprs [zloc replacements]
   (z/prewalk zloc z/sexpr-able?
              (fn [zloc]

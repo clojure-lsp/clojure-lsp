@@ -338,6 +338,33 @@
                           [] {}
                           @db/db*))))
 
+(deftest destructure-keys-code-action
+  (let [[[non-local-r non-local-c]
+         [local-r local-c]]
+        (h/load-code-and-locs (h/code "(ns some-ns)"
+                                      "(def |foo)"
+                                      "(defn bar [|shape]"
+                                      "  (:shape/type shape))")
+                              (h/file-uri "file:///a.clj"))]
+    (testing "when not on local"
+      (is (not-any? #(= (:title %) "Destructure keys")
+                    (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                        (h/file-uri "file:///a.clj")
+                                        non-local-r
+                                        non-local-c
+                                        [] {}
+                                        @db/db*))))
+    (testing "when on local"
+      (h/assert-contains-submaps
+        [{:title "Destructure keys"
+          :command {:command "destructure-keys"}}]
+        (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                            (h/file-uri "file:///a.clj")
+                            local-r
+                            local-c
+                            [] {}
+                            @db/db*)))))
+
 (deftest extract-function-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")
@@ -360,6 +387,19 @@
                           5
                           [] {}
                           @db/db*))))
+
+(deftest extract-to-def-code-action
+  (h/load-code-and-locs "{:a 1}"
+                        (h/file-uri "file:///a.clj"))
+  (h/assert-contains-submaps
+    [{:title "Extract to def"
+      :command {:command "extract-to-def"}}]
+    (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                        (h/file-uri "file:///a.clj")
+                        1
+                        1
+                        [] {}
+                        @db/db*)))
 
 (deftest create-private-function-code-action
   (h/load-code-and-locs (h/code "(ns some-ns)"

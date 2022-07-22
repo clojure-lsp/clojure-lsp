@@ -94,7 +94,27 @@
                            "     [foo  :as f]"
                            "     [z]))"
                            "(s/defn func []"
-                           "  (f/some))")))
+                           "  (f/some))"))
+    (testing "should no op if clean"
+      (let [test-no-op #(test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :keep}}}
+                                       %1
+                                       %1)]
+        (test-no-op (h/code "(ns foo.bar"
+                            " (:require  b"
+                            "            f))"))
+        (test-no-op (h/code "(ns foo.bar"
+                            " (:require"
+                            "    b"
+                            "    f))"))
+        (test-no-op (h/code "(ns foo.bar"
+                            " (:import  java.io.File"
+                            "           java.util.Date))"
+                            "File Date"))
+        (test-no-op (h/code "(ns foo.bar"
+                            " (:import"
+                            "     java.io.File"
+                            "     java.util.Date))"
+                            "File Date")))))
   (testing "with first require as unused"
     (test-clean-ns {}
                    (h/code "(ns foo.bar"

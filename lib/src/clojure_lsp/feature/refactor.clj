@@ -123,6 +123,7 @@
        methods
        keys
        (map name)
+       sort
        vec))
 
 (defn refactor-client-seq-changes [uri version result db]

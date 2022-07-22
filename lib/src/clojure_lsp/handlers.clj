@@ -225,26 +225,8 @@
   (shared/logging-task
     :document-symbol
     (let [db @db/db*
-          filename (shared/uri->filename textDocument)
-          namespace-definition (q/find-namespace-definition-by-filename db filename)]
-      [{:name (or (some-> namespace-definition :name name)
-                  filename)
-        :kind (f.document-symbol/element->symbol-kind namespace-definition)
-        :range shared/full-file-range
-        :selection-range (if namespace-definition
-                           (shared/->scope-range namespace-definition)
-                           shared/full-file-range)
-        :children (->> (q/find-var-definitions db filename true)
-                       (mapv (fn [e]
-                               (shared/assoc-some
-                                 {:name (-> e :name name)
-                                  :kind (f.document-symbol/element->symbol-kind e)
-                                  :range (shared/->scope-range e)
-                                  :selection-range (shared/->range e)
-                                  :tags (cond-> []
-                                          (:deprecated e) (conj 1))}
-                                 :detail (when (:private e)
-                                           "private")))))}])))
+          filename (shared/uri->filename textDocument)]
+      (f.document-symbol/document-symbols db filename))))
 
 (defn document-highlight [{:keys [textDocument position]}]
   (process-after-changes

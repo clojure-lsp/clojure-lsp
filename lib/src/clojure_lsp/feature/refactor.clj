@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
@@ -39,6 +40,9 @@
 
 (defmethod refactor :cycle-privacy [{:keys [loc db]}]
   (r.transform/cycle-privacy loc db))
+
+(defmethod refactor :destructure-keys [{:keys [loc uri db]}]
+  (f.destructure-keys/destructure-keys loc uri db))
 
 (defmethod refactor :promote-fn [{:keys [loc uri db args]}]
   (apply r.transform/promote-fn loc uri db args))

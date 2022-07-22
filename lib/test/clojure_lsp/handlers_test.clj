@@ -87,12 +87,7 @@
                              :selection-range {:start {:line 0, :character 49}, :end {:line 0, :character 53}},
                              :tags []}
                             ;; defmethod
-                            ;; TODO: after
-                            ;; https://github.com/clj-kondo/clj-kondo/issues/1716
-                            ;; switch this to `mult "foo"`, and mark
-                            ;; https://github.com/clojure-lsp/clojure-lsp/issues/1016
-                            ;; as fixed.
-                            {:name "mult",
+                            {:name "mult \"foo\"",
                              :kind :variable,
                              :range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},
                              :selection-range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},

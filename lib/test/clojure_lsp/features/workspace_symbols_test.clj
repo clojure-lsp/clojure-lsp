@@ -53,7 +53,7 @@
              :location {:range {:start {:line 1, :character 0}, :end {:line 1, :character 53}},
                         :uri (h/file-uri "file:///b.clj")},
              :name "goats-from-alpacas"}
-            {:name "llama",
+            {:name "llama \"wooly\"",
              :kind :variable,
              :location {:range {:start {:line 2, :character 11}, :end {:line 2, :character 18}},
                         :uri (h/file-uri "file:///b.clj")}}]

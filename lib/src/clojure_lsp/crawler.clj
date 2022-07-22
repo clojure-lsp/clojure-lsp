@@ -11,13 +11,59 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer])
+   [lsp4clj.protocols.producer :as producer]
+   [medley.core :as medley])
   (:import
    (java.net URI)))
 
 (set! *warn-on-reflection* true)
 
 (def startup-logger-tag "[Startup]")
+
+(defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
+
+(defn init-tasks [tasks]
+  (->> tasks
+       (partition-all 2 1)
+       (map (fn [[task next-task]]
+              (assoc task :task/end-percent (if next-task
+                                              (dec (:task/start-percent next-task))
+                                              100))))
+       (medley/index-by :task/id)))
+
+(def fast-tasks
+  (init-tasks
+    [{:task/start-percent   0, :task/title "clojure-lsp",             :task/id :start}
+     {:task/start-percent   5, :task/title "Finding kondo config",    :task/id :finding-kondo}
+     {:task/start-percent  10, :task/title "Finding cache",           :task/id :finding-cache}
+     {:task/start-percent  15, :task/title "Copying kondo configs",   :task/id :copying-kondo}
+     {:task/start-percent  15, :task/title "Resolving config paths",  :task/id :resolving-config}
+     {:task/start-percent  20, :task/title "Analyzing project files", :task/id :analyzing-project}
+     {:task/start-percent 100, :task/title "Project analyzed",        :task/id :done}]))
+
+(def slow-tasks
+  (init-tasks
+    [{:task/start-percent   0, :task/title "clojure-lsp",                  :task/id :start}
+     {:task/start-percent   5, :task/title "Finding kondo config",         :task/id :finding-kondo}
+     {:task/start-percent  10, :task/title "Finding cache",                :task/id :finding-cache}
+     {:task/start-percent  15, :task/title "Discovering classpath",        :task/id :discovering-classpath}
+     {:task/start-percent  20, :task/title "Copying kondo configs",        :task/id :copying-kondo}
+     {:task/start-percent  25, :task/title "Analyzing external classpath", :task/id :analyzing-deps}
+     {:task/start-percent  45, :task/title "Resolving config paths",       :task/id :resolving-config}
+     {:task/start-percent  50, :task/title "Analyzing project files",      :task/id :analyzing-project}
+     {:task/start-percent 100, :task/title "Project analyzed",             :task/id :done}]))
+
+(defn batched-task [{:keys [:task/start-percent :task/end-percent] :as task} batch-idx batch-count]
+  (assoc task
+         :task/start-percent (lerp start-percent end-percent (/ (dec batch-idx) batch-count))
+         :task/end-percent (lerp start-percent end-percent (/ batch-idx batch-count))))
+
+(defn partial-task [{:keys [:task/start-percent :task/end-percent] :as task} subtask-idx subtask-count]
+  (assoc task
+         :task/current-percent (lerp start-percent end-percent (/ subtask-idx subtask-count))))
+
+(defn publish-task-progress [producer {:keys [:task/title :task/current-percent :task/start-percent]} progress-token]
+  (producer/publish-progress producer (or current-percent start-percent) title progress-token))
 
 (defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
   (let [kondo-result* (future
@@ -35,8 +81,6 @@
                      (lsp.kondo/db-with-results kondo-result)
                      (lsp.depend/db-with-results depend-result))))))
 
-(defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
-
 (defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* producer]}]
   (logger/info "Analyzing classpath for project root" root-path)
   (when classpath
@@ -46,10 +90,10 @@
                               (remove (set source-paths)))
           {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums external-paths nil @db*)
           batch-update-callback (fn [batch-index batch-count {:keys [total-files files-done]}]
-                                  (let [percentage (lerp (lerp 25 70 (/ (dec batch-index) batch-count))
-                                                         (lerp 25 70 (/ batch-index batch-count))
-                                                         (/ files-done total-files))]
-                                    (producer/publish-progress producer percentage "Analyzing external classpath" progress-token)))
+                                  (let [task (-> (:analyzing-deps slow-tasks)
+                                                 (batched-task batch-index batch-count)
+                                                 (partial-task files-done total-files))]
+                                    (publish-task-progress producer task progress-token)))
           normalization-config {:external? true
                                 :filter-analysis (fn [analysis]
                                                    (update analysis :var-definitions #(remove :private %)))}
@@ -121,8 +165,9 @@
    force-settings
    progress-token
    {:keys [db* logger producer] :as components}]
-  (producer/publish-progress producer 0 "clojure-lsp" progress-token)
-  (let [project-settings (config/resolve-for-root project-root-uri)
+  (publish-task-progress producer (:start fast-tasks) progress-token)
+  (let [task-list fast-tasks
+        project-settings (config/resolve-for-root project-root-uri)
         root-path (shared/uri->path project-root-uri)
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
                                                                        (re-find #"^/[A-Z]:/")
@@ -144,25 +189,26 @@
            :force-settings force-settings
            :settings settings
            :client-capabilities client-capabilities)
-    (producer/publish-progress producer 5 "Finding kondo config" progress-token)
+    (publish-task-progress producer (:finding-kondo task-list) progress-token)
     (ensure-kondo-config-dir-exists! project-root-uri @db*)
-    (producer/publish-progress producer 10 "Finding cache" progress-token)
+    (publish-task-progress producer (:finding-cache task-list) progress-token)
     (load-db-cache! root-path db*)
     (let [project-hash (classpath/project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
           use-db-analysis? (and (= (:project-hash @db*) project-hash)
                                 (= (:kondo-config-hash @db*) kondo-config-hash))
           fast-startup? (or use-db-analysis?
-                            (not= :project-and-deps (:project-analysis-type @db*)))]
+                            (not= :project-and-deps (:project-analysis-type @db*)))
+          task-list (if fast-startup? fast-tasks slow-tasks)]
       (if use-db-analysis?
         (let [classpath (:classpath @db*)]
           (logger/info startup-logger-tag "Using cached db for project root" root-path)
           (swap! db* assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
-          (producer/publish-progress producer 15 "Copying kondo configs" progress-token)
+          (publish-task-progress producer (:copying-kondo fast-tasks) progress-token)
           (copy-configs-from-classpath! classpath settings @db*))
         (do
-          (producer/publish-progress producer 15 "Discovering classpath" progress-token)
+          (publish-task-progress producer (:discovering-classpath slow-tasks) progress-token)
           (when-let [classpath (classpath/scan-classpath! components)]
             (swap! db* assoc
                    :project-hash project-hash
@@ -170,14 +216,15 @@
                    :classpath classpath
                    :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
 
-            (producer/publish-progress producer 20 "Copying kondo configs" progress-token)
+            (publish-task-progress producer (:copying-kondo slow-tasks) progress-token)
             (copy-configs-from-classpath! classpath settings @db*)
             (when (= :project-and-deps (:project-analysis-type @db*))
-              (producer/publish-progress producer 25 "Analyzing external classpath" progress-token)
+              (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
             (logger/info "Caching db for next startup...")
             (upsert-db-cache! @db*))))
-      (producer/publish-progress producer (if fast-startup? 15 75) "Resolving config paths" progress-token)
+
+      (publish-task-progress producer (:resolving-config task-list) progress-token)
       (when-let [classpath-settings (and (config/classpath-config-paths? settings)
                                          (:classpath @db*)
                                          (config/resolve-from-classpath-config-paths (:classpath @db*) settings))]
@@ -187,12 +234,13 @@
                                             project-settings
                                             force-settings)
                :classpath-settings classpath-settings))
-      (producer/publish-progress producer (if fast-startup? 20 80) "Analyzing project files" progress-token)
+      (publish-task-progress producer (:analyzing-project task-list) progress-token)
       (logger/info startup-logger-tag "Analyzing source paths for project root" root-path)
       (analyze-source-paths! (-> @db* :settings :source-paths)
                              db*
                              (fn [{:keys [total-files files-done]}]
-                               (let [percentage (lerp (if fast-startup? 20 80) 99 (/ files-done total-files))]
-                                 (producer/publish-progress producer percentage "Analyzing project files" progress-token))))
+                               (let [task (-> (:analyzing-project task-list)
+                                              (partial-task files-done total-files))]
+                                 (publish-task-progress producer task progress-token))))
       (swap! db* assoc :settings-auto-refresh? true)
-      (producer/publish-progress producer 100 "Project analyzed" progress-token))))
+      (publish-task-progress producer (:done task-list) progress-token))))

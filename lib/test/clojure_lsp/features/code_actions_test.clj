@@ -388,12 +388,12 @@
                           [] {}
                           @db/db*))))
 
-(deftest extract-definition-code-action
+(deftest extract-to-def-code-action
   (h/load-code-and-locs "{:a 1}"
                         (h/file-uri "file:///a.clj"))
   (h/assert-contains-submaps
     [{:title "Extract to def"
-      :command {:command "extract-definition"}}]
+      :command {:command "extract-to-def"}}]
     (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                         (h/file-uri "file:///a.clj")
                         1

@@ -453,7 +453,7 @@
            {:loc   expr-edit
             :range expr-meta}])))))
 
-(defn ^:private extract-definition-params [zloc]
+(defn ^:private extract-to-def-params [zloc]
   ;; the expression that will be extracted
   (when-let [zloc (or (z/skip-whitespace z/right zloc)
                       (z/skip-whitespace z/up zloc))]
@@ -462,11 +462,11 @@
       {:zloc zloc
        :form-loc form-loc})))
 
-(defn can-extract-definition? [zloc]
-  (boolean (extract-definition-params zloc)))
+(defn can-extract-to-def? [zloc]
+  (boolean (extract-to-def-params zloc)))
 
-(defn extract-definition [zloc def-name]
-  (when-let [{:keys [zloc form-loc]} (extract-definition-params zloc)]
+(defn extract-to-def [zloc def-name]
+  (when-let [{:keys [zloc form-loc]} (extract-to-def-params zloc)]
     (let [expr-node (z/node zloc)
           expr-meta (meta expr-node)
 

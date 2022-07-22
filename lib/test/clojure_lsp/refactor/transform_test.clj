@@ -848,12 +848,12 @@
                           :end-row 999999 :end-col 1}}]}
                result))))))
 
-(defn- extract-definition
+(defn- extract-to-def
   [code new-def-name]
   (let [zloc (h/zloc-from-code code)]
-    (transform/extract-definition zloc new-def-name)))
+    (transform/extract-to-def zloc new-def-name)))
 
-(deftest extract-definition-test
+(deftest extract-to-def-test
   (h/clean-db!)
   (is (= [(h/code ""
                   "(def ^:private foo"
@@ -861,7 +861,7 @@
                   "")
           (h/code "foo")]
          (-> "|{:a 1}"
-             (extract-definition "foo")
+             (extract-to-def "foo")
              as-strings)))
   (h/clean-db!)
   (is (= [(h/code ""
@@ -870,7 +870,7 @@
                   "")
           (h/code "new-value")]
          (-> "|{:a 1}"
-             (extract-definition nil)
+             (extract-to-def nil)
              as-strings))))
 
 (deftest can-create-test?

@@ -263,14 +263,14 @@
       "hash": "sha256-LvTRPdHDFaV0sKMDfPcsqv+5rJR2QcBv7H4bMGy2vkE="
     },
     {
-      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/0.5.2/clj-async-profiler-0.5.2.jar",
+      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/1.0.0/clj-async-profiler-1.0.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-7AfZL91zlyGkyfAACYPymbnL4SSBviFdrt5xZee9q+A="
+      "hash": "sha256-WVOz+T8qh3Hrrgw2+RnnCZeYrW86HEr8m6oX0yskbJQ="
     },
     {
-      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/0.5.2/clj-async-profiler-0.5.2.pom",
+      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/1.0.0/clj-async-profiler-1.0.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-S4zVXXJrMwy90g8nnTABVa3L69sbOdoGdec+nsFouJ0="
+      "hash": "sha256-nO/f2cV6nwRjLQhz41KzzEAt+pYtRKU72S6y+kC+H7U="
     },
     {
       "mvn-path": "com/clojure-goes-fast/clj-memory-meter/0.1.3/clj-memory-meter-0.1.3.jar",

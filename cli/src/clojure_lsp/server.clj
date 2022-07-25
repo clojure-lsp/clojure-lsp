@@ -503,7 +503,7 @@
                       :producer producer
                       :server server}]
       (logger/info "[SERVER]" "Starting server...")
-      ;; TODO: if this were moved to `initialize`, after timbre has been
+      ;; NOTE: if this were moved to `initialize`, after timbre has been
       ;; configured, the server's startup logs and traces would appear in the
       ;; regular log file instead of the temp log file. The downside would be that
       ;; if anything bad happens before `initialize`, we wouldn't get any logs.

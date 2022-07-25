@@ -101,7 +101,7 @@
                          (lsp.server/send-request server "workspace/applyEdit"))
             response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
         (if (= ::timeout response)
-          (logger/error "No reponse from client after 10 seconds.")
+          (logger/error "No reponse from client after 10 seconds while applying workspace-edit.")
           response))))
 
   (show-document-request [_this document-request]

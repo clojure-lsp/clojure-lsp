@@ -151,7 +151,7 @@
                          (conform-or-log ::clojure-coercer/publish-test-tree-params)
                          (lsp.server/send-notification server "clojure/textDocument/testTree"))))))))))
 
-;;;; clojure experimental features
+;;;; clojure extra features
 
 (defmethod lsp.server/receive-request "clojure/dependencyContents" [_ components params]
   (->> params

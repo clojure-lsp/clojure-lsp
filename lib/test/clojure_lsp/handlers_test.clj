@@ -277,3 +277,26 @@
                 {:text-document {:uri (h/file-uri "file:///b.clj")}
                  :context {:diagnostics []}
                  :range {:start {:line 1 :character 1}}})))))
+
+(deftest code-lens-can-be-resolved
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "(def foo 1)\n"
+                             "(defn- foo2 []\n"
+                             " foo)\n"
+                             "(defn bar [a b]\n"
+                             "  (+ a b (foo2)))\n"
+                             "(s/defn baz []\n"
+                             "  (bar 2 3))\n"))
+  (let [code-lenses (handlers/code-lens h/components {:text-document {:uri h/default-uri}})
+        resolved-code-lenses (map (fn [code-lens]
+                                    (handlers/code-lens-resolve h/components code-lens))
+                                  code-lenses)]
+    (is (= [0 1 2 4]
+           (map #(get-in % [:range :start :line])
+                resolved-code-lenses)))
+    (is (= ["0 references"
+            "1 reference"
+            "1 reference"
+            "1 reference"]
+           (map #(get-in % [:command :title])
+                resolved-code-lenses)))))

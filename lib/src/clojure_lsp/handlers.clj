@@ -396,10 +396,10 @@
     (f.code-lens/reference-code-lens (:uri text-document) @db*)))
 
 (defn code-lens-resolve
-  [{:keys [db*]} {[text-document row col] :data range :range}]
+  [{:keys [db*]} {[uri row col] :data range :range}]
   (shared/logging-task
     :resolve-code-lens
-    (f.code-lens/resolve-code-lens (:uri text-document) row col range @db*)))
+    (f.code-lens/resolve-code-lens uri row col range @db*)))
 
 (defn semantic-tokens-full
   [{:keys [db*]} {:keys [text-document]}]

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix extra space on :import when sorting classes. #1152
+
 ## 2022.07.24-18.25.43
 
 - General

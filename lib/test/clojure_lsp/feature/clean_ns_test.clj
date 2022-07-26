@@ -525,11 +525,11 @@
                              " (:import"
                              "  (a.b A B C D)"
                              "  (a.c"
-                             "    E"
-                             "    F"
-                             "    G"
-                             "    H"
-                             "    I)))"
+                             "   E"
+                             "   F"
+                             "   G"
+                             "   H"
+                             "   I)))"
                              "  A B C D E F G H I"))
       (test-clean-ns {:settings {:clean {:sort {:import-classes {:classes-per-line -1}}}}}
                      (h/code "(ns foo.bar"

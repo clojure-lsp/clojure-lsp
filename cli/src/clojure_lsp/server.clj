@@ -157,8 +157,10 @@
   (->> params
        (handler/dependency-contents components)
        (conform-or-log ::coercer/uri)))
+
 (defmethod lsp.server/receive-request "clojure/serverInfo/raw" [_ components _params]
   (handler/server-info-raw components))
+
 (defmethod lsp.server/receive-notification "clojure/serverInfo/log" [_ components _params]
   (future
     (try
@@ -166,8 +168,10 @@
       (catch Throwable e
         (logger/error e)
         (throw e)))))
+
 (defmethod lsp.server/receive-request "clojure/cursorInfo/raw" [_ components params]
   (handler/cursor-info-raw components params))
+
 (defmethod lsp.server/receive-notification "clojure/cursorInfo/log" [_ components params]
   (future
     (try
@@ -175,6 +179,7 @@
       (catch Throwable e
         (logger/error e)
         (throw e)))))
+
 (defmethod lsp.server/receive-request "clojure/clojuredocs/raw" [_ components params]
   (handler/clojuredocs-raw components params))
 
@@ -488,6 +493,16 @@
       (apply log-wrapper-fn log-args)
       (recur))))
 
+(defn ^:private setup-dev-environment [db*]
+  ;; We don't have an ENV=development flag, so the next best indication that
+  ;; we're in a development environment is whether we're able to start an nREPL.
+  (when-let [port (nrepl/setup-nrepl)]
+    ;; If we're in development, make the db* atom available globally as db/db*.
+    ;; In other environments it's empty (except for tests, which set it via a
+    ;; different mechanism).
+    (alter-var-root #'db/db* (constantly db*))
+    (swap! db/db* assoc :port port)))
+
 (defn run-server! []
   (lsp.server/discarding-stdout
     (let [timbre-logger (->TimbreLogger)
@@ -508,6 +523,6 @@
       ;; regular log file instead of the temp log file. The downside would be that
       ;; if anything bad happens before `initialize`, we wouldn't get any logs.
       (monitor-server-logs server)
-      (nrepl/setup-nrepl db*)
+      (setup-dev-environment db*)
       (spawn-async-tasks! components)
       (lsp.server/start server components))))

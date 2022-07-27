@@ -482,6 +482,10 @@
           (f.file-management/analyze-watched-created-files! created-watched-files components))))))
 
 (defn ^:private monitor-server-logs [{:keys [trace-ch log-ch]}]
+  ;; NOTE: if this were moved to `initialize`, after timbre has been configured,
+  ;; the server's startup logs and traces would appear in the regular log file
+  ;; instead of the temp log file. The downside would be that if anything bad
+  ;; happens before `initialize`, we wouldn't get any logs.
   (when trace-ch
     (async/go-loop []
       (when-let [trace (async/<! trace-ch)]
@@ -496,12 +500,12 @@
 (defn ^:private setup-dev-environment [db*]
   ;; We don't have an ENV=development flag, so the next best indication that
   ;; we're in a development environment is whether we're able to start an nREPL.
-  (when-let [port (nrepl/setup-nrepl)]
-    ;; If we're in development, make the db* atom available globally as db/db*.
-    ;; In other environments it's empty (except for tests, which set it via a
-    ;; different mechanism).
+  (when-let [nrepl-port (nrepl/setup-nrepl)]
+    ;; We're in the development environment, so make the db* atom available
+    ;; globally as db/db*. In other environments it's empty (except for unit
+    ;; tests, which set it via a different mechanism).
     (alter-var-root #'db/db* (constantly db*))
-    (swap! db/db* assoc :port port)))
+    (swap! db/db* assoc :port nrepl-port)))
 
 (defn run-server! []
   (lsp.server/discarding-stdout
@@ -518,10 +522,6 @@
                       :producer producer
                       :server server}]
       (logger/info "[SERVER]" "Starting server...")
-      ;; NOTE: if this were moved to `initialize`, after timbre has been
-      ;; configured, the server's startup logs and traces would appear in the
-      ;; regular log file instead of the temp log file. The downside would be that
-      ;; if anything bad happens before `initialize`, we wouldn't get any logs.
       (monitor-server-logs server)
       (setup-dev-environment db*)
       (spawn-async-tasks! components)

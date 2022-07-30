@@ -89,8 +89,8 @@
       (f.completion/completion (h/file-uri "file:///f.clj") 2 21 @db/db*)))
   (testing "complete locals"
     (h/assert-submaps
-      [{:label "bar" :kind :function}
-       {:label "baz" :kind :variable}
+      [{:label "baz" :kind :variable}
+       {:label "bar" :kind :function}
        {:label "ba" :kind :property}
        {:label "ba/baff" :kind :variable}
        {:label "ba/barr" :kind :variable}
@@ -256,10 +256,10 @@
 
   (testing "completing replacing $current-form"
     (swap! db/db* merge {:settings {:additional-snippets
-                                   [{:name "wrap-in-let-sexpr$"
-                                     :detail "Wrap in let"
-                                     :snippet "(let [$1] $0$current-form)"}]}
-                        :client-capabilities {:text-document {:completion {:completion-item {:snippet-support true}}}}})
+                                    [{:name "wrap-in-let-sexpr$"
+                                      :detail "Wrap in let"
+                                      :snippet "(let [$1] $0$current-form)"}]}
+                         :client-capabilities {:text-document {:completion {:completion-item {:snippet-support true}}}}})
     (h/assert-submaps
       [{:label "wrap-in-let-sexpr$"
         :detail "Wrap in let"
@@ -354,17 +354,19 @@
     (f.completion/completion (h/file-uri "file:///some/c.clj") 3 13 @db/db*)))
 
 (deftest completing-sorting
-  (h/load-code-and-locs
-    (h/code "(ns foo)"
-            ":foo"
-            "(def foo 1)"
-            "fo"))
-  (testing "completing replacing $current-form"
-    (h/assert-submaps
-      [{:label "foo", :kind :module}
-       {:label "foo", :kind :variable}
-       {:label ":foo", :kind :keyword, :detail ""}
-       {:label "for", :kind :function, :detail "clojure.core/for"}
-       {:label "force", :kind :function, :detail "clojure.core/force"}
-       {:label "format", :kind :function, :detail "clojure.core/format"}]
-      (f.completion/completion (h/file-uri "file:///a.clj") 4 2 @db/db*))))
+  (let [[[row col]] (h/load-code-and-locs
+                      (h/code "(ns foo)"
+                              ":foo"
+                              "(def foo 1)"
+                              "(let [foob 1]"
+                              " fo|)"))]
+    (testing "items are sorted properly"
+      (h/assert-submaps
+        [{:label "foob", :kind :variable}
+         {:label "foo", :kind :module}
+         {:label "foo", :kind :variable}
+         {:label ":foo", :kind :keyword, :detail ""}
+         {:label "for", :kind :function, :detail "clojure.core/for"}
+         {:label "force", :kind :function, :detail "clojure.core/force"}
+         {:label "format", :kind :function, :detail "clojure.core/format"}]
+        (f.completion/completion (h/file-uri "file:///a.clj") row col @db/db*)))))

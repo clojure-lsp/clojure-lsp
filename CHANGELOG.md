@@ -4,6 +4,9 @@
 
 - General
   - Fix extra space on :import when sorting classes. #1152
+  
+- Editor
+  - Improve completion sorting, showing locals before functions and other completion items. #1158
 
 ## 2022.07.24-18.25.43
 

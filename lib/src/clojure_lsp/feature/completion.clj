@@ -23,17 +23,18 @@
 
 (def priority-kw->number
   {:kw-arg 1
-   :simple-cursor 2
-   :alias-keyword 3
-   :keyword 4
-   :refer 5
-   :required-alias 6
-   :unrequired-alias 7
-   :ns-definition 8
-   :clojure-core 9
-   :clojurescript-core 10
-   :java 11
-   :snippet 12})
+   :locals 2
+   :simple-cursor 3
+   :alias-keyword 4
+   :keyword 5
+   :refer 6
+   :required-alias 7
+   :unrequired-alias 8
+   :ns-definition 9
+   :clojure-core 10
+   :clojurescript-core 11
+   :java 12
+   :snippet 13})
 
 (defn ^:private keyword-element->str [{:keys [alias ns] :as element} cursor-alias priority]
   (let [alias (or alias
@@ -108,6 +109,10 @@
     (and (identical? :simple-cursor priority)
          (contains? #{:keyword-usages :keyword-definitions} (:bucket element)))
     :keyword
+
+    (and (identical? :simple-cursor priority)
+         (contains? #{:locals} (:bucket element)))
+    :locals
 
     :else
     priority))

@@ -98,7 +98,7 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm: 22.0.0.2
+          graalvm: 22.2.0
           java: java11
 
       - name: Install native-image component
@@ -155,7 +155,7 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: '22.0.0.2'
+          version: '22.2.0'
           java-version: '11'
           components: 'native-image'
           native-image-musl: 'true'
@@ -205,9 +205,9 @@ jobs:
           setup: |
             mkdir -p "${PWD}/artifacts"
             mv clojure-lsp-standalone.jar "${PWD}/artifacts/"
-            wget -q https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.0.0.2/graalvm-ce-java11-linux-aarch64-22.0.0.2.tar.gz
-            tar -xzf graalvm-ce-java11-linux-aarch64-22.0.0.2.tar.gz
-            mv graalvm-ce-java11-22.0.0.2 graalvm-ce-java11
+            wget -q https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.2.0/graalvm-ce-java11-linux-aarch64-22.2.0.tar.gz
+            tar -xzf graalvm-ce-java11-linux-aarch64-22.2.0.tar.gz
+            mv graalvm-ce-java11-22.2.0 graalvm-ce-java11
           dockerRunArgs: |
             --volume "${PWD}/graalvm-ce-java11:/graalvm-ce-java11"
             --volume "${PWD}/artifacts:/artifacts"
@@ -288,7 +288,7 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm: 22.0.0.2
+          graalvm: 22.2.0
           java: java11
 
       - name: Install native-image component

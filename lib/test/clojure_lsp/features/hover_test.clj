@@ -170,4 +170,13 @@
                  :value "a/foo [x y]"}
                 "Some cool docs :foo"
                 "/a.clj"]
-               (:contents (f.hover/hover (h/file-uri "file:///a.clj") anon-row anon-col db/db*))))))))
+               (:contents (f.hover/hover (h/file-uri "file:///a.clj") anon-row anon-col db/db*))))))
+    (testing "On function definition"
+      (let [code (h/code "(ns a)"
+                         "(defn |foo \"Some cool docs :foo\" [x y] x)")
+            [[foo-row foo-col]] (h/load-code-and-locs code)]
+        (is (= [{:language "clojure"
+                 :value "a/foo [x y]"}
+                "Some cool docs :foo"
+                "/a.clj"]
+               (:contents (f.hover/hover (h/file-uri "file:///a.clj") foo-row foo-col db/db*))))))))

@@ -123,7 +123,7 @@
                               z/node
                               meta)
         element (cond
-                  (identical? :var-usages (:bucket cursor-element))
+                  (contains? #{:var-usages :var-definitions} (:bucket cursor-element))
                   cursor-element
 
                   func-position

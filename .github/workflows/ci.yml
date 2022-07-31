@@ -126,7 +126,7 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: '22.0.0.2'
+          version: '22.2.0'
           java-version: '11'
           components: 'native-image'
           native-image-musl: 'true'

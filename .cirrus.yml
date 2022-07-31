@@ -3,8 +3,8 @@ macos_instance:
 
 task:
   env:
-    GRAALVM_VERSION: "22.1.0"
-    GRAALVM_HOME: ${HOME}/graalvm-ce-java11-22.1.0/Contents/Home
+    GRAALVM_VERSION: "22.2.0"
+    GRAALVM_HOME: ${HOME}/graalvm-ce-java11-22.2.0/Contents/Home
     CLOJURE_LSP_PLATFORM: macos # used in release script
     CLOJURE_LSP_ARCH: aarch64
     CLOJURE_LSP_XMX: "-J-Xmx6g"
@@ -13,9 +13,9 @@ task:
     sudo scripts/install-clojure /usr/local
 
     pushd ~
-    if ! [ -d graalvm-ce-java11-22.1.0 ]; then
-      curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.1.0/graalvm-ce-java11-darwin-aarch64-22.1.0.tar.gz
-      tar xzf graalvm-ce-java11-darwin-aarch64-22.1.0.tar.gz
+    if ! [ -d graalvm-ce-java11-22.2.0 ]; then
+      curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.2.0/graalvm-ce-java11-darwin-aarch64-22.2.0.tar.gz
+      tar xzf graalvm-ce-java11-darwin-aarch64-22.2.0.tar.gz
     fi
     popd
 

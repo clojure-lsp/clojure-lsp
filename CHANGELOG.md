@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- General
+  - Fix extra space on :import when sorting classes. #1152
+  - Bump Graalvm from 22.0.0.2 to 22.2.0 improving binary performance/size. #1154
+  - Bump clj-kondo to `2022.08.03`.
+  
+- Editor
+  - Improve completion sorting, showing locals before functions and other completion items. #1158
+  - Fix hover to show current var definition docs instead of `def`/`defn`. #1157
+
 ## 2022.07.24-18.25.43
 
 - General

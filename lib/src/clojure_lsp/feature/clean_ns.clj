@@ -342,9 +342,7 @@
                 (->> sorted-classes
                      (mapv (fn [n]
                              [(n/newlines 1)
-                              (n/spaces (if (= :list (z/tag parent-node))
-                                          (+ 2 parent-node-col)
-                                          (+ 1 parent-node-col)))
+                              (n/spaces (inc parent-node-col))
                               (n/token-node n)]))
                      (concat [(n/token-node (symbol base-package))])
                      flatten)

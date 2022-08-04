@@ -355,16 +355,27 @@
                         (shared/inside? local-usage form-scope))))
          (medley/distinct-by :id))))
 
+(defn find-locals-under-form
+  [db filename {:keys [row col end-row end-col]}]
+  (let [form-scope {:name-row row
+                    :name-col col
+                    :name-end-row end-row
+                    :name-end-col end-col}]
+    (into []
+          (filter (fn [local-def]
+                    (shared/inside? local-def form-scope)))
+          (get-in db [:analysis filename :locals]))))
+
 (defn find-var-usages-under-form
   [db filename row col end-row end-col]
-  (let [local-usages (get-in db [:analysis filename :var-usages])]
+  (let [var-usages (get-in db [:analysis filename :var-usages])]
     (filter (fn [element]
               (shared/inside? element
                               {:name-row row
                                :name-col col
                                :name-end-row end-row
                                :name-end-col end-col}))
-            local-usages)))
+            var-usages)))
 
 (defmulti find-definition
   (fn [_db element]
@@ -633,23 +644,27 @@
   [element])
 
 (defn ^:private xf-under-cursor [row col]
-  (comp (mapcat val)
-        (filter
-          (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-            ;; TODO Probably should use q/inside? instead
+  (filter (fn [{:keys [name-row name-col name-end-row name-end-col]}]
             (and (<= name-row row name-end-row)
-                 (<= name-col col name-end-col))))))
+                 (<= name-col col name-end-col)))))
 
 (defn find-element-under-cursor
   [db filename row col]
-  (find-first (xf-under-cursor row col)
+  (find-first (comp (mapcat val)
+                    (xf-under-cursor row col))
               (get-in db [:analysis filename])))
 
 (defn find-all-elements-under-cursor
   [db filename row col]
   (into []
-        (xf-under-cursor row col)
+        (comp (mapcat val)
+              (xf-under-cursor row col))
         (get-in db [:analysis filename])))
+
+(defn find-local-under-cursor
+  [db filename line column]
+  (find-first (xf-under-cursor line column)
+              (get-in db [:analysis filename :locals])))
 
 (defn find-definition-from-cursor [db filename row col]
   (try

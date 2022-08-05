@@ -13,6 +13,7 @@
   - Fix hover to show current var definition docs instead of `def`/`defn`. #1157
   - Improve hover for requires to show ns docstring. #1171
   - Fix destructuring of things that have been destructured before. #1156
+  - Some completions require that a new alias be added to the ns form. Fix this feature for Calva users, and improve performance for all users. #1068
 
 ## 2022.07.24-18.25.43
 
@@ -38,7 +39,6 @@
   - Add refactoring `Destructure keys` to destructure keywords. #905
   - Add refactoring `Extract to def` to create a `def` from the thing under the cursor. #1136
   - Include defmethods in document and workspace symbols. #1016
-  - Improve performance of some completions by postponing ns form edits #1068
 
 ## 2022.06.29-19.32.13
 

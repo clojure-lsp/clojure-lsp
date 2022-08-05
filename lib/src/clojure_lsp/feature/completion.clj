@@ -107,13 +107,13 @@
   (update-in completion-item [:data "unresolved"] (fnil conj []) [unresolved-type args]))
 
 (defn ^:private completion-item-with-documentation
-  [completion-item element var-name db*]
+  [completion-item element var-name db* docs-config]
   (let [definition (when (and element
                               (identical? :var-definitions (:bucket element))
                               (= var-name (str (:name element))))
                      element)]
     (cond-> completion-item
-      definition (assoc :documentation (f.hover/hover-documentation definition db*)))))
+      definition (assoc :documentation (f.hover/hover-documentation definition db* docs-config)))))
 
 (defn ^:private completion-item-with-alias-edit
   [completion-item cursor-loc alias-to-add ns-to-add db]
@@ -554,16 +554,19 @@
 (defn ^:private find-element-by-position [{:keys [filename name-row name-col]} db]
   (q/find-element-under-cursor db filename name-row name-col))
 
-(defmulti ^:private resolve-unresolved (fn [unresolved-type _item _args] unresolved-type))
+(defmulti ^:private resolve-unresolved (fn [unresolved-type _item _other-unresolved _args]
+                                         unresolved-type))
 
-(defmethod resolve-unresolved "documentation" [_ item {:keys [ns db db*] :as args}]
+(defmethod resolve-unresolved "documentation" [_ item other-unresolved {:keys [ns db db*] :as args}]
   (if-let [element (if ns
                      (find-element-by-ns args db)
                      (find-element-by-position args db))]
-    (completion-item-with-documentation item element (:name args) db*)
+    (completion-item-with-documentation item element (:name args) db* {:additional-text-edits? (->> other-unresolved
+                                                                                                    (map first)
+                                                                                                    (some #{"alias"}))})
     item))
 
-(defmethod resolve-unresolved "alias" [_ item {:keys [uri alias-to-add ns-to-add db]}]
+(defmethod resolve-unresolved "alias" [_ item _other-unresolved {:keys [uri alias-to-add ns-to-add db]}]
   (if-let [zloc (parser/safe-zloc-of-file db uri)]
     (completion-item-with-alias-edit item zloc (symbol alias-to-add) (symbol ns-to-add) db)
     item))
@@ -580,6 +583,7 @@
       (reduce (fn [item [unresolved-type args]]
                 (resolve-unresolved unresolved-type
                                     item
+                                    unresolved
                                     (assoc args :db db :db* db*)))
               item
               unresolved)

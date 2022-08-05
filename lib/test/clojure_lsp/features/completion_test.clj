@@ -214,6 +214,7 @@
         (f.completion/completion (h/file-uri "file:///a.cljc") after-reader-r after-reader-c @db/db*)))))
 
 (deftest resolve-item-test
+  (swap! db/db* merge {:settings {:completion {:additional-edits-warning-text "* includes additional edits"}}})
   (h/load-code-and-locs "(ns a) (def foo \"Some docs\" 1)")
   (testing "When element does not contains data"
     (is (= {:label "Some" :kind :module}
@@ -259,7 +260,32 @@
                                                                       {:ns-to-add "bbb"
                                                                        :alias-to-add "b"
                                                                        :uri (h/file-uri "file:///aaa.clj")}]]}}
-                                                db/db*))))
+                                                db/db*)))
+  (testing "When element needs an alias and documentation"
+    (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
+    (h/assert-submap {:label "foo"
+                      :documentation [{:language "clojure" :value "a/foo"}
+                                      "* includes additional edits"
+                                      "Some docs"
+                                      (h/file-path "/a.clj")]
+                      :kind :function
+                      :additional-text-edits [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
+                                               :new-text (h/code "(ns aaa "
+                                                                 "  (:require"
+                                                                 "    [bbb :as b]))")}]}
+                     (f.completion/resolve-item {:label "foo"
+                                                 :kind :function
+                                                 :data {:unresolved [["documentation"
+                                                                      {:name "foo"
+                                                                       :filename (h/file-path "/a.clj")
+                                                                       :name-row 1
+                                                                       :name-col 13}]
+                                                                     ["alias"
+                                                                      {:ns-to-add "bbb"
+                                                                       :alias-to-add "b"
+                                                                       :uri (h/file-uri "file:///aaa.clj")}]]}}
+                                                db/db*))
+    (swap! db/db* merge {:settings {:completion {:additional-edits-warning-text nil}}})))
 
 (deftest completing-refers
   (h/load-code-and-locs

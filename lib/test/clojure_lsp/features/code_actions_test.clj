@@ -452,6 +452,22 @@
                             :range   {:start {:line 2 :character 11}}}] {}
                           (h/db)))))
 
+(deftest thread-get-actions
+  (let [[[row col]] (h/load-code-and-locs (h/code "|(:z (:y (:x m)))"))]
+    (h/assert-contains-submaps
+      [{:title "Move another expression to get/get-in"
+        :command {:command "get-in-more"}}
+       {:title "Move all expressions to get/get-in"
+        :command {:command "get-in-all"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") row col [] {} (h/db))))
+  (let [[[row col]] (h/load-code-and-locs (h/code "|(get-in m [:x :y :z])"))]
+    (h/assert-contains-submaps
+      [{:title "Remove one element from get/get-in"
+        :command {:command "get-in-less"}}
+       {:title "Unwind whole get/get-in"
+        :command {:command "get-in-none"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") row col [] {} (h/db)))))
+
 (deftest thread-first-all-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
                                 "(def foo)"

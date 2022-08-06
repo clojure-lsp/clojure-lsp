@@ -6,6 +6,7 @@
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
    [clojure-lsp.feature.sort-map :as f.sort-map]
+   [clojure-lsp.feature.thread-get :as f.thread-get]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -276,6 +277,34 @@
              :command   "resolve-macro-as"
              :arguments [uri line character]}})
 
+(defn ^:private get-in-more-action [uri line character]
+  {:title   "Move another expression to get/get-in"
+   :kind    :refactor-rewrite
+   :command {:title     "Move another expression to get/get-in"
+             :command   "get-in-more"
+             :arguments [uri line character]}})
+
+(defn ^:private get-in-all-action [uri line character]
+  {:title   "Move all expressions to get/get-in"
+   :kind    :refactor-rewrite
+   :command {:title     "Move all expressions to get/get-in"
+             :command   "get-in-all"
+             :arguments [uri line character]}})
+
+(defn ^:private get-in-less-action [uri line character]
+  {:title   "Remove one element from get/get-in"
+   :kind    :refactor-rewrite
+   :command {:title     "Remove one element from get/get-in"
+             :command   "get-in-less"
+             :arguments [uri line character]}})
+
+(defn ^:private get-in-none-action [uri line character]
+  {:title   "Unwind whole get/get-in"
+   :kind    :refactor-rewrite
+   :command {:title     "Unwind whole get/get-in"
+             :command   "get-in-none"
+             :arguments [uri line character]}})
+
 (defn all [root-zloc uri row col diagnostics client-capabilities db]
   (let [zloc (parser/to-pos root-zloc row col)
         line (dec row)
@@ -288,6 +317,8 @@
         other-colls* (future (r.transform/find-other-colls zloc))
         can-thread?* (future (r.transform/can-thread? zloc))
         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
+        can-get-in-more?* (future (f.thread-get/can-get-in-more? zloc))
+        can-get-in-less?* (future (f.thread-get/can-get-in-less? zloc))
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
@@ -357,6 +388,14 @@
       @can-unwind-thread?*
       (conj (unwind-thread-action uri line character)
             (unwind-all-action uri line character))
+
+      @can-get-in-more?*
+      (conj (get-in-more-action uri line character)
+            (get-in-all-action uri line character))
+
+      @can-get-in-less?*
+      (conj (get-in-less-action uri line character)
+            (get-in-none-action uri line character))
 
       (and workspace-edit-capability?
            @allow-sort-map?*)

@@ -8,6 +8,7 @@
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
    [clojure-lsp.feature.sort-map :as f.sort-map]
+   [clojure-lsp.feature.thread-get :as f.thread-get]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
@@ -68,6 +69,18 @@
 
 (defmethod refactor :extract-to-def [{:keys [loc args]}]
   (apply r.transform/extract-to-def loc args))
+
+(defmethod refactor :get-in-more [{:keys [loc]}]
+  (f.thread-get/get-in-more loc))
+
+(defmethod refactor :get-in-all [{:keys [loc]}]
+  (f.thread-get/get-in-all loc))
+
+(defmethod refactor :get-in-less [{:keys [loc]}]
+  (f.thread-get/get-in-less loc))
+
+(defmethod refactor :get-in-none [{:keys [loc]}]
+  (f.thread-get/get-in-none loc))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col db]}]
   (r.transform/inline-symbol uri row col db))

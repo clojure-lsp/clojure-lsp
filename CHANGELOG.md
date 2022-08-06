@@ -10,6 +10,7 @@
 - Editor
   - Improve completion sorting, showing locals before functions and other completion items. #1158
   - Fix hover to show current var definition docs instead of `def`/`defn`. #1157
+  - Improve hover for requires to show ns docstring. #1171
 
 ## 2022.07.24-18.25.43
 

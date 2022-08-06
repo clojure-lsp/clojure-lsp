@@ -179,4 +179,13 @@
                  :value "a/foo [x y]"}
                 "Some cool docs :foo"
                 "/a.clj"]
-               (:contents (f.hover/hover (h/file-uri "file:///a.clj") foo-row foo-col db/db*))))))))
+               (:contents (f.hover/hover (h/file-uri "file:///a.clj") foo-row foo-col db/db*))))))
+    (testing "on a require with docs"
+      (let [_ (h/load-code-and-locs (h/code "(ns ^{:doc \"Some cool docstring\"} some-a)") (h/file-uri "file:///some_a.clj"))
+            code-b (h/code "(ns some-b (:require [some-|a :as abc]))")
+            [[row col]] (h/load-code-and-locs code-b (h/file-uri "file:///some_b.clj"))]
+        (is (= [{:language "clojure"
+                 :value "some-a"}
+                "Some cool docstring"
+                "/some_a.clj"]
+               (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col db/db*))))))))

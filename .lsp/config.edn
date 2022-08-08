@@ -1,4 +1,3 @@
 {:linters {:clj-kondo {:ns-exclude-regex "sample-test.*"}}
  :source-aliases #{:dev :test :debug}
- :use-metadata-for-privacy? true
- #_#_:experimental {:dep-graph-queries true}}
+ :use-metadata-for-privacy? true}

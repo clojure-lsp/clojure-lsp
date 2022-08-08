@@ -5,9 +5,7 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [are deftest is testing]]
-   [medley.core :as medley]
-   [clojure-lsp.feature.rename :as f.rename]
-   [clojure-lsp.queries :as q]))
+   [medley.core :as medley]))
 
 (h/reset-db-after-test)
 

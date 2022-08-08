@@ -116,14 +116,17 @@
   (let [db @db*
         filename (shared/uri->filename uri)
         cursor-element (q/find-element-under-cursor db filename line column)
-        func-position (some-> (f.file-management/force-get-document-text uri db*)
-                              (parser/safe-zloc-of-string)
-                              (parser/to-pos line column)
+        cursor-loc (some-> (f.file-management/force-get-document-text uri db*)
+                           parser/safe-zloc-of-string
+                           (parser/to-pos line column))
+        func-position (some-> cursor-loc
                               edit/find-function-usage-name-loc
                               z/node
                               meta)
+        inside-ns (and cursor-loc (edit/inside-require? cursor-loc))
         element (cond
-                  (contains? #{:var-usages :var-definitions} (:bucket cursor-element))
+                  (or (contains? #{:var-usages :var-definitions} (:bucket cursor-element))
+                      inside-ns)
                   cursor-element
 
                   func-position

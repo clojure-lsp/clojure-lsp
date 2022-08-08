@@ -481,17 +481,11 @@
           :analyze-created-files-in-watched-dir
           (f.file-management/analyze-watched-created-files! created-watched-files components))))))
 
-(defn ^:private monitor-server-logs [{:keys [trace-ch log-ch]}]
+(defn ^:private monitor-server-logs [log-ch]
   ;; NOTE: if this were moved to `initialize`, after timbre has been configured,
   ;; the server's startup logs and traces would appear in the regular log file
-  ;; instead of the temp log file. The downside would be that if anything bad
-  ;; happens before `initialize`, we wouldn't get any logs.
-  (when trace-ch
-    (async/go-loop []
-      (when-let [trace (async/<! trace-ch)]
-        ;; TODO: send traces to a log file?
-        (logger/debug trace)
-        (recur))))
+  ;; instead of the temp log file. We don't do this though because if anything
+  ;; bad happened before `initialize`, we wouldn't get any logs.
   (async/go-loop []
     (when-let [log-args (async/<! log-ch)]
       (apply log-wrapper-fn log-args)
@@ -513,16 +507,21 @@
           log-path (logger/setup timbre-logger)
           db (assoc db/initial-db :log-path log-path)
           db* (atom db)
-          server (lsp.server/stdio-server {:trace? false
-                                           :in System/in
-                                           :out System/out})
+          log-ch (async/chan (async/sliding-buffer 20))
+          server (lsp.server/stdio-server {:in System/in
+                                           :out System/out
+                                           :log-ch log-ch
+                                           ;; tracing
+                                           :trace? false
+                                           ;; merge log and trace, though only when `:trace?`
+                                           :trace-ch log-ch})
           producer (ClojureLspProducer. server db*)
           components {:db* db*
                       :logger timbre-logger
                       :producer producer
                       :server server}]
       (logger/info "[SERVER]" "Starting server...")
-      (monitor-server-logs server)
+      (monitor-server-logs log-ch)
       (setup-dev-environment db*)
       (spawn-async-tasks! components)
       (lsp.server/start server components))))

@@ -4,13 +4,13 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]))
+   [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
 
@@ -288,18 +288,14 @@
         (with-additional-config (settings/all db)))))
 
 (defn ^:private run-kondo! [config err-hint db]
-  (let [err-writer (java.io.StringWriter.)
-        out-writer (java.io.StringWriter.)]
+  (let [err-writer (java.io.StringWriter.)]
     (try
       (let [result (if (:api? db)
                      (kondo/run! config)
-                     (binding [*err* err-writer
-                               *out* out-writer]
+                     (binding [*err* err-writer]
                        (kondo/run! config)))]
         (when-not (string/blank? (str err-writer))
           (logger/warn "Non-fatal error from clj-kondo:" (str err-writer)))
-        (when-not (string/blank? (str out-writer))
-          (logger/warn "Output from clj-kondo:" (str out-writer)))
         result)
       (catch Exception e
         (logger/error e "Error running clj-kondo on" err-hint)))))

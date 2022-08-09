@@ -16,8 +16,8 @@
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
         babashka/fs {:mvn/version "0.1.6"}
-        com.github.clojure-lsp/lsp4clj-protocols {:mvn/version "0.4.3"}
-         ;; com.github.clojure-lsp/lsp4clj-protocols {:local/root "../../lsp4clj/protocols"}
+        com.github.clojure-lsp/lsp4clj {:mvn/version "1.0.0"}
+        ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
         }
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}

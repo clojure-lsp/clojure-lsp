@@ -412,7 +412,7 @@
 
 (defn ^:private merging-snippets [items cursor-loc next-loc function-call? matches-fn settings]
   (let [snippet-items (map (fn [snippet]
-                             (if (:function-call? snippet)
+                             (if (:function-call snippet)
                                (update snippet :insert-text remove-first-and-last-char)
                                snippet))
                            (f.completion-snippet/known-snippets function-call? settings))
@@ -441,7 +441,7 @@
   (->> items
        (medley/distinct-by (juxt :label :kind :detail))
        (sort-by (juxt #(get priority-kw->number (:priority %) 0) :label :detail))
-       (map #(dissoc % :priority))
+       (mapv #(dissoc % :priority))
        not-empty))
 
 (defn completion [uri row col db]
@@ -573,12 +573,7 @@
 
 (defn resolve-item [{:keys [data] :as item} db*]
   (let [db @db*
-        item (-> item
-                 (dissoc :data)
-                 (shared/assoc-some :insert-text-format (:insertTextFormat item)
-                                    :text-edit (:textEdit item)
-                                    :filter-text (:filterText item)
-                                    :insert-text (:insertText item)))]
+        item (dissoc item :data)]
     (if-let [unresolved (some-> data :unresolved seq)]
       (reduce (fn [item [unresolved-type args]]
                 (resolve-unresolved unresolved-type

@@ -63,11 +63,6 @@
       <version>1.2.0</version>
     </dependency>
     <dependency>
-      <groupId>com.github.clojure-lsp</groupId>
-      <artifactId>lsp4clj-protocols</artifactId>
-      <version>0.4.1</version>
-    </dependency>
-    <dependency>
       <groupId>borkdude</groupId>
       <artifactId>rewrite-edn</artifactId>
       <version>0.2.0</version>

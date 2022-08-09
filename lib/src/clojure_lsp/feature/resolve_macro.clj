@@ -3,12 +3,12 @@
    [borkdude.rewrite-edn :as r]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.logger :as logger]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
-   [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]
    [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
@@ -66,23 +66,37 @@
    "clojure.core/->>"
    "clj-kondo.lint-as/def-catch-all"])
 
+(defn show-message-request-or-error [producer message error]
+  (if-let [result (apply producer/show-message-request producer message)]
+    result
+    (do
+      (logger/error error)
+      nil)))
+
 (defn resolve-macro-as!
   [zloc uri db {:keys [producer] :as components}]
-  (let [project-root-uri (:project-root-uri db)
-        resolved-full-symbol-str (producer/show-message-request producer "Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve))
-        kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
-                                    (lsp.kondo/home-config-path)]
-        kondo-config-path (producer/show-message-request producer "Select where LSP should save this setting:" :info (mapv #(hash-map :title %) kondo-config-paths-options))]
-    (if-let [new-kondo-config (resolve-macro-as zloc uri resolved-full-symbol-str kondo-config-path db)]
-      (let [document (get-in db [:documents uri])]
-        (io/make-parents kondo-config-path)
-        (spit kondo-config-path new-kondo-config)
-        (f.file-management/analyze-changes {:uri uri
-                                            :version (:v document)
-                                            :text (:text document)}
-                                           components)
-        (logger/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
-      (do
-        (logger/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
-        (producer/show-message producer (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil)))
+  (let [project-root-uri (:project-root-uri db)]
+    (when-let [resolved-full-symbol-str
+               (show-message-request-or-error
+                 producer
+                 ["Select how LSP should resolve this macro:" :info (mapv #(hash-map :title %) known-full-symbol-resolve)]
+                 "No response from client on how to resolve macro.")]
+      (let [kondo-config-paths-options [(lsp.kondo/project-config-path project-root-uri)
+                                        (lsp.kondo/home-config-path)]]
+        (when-let [kondo-config-path (show-message-request-or-error
+                                       producer
+                                       ["Select where LSP should save this setting:" :info (mapv #(hash-map :title %) kondo-config-paths-options)]
+                                       "No response from client on where to save setting.")]
+          (if-let [new-kondo-config (resolve-macro-as zloc uri resolved-full-symbol-str kondo-config-path db)]
+            (let [document (get-in db [:documents uri])]
+              (io/make-parents kondo-config-path)
+              (spit kondo-config-path new-kondo-config)
+              (f.file-management/analyze-changes {:uri uri
+                                                  :version (:v document)
+                                                  :text (:text document)}
+                                                 components)
+              (logger/info (format "Resolving macro as %s. Saving setting into %s" resolved-full-symbol-str kondo-config-path)))
+            (do
+              (logger/error (format "Could not resolve macro at cursor to be resolved as '%s' for path '%s'" resolved-full-symbol-str kondo-config-path))
+              (producer/show-message producer (format "No macro was found at cursor to resolve as '%s'." resolved-full-symbol-str) :error nil))))))
     {:no-op? true}))

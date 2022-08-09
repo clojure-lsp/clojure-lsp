@@ -18,6 +18,7 @@
        str/trim
        not-empty))
 
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn release [& args]
   (let [t (tag)]
     (println "The tag: " t)

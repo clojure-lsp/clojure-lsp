@@ -1,7 +1,9 @@
 (ns clojure-lsp.refactor.transform
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
@@ -9,7 +11,6 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [lsp4clj.protocols.producer :as producer]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
@@ -842,13 +843,13 @@
                     {:loc (z/of-string "\n")
                      :range max-range}]]
     (merge {:show-document-after-edit {:uri def-uri
-                                       :take-focus? true}}
+                                       :take-focus true}}
            (if ns-definition
              {:changes-by-uri {def-uri defn-edits}}
              {:resource-changes [{:kind "create"
                                   :uri def-uri
-                                  :options {:overwrite? false
-                                            :ignore-if-exists? true}}]
+                                  :options {:overwrite false
+                                            :ignore-if-exists true}}]
               :changes-by-uri {uri (f.add-missing-libspec/add-known-alias
                                      local-zloc
                                      (symbol ns-or-alias)
@@ -924,7 +925,7 @@
             test-text (format "(deftest %s\n  (is (= 1 1)))" (str function-name "-test"))
             test-zloc (z/up (z/of-string (str "\n" test-text)))]
         {:show-document-after-edit {:uri test-uri
-                                    :take-focus? true}
+                                    :take-focus true}
          :changes-by-uri
          {test-uri [{:loc test-zloc
                      :range {:row (inc lines) :col 1 :end-row (+ 3 lines) :end-col 1}}]}})
@@ -936,11 +937,11 @@
                               (str function-name "-test"))
             test-zloc (z/up (z/of-string (str ns-text "\n\n" test-text)))]
         {:show-document-after-edit {:uri test-uri
-                                    :take-focus? true}
+                                    :take-focus true}
          :resource-changes [{:kind "create"
                              :uri test-uri
-                             :options {:overwrite? false
-                                       :ignore-if-exists? true}}]
+                             :options {:overwrite false
+                                       :ignore-if-exists true}}]
          :changes-by-uri {test-uri [{:loc test-zloc
                                      :range (-> test-zloc z/node meta)}]}}))))
 
@@ -965,9 +966,10 @@
         (create-test-for-source-path uri function-name-loc (first test-source-paths) db)
 
         (< 1 (count test-source-paths))
-        (let [actions (mapv #(hash-map :title %) source-paths)
-              chosen-source-path (producer/show-message-request producer "Choose a source-path to create the test file" :info actions)]
-          (create-test-for-source-path uri function-name-loc chosen-source-path db))
+        (let [actions (mapv #(hash-map :title %) source-paths)]
+          (if-let [chosen-source-path (producer/show-message-request producer "Choose a source-path to create the test file" :info actions)]
+            (create-test-for-source-path uri function-name-loc chosen-source-path db)
+            (logger/error "No response from client on source-path.")))
 
         ;; No source paths besides current one
         :else nil))))

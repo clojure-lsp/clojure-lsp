@@ -2,12 +2,12 @@
   (:require
    [clj-kondo.impl.config :as kondo.config]
    [clojure-lsp.db :as db]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.java.io :as io]
-   [lsp4clj.protocols.logger :as logger]))
+   [clojure.java.io :as io]))
 
 (set! *warn-on-reflection* true)
 

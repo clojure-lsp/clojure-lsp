@@ -496,9 +496,9 @@
 (defn ^:private drag [zloc dir cursor-position uri db]
   (when-let [[zloc clause-spec] (plan zloc dir uri db)]
     (when-let [[edits cursor-position] (drag-clause zloc dir cursor-position clause-spec)]
-      {:show-document-after-edit {:uri         uri
-                                  :take-focus? true
-                                  :range       cursor-position}
+      {:show-document-after-edit {:uri        uri
+                                  :take-focus true
+                                  :range      cursor-position}
        :changes-by-uri {uri edits}})))
 
 (defn drag-backward [zloc cursor-position uri db] (drag zloc :backward cursor-position uri db))

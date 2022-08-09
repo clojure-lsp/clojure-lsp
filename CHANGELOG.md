@@ -3,6 +3,7 @@
 ## Unreleased
 
 - General
+  - Remove dependency on lsp4j. https://github.com/clojure-lsp/lsp4clj/issues/8
   - Fix extra space on :import when sorting classes. #1152
   - Bump Graalvm from 22.0.0.2 to 22.2.0 improving binary performance/size. #1154
   - Bump clj-kondo to `2022.08.03`.

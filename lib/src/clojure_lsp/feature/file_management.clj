@@ -1,21 +1,20 @@
 (ns clojure-lsp.feature.file-management
   (:require
    [clojure-lsp.clj-depend :as lsp.depend]
-   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.logger :as logger]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]))
+   [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
 
@@ -133,7 +132,7 @@
     (swap! db* lsp.kondo/db-with-results result)))
 
 (defn ^:private notify-references [filename db-before db-after {:keys [db* producer]}]
-  (async/go
+  (async/thread
     (shared/logging-task
       :notify-references
       (let [filenames (shared/logging-task
@@ -233,7 +232,7 @@
               (f.diagnostic/sync-publish-diagnostics! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-db db components))
-              (clojure-producer/refresh-test-tree producer [uri]))
+              (producer/refresh-test-tree producer [uri]))
             (recur @db*)))))))
 
 (defn did-change [uri changes version db*]
@@ -254,7 +253,7 @@
                  (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil))]
     (swap! db* lsp.kondo/db-with-results result)
     (f.diagnostic/publish-all-diagnostics! filenames @db*)
-    (clojure-producer/refresh-test-tree producer uris)))
+    (producer/refresh-test-tree producer uris)))
 
 (defn ^:private db-without-file [state-db uri filename]
   (-> state-db
@@ -302,12 +301,12 @@
 
 (defn will-rename-files [files db]
   (->> files
-       (keep (fn [{:keys [oldUri newUri]}]
-               (let [old-filename (shared/uri->filename oldUri)
-                     new-ns (shared/uri->namespace newUri db)
+       (keep (fn [{:keys [old-uri new-uri]}]
+               (let [old-filename (shared/uri->filename old-uri)
+                     new-ns (shared/uri->namespace new-uri db)
                      old-ns-definition (q/find-namespace-definition-by-filename db old-filename)]
                  (when (and new-ns
                             old-ns-definition
                             (not= new-ns (name (:name old-ns-definition))))
-                   (f.rename/rename-element oldUri new-ns db old-ns-definition :rename-file)))))
+                   (f.rename/rename-element old-uri new-ns db old-ns-definition :rename-file)))))
        (reduce #(shared/deep-merge %1 %2) {:document-changes []})))

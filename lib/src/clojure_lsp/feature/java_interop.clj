@@ -5,11 +5,11 @@
    [clojure-lsp.db :as db]
    [clojure-lsp.http :as http]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger])
+   [clojure.string :as string])
   (:import
    (java.io File)
    (java.net JarURLConnection URL)

@@ -1,6 +1,5 @@
 (ns clojure-lsp.internal-api
   (:require
-   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.diff :as diff]
@@ -8,15 +7,14 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.logger :as logger]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! go-loop]]
    [clojure.java.io :as io]
-   [clojure.string :as string]
-   [lsp4clj.components :as components]
-   [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer])
+   [clojure.string :as string])
   (:import
    [java.io File]))
 
@@ -35,7 +33,7 @@
     (apply cli-println options type messages)))
 
 (defrecord ^:private CLILogger [options]
-  logger/ILSPLogger
+  logger/ILogger
   (setup [this]
     (logger/set-logger! this))
   (set-log-path [_ _])
@@ -52,14 +50,14 @@
   (-debug [_ _fmeta arg1 arg2] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1 arg2))
   (-debug [_ _fmeta arg1 arg2 arg3] (log-print (shared/colorize "[DEBUG]" :cyan) options arg1 arg2 arg3)))
 
-(defn ^:private show-message-cli [options {:keys [message extra type]}]
+(defn ^:private show-message-cli [db* options {:keys [message extra type]}]
   (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message))
   (when (and (= :error type)
-             (settings/get @db/db* [:api :exit-on-errors?] true))
+             (settings/get @db* [:api :exit-on-errors?] true))
     (throw (ex-info message {:result-code 1 :message extra}))))
 
-(defrecord APIProducer [options]
-  producer/ILSPProducer
+(defrecord APIProducer [db* options]
+  producer/IProducer
 
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])
@@ -78,18 +76,16 @@
     (let [message-content {:message message
                            :type type
                            :extra extra}]
-      (show-message-cli options message-content)))
-  (register-capability [_this _capability])
+      (show-message-cli db* options message-content)))
 
-  clojure-producer/IClojureProducer
   (refresh-test-tree [_this _uris]))
 
 (defn ^:private build-components [options]
-  (components/->components
-    db/db*
-    (doto (->CLILogger options)
-      (logger/setup))
-    (->APIProducer options)))
+  (let [db* db/db*]
+    {:db* db*
+     :logger (doto (->CLILogger options)
+               (logger/setup))
+     :producer (->APIProducer db* options)}))
 
 (defn ^:private edit->summary
   ([db uri edit]
@@ -155,10 +151,7 @@
       (shared/filename->uri db)))
 
 (defn ^:private setup-api! [{:keys [producer db*]}]
-  ;; TODO do not add components to db after all usages relies on components from outside db.
-  (swap! db* assoc
-         :api? true
-         :producer producer)
+  (swap! db* assoc :api? true)
   (go-loop []
     (producer/publish-diagnostic producer (<! db/diagnostics-chan))
     (recur)))
@@ -286,9 +279,9 @@
                    (assert-ns-exists-or-drop! options)
                    (map #(open-file! % components))
                    (pmap (comp :document-changes
-                               #(handlers/execute-command {:command "clean-ns"
-                                                           :arguments [(:uri %) 0 0]}
-                                                          components)))
+                               #(handlers/execute-command components
+                                                          {:command "clean-ns"
+                                                           :arguments [(:uri %) 0 0]})))
                    (apply concat)
                    (pmap #(document-change->edit-summary % db))
                    (remove nil?))]
@@ -359,7 +352,7 @@
                    (assert-ns-exists-or-drop! options)
                    (map #(open-file! % components))
                    (pmap (comp (fn [{:keys [uri]}]
-                                 (some->> (handlers/formatting {:textDocument uri})
+                                 (some->> (handlers/formatting components {:text-document {:uri uri}})
                                           (map #(edit->summary @db* uri %))))))
                    (apply concat)
                    (remove nil?))]

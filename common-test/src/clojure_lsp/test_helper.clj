@@ -1,17 +1,15 @@
 (ns clojure-lsp.test-helper
   (:require
-   [clojure-lsp.clojure-producer :as clojure-producer]
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
-   [lsp4clj.components :as components]
-   [lsp4clj.protocols.logger :as logger]
-   [lsp4clj.protocols.producer :as producer]
    [rewrite-clj.zip :as z]))
 
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
@@ -31,7 +29,7 @@
 (defn code [& strings] (string/join "\n" strings))
 
 (defrecord TestProducer []
-  producer/ILSPProducer
+  producer/IProducer
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
@@ -39,12 +37,10 @@
   (show-document-request [_this _document-request])
   (show-message-request [_this _message _type _actions])
   (show-message [_this _message _type _extra])
-  (register-capability [_this _capability])
-  clojure-producer/IClojureProducer
   (refresh-test-tree [_this _uris]))
 
 (defrecord TestLogger []
-  logger/ILSPLogger
+  logger/ILogger
   (setup [_])
 
   (set-log-path [_this _log-path])
@@ -63,18 +59,16 @@
   (-debug [_this _fmeta _arg1 _arg2 _arg3]))
 
 (def components
-  (components/->components
-    db/db*
-    (->TestLogger)
-    (->TestProducer)))
+  {:db* db/db*
+   :logger (->TestLogger)
+   :producer (->TestProducer)})
 
 (defn clean-db!
   ([]
    (clean-db! :unit-test))
   ([env]
    (reset! db/db* (assoc db/initial-db
-                         :env env
-                         :producer (:producer components)))
+                         :env env))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/created-watched-files-chan (constantly (async/chan 1)))
@@ -177,7 +171,7 @@
 
 (defn load-code [code & [uri]]
   (let [uri (or uri default-uri)]
-    (handlers/did-open {:textDocument {:uri uri :text code}} components)))
+    (handlers/did-open components {:text-document {:uri uri :text code}})))
 
 (defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)]

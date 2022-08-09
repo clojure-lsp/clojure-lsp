@@ -49,15 +49,13 @@
   (is (= 10 (settings/get @db/db* [:d] 10))))
 
 (deftest clean-client-settings-test
-  (let [raw-settings {"linters"
-                      {"clojure-lsp/unused-public-var"
-                       {"level" "off"}}
+  (let [raw-settings {:linters
+                      {:clojure-lsp/unused-public-var
+                       {:level "off"}}
 
-                      "cljfmt"
-                      {"indentation?" false}}
-        cleaned (-> raw-settings
-                    shared/keywordize-first-depth
-                    settings/clean-client-settings)]
+                      :cljfmt
+                      {:indentation? false}}
+        cleaned (settings/clean-client-settings raw-settings)]
     (is (= {:level :off}
            (get-in cleaned [:linters :clojure-lsp/unused-public-var])))
 

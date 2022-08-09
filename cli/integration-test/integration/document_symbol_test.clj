@@ -24,9 +24,11 @@
         [{:name "a-some-var"
           :kind 13
           :range {:start {:line 3 :character 0} :end {:line 3 :character 18}}
-          :selectionRange {:start {:line 3 :character 5} :end {:line 3 :character 15}}}
+          :selectionRange {:start {:line 3 :character 5} :end {:line 3 :character 15}}
+          :tags []}
          {:name "a-some-public-function"
           :kind 12
           :range {:start {:line 5 :character 0} :end {:line 6 :character 10}}
-          :selectionRange {:start {:line 5 :character 6} :end {:line 5 :character 28}}}]}]
+          :selectionRange {:start {:line 5 :character 6} :end {:line 5 :character 28}}
+          :tags []}]}]
       (lsp/request! (fixture/document-symbol-request "document_symbol/a.clj")))))

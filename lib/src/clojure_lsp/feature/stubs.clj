@@ -3,10 +3,10 @@
    [clj-easy.stub.core :as stub]
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
-   [clojure.string :as string]
-   [lsp4clj.protocols.logger :as logger])
+   [clojure.string :as string])
   (:import
    (java.io File)))
 

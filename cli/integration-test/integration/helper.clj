@@ -58,7 +58,7 @@
          res# ~result]
      (doseq [m# maps#]
        (let [m-keys (keys m#)]
-         (is (some #(= m# (some-> % (select-keys m-keys))) res#)))))) 
+         (is (some (fn [element#] (= m# (some-> element# (select-keys m-keys)))) res#))))))
 
 (defn delete-folder
   "Recursively delete a directory."

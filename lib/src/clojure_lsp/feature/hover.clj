@@ -66,12 +66,15 @@
                              (string/join "\n---\n"))))))
 
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition} db*]
+  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition}
+   db*
+   {:keys [additional-text-edits?]}]
   (let [db @db*
         content-formats (get-in db [:client-capabilities :text-document :hover :content-format])
         arity-on-same-line? (or (settings/get db [:hover :arity-on-same-line?])
                                 (settings/get db [:show-docs-arity-on-same-line?]))
         hide-filename? (settings/get db [:hover :hide-file-location?])
+        additional-edits-warning-text (settings/get db [:completion :additional-edits-warning-text])
         join-char (if arity-on-same-line? " " "\n")
         signatures (some->> arglist-strs
                             (remove nil?)
@@ -89,65 +92,72 @@
     (if markdown?
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)
+                (and additional-text-edits? additional-edits-warning-text)
+                , (str "\n\n" additional-edits-warning-text)
                 clojuredocs
-                (str "\n\n" (clojuredocs->hover-docs clojuredocs doc-line))
-
+                , (str "\n\n" (clojuredocs->hover-docs clojuredocs doc-line))
                 (and (not clojuredocs)
                      doc-line)
-                (str "\n\n" doc-line)
-
+                , (str "\n\n" doc-line)
                 (and filename (not hide-filename?))
-                (str (format "%s*[%s](%s)*"
-                             line-break
-                             (string/replace filename #"\\" "\\\\")
-                             (shared/filename->uri filename db))))}
+                , (str (format "%s*[%s](%s)*"
+                               line-break
+                               (string/replace filename #"\\" "\\\\")
+                               (shared/filename->uri filename db))))}
       ;; Default to plaintext
-      (cond->> []
-        (and filename (not hide-filename?)) (cons filename)
-        doc-line (cons doc-line)
+      (cond-> []
+        sym
+        , (conj {:language "clojure"
+                 :value (str (if arity-on-same-line? sym-line sym))})
         (and signatures
              (not arity-on-same-line?))
-        (cons {:language "clojure"
-               :value (str signatures)})
-        sym (cons {:language "clojure"
-                   :value (str (if arity-on-same-line? sym-line sym))})))))
+        , (conj {:language "clojure"
+                 :value (str signatures)})
+        (and additional-text-edits? additional-edits-warning-text)
+        , (conj additional-edits-warning-text)
+        doc-line
+        , (conj doc-line)
+        (and filename (not hide-filename?))
+        , (conj filename)))))
 
-(defn hover [uri line column db*]
-  (let [db @db*
-        filename (shared/uri->filename uri)
-        cursor-element (q/find-element-under-cursor db filename line column)
-        cursor-loc (some-> (f.file-management/force-get-document-text uri db*)
-                           parser/safe-zloc-of-string
-                           (parser/to-pos line column))
-        func-position (some-> cursor-loc
-                              edit/find-function-usage-name-loc
-                              z/node
-                              meta)
-        inside-ns (and cursor-loc (edit/inside-require? cursor-loc))
-        element (cond
-                  (or (contains? #{:var-usages :var-definitions} (:bucket cursor-element))
-                      inside-ns)
-                  cursor-element
+(defn hover
+  ([uri line column db*] (hover uri line column db* {}))
+  ([uri line column db* docs-config]
+   (let [db @db*
+         filename (shared/uri->filename uri)
+         cursor-element (q/find-element-under-cursor db filename line column)
+         cursor-loc (some-> (f.file-management/force-get-document-text uri db*)
+                            parser/safe-zloc-of-string
+                            (parser/to-pos line column))
+         func-position (some-> cursor-loc
+                               edit/find-function-usage-name-loc
+                               z/node
+                               meta)
+         inside-ns (and cursor-loc (edit/inside-require? cursor-loc))
+         element (cond
+                   (or (contains? #{:var-usages :var-definitions} (:bucket cursor-element))
+                       inside-ns)
+                   cursor-element
 
-                  func-position
-                  (q/find-element-under-cursor db filename (:row func-position) (:col func-position))
+                   func-position
+                   (q/find-element-under-cursor db filename (:row func-position) (:col func-position))
 
-                  :else
-                  (loop [try-column column]
-                    (if-let [usage (q/find-element-under-cursor db filename line try-column)]
-                      usage
-                      (when (pos? try-column)
-                        (recur (dec try-column))))))
+                   :else
+                   (loop [try-column column]
+                     (if-let [usage (q/find-element-under-cursor db filename line try-column)]
+                       usage
+                       (when (pos? try-column)
+                         (recur (dec try-column))))))
 
-        definition (when element (q/find-definition db element))]
-    (cond
-      definition
-      {:range (shared/->range element)
-       :contents (hover-documentation definition db*)}
+         definition (when element (q/find-definition db element))]
+     (cond
+       definition
+       {:range (shared/->range element)
+        :contents (hover-documentation definition db* docs-config)}
 
-      element
-      {:range (shared/->range element)
-       :contents (hover-documentation element db*)}
+       element
+       {:range (shared/->range element)
+        :contents (hover-documentation element db* docs-config)}
 
-      :else
-      {:contents []})))
+       :else
+       {:contents []}))))

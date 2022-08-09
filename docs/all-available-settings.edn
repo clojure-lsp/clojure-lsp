@@ -22,6 +22,7 @@
  :hover {:hide-file-location? false
          :arity-on-same-line? false
          :clojuredocs true}
+ :completion {:additional-edits-warning-text nil}
  :java {:jdk-source-uri "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip" ; "file:///usr/lib/jvm/java-17-openjdk/lib/src.zip"
         :home-path nil ;; jdk-source-uri takes precedence
         :download-jdk-source? false}

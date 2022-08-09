@@ -5,28 +5,42 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(defn can-destructure-zloc? [zloc]
+(h/reset-db-after-test)
+
+(defn ^:private can-destructure-zloc? [zloc]
   (f.destructure-keys/can-destructure-keys? zloc h/default-uri @db/db*))
 
-(defn can-destructure-code? [code]
-  (can-destructure-zloc? (h/load-code-and-zloc code)))
-
-(deftest can-destructure-keys?
-  (is (not (can-destructure-code? "{:a |1}")))
-  (is (not (can-destructure-code? "(def |foo {:a 1})"))))
-
-(defn destructure-zloc [zloc]
+(defn ^:private destructure-zloc [zloc]
   (f.destructure-keys/destructure-keys zloc h/default-uri @db/db*))
 
-(defn- as-string [changes]
+(defn ^:private as-string [changes]
   (h/changes->code changes @db/db*))
 
+(defmacro ^:private assert-cannot-destructure [code]
+  `(let [zloc# (h/load-code-and-zloc ~code)]
+     (is (not (can-destructure-zloc? zloc#))
+         (as-string (destructure-zloc zloc#)))))
+
 (defmacro ^:private assert-destructures [destructured-code original-code]
-  `(let [zloc# (h/load-code-and-zloc ~original-code)
+  `(let [original# ~original-code
+         zloc# (h/load-code-and-zloc original#)
          expected# ~destructured-code]
-     (is (can-destructure-zloc? zloc#))
+     (is (can-destructure-zloc? zloc#) original#)
      (is (= expected#
-            (as-string (destructure-zloc zloc#))))))
+            (as-string (destructure-zloc zloc#)))
+          original#)))
+
+(deftest should-not-destructure
+  (assert-cannot-destructure "{|:a 1}")
+  (assert-cannot-destructure "{:a |1}")
+  (assert-cannot-destructure "(|def foo)")
+  (assert-cannot-destructure "(def |foo)")
+  (assert-cannot-destructure "(let [{:keys [a]} loc] (+ (:x |a)))")
+  (assert-cannot-destructure "(let [{:syms [a]} loc] (+ (:x |a)))")
+  (assert-cannot-destructure "(let [{:strs [a]} loc] (+ (:x |a)))")
+  (assert-cannot-destructure "(let [{:nsed/keys [a]} loc] (+ (:x |a)))")
+  (assert-cannot-destructure "|")
+  (assert-cannot-destructure "|;; comment"))
 
 (deftest should-destructure-local
   (testing "destructures keys"
@@ -70,4 +84,23 @@
                                  "  loc')")
                          (h/code "(let [|loc' loc]"
                                  "  (+ (:a loc') (:b loc'))"
-                                 "  loc')"))))
+                                 "  loc')")))
+  (testing "makes changes only if necessary"
+    (assert-destructures "(let [loc' loc] (tangent loc'))"
+                         "(let [loc' loc] (tangent |loc'))")))
+
+(deftest should-extend-prior-map-destructuring
+  (testing "when local is :as"
+    (assert-destructures (h/code "(let [{:keys [a b c]} loc] (+ a b c))")
+                         (h/code "(let [{:keys [a b] :as x} loc] (+ a b (:c |x)))")))
+  (testing "when local is :as and needs to be maintained"
+    (assert-destructures (h/code "(let [{:keys [a b c], :as x} loc] (+ a b c (tangent x)))")
+                         (h/code "(let [{:keys [a b] :as x} loc] (+ a b (:c |x) (tangent x)))")))
+  (testing "when local is destructured by name"
+    (assert-destructures (h/code "(let [{{:keys [x]} :a} loc] (+ x))")
+                         (h/code "(let [{a :a} loc] (+ (:x |a)))")))
+  (testing "when exotic keys are present"
+    (assert-destructures (h/code "(let [{:nsed/keys [a b], :keys [c]} loc] (+ a b c))")
+                         (h/code "(let [{:nsed/keys [a b] :as x} loc] (+ a b (:c |x)))"))
+    (assert-destructures (h/code "(let [{a :a, b :b, :keys [c]} loc] (+ a b c))")
+                         (h/code "(let [{a :a b :b :as x} loc] (+ a b (:c |x)))"))))

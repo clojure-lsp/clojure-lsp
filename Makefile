@@ -46,9 +46,9 @@ native-cli:
 
 test:
 	cd lib && clojure -M:test
-	cd lib && CLOJURE_LSP_USE_DEP_GRAPH="true" clojure -M:test
+	cd lib && CLOJURE_LSP_USE_DEP_GRAPH="false" clojure -M:test
 	cd cli && clojure -M:test
-	cd cli && CLOJURE_LSP_USE_DEP_GRAPH="true" clojure -M:test
+	cd cli && CLOJURE_LSP_USE_DEP_GRAPH="false" clojure -M:test
 
 pod-test:
 	cd cli && clojure -M:pod-test

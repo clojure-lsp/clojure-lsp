@@ -10,16 +10,16 @@
 (deftest completion
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
-                 {:initializationOptions fixture/default-init-options
-                  :capabilities
-                  {:textDocument
-                   {:completion
-                    {:contextSupport true
-                     :completionItem {:snippetSupport true
-                                      :commitCharactersSupport true
-                                      :preselectSupport true
-                                      :documentationFormat ["markdown" "plaintext"]
-                                      :resolveSupport {:properties ["documentation" "detail" "additionalTextEdits"]}}}}}}))
+                  {:initializationOptions fixture/default-init-options
+                   :capabilities
+                   {:textDocument
+                    {:completion
+                     {:contextSupport true
+                      :completionItem {:snippetSupport true
+                                       :commitCharactersSupport true
+                                       :preselectSupport true
+                                       :documentationFormat ["markdown" "plaintext"]
+                                       :resolveSupport {:properties ["documentation" "detail" "additionalTextEdits"]}}}}}}))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "completion/a.clj"))
   (lsp/notify! (fixture/did-open-notification "completion/b.clj"))
@@ -27,20 +27,25 @@
   (testing "normal completions"
     (testing "get completions"
       (h/assert-contains-submaps
-       [{:label "definterface"
-         :kind 3
-         :detail "clojure.core/definterface"
-         :data {:filename "/clojure.core.clj", :name "definterface", :ns "clojure.core"}}]
-       (lsp/request! (fixture/completion-request "completion/a.clj" 2 3))))
+        [{:label "definterface"
+          :kind 3
+          :detail "clojure.core/definterface"
+          :data {:unresolved [["documentation" {:filename "/clojure.core.clj"
+                                                :name "definterface"
+                                                :ns "clojure.core"}]]}}]
+        (lsp/request! (fixture/completion-request "completion/a.clj" 2 3))))
     (testing "get snippets"
       (h/assert-contains-submaps
-       [{:label "defn"
-         :kind 15
-         :detail "Insert public defn"
-         :insertText "defn ${1:name} [$2]\n  $0"
-         :insertTextFormat 2
-         :data {:filename "/clojure.core.clj" :name "defn" :ns "clojure.core", :snippet-kind 3}}]
-       (lsp/request! (fixture/completion-request "completion/a.clj" 2 4)))))
+        [{:label "defn"
+          :kind 15
+          :detail "Insert public defn"
+          :insertText "defn ${1:name} [$2]\n  $0"
+          :insertTextFormat 2
+          :data {:unresolved [["documentation" {:filename "/clojure.core.clj"
+                                                :name "defn"
+                                                :ns "clojure.core"}]]
+                 :snippet-kind 3}}]
+        (lsp/request! (fixture/completion-request "completion/a.clj" 2 4)))))
   (testing "completions from comment"
     (h/assert-submaps
       []

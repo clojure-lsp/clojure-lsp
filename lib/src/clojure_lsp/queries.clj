@@ -21,8 +21,8 @@
 ;; NOTE: Do not make this public. It will make it harder to end the dep-graph
 ;; experiment.
 (defn ^:private use-dep-graph? [db]
-  (or (settings/get db [:experimental :dep-graph-queries] false)
-      (= "true" (System/getenv "CLOJURE_LSP_USE_DEP_GRAPH"))))
+  (settings/get db [:experimental :dep-graph-queries]
+                (not= "false" (System/getenv "CLOJURE_LSP_USE_DEP_GRAPH"))))
 
 (defn ^:private deprecated-buckets-external? [buckets]
   (some-> buckets first val first :external?))

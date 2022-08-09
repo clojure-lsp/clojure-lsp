@@ -74,8 +74,7 @@
   ([env]
    (reset! db/db* (assoc db/initial-db
                          :env env
-                         :producer (:producer components)
-                         #_#_:settings {:experimental {:dep-graph-queries true}}))
+                         :producer (:producer components)))
    (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
    (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
    (alter-var-root #'db/created-watched-files-chan (constantly (async/chan 1)))

@@ -32,7 +32,7 @@
         (shared/client-changes changes db)))))
 
 (defn load-document! [uri text db*]
-  (swap! db* #(assoc-in % [:documents uri] {:v 0 :text text :saved-on-disk false})))
+  (swap! db* update-in [:documents uri] assoc :v 0 :text text :saved-on-disk false))
 
 (defn did-open [uri text db* allow-create-ns]
   (load-document! uri text db*)

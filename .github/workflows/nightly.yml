@@ -33,7 +33,7 @@ jobs:
         id: dev-tag
         run: |
           VERSION=$(date -u +"%Y.%m.%d-%H.%M.%S")
-          echo "::set-output name=tag::$VERSION"
+          echo "::set-output name=tag::$VERSION-nightly"
 
       - name: Create dev release
         id: create_dev_release
@@ -43,7 +43,7 @@ jobs:
           tag_name: ${{ steps.dev-tag.outputs.tag}}
           prerelease: true
           repository: clojure-lsp/clojure-lsp-dev-builds
-          body: "https://github.com/clojure-lsp/clojure-lsp/commit/${{ env.GITHUB_SHA }}"
+          body: https://github.com/clojure-lsp/clojure-lsp/commit/${{ env.GITHUB_SHA }}
 
   build-cli-jar:
     needs: release-dev-build
@@ -64,7 +64,7 @@ jobs:
 
       - name: Update nightly version
         run: |
-          date -u +"%Y.%m.%d-%H.%M.%S-nightly" > lib/resources/CLOJURE_LSP_VERSION
+          echo ${{ needs.release-dev-build.outputs.tag}} > lib/resources/CLOJURE_LSP_VERSION
 
       - name: Generate jar for native
         run: make cli-jar-for-native
@@ -137,14 +137,17 @@ jobs:
           path: clojure-lsp
           name: clojure-lsp-native-linux-amd64
 
+      - name: Zip binary
+        run: zip clojure-lsp-native-linux-amd64.zip clojure-lsp
+
       - name: Upload to dev release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           prerelease: true
           repo_name: clojure-lsp/clojure-lsp-dev-builds
-          file: clojure-lsp
-          asset_name: clojure-lsp-native-linux-amd64
+          file: clojure-lsp-native-linux-amd64.zip
+          asset_name: clojure-lsp-native-linux-amd64.zip
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
   linux-amd64-static:
@@ -198,14 +201,17 @@ jobs:
           path: clojure-lsp
           name: clojure-lsp-native-static-linux-amd64
 
+      - name: Zip binary
+        run: zip clojure-lsp-native-static-linux-amd64.zip clojure-lsp
+
       - name: Upload to dev release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           prerelease: true
           repo_name: clojure-lsp/clojure-lsp-dev-builds
-          file: clojure-lsp
-          asset_name: clojure-lsp-native-static-linux-amd64
+          file: clojure-lsp-native-static-linux-amd64.zip
+          asset_name: clojure-lsp-native-static-linux-amd64.zip
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
   macos:
@@ -254,14 +260,17 @@ jobs:
           path: clojure-lsp
           name: clojure-lsp-native-macos-amd64
 
+      - name: Zip binary
+        run: zip clojure-lsp-native-macos-amd64.zip clojure-lsp
+
       - name: Upload to dev release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           prerelease: true
           repo_name: clojure-lsp/clojure-lsp-dev-builds
-          file: clojure-lsp
-          asset_name: clojure-lsp-native-macos-amd64
+          file: clojure-lsp-native-macos-amd64.zip
+          asset_name: clojure-lsp-native-macos-amd64.zip
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
   windows:
@@ -336,14 +345,18 @@ jobs:
           path: clojure-lsp.exe
           name: clojure-lsp-native-windows-amd64
 
+      - name: Zip binary
+        run: |
+          jar -cMf clojure-lsp-native-windows-amd64.zip clojure-lsp.exe
+
       - name: Upload to dev release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           prerelease: true
           repo_name: clojure-lsp/clojure-lsp-dev-builds
-          file: clojure-lsp.exe
-          asset_name: clojure-lsp-native-windows-amd64
+          file: clojure-lsp-native-windows-amd64.zip
+          asset_name: clojure-lsp-native-windows-amd64.zip
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
   # Change to point to clojure-lsp-dev-builds after all places are using clojure-lsp-dev-builds

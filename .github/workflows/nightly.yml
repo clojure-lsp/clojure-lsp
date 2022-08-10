@@ -44,7 +44,7 @@ jobs:
         with:
           token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           tag_name: ${{ steps.dev-tag.outputs.tag}}
-          prerelease: true
+          prerelease: false
           repository: clojure-lsp/clojure-lsp-dev-builds
           body: https://github.com/clojure-lsp/clojure-lsp/commit/${{ steps.commit-hash.outputs.hash }}
 
@@ -83,7 +83,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-          prerelease: true
+          prerelease: false
           repo_name: clojure-lsp/clojure-lsp-dev-builds
           file: clojure-lsp-standalone.jar
           asset_name: clojure-lsp-standalone.jar
@@ -152,7 +152,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-          prerelease: true
+          prerelease: false
           repo_name: clojure-lsp/clojure-lsp-dev-builds
           file: clojure-lsp-native-linux-amd64.zip
           asset_name: clojure-lsp-native-linux-amd64.zip
@@ -216,7 +216,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-          prerelease: true
+          prerelease: false
           repo_name: clojure-lsp/clojure-lsp-dev-builds
           file: clojure-lsp-native-static-linux-amd64.zip
           asset_name: clojure-lsp-native-static-linux-amd64.zip
@@ -275,7 +275,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-          prerelease: true
+          prerelease: false
           repo_name: clojure-lsp/clojure-lsp-dev-builds
           file: clojure-lsp-native-macos-amd64.zip
           asset_name: clojure-lsp-native-macos-amd64.zip
@@ -361,7 +361,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-          prerelease: true
+          prerelease: false
           repo_name: clojure-lsp/clojure-lsp-dev-builds
           file: clojure-lsp-native-windows-amd64.zip
           asset_name: clojure-lsp-native-windows-amd64.zip

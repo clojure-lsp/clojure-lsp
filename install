@@ -104,7 +104,7 @@ case "$platform-$static_binary" in
 esac
 
 if [[ "$version" == "nightly" ]]; then
-    download_url="https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/$filename"
+    download_url="https://github.com/clojure-lsp/clojure-lsp-dev-builds/releases/latest/download/$filename"
 else
     download_url="https://github.com/clojure-lsp/clojure-lsp/releases/download/$version/$filename"
 fi

@@ -383,9 +383,10 @@ jobs:
           SLACK_ICON_EMOJI: ":clojure-lsp:"
           SLACK_TITLE: "New nightly build"
           SLACK_MESSAGE: |
-            https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-standalone.jar
-            https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-linux-amd64.zip
-            https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-static-linux-amd64.zip
-            https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-macos-amd64.zip
-            https://nightly.link/clojure-lsp/clojure-lsp/workflows/nightly/master/clojure-lsp-native-windows-amd64.zip
+            https://github.com/clojure-lsp/clojure-lsp-dev-builds/releases/download/${{ needs.release-dev-build.outputs.tag}}/clojure-lsp-standalone.jar
+            https://github.com/clojure-lsp/clojure-lsp-dev-builds/releases/download/${{ needs.release-dev-build.outputs.tag}}/clojure-lsp-native-linux-amd64.zip
+            https://github.com/clojure-lsp/clojure-lsp-dev-builds/releases/download/${{ needs.release-dev-build.outputs.tag}}/clojure-lsp-native-static-linux-amd64.zip
+            https://github.com/clojure-lsp/clojure-lsp-dev-builds/releases/download/${{ needs.release-dev-build.outputs.tag}}/clojure-lsp-native-macos-amd64.zip
+            https://github.com/clojure-lsp/clojure-lsp-dev-builds/releases/download/${{ needs.release-dev-build.outputs.tag}}/clojure-lsp-native-macos-aarch64.zip
+            https://github.com/clojure-lsp/clojure-lsp-dev-builds/releases/download/${{ needs.release-dev-build.outputs.tag}}/clojure-lsp-native-windows-amd64.zip
           MSG_MINIMAL: true

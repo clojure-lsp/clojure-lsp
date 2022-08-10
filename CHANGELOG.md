@@ -8,6 +8,7 @@
   - Bump Graalvm from 22.0.0.2 to 22.2.0 improving binary performance/size. #1154
   - Bump clj-kondo to `2022.08.03`.
   - General release of dep-graph-queries, improving query performance. See prior release for feature details.
+  - Generate nightly builds for macos aarch64 (M1/M2) every push on master.
   
 - Editor
   - Improve completion sorting, showing locals before functions and other completion items. #1158

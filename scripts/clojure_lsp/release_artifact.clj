@@ -8,7 +8,9 @@
   (or (System/getenv "APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH")
       (System/getenv "APPVEYOR_REPO_BRANCH")
       (System/getenv "CIRCLE_BRANCH")
-      (-> (sh ["git" "rev-parse" "--abbrev-ref" "HEAD"])
+      (System/getenv "GITHUB_REF_NAME")
+      (System/getenv "CIRRUS_BRANCH")
+      (-> (sh "git rev-parse --abbrev-ref HEAD")
           :out
           str/trim)))
 
@@ -20,25 +22,29 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn release [& args]
-  (let [t (tag)]
-    (println "The tag: " t)
-    (if t
-      (let [current-version (-> (slurp "lib/resources/CLOJURE_LSP_VERSION")
-                                str/trim)
-            ght (System/getenv "GITHUB_TOKEN")
-            file (first args)
-            branch (current-branch)
-            release-branch? (contains? #{"master" "main"} branch)]
-        (when-not ght
-          (println "Skipping: not GITHUB_TOKEN"))
-        (when-not release-branch?
-          (println "Skipping: not on release branch"))
-        (if (and ght release-branch?)
-          (do (assert file "File name must be provided")
-              (ghr/overwrite-asset {:org "clojure-lsp"
-                                    :repo "clojure-lsp"
-                                    :file file
-                                    :tag (str "v" current-version)}))
-          (println "Skipping release artifact (no GITHUB_TOKEN or not on main branch)"))
-        nil)
-      (println "Skipping release artifact because no tag"))))
+  (let [latest-dev-tag (:tag_name (first (ghr/list-releases "clojure-lsp" "clojure-lsp-dev-builds")))
+        prod-release-tag (tag)
+        gh-token (System/getenv "GITHUB_TOKEN")
+        file (first args)
+        branch (current-branch)
+        release-branch? (contains? #{"master" "main"} branch)]
+    (assert file "File name must be provided")
+    (cond
+      (not gh-token)
+      (println "Skipping: no GITHUB_TOKEN found")
+
+      (not release-branch?)
+      (println (format "Skipping: not on release branch (%s)" branch))
+
+      prod-release-tag
+      (ghr/overwrite-asset {:org "clojure-lsp"
+                            :repo "clojure-lsp"
+                            :file file
+                            :tag (str/trim (slurp "lib/resources/CLOJURE_LSP_VERSION"))})
+
+      latest-dev-tag
+      (ghr/overwrite-asset {:org "clojure-lsp"
+                            :repo "clojure-lsp-dev-builds"
+                            :file file
+                            :tag latest-dev-tag}))
+    nil))

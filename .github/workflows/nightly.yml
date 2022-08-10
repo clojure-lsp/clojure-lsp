@@ -35,6 +35,9 @@ jobs:
           VERSION=$(date -u +"%Y.%m.%d-%H.%M.%S")
           echo "::set-output name=tag::$VERSION-nightly"
 
+      - id: commit-hash
+        uses: pr-mpt/actions-commit-hash@v1
+
       - name: Create dev release
         id: create_dev_release
         uses: softprops/action-gh-release@v1
@@ -43,7 +46,7 @@ jobs:
           tag_name: ${{ steps.dev-tag.outputs.tag}}
           prerelease: true
           repository: clojure-lsp/clojure-lsp-dev-builds
-          body: https://github.com/clojure-lsp/clojure-lsp/commit/${{ env.GITHUB_SHA }}
+          body: https://github.com/clojure-lsp/clojure-lsp/commit/${{ steps.commit-hash.outputs.hash }}
 
   build-cli-jar:
     needs: release-dev-build
@@ -95,6 +98,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp-standalone.jar
+
       - name: Prepare java
         uses: actions/setup-java@v1
         with:

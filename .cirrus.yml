@@ -2,6 +2,7 @@ macos_instance:
   image: ghcr.io/cirruslabs/macos-monterey-base:latest
 
 task:
+  name: Dev release (macos-aarch64)
   env:
     GRAALVM_VERSION: "22.2.0"
     GRAALVM_HOME: ${HOME}/graalvm-ce-java11-22.2.0/Contents/Home

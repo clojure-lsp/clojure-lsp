@@ -19,7 +19,35 @@ on:
       - '.github/workflows/release.yml'
 
 jobs:
+  release-dev-build:
+    name: Release dev build
+    needs: [build-cli-jar, linux-amd64, linux-amd64-static, macos, windows]
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.dev-tag.outputs.tag}}
+    steps:
+      - uses: actions/checkout@v2.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Generate dev tag name
+        id: dev-tag
+        run: |
+          VERSION=$(date -u +"%Y.%m.%d-%H.%M.%S")
+          echo "::set-output name=tag::$VERSION"
+
+      - name: Create dev release
+        id: create_dev_release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          tag_name: ${{ steps.dev-tag.outputs.tag}}
+          prerelease: true
+          repository: clojure-lsp/clojure-lsp-dev-builds
+          body: "https://github.com/clojure-lsp/clojure-lsp/commit/${{ env.GITHUB_SHA }}"
+
   build-cli-jar:
+    needs: release-dev-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.2.0
@@ -42,14 +70,25 @@ jobs:
       - name: Generate jar for native
         run: make cli-jar-for-native
 
+      # Remove after all places are using clojure-lsp-dev-builds
       - name: Upload jar
         uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp-standalone.jar
           name: clojure-lsp-standalone.jar
 
+      - name: Upload to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: true
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp-standalone.jar
+          asset_name: clojure-lsp-standalone.jar
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
   linux-amd64:
-    needs: [build-cli-jar]
+    needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
     runs-on: ubuntu-latest
     strategy:
@@ -92,14 +131,25 @@ jobs:
         with:
           file: clojure-lsp
 
+      # Remove after all places are using clojure-lsp-dev-builds
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp
           name: clojure-lsp-native-linux-amd64
 
+      - name: Upload to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: true
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp
+          asset_name: clojure-lsp-native-linux-amd64
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
   linux-amd64-static:
-    needs: [build-cli-jar]
+    needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
     runs-on: ubuntu-latest
     strategy:
@@ -142,14 +192,25 @@ jobs:
         with:
           file: clojure-lsp
 
+      # Remove after all places are using clojure-lsp-dev-builds
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp
           name: clojure-lsp-native-static-linux-amd64
 
+      - name: Upload to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: true
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp
+          asset_name: clojure-lsp-native-static-linux-amd64
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
   macos:
-    needs: [build-cli-jar]
+    needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
     runs-on: macos-latest
     strategy:
@@ -187,14 +248,25 @@ jobs:
         run: |
           make native-cli
 
+      # Remove after all places are using clojure-lsp-dev-builds
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp
           name: clojure-lsp-native-macos-amd64
 
+      - name: Upload to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: true
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp
+          asset_name: clojure-lsp-native-macos-amd64
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
   windows:
-    needs: [build-cli-jar]
+    needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
     runs-on: windows-2022
     strategy:
@@ -258,12 +330,24 @@ jobs:
         with:
           file: clojure-lsp.exe
 
+      # Remove after all places are using clojure-lsp-dev-builds
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           path: clojure-lsp.exe
           name: clojure-lsp-native-windows-amd64
 
+      - name: Upload to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: true
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp.exe
+          asset_name: clojure-lsp-native-windows-amd64
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
+  # Change to point to clojure-lsp-dev-builds after all places are using clojure-lsp-dev-builds
   notify:
     needs: [build-cli-jar, linux-amd64, linux-amd64-static, macos]
     continue-on-error: true

@@ -369,7 +369,7 @@ jobs:
 
   # Change to point to clojure-lsp-dev-builds after all places are using clojure-lsp-dev-builds
   notify:
-    needs: [build-cli-jar, linux-amd64, linux-amd64-static, macos]
+    needs: [release-dev-build, build-cli-jar, linux-amd64, linux-amd64-static, macos]
     continue-on-error: true
     runs-on: ubuntu-latest
     strategy:

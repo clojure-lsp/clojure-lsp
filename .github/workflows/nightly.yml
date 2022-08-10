@@ -21,7 +21,6 @@ on:
 jobs:
   release-dev-build:
     name: Release dev build
-    needs: [build-cli-jar, linux-amd64, linux-amd64-static, macos, windows]
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.dev-tag.outputs.tag}}

@@ -23,11 +23,12 @@
   (when root-zloc
     (->> diagnostics
          (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "unresolved-var"})
-         (keep (fn [{{{:keys [line character] :as position} :start} :range :as diagnostic}]
-                 (when-let [zloc (parser/to-cursor root-zloc line character)]
-                   (assoc diagnostic
-                          :zloc     zloc
-                          :position position)))))))
+         (keep (fn [{{position :start} :range :as diagnostic}]
+                 (let [[row col] (shared/position->row-col position)]
+                   (when-let [zloc (parser/to-pos root-zloc row col)]
+                     (assoc diagnostic
+                            :zloc     zloc
+                            :position position))))))))
 
 (defn ^:private find-require-suggestions [uri db {:keys [position zloc]}]
   (->> (f.add-missing-libspec/find-require-suggestions zloc uri db)

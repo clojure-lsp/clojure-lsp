@@ -92,34 +92,34 @@ It should be possible to introduce most of the refactorings [here](https://githu
 #### More details
 
 Calling `executeCommand` with the following commands and additional args will notify the client with `applyEdit`.
-All commands expect the first three args to be `[document-uri, line, column]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
+All commands expect the first three args to be `[document-uri, line, character]` (eg `["file:///home/snoe/file.clj", 13, 11]`)
 
-| done | command                 | args                                                                   | notes |
-|------|-------------------------|------------------------------------------------------------------------|-------|
-| √    | add-import-to-namespace | `[document-uri, line, column, import-name]`                            |       |
-| √    | add-missing-libspec     |                                                                        |       |
-| √    | clean-ns                |                                                                        |       |
-| √    | cycle-coll              |                                                                        |       |
-| √    | cycle-privacy           |                                                                        |       |
-| √    | expand-let              |                                                                        |       |
-| √    | extract-function        | `[document-uri, line, column, function-name]`                          |       |
-| √    | inline-symbol           |                                                                        |       |
-| √    | introduce-let           | `[document-uri, line, column, binding-name]`                           |       |
-| √    | move-to-let             | `[document-uri, line, column, binding-name]`                           |       |
-| √    | thread-first            |                                                                        |       |
-| √    | thread-first-all        |                                                                        |       |
-| √    | thread-last             |                                                                        |       |
-| √    | thread-last-all         |                                                                        |       |
-| √    | unwind-all              |                                                                        |       |
-| √    | unwind-thread           |                                                                        |       |
-| √    | resolve-macro-as        | `[document-uri, line, column, resolved-full-symbol kondo-config-path]` |       |
-| √    | create-test             |                                                                        |       |
+| done | command                 | args                                                                      | notes |
+|------|-------------------------|---------------------------------------------------------------------------|-------|
+| √    | add-import-to-namespace | `[document-uri, line, character, import-name]`                            |       |
+| √    | add-missing-libspec     |                                                                           |       |
+| √    | clean-ns                |                                                                           |       |
+| √    | cycle-coll              |                                                                           |       |
+| √    | cycle-privacy           |                                                                           |       |
+| √    | expand-let              |                                                                           |       |
+| √    | extract-function        | `[document-uri, line, character, function-name]`                          |       |
+| √    | inline-symbol           |                                                                           |       |
+| √    | introduce-let           | `[document-uri, line, character, binding-name]`                           |       |
+| √    | move-to-let             | `[document-uri, line, character, binding-name]`                           |       |
+| √    | thread-first            |                                                                           |       |
+| √    | thread-first-all        |                                                                           |       |
+| √    | thread-last             |                                                                           |       |
+| √    | thread-last-all         |                                                                           |       |
+| √    | unwind-all              |                                                                           |       |
+| √    | unwind-thread           |                                                                           |       |
+| √    | resolve-macro-as        | `[document-uri, line, character, resolved-full-symbol kondo-config-path]` |       |
+| √    | create-test             |                                                                           |       |
 
 See Vim client section for an example.
 
 Emacs provides all those refactorings via [lsp-mode](https://emacs-lsp.github.io/lsp-mode/)  with the `lsp-clojure-` prefix.
 
-Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and column numbers.
+Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and character numbers.
 
 ### Custom methods
 
@@ -181,7 +181,7 @@ Capability: none
 
 Method: `clojure/cursorInfo/log`
 
-Params: `[uri, line, column]` 
+Params: `[uri, line, character]` 
 
 Response: Any
 

@@ -746,10 +746,10 @@
             #{'let 'def})))
 
 (defn inline-symbol
-  [uri line column db]
-  (let [definition (q/find-definition-from-cursor db (shared/uri->filename uri) line column)]
+  [uri row col db]
+  (let [definition (q/find-definition-from-cursor db (shared/uri->filename uri) row col)]
     (when-let [op (inline-symbol? definition db)]
-      (let [references (q/find-references-from-cursor db (shared/uri->filename uri) line column false)
+      (let [references (q/find-references-from-cursor db (shared/uri->filename uri) row col false)
             def-uri    (shared/filename->uri (:filename definition) db)
             ;; TODO: use safe-zloc-of-file and handle nils
             def-loc    (some-> (parser/zloc-of-file db def-uri)

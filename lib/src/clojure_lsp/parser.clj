@@ -116,9 +116,6 @@
 (defn to-pos [zloc row col]
   (edit/find-at-pos zloc row col))
 
-(defn to-cursor [zloc line character]
-  (to-pos zloc (inc line) (inc character)))
-
 (defn lein-zloc->edn [zloc]
   (when-let [zloc (some-> zloc
                           (z/find-next-value z/next 'defproject)

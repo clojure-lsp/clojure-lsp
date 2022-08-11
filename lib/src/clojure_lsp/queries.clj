@@ -356,14 +356,14 @@
          (medley/distinct-by :id))))
 
 (defn find-var-usages-under-form
-  [db filename line column end-line end-column]
+  [db filename row col end-row end-col]
   (let [local-usages (get-in db [:analysis filename :var-usages])]
     (filter (fn [element]
               (shared/inside? element
-                              {:name-row line
-                               :name-col column
-                               :name-end-row end-line
-                               :name-end-col end-column}))
+                              {:name-row row
+                               :name-col col
+                               :name-end-row end-row
+                               :name-end-col end-col}))
             local-usages)))
 
 (defmulti find-definition
@@ -632,49 +632,49 @@
   [_db element _]
   [element])
 
-(defn ^:private xf-under-cursor [line column]
+(defn ^:private xf-under-cursor [row col]
   (comp (mapcat val)
         (filter
           (fn [{:keys [name-row name-col name-end-row name-end-col]}]
             ;; TODO Probably should use q/inside? instead
-            (and (<= name-row line name-end-row)
-                 (<= name-col column name-end-col))))))
+            (and (<= name-row row name-end-row)
+                 (<= name-col col name-end-col))))))
 
 (defn find-element-under-cursor
-  [db filename line column]
-  (find-first (xf-under-cursor line column)
+  [db filename row col]
+  (find-first (xf-under-cursor row col)
               (get-in db [:analysis filename])))
 
 (defn find-all-elements-under-cursor
-  [db filename line column]
+  [db filename row col]
   (into []
-        (xf-under-cursor line column)
+        (xf-under-cursor row col)
         (get-in db [:analysis filename])))
 
-(defn find-definition-from-cursor [db filename line column]
+(defn find-definition-from-cursor [db filename row col]
   (try
-    (when-let [element (find-element-under-cursor db filename line column)]
+    (when-let [element (find-element-under-cursor db filename row col)]
       (find-definition db element))
     (catch Throwable e
       (logger/error e "can't find definition"))))
 
-(defn find-declaration-from-cursor [db filename line column]
+(defn find-declaration-from-cursor [db filename row col]
   (try
-    (when-let [element (find-element-under-cursor db filename line column)]
+    (when-let [element (find-element-under-cursor db filename row col)]
       (find-declaration db element))
     (catch Throwable e
       (logger/error e "can't find declaration"))))
 
-(defn find-implementations-from-cursor [db filename line column]
+(defn find-implementations-from-cursor [db filename row col]
   (try
-    (when-let [element (find-element-under-cursor db filename line column)]
+    (when-let [element (find-element-under-cursor db filename row col)]
       (find-implementations db element))
     (catch Throwable e
       (logger/error e "can't find implementation"))))
 
-(defn find-references-from-cursor [db filename line column include-declaration?]
+(defn find-references-from-cursor [db filename row col include-declaration?]
   (try
-    (when-let [element (find-element-under-cursor db filename line column)]
+    (when-let [element (find-element-under-cursor db filename row col)]
       (find-references db element include-declaration?))
     (catch Throwable e
       (logger/error e "can't find references"))))

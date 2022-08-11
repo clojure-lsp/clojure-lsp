@@ -149,23 +149,22 @@
 
 (defn positions-from-text
   "Takes text with a pipe `|` as a placeholder for cursor positions and returns the text without
-   the pipes alone with a vector of [line column] pairs representing the cursor positions (1-based)"
+   the pipes alone with a vector of [row col] pairs representing the cursor positions (1-based)"
   [text]
   (let [[_ _ text positions] (reduce
-                               (fn [[row column text positions] ch]
-                                 (cond
-                                   (= \| ch)
-                                   [row column text (conj positions [row column])]
+                               (fn [[row col text positions] ch]
+                                 (case ch
+                                   \|
+                                   [row col text (conj positions [row col])]
 
-                                   (= \newline ch)
-                                   [(inc row) 1 (str text ch) positions]
+                                   \newline
+                                   [(inc row) 1 (.append text ch) positions]
 
-                                   :else
-                                   [row (inc column) (str text ch) positions]))
-                               [1 1 "" []]
+                                   [row (inc col) (.append text ch) positions]))
+                               [1 1 (java.lang.StringBuilder.) []]
                                text)]
 
-    [text positions]))
+    [(str text) positions]))
 
 (def default-uri (file-uri "file:///a.clj"))
 
@@ -181,9 +180,9 @@
 (defn ->position [[row col]]
   {:line (dec row) :character (dec col)})
 
-(defn ->range [[row col] [end-row end-col]]
-  {:start {:line (dec row) :character (dec col)}
-   :end {:line (dec end-row) :character (dec end-col)}})
+(defn ->range [start end]
+  {:start (->position start)
+   :end (->position end)})
 
 (defn load-code-into-zloc-and-position
   "Load a `code` block into the kondo db at the provided `uri` and return a map

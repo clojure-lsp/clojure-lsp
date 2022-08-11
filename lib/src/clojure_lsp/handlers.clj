@@ -147,16 +147,14 @@
     (str :completion " %s - total items: %s")
     count
     (let [db @db*
-          row (-> position :line inc)
-          col (-> position :character inc)]
+          [row col] (shared/position->row-col position)]
       (f.completion/completion (:uri text-document) row col db))))
 
 (defn references [{:keys [db*]} {:keys [text-document position context]}]
   (shared/logging-task
     :references
     (let [db @db*
-          row (-> position :line inc)
-          col (-> position :character inc)]
+          [row col] (shared/position->row-col position)]
       (mapv (fn [reference]
               {:uri (-> (:filename reference)
                         (shared/filename->uri db)
@@ -172,21 +170,21 @@
 (defn prepare-rename [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :prepare-rename
-    (let [[row col] (shared/position->line-column position)]
+    (let [[row col] (shared/position->row-col position)]
       (f.rename/prepare-rename (:uri text-document) row col @db*))))
 
 (defn rename [{:keys [db*]} {:keys [text-document position new-name]}]
   (shared/logging-task
     :rename
-    (let [[row col] (shared/position->line-column position)]
+    (let [[row col] (shared/position->row-col position)]
       (f.rename/rename-from-position (:uri text-document) new-name row col @db*))))
 
 (defn definition [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :definition
     (let [db @db*
-          [line column] (shared/position->line-column position)]
-      (when-let [definition (q/find-definition-from-cursor db (shared/uri->filename (:uri text-document)) line column)]
+          [row col] (shared/position->row-col position)]
+      (when-let [definition (q/find-definition-from-cursor db (shared/uri->filename (:uri text-document)) row col)]
         {:uri (-> (:filename definition)
                   (shared/filename->uri db)
                   (f.java-interop/uri->translated-uri db))
@@ -196,8 +194,8 @@
   (shared/logging-task
     :declaration
     (let [db @db*
-          [line column] (shared/position->line-column position)]
-      (when-let [declaration (q/find-declaration-from-cursor db (shared/uri->filename (:uri text-document)) line column)]
+          [row col] (shared/position->row-col position)]
+      (when-let [declaration (q/find-declaration-from-cursor db (shared/uri->filename (:uri text-document)) row col)]
         {:uri (-> (:filename declaration)
                   (shared/filename->uri db)
                   (f.java-interop/uri->translated-uri db))
@@ -207,7 +205,7 @@
   (shared/logging-task
     :implementation
     (let [db @db*
-          [row col] (shared/position->line-column position)]
+          [row col] (shared/position->row-col position)]
       (mapv (fn [implementation]
               {:uri (-> (:filename implementation)
                         (shared/filename->uri db)
@@ -226,11 +224,10 @@
   (process-after-changes
     :document-highlight (:uri text-document) db*
     (let [db @db*
-          line (-> position :line inc)
-          column (-> position :character inc)
+          [row col] (shared/position->row-col position)
           filename (shared/uri->filename (:uri text-document))
           local-db (update db :analysis select-keys [filename])
-          references (q/find-references-from-cursor local-db filename line column true)]
+          references (q/find-references-from-cursor local-db filename row col true)]
       (mapv (fn [reference]
               {:range (shared/->range reference)})
             references))))
@@ -267,9 +264,9 @@
 
 (def server-info-raw #'server-info)
 
-(defn ^:private cursor-info [{:keys [db*]} [doc-id line character]]
+(defn ^:private cursor-info [{:keys [db*]} [uri line character]]
   (let [db @db*
-        elements (q/find-all-elements-under-cursor db (shared/uri->filename doc-id) (inc line) (inc character))]
+        elements (q/find-all-elements-under-cursor db (shared/uri->filename uri) (inc line) (inc character))]
     (shared/assoc-some {}
                        :elements (mapv (fn [e]
                                          (shared/assoc-some
@@ -299,18 +296,18 @@
     :clojuredocs-raw
     (f.clojuredocs/find-docs-for sym-name sym-ns db*)))
 
-(defn ^:private refactor [{:keys [db*] :as components} refactoring [doc-id line character & args]]
+(defn ^:private refactor [{:keys [db*] :as components} refactoring [uri line character & args]]
   (let [db @db*
         row (inc (int line))
         col (inc (int character))
         ;; TODO Instead of v=0 should I send a change AND a document change
-        v (get-in db [:documents doc-id :v] 0)
-        loc (some-> (parser/zloc-of-file db doc-id)
+        v (get-in db [:documents uri :v] 0)
+        loc (some-> (parser/zloc-of-file db uri)
                     (parser/to-pos row col))]
     (f.refactor/call-refactor {:refactoring (keyword refactoring)
                                :db          db
                                :loc         loc
-                               :uri         doc-id
+                               :uri         uri
                                :row         row
                                :col         col
                                :args        args
@@ -344,14 +341,14 @@
 (defn hover [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :hover
-    (let [[line column] (shared/position->line-column position)]
-      (f.hover/hover (:uri text-document) line column db*))))
+    (let [[row col] (shared/position->row-col position)]
+      (f.hover/hover (:uri text-document) row col db*))))
 
 (defn signature-help [{:keys [db*]} {:keys [text-document position _context]}]
   (shared/logging-task
     :signature-help
-    (let [[line column] (shared/position->line-column position)]
-      (f.signature-help/signature-help (:uri text-document) line column db*))))
+    (let [[row col] (shared/position->row-col position)]
+      (f.signature-help/signature-help (:uri text-document) row col db*))))
 
 (defn formatting [{:keys [db*]} {:keys [text-document]}]
   (shared/logging-task
@@ -362,12 +359,12 @@
   (process-after-changes
     :range-formatting (:uri text-document) db*
     (let [db @db*
-          start (:start range)
-          end (:end range)
-          format-pos {:row (inc (:line start))
-                      :col (inc (:character start))
-                      :end-row (inc (:line end))
-                      :end-col (inc (:character end))}]
+          [row col] (shared/position->row-col (:start range))
+          [end-row end-col] (shared/position->row-col (:end range))
+          format-pos {:row row
+                      :col col
+                      :end-row end-row
+                      :end-col end-col}]
       (f.format/range-formatting (:uri text-document) format-pos db))))
 
 (defn dependency-contents [{:keys [db*]} {:keys [uri]}]
@@ -381,10 +378,7 @@
     :code-actions (:uri text-document) db*
     (let [db @db*
           diagnostics (-> context :diagnostics)
-          line (-> range :start :line)
-          character (-> range :start :character)
-          row (inc line)
-          col (inc character)
+          [row col] (shared/position->row-col (:start range))
           root-zloc (parser/safe-zloc-of-file db (:uri text-document))
           client-capabilities (get db :client-capabilities)]
       (f.code-actions/all root-zloc (:uri text-document) row col diagnostics client-capabilities db))))
@@ -413,10 +407,12 @@
   (process-after-changes
     :semantic-tokens-range (:uri text-document) db*
     (let [db @db*
-          range {:name-row (inc (:line start))
-                 :name-col (inc (:character start))
-                 :name-end-row (inc (:line end))
-                 :name-end-col (inc (:character end))}
+          [row col] (shared/position->row-col start)
+          [end-row end-col] (shared/position->row-col end)
+          range {:name-row row
+                 :name-col col
+                 :name-end-row end-row
+                 :name-end-col end-col}
           data (f.semantic-tokens/range-tokens (:uri text-document) range db)]
       {:data data})))
 
@@ -424,26 +420,21 @@
   [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
     :prepare-call-hierarchy
-    (f.call-hierarchy/prepare (:uri text-document)
-                              (inc (:line position))
-                              (inc (:character position)) db*)))
+    (let [[row col] (shared/position->row-col position)]
+      (f.call-hierarchy/prepare (:uri text-document) row col db*))))
 
 (defn call-hierarchy-incoming
-  [{:keys [db*]} {:keys [item]}]
+  [{:keys [db*]} {{:keys [uri range]} :item}]
   (shared/logging-task
     :call-hierarchy-incoming-calls
-    (let [uri (:uri item)
-          row (inc (-> item :range :start :line))
-          col (inc (-> item :range :start :character))]
+    (let [[row col] (shared/position->row-col (:start range))]
       (f.call-hierarchy/incoming uri row col db*))))
 
 (defn call-hierarchy-outgoing
-  [{:keys [db*]} {:keys [item]}]
+  [{:keys [db*]} {{:keys [uri range]} :item}]
   (shared/logging-task
     :call-hierarchy-outgoing-calls
-    (let [uri (:uri item)
-          row (inc (-> item :range :start :line))
-          col (inc (-> item :range :start :character))]
+    (let [[row col] (shared/position->row-col (:start range))]
       (f.call-hierarchy/outgoing uri row col db*))))
 
 (defn linked-editing-ranges
@@ -451,8 +442,7 @@
   (shared/logging-task
     :linked-editing-range
     (let [db @db*
-          row (-> position :line inc)
-          col (-> position :character inc)]
+          [row col] (shared/position->row-col position)]
       (f.linked-editing-range/ranges (:uri text-document) row col db))))
 
 (defn will-rename-files [{:keys [db*]} {:keys [files]}]

@@ -260,12 +260,12 @@
              :command   "create-function"
              :arguments [uri (:line position) (:character position)]}})
 
-(defn ^:private resolve-macro-as-action [uri row col macro-sym]
+(defn ^:private resolve-macro-as-action [uri line character macro-sym]
   {:title   (format "Resolve macro '%s' as..." (str macro-sym))
    :kind    :quick-fix
    :command {:title     "Resolve macro as..."
              :command   "resolve-macro-as"
-             :arguments [uri row col]}})
+             :arguments [uri line character]}})
 
 (defn all [root-zloc uri row col diagnostics client-capabilities db]
   (let [zloc (parser/to-pos root-zloc row col)
@@ -310,7 +310,7 @@
       (conj (create-public-function-action uri @public-function-to-create*))
 
       @macro-sym*
-      (conj (resolve-macro-as-action uri row col @macro-sym*))
+      (conj (resolve-macro-as-action uri line character @macro-sym*))
 
       @inline-symbol?*
       (conj (inline-symbol-action uri line character))

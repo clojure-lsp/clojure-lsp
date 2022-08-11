@@ -68,10 +68,14 @@
 (defn directory? [^java.io.File f]
   (.isDirectory f))
 
-(defn slurp-filename
-  "Slurp filename f. Used for be able to with-refefs this function."
-  [^String f]
-  (slurp f))
+(defn slurp-uri
+  "Slurp uri, returning nil if anything goes wrong, and in particular when the
+  URI does not exist on disk. Also useful in with-redefs."
+  [^String uri]
+  (try
+    (slurp uri)
+    (catch Exception _
+      (logger/warn "couldn't read" uri))))
 
 (defn assoc-some
   "Assoc[iate] if the value is not nil. "

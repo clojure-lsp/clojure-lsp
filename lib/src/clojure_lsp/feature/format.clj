@@ -41,13 +41,14 @@
   (memoize/ttl resolve-cljfmt-config :ttl/threshold memoize-ttl-threshold-milis))
 
 (defn formatting [uri db*]
-  (let [text (f.file-management/force-get-document-text uri db*)
-        cljfmt-settings (cljfmt-config @db*)
-        new-text (cljfmt/reformat-string text cljfmt-settings)]
-    (if (= new-text text)
-      []
-      [{:range shared/full-file-range
-        :new-text new-text}])))
+  (if-let [text (f.file-management/force-get-document-text uri db*)]
+    (let [cljfmt-settings (cljfmt-config @db*)
+          new-text (cljfmt/reformat-string text cljfmt-settings)]
+      (if (= new-text text)
+        []
+        [{:range shared/full-file-range
+          :new-text new-text}]))
+    []))
 
 (defn range-formatting [doc-id format-pos db]
   (let [cljfmt-settings (cljfmt-config db)

@@ -91,22 +91,22 @@
   ([db uri edit]
    (edit->summary db uri edit nil))
   ([db uri {:keys [range new-text]} old-text]
-   (let [old-text (or old-text
-                      (get-in db [:documents uri :text])
-                      (slurp uri))
-         new-full-text (f.file-management/replace-text
-                         old-text
-                         new-text
-                         (-> range :start :line)
-                         (-> range :start :character)
-                         (-> range :end :line)
-                         (-> range :end :character))]
-     (when (not= new-full-text old-text)
-       {:kind :change
-        :uri uri
-        :version (get-in db [:documents uri :version] 0)
-        :old-text old-text
-        :new-text new-full-text}))))
+   (when-let [old-text (or old-text
+                           (get-in db [:documents uri :text])
+                           (shared/slurp-uri uri))]
+     (let [new-full-text (f.file-management/replace-text
+                           old-text
+                           new-text
+                           (-> range :start :line)
+                           (-> range :start :character)
+                           (-> range :end :line)
+                           (-> range :end :character))]
+       (when (not= new-full-text old-text)
+         {:kind :change
+          :uri uri
+          :version (get-in db [:documents uri :version] 0)
+          :old-text old-text
+          :new-text new-full-text})))))
 
 (defn ^:private document-change->edit-summary [{:keys [text-document edits kind old-uri new-uri]} db]
   (if (= "rename" kind)

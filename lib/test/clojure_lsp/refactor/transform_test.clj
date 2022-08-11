@@ -951,7 +951,7 @@
       (let [test-code (h/code "(ns some.ns-test)"
                               "(deftest some-other-test)")]
         (with-redefs [shared/file-exists? #(not (string/ends-with? % "config.edn"))
-                      shared/slurp-filename (constantly test-code)]
+                      shared/slurp-uri (constantly test-code)]
           (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                            "file:///project/src/some/ns.clj")

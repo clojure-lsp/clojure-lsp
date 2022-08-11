@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.diff :as diff]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.file-management :as f.file-management]
@@ -200,13 +201,15 @@
     (analyze! options components)))
 
 (defn ^:private nses->ns+uri [namespaces db]
-  (let [found (q/nses-some-internal-uri db namespaces)]
-    (map (fn [namespace]
-           (if-let [uri (get found namespace)]
-             {:namespace namespace
-              :uri uri}
-             {:namespace namespace}))
-         namespaces)))
+  (mapcat (fn [namespace]
+            (or
+              (->> (dep-graph/ns-internal-uris db namespace)
+                   seq
+                   (map (fn [uri]
+                          {:namespace namespace
+                           :uri       uri})))
+              [{:namespace namespace}]))
+          namespaces))
 
 (defn ^:private uri->ns
   [uri ns+uris]
@@ -268,7 +271,7 @@
            seq)
       (into #{}
             (remove (partial exclude-ns? options))
-            (q/internal-ns-names db))))
+            (dep-graph/internal-ns-names db))))
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)

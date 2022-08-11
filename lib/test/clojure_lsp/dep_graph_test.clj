@@ -272,3 +272,64 @@
       (is (= #{"file:///aaa.clj" "file:///also/aaa.clj"} (dep-graph/ns-uris db 'aaa)))
       (is (= '#{aaa} (get-in db [:documents "file:///aaa.clj" :namespaces])))
       (is (= '#{aaa} (get-in db [:documents "file:///also/aaa.clj" :namespaces]))))))
+
+(deftest test-ns-aliases
+  (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))
+  (h/load-code-and-locs "(ns bbb (:require [ccc :as c]))" (h/file-uri "file:///bbb.clj"))
+  (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
+  (is (= '#{{:alias c :to ccc}
+            {:alias b :to bbb}}
+         (dep-graph/ns-aliases (h/db)))))
+
+(deftest ns-aliases-for-langs
+  (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))
+  (h/load-code-and-locs "(ns bbb (:require [ccc :as c]))" (h/file-uri "file:///bbb.clj"))
+  (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
+  (h/load-code-and-locs "(ns jjj (:require [kkk :as k] [lll :as l]))" (h/file-uri "file:///aaa.cljs"))
+  (h/load-code-and-locs "(ns kkk (:require [lll :as l]))" (h/file-uri "file:///bbb.cljs"))
+  (h/load-code-and-locs "(ns lll)" (h/file-uri "file:///ccc.cljs"))
+  (is (= '#{{:alias c :to ccc}
+            {:alias b :to bbb}}
+         (dep-graph/ns-aliases-for-langs (h/db) #{:clj})))
+  (is (= '#{{:alias k :to kkk}
+            {:alias l :to lll}}
+         (dep-graph/ns-aliases-for-langs (h/db) #{:cljs})))
+  (is (= '#{{:alias c :to ccc}
+            {:alias b :to bbb}
+            {:alias k :to kkk}
+            {:alias l :to lll}}
+         (dep-graph/ns-aliases-for-langs (h/db) #{:clj :cljs}))))
+
+(deftest ns-names-for-langs
+  (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
+  (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
+  (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
+  (h/load-code-and-locs "(ns jjj)" (h/file-uri "file:///aaa.cljs"))
+  (h/load-code-and-locs "(ns kkk)" (h/file-uri "file:///bbb.cljs"))
+  (h/load-code-and-locs "(ns lll)" (h/file-uri "file:///ccc.cljs"))
+  (is (= '#{aaa ccc bbb}
+         (dep-graph/ns-names-for-langs (h/db) #{:clj})))
+  (is (= '#{jjj kkk lll}
+         (dep-graph/ns-names-for-langs (h/db) #{:cljs})))
+  (is (= '#{aaa ccc bbb
+            jjj kkk lll}
+         (dep-graph/ns-names-for-langs (h/db) #{:clj :cljs}))))
+
+(deftest ns-names-for-file
+  (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
+  (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
+  (is (= '[aaa ccc]
+         (dep-graph/ns-names-for-uri (h/db) (h/file-uri "file:///aaa.clj")))))
+
+(deftest ns-names
+  (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
+  (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
+  (h/load-code-and-locs "(ns jjj)" (h/file-uri "file:///jjj.cljs"))
+  (is (= '#{aaa bbb ccc jjj clojure.core cljs.core}
+         (dep-graph/ns-names (h/db)))))
+
+(deftest internal-ns-names
+  (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
+  (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
+  (h/load-code-and-locs "(ns some)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
+  (is (= '#{aaa bbb} (dep-graph/internal-ns-names (h/db)))))

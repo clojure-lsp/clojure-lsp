@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.completion
   (:require
    [clojure-lsp.common-symbols :as common-sym]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
    [clojure-lsp.feature.hover :as f.hover]
@@ -306,7 +307,7 @@
                               :namespace-alias
                               (filter #(= (-> % :alias str) cursor-alias))
                               seq)
-                         (->> (q/ns-aliases db)
+                         (->> (dep-graph/ns-aliases db)
                               seq))]
     (->> (concat
            (when (simple-ident? cursor-value)
@@ -529,7 +530,7 @@
                                    (name cursor-value)
                                    (str cursor-value)))
             cursor-full-ns? (when cursor-value-or-ns
-                              (contains? (q/ns-names db) (symbol cursor-value-or-ns)))
+                              (contains? (dep-graph/ns-names db) (symbol cursor-value-or-ns)))
             items (cond
                     inside-refer?
                     (with-refer-elements matches-fn cursor-loc non-local-db resolve-support)

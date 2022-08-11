@@ -32,50 +32,60 @@
 
 (set! *warn-on-reflection* true)
 
-;; e.g. 2^0, 2^1, ..., up to 200ms
-(def backoff-start 5)
-(def backoff-mult 1.2)
-(def backoff-max 200)
-(comment
-  (->> backoff-start
-       (iterate #(min backoff-max (Math/ceil (* backoff-mult %))))
-       (reductions +)
-       (take 15)))
+(defn ^:private wait-for-analysis [{:keys [v analyzed-v*]} timeout-ms]
+  (if-not analyzed-v*
+    :initial ;; we have only the initial analysis, not one from a did-change
+    (let [watch-k (gensym)
+          p (promise)
+          check-v (fn [new-v status]
+                    (when (<= v new-v)
+                      (deliver p status)))]
+      (try
+        (add-watch analyzed-v* watch-k (fn [_ _ _ new-v] (check-v new-v :waited)))
+        (check-v @analyzed-v* :immediate)
+        (deref p timeout-ms :timed-out)
+        (finally
+          (remove-watch analyzed-v* watch-k))))))
 
 (defmacro process-after-all-changes [task-id uris db* & body]
   (let [waiting-start-sym (gensym "waiting-start-time")
         start-sym (gensym "start-time")
-        backoff-sym (gensym "backoff")
-        uris-sym (gensym "uris")
         process-msg (str task-id " %s")
-        wait-and-process-msg (str task-id " %s - waited %s")]
-    `(let [~waiting-start-sym (System/nanoTime)]
-       (loop [~backoff-sym backoff-start
-              ~uris-sym ~uris]
-         (if (> (quot (- (System/nanoTime) ~waiting-start-sym) 1000000) 60000) ; one minute timeout
-           ~(with-meta
-              `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id (first ~uris-sym)))
-              (meta &form))
-           (if-let [processing-uris# (seq (filter (:processing-changes @~db*) ~uris-sym))]
-             (do
-               (Thread/sleep ~backoff-sym)
-               (recur (min backoff-max (* backoff-mult ~backoff-sym)) processing-uris#))
-             (let [~start-sym (System/nanoTime)
-                   result# (do ~@body)]
-               ~(with-meta
-                  `(logger/info
-                     (if (= backoff-start ~backoff-sym)
-                       (format ~process-msg (shared/start-time->end-time-ms ~waiting-start-sym))
-                       (format ~wait-and-process-msg
-                               (shared/start-time->end-time-ms ~start-sym)
-                               (shared/format-time-delta-ms ~waiting-start-sym ~start-sym))))
-                  (meta &form))
-               result#)))))))
+        wait-and-process-msg (str task-id " %s - waited %s")
+        timed-out-doc-sym (gensym "timed-out-doc")]
+    `(let [~waiting-start-sym (System/nanoTime)
+           uris-sym# ~uris
+           db# @~db*
+           wait-results# (->> uris-sym#
+                              (pmap (fn [uri#]
+                                      {:uri    uri#
+                                       :status (-> db#
+                                                   (get-in [:documents uri#])
+                                                   (wait-for-analysis 60000))}))
+                              (group-by :status))]
+       (if-let [~timed-out-doc-sym (first (:timed-out wait-results#))]
+         ~(with-meta
+            `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id (:uri ~timed-out-doc-sym)))
+            (meta &form))
+         (if (seq (:waited wait-results#))
+           (let [~start-sym (System/nanoTime)
+                 result# (do ~@body)]
+             ~(with-meta
+                `(logger/info
+                   (format ~wait-and-process-msg
+                           (shared/start-time->end-time-ms ~start-sym)
+                           (shared/format-time-delta-ms ~waiting-start-sym ~start-sym)))
+                (meta &form))
+             result#)
+           (let [result# (do ~@body)]
+             ~(with-meta
+                `(logger/info
+                   (format ~process-msg (shared/start-time->end-time-ms ~waiting-start-sym)))
+                (meta &form))
+             result#))))))
 
 (defmacro process-after-changes [task-id uri db* & body]
-  (with-meta
-    `(process-after-all-changes ~task-id [~uri] ~db* ~@body)
-    (meta &form)))
+  (with-meta `(process-after-all-changes ~task-id [~uri] ~db* ~@body) (meta &form)))
 
 (defn ^:private element->location [db producer element]
   {:uri (f.java-interop/uri->translated-uri (:uri element) db producer)

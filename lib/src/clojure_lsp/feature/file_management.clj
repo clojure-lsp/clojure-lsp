@@ -247,7 +247,9 @@
                               (-> state-db
                                   (lsp.kondo/db-with-results kondo-result)
                                   (lsp.depend/db-with-results depend-result)
-                                  (update :processing-changes disj uri)))
+                                  (update-in [:documents uri :analyzed-v*] (fn [analyzed-v*]
+                                                                               (reset! analyzed-v* version)
+                                                                               analyzed-v*))))
           (let [db @db*]
             (f.diagnostic/publish-diagnostics! uri components)
             (when (settings/get db [:notify-references-on-file-change] true)
@@ -261,7 +263,7 @@
     (swap! db* (fn [state-db] (-> state-db
                                   (assoc-in [:documents uri :v] version)
                                   (assoc-in [:documents uri :text] final-text)
-                                  (update :processing-changes conj uri))))
+                                  (update-in [:documents uri :analyzed-v*] #(or % (atom -1))))))
     (async/>!! current-changes-chan {:uri uri
                                      :text final-text
                                      :version version})))

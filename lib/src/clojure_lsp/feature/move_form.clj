@@ -145,8 +145,8 @@
                                             (fn [file-uri usages]
                                               (let [usage (first usages)
                                                     filename (:filename usage)
-                                                    file-loc (-> (f.file-management/force-get-document-text file-uri db*)
-                                                                 z/of-string)
+                                                    file-loc (some-> (f.file-management/force-get-document-text file-uri db*)
+                                                                     z/of-string)
                                                     db @db*
                                                     local-buckets (get-in db [:analysis filename])
                                                     source-refer (first (filter #(and (:refer %)

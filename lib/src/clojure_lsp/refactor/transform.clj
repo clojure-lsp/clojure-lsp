@@ -8,7 +8,6 @@
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
    [medley.core :as medley]
@@ -917,11 +916,9 @@
         namespace (shared/uri->namespace uri db)
         namespace-test (str namespace "-test")
         test-filename (shared/namespace+source-path->filename namespace-test source-path file-type)
-        test-uri (shared/filename->uri test-filename db)
-        test-namespace-file (io/file test-filename)]
-    (if (shared/file-exists? test-namespace-file)
-      (let [existing-text (shared/slurp-filename test-uri)
-            lines (count (string/split existing-text #"\n"))
+        test-uri (shared/filename->uri test-filename db)]
+    (if-let [existing-text (shared/slurp-uri test-uri)]
+      (let [lines (count (string/split existing-text #"\n"))
             test-text (format "(deftest %s\n  (is (= 1 1)))" (str function-name "-test"))
             test-zloc (z/up (z/of-string (str "\n" test-text)))]
         {:show-document-after-edit {:uri test-uri

@@ -18,6 +18,7 @@
   - Some completions require that a new alias be added to the ns form. Fix this feature for Calva users, and improve performance for all users. #1068
   - Fix resolve-macro-as code action corner case. #1084
   - Ensure line numbers provided by document-symbol correspond to the latest version of the file. #1178
+  - Avoid exceptions when clients use URIs that don't exist on disk.
 
 ## 2022.07.24-18.25.43
 

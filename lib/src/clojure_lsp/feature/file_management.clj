@@ -273,10 +273,11 @@
       :changed (when (settings/get @db* [:compute-external-file-changes] true)
                  (shared/logging-task
                    :changed-watched-file
-                   (did-change uri
-                               [{:text (slurp (shared/uri->filename uri))}]
-                               (get-in @db* [:documents uri :v] 0)
-                               db*)))
+                   (when-let [text (shared/slurp-uri uri)]
+                     (did-change uri
+                                 [{:text text}]
+                                 (get-in @db* [:documents uri :v] 0)
+                                 db*))))
       :deleted (shared/logging-task
                  :delete-watched-file
                  (file-deleted db* uri (shared/uri->filename uri))))))
@@ -292,8 +293,8 @@
   "Get document text from db, if document not found, tries to open the document"
   [uri db*]
   (or (get-in @db* [:documents uri :text])
-      (do
-        (did-open uri (slurp uri) db* false)
+      (when-let [text (shared/slurp-uri uri)]
+        (did-open uri text db* false)
         (get-in @db* [:documents uri :text]))))
 
 (defn did-save [uri db*]

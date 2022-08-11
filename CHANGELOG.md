@@ -16,6 +16,7 @@
   - Improve hover for requires to show ns docstring. #1171
   - Fix destructuring of things that have been destructured before. #1156
   - Some completions require that a new alias be added to the ns form. Fix this feature for Calva users, and improve performance for all users. #1068
+  - Fix resolve-macro-as code action corner case. #1084
 
 ## 2022.07.24-18.25.43
 

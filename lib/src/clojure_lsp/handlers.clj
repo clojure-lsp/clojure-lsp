@@ -216,8 +216,8 @@
             (q/find-implementations-from-cursor db (shared/uri->filename (:uri text-document)) row col)))))
 
 (defn document-symbol [{:keys [db*]} {:keys [text-document]}]
-  (shared/logging-task
-    :document-symbol
+  (process-after-changes
+    :document-symbol (:uri text-document) db*
     (let [db @db*
           filename (shared/uri->filename (:uri text-document))]
       (f.document-symbol/document-symbols db filename))))

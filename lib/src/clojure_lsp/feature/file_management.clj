@@ -167,19 +167,19 @@
               (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))
           (producer/refresh-code-lens producer))))))
 
-(defn ^:private offsets [lines line col end-line end-col]
+(defn ^:private offsets [lines line character end-line end-character]
   (loop [lines (seq lines)
          offset 0
          idx 0]
     (if (or (not lines)
             (= line idx))
-      [(+ offset col line)
+      [(+ offset character line)
        (loop [lines lines
               offset offset
               idx idx]
          (if (or (not lines)
                  (= end-line idx))
-           (+ offset end-col end-line)
+           (+ offset end-character end-line)
            (recur (next lines)
                   (+ offset (count (first lines)))
                   (inc idx))))]
@@ -187,9 +187,9 @@
              (+ offset (count (first lines)))
              (inc idx)))))
 
-(defn replace-text [original replacement line col end-line end-col]
+(defn replace-text [original replacement line character end-line end-character]
   (let [lines (string/split original #"\n") ;; don't use OS specific line delimiter!
-        [start-offset end-offset] (offsets lines line col end-line end-col)
+        [start-offset end-offset] (offsets lines line character end-line end-character)
         [prefix suffix] [(subs original 0 start-offset)
                          (subs original (min end-offset (count original)) (count original))]]
     (string/join [prefix replacement suffix])))

@@ -332,9 +332,13 @@
         (for [[k v] m]
           [(keyword k) v])))
 
-(defn position->line-column [position]
+(defn position->row-col [position]
   [(inc (:line position))
    (inc (:character position))])
+
+(defn row-col->position [row col]
+  {:line (max 0 (dec row))
+   :character (max 0 (dec col))})
 
 (defn debounce-all
   "Debounce in channel with ms miliseconds returning all values."
@@ -436,13 +440,13 @@
 
 (defn ->range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element
-    {:start {:line (max 0 (dec (or name-row row))) :character (max 0 (dec (or name-col col)))}
-     :end {:line (max 0 (dec (or name-end-row end-row))) :character (max 0 (dec (or name-end-col end-col)))}}))
+    {:start (row-col->position (or name-row row) (or name-col col))
+     :end (row-col->position (or name-end-row end-row) (or name-end-col end-col))}))
 
 (defn ->scope-range [{:keys [name-row name-end-row name-col name-end-col row end-row col end-col] :as element}]
   (when element
-    {:start {:line (max 0 (dec (or row name-row))) :character (max 0 (dec (or col name-col)))}
-     :end {:line (max 0 (dec (or end-row name-end-row))) :character (max 0 (dec (or end-col name-end-col)))}}))
+    {:start (row-col->position (or row name-row) (or col name-col))
+     :end (row-col->position (or end-row name-end-row) (or end-col name-end-col))}))
 
 (def full-file-range
   (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))

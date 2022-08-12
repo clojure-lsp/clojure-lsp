@@ -18,25 +18,25 @@
   []
   [:shutdown {}])
 
-(defn completion-request [path row col]
+(defn completion-request [path line character]
   [:textDocument/completion
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}}])
+    :position {:line line :character character}}])
 
-(defn definition-request [path row col]
+(defn definition-request [path line character]
   [:textDocument/definition
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}}])
+    :position {:line line :character character}}])
 
-(defn declaration-request [path row col]
+(defn declaration-request [path line character]
   [:textDocument/declaration
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}}])
+    :position {:line line :character character}}])
 
-(defn implementation-request [path row col]
+(defn implementation-request [path line character]
   [:textDocument/implementation
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}}])
+    :position {:line line :character character}}])
 
 (defn formatting-full-request [path]
   [:textDocument/formatting
@@ -44,59 +44,59 @@
     :options {:tabSize 2
               :insertSpaces true}}])
 
-(defn prepare-rename-request [path row col]
+(defn prepare-rename-request [path line character]
   [:textDocument/prepareRename
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}}])
+    :position {:line line :character character}}])
 
-(defn rename-request [path new-name row col]
+(defn rename-request [path new-name line character]
   [:textDocument/rename
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}
+    :position {:line line :character character}
     :newName new-name}])
 
-(defn formatting-range-request [path start-row start-col end-row end-col]
+(defn formatting-range-request [path start-line start-character end-line end-character]
   [:textDocument/rangeFormatting
    {:textDocument {:uri (h/source-path->uri path)}
     :options {:tabSize 2
               :insertSpaces true}
-    :range {:start {:line start-row :character start-col}
-            :end {:line end-row :character end-col}}}])
+    :range {:start {:line start-line :character start-character}
+            :end {:line end-line :character end-character}}}])
 
 (defn document-symbol-request [path]
   [:textDocument/documentSymbol
    {:textDocument {:uri (h/source-path->uri path)}}])
 
-(defn document-highlight-request [path row col]
+(defn document-highlight-request [path line character]
   [:textDocument/documentHighlight
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}}])
+    :position {:line line :character character}}])
 
-(defn linked-editing-range-request [path row col]
+(defn linked-editing-range-request [path line character]
   [:textDocument/linkedEditingRange
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}}])
+    :position {:line line :character character}}])
 
-(defn code-action-request [path row col]
+(defn code-action-request [path line character]
   [:textDocument/codeAction
    {:textDocument {:uri (h/source-path->uri path)}
     :context      {:diagnostics []}
-    :range        {:start {:line row :character col}}}])
+    :range        {:start {:line line :character character}}}])
 
-(defn hover-request [path row col]
+(defn hover-request [path line character]
   [:textDocument/hover
    {:textDocument {:uri (h/source-path->uri path)}
-    :position     {:line row :character col}}])
+    :position     {:line line :character character}}])
 
 (defn execute-command-request [command & args]
   [:workspace/executeCommand
    {:command   command
     :arguments args}])
 
-(defn cursor-info-raw-request [path row col]
+(defn cursor-info-raw-request [path line character]
   ["clojure/cursorInfo/raw"
    {:textDocument {:uri (h/source-path->uri path)}
-    :position {:line row :character col}}])
+    :position {:line line :character character}}])
 
 (defn clojure-dependency-contents-request [uri]
   ["clojure/dependencyContents"
@@ -120,8 +120,8 @@
   [:textDocument/didChange
    {:textDocument {:uri (h/source-path->uri path)
                    :version version}
-    :contentChanges (map (fn [[text start-row start-col end-row end-col]]
+    :contentChanges (map (fn [[text start-line start-character end-line end-character]]
                            {:text text
-                            :range {:start {:line start-row :character start-col}
-                                    :end {:line end-row :character end-col}}})
+                            :range {:start {:line start-line :character start-character}
+                                    :end {:line end-line :character end-character}}})
                          changes)}])

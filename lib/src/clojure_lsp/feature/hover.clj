@@ -121,14 +121,14 @@
         , (conj filename)))))
 
 (defn hover
-  ([uri line column db*] (hover uri line column db* {}))
-  ([uri line column db* docs-config]
+  ([uri row col db*] (hover uri row col db* {}))
+  ([uri row col db* docs-config]
    (let [db @db*
          filename (shared/uri->filename uri)
-         cursor-element (q/find-element-under-cursor db filename line column)
+         cursor-element (q/find-element-under-cursor db filename row col)
          cursor-loc (some-> (f.file-management/force-get-document-text uri db*)
                             parser/safe-zloc-of-string
-                            (parser/to-pos line column))
+                            (parser/to-pos row col))
          func-position (some-> cursor-loc
                                edit/find-function-usage-name-loc
                                z/node
@@ -143,11 +143,11 @@
                    (q/find-element-under-cursor db filename (:row func-position) (:col func-position))
 
                    :else
-                   (loop [try-column column]
-                     (if-let [usage (q/find-element-under-cursor db filename line try-column)]
+                   (loop [try-col col]
+                     (if-let [usage (q/find-element-under-cursor db filename row try-col)]
                        usage
-                       (when (pos? try-column)
-                         (recur (dec try-column))))))
+                       (when (pos? try-col)
+                         (recur (dec try-col))))))
 
          definition (when element (q/find-definition db element))]
      (cond

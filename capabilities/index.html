@@ -1102,7 +1102,7 @@
 <hr />
 <h4 id="more-details">More details<a class="headerlink" href="#more-details" title="Permanent link">#</a></h4>
 <p>Calling <code>executeCommand</code> with the following commands and additional args will notify the client with <code>applyEdit</code>.
-All commands expect the first three args to be <code>[document-uri, line, column]</code> (eg <code>["file:///home/snoe/file.clj", 13, 11]</code>)</p>
+All commands expect the first three args to be <code>[document-uri, line, character]</code> (eg <code>["file:///home/snoe/file.clj", 13, 11]</code>)</p>
 <table>
 <thead>
 <tr>
@@ -1116,7 +1116,7 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <tr>
 <td>√</td>
 <td>add-import-to-namespace</td>
-<td><code>[document-uri, line, column, import-name]</code></td>
+<td><code>[document-uri, line, character, import-name]</code></td>
 <td></td>
 </tr>
 <tr>
@@ -1152,7 +1152,7 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <tr>
 <td>√</td>
 <td>extract-function</td>
-<td><code>[document-uri, line, column, function-name]</code></td>
+<td><code>[document-uri, line, character, function-name]</code></td>
 <td></td>
 </tr>
 <tr>
@@ -1164,13 +1164,13 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <tr>
 <td>√</td>
 <td>introduce-let</td>
-<td><code>[document-uri, line, column, binding-name]</code></td>
+<td><code>[document-uri, line, character, binding-name]</code></td>
 <td></td>
 </tr>
 <tr>
 <td>√</td>
 <td>move-to-let</td>
-<td><code>[document-uri, line, column, binding-name]</code></td>
+<td><code>[document-uri, line, character, binding-name]</code></td>
 <td></td>
 </tr>
 <tr>
@@ -1212,7 +1212,7 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <tr>
 <td>√</td>
 <td>resolve-macro-as</td>
-<td><code>[document-uri, line, column, resolved-full-symbol kondo-config-path]</code></td>
+<td><code>[document-uri, line, character, resolved-full-symbol kondo-config-path]</code></td>
 <td></td>
 </tr>
 <tr>
@@ -1225,7 +1225,7 @@ All commands expect the first three args to be <code>[document-uri, line, column
 </table>
 <p>See Vim client section for an example.</p>
 <p>Emacs provides all those refactorings via <a href="https://emacs-lsp.github.io/lsp-mode/">lsp-mode</a>  with the <code>lsp-clojure-</code> prefix.</p>
-<p>Other clients might provide a higher level interface to <code>workspace/executeCommand</code> you need to pass the path, line and column numbers.</p>
+<p>Other clients might provide a higher level interface to <code>workspace/executeCommand</code> you need to pass the path, line and character numbers.</p>
 <h3 id="custom-methods">Custom methods<a class="headerlink" href="#custom-methods" title="Permanent link">#</a></h3>
 <p><code>clojure-lsp</code> has some custom LSP methods that doesn't follow the protocol but aggregate value as a clojure IDE:</p>
 <h4 id="test-tree">Test tree<a class="headerlink" href="#test-tree" title="Permanent link">#</a></h4>
@@ -1264,7 +1264,7 @@ All commands expect the first three args to be <code>[document-uri, line, column
 <p>Type: Client request with response</p>
 <p>Capability: none </p>
 <p>Method: <code>clojure/cursorInfo/log</code></p>
-<p>Params: <code>[uri, line, column]</code> </p>
+<p>Params: <code>[uri, line, character]</code> </p>
 <p>Response: Any</p>
 <h4 id="clojuredocs-raw">Clojuredocs raw<a class="headerlink" href="#clojuredocs-raw" title="Permanent link">#</a></h4>
 <p>Use to retrieve any Clojuredocs entry. Will return <code>null</code> if no entry found.</p>

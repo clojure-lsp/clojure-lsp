@@ -8,6 +8,12 @@
 
 (h/reset-db-after-test :api-test)
 
+(defn- replace-last
+  "Replaces the last occurrence of `old-value` in `s` with `new-value`."
+  [s old-value new-value]
+  (string/reverse
+   (string/replace-first (string/reverse s) (string/reverse old-value) (string/reverse new-value))))
+
 (deftest analyze-project-and-deps!
   (testing "when project-root is not a file"
     (is (thrown? AssertionError
@@ -48,7 +54,7 @@
   (testing "when project-root is a valid file"
     (testing "when a single namespace is specified"
       (h/clean-db! :api-test)
-      (with-redefs [spit #(is (= (slurp (string/replace %1 "src" "fixtures")) %2))]
+      (with-redefs [spit #(is (= (slurp (replace-last %1 "src" "fixtures")) %2))]
         (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
                         :namespace '[sample-test.api.clean-ns.a]
                         :raw? true})))
@@ -154,7 +160,7 @@
   (testing "when project-root is a valid file"
     (testing "when a single namespace is specified"
       (h/clean-db! :api-test)
-      (with-redefs [spit #(is (= (slurp (string/replace %1 "src" "fixtures")) %2))]
+      (with-redefs [spit #(is (= (slurp (replace-last %1 "src" "fixtures")) %2))]
         (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
                       :namespace '[sample-test.api.format.a]
                       :raw? true})))
@@ -236,7 +242,7 @@
                                                 :raw?         true})))))
   (testing "renaming a function"
     (h/clean-db! :api-test)
-    (with-redefs [spit #(is (= (slurp (string/replace %1 "src/sample_test" "fixtures/sample_test/api")) %2))]
+    (with-redefs [spit #(is (= (slurp (replace-last %1 "src/sample_test" "fixtures/sample_test/api")) %2))]
       (is (= 0 (:result-code (api/rename! {:project-root (io/file "../cli/integration-test/sample-test")
                                            :from         'sample-test.rename.a/my-func
                                            :to           'sample-test.rename.a/your-func

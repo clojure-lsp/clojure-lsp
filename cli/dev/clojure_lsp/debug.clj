@@ -28,8 +28,19 @@
   `(let [n# ~n]
      (println "profiling" n# "iterations")
      (let [time-start# (System/nanoTime)
-           result# (profiler/profile {:min-width 5
-                                      :return-file true}
+           result# (profiler/profile {:return-file true
+                                      :predefined-transforms
+                                      [{:type :remove
+                                        :what #"unknown_Java|thread_start"}
+                                       {:type :replace
+                                        :what #".*?(clojure-lsp.*)"
+                                        :replacement "$1"}
+                                       {:type :replace
+                                        :what #"(rewrite-clj.([^/]*)/[^;]*).*"
+                                        :replacement "$1"}
+                                       {:type :replace
+                                        :what #"(clj-kondo.core/[^;]*).*"
+                                        :replacement "$1"}]}
                                      (dotimes [_n# n#] ~body))
            elapsed-s# (/ (- (System/nanoTime) time-start#) 1e9)]
        (println "Profiled for" elapsed-s# "seconds. (Should be 5-10 seconds to have enough samples.)")

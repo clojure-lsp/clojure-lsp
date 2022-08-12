@@ -611,14 +611,14 @@
       "hash": "sha256-4LypffdwI9ZRgGAAeLJGJYwiLhUDJ64urPOynp9cIu4="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.0.0/lsp4clj-1.0.0.jar",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.0.1/lsp4clj-1.0.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-sq4gkN0Wyf/JaPrHIJIFwz5mz1Ipcjz4/QNkHB/vhHw="
+      "hash": "sha256-cE22RVk+CaWDp2n/poTHG/oCAFgP0iGyTURm1WxNpBQ="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.0.0/lsp4clj-1.0.0.pom",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.0.1/lsp4clj-1.0.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-f2iSX3PmvZUCPyqsKY9zHlqZ6pgeJDvhNQNWeW2aRzQ="
+      "hash": "sha256-5bF1CirMWYrI4OcGnL+B2ZamWbmLPnpZby/TuEKbV9U="
     },
     {
       "mvn-path": "com/github/ericdallo/deps-bin/0.1.2/deps-bin-0.1.2.jar",

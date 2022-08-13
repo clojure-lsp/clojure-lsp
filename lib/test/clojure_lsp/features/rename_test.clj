@@ -176,6 +176,26 @@
               :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.clj")}]}
            (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 @db/db*)))))
 
+(deftest rename-defrecord
+  (h/clean-db!)
+  (let [[def-start-pos def-end-pos
+         use1-start-pos use1-end-pos
+         use2-start-pos use2-end-pos
+         use3-start-pos use3-end-pos
+         use4-start-pos use4-end-pos] (h/load-code-and-locs (h/code "(defrecord |Foo| [a])"
+                                                                     "(|Foo|. 1)"
+                                                                     "(|->Foo| 1)"
+                                                                     "(|map->Foo| {:a 1})"
+                                                                     "|Foo|"))
+        [start-row start-col] def-start-pos
+        result (:changes (f.rename/rename-from-position h/default-uri "Bar" start-row start-col @db/db*))]
+    (is (= {h/default-uri [{:new-text "Bar" :range (h/->range def-start-pos def-end-pos)}
+                           {:new-text "Bar" :range (h/->range use1-start-pos use1-end-pos)}
+                           {:new-text "->Bar" :range (h/->range use2-start-pos use2-end-pos)}
+                           {:new-text "map->Bar" :range (h/->range use3-start-pos use3-end-pos)}
+                           {:new-text "Bar" :range (h/->range use4-start-pos use4-end-pos)}]}
+           result))))
+
 (deftest prepare-rename
   (testing "rename local var"
     (h/clean-db!)

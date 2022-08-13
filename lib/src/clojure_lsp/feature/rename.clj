@@ -139,22 +139,52 @@
      :new-text replacement
      :text-document {:version version :uri ref-doc-id}}))
 
+(defn ^:private rename-defrecord
+  [replacement db reference]
+  (let [current-name (str (:name reference))
+        map->? (string/starts-with? current-name "map->")
+        ->? (string/starts-with? current-name "->")
+        name-end (+ (:name-col reference) (count (name current-name)))
+        ref-doc-id (shared/filename->uri (:filename reference) db)
+        version (get-in db [:documents ref-doc-id :v] 0)]
+    {:new-text (cond
+                 map->?
+                 (str "map->" replacement)
+
+                 ->?
+                 (str "->" replacement)
+
+                 :else
+                 replacement)
+     :text-document {:version version :uri ref-doc-id}
+     :range (shared/->range (assoc reference :name-end-col name-end))}))
+
 (defn ^:private rename-changes
   [element definition references replacement replacement-raw db]
-  (if (identical? :namespace-alias (:bucket element))
+  (cond
+    (identical? :namespace-alias (:bucket element))
     (mapv (partial rename-alias replacement db) references)
-    (case (:bucket definition)
 
-      :namespace-definitions
-      (mapv (partial rename-ns-definition replacement db) references)
+    (identical? :namespace-definitions (:bucket definition))
+    (mapv (partial rename-ns-definition replacement db) references)
 
-      (:keyword-definitions :keyword-usages)
-      (mapv (partial rename-keyword replacement replacement-raw db) references)
+    (contains? #{:keyword-definitions :keyword-usages} (:bucket definition))
+    (mapv (partial rename-keyword replacement replacement-raw db) references)
 
-      :locals
-      (mapv (partial rename-local replacement db) references)
+    (identical? :locals (:bucket definition))
+    (mapv (partial rename-local replacement db) references)
 
-      (mapv (partial rename-other replacement db) references))))
+    (and (identical? :var-definitions (:bucket definition))
+         (contains? '#{clojure.core/defrecord cljs.core/defrecord}
+                    (:defined-by definition)))
+    (->> references
+         (remove #(and (identical? :var-definitions (:bucket %))
+                       (or (string/starts-with? (str (:name %)) "->")
+                           (string/starts-with? (str (:name %)) "map->"))))
+         (mapv (partial rename-defrecord replacement db)))
+
+    :else
+    (mapv (partial rename-other replacement db) references)))
 
 (defn ^:private rename-status
   [element definition references source-paths client-capabilities]

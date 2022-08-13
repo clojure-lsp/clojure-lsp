@@ -20,6 +20,7 @@
   - Ensure line numbers provided by document-symbol correspond to the latest version of the file. #1178
   - Avoid exceptions when clients use URIs that don't exist on disk.
   - Fix documentation on completion items. #1181
+  - Fix rename of defrecords. #1165
 
 ## 2022.07.24-18.25.43
 

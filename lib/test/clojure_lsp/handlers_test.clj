@@ -28,7 +28,7 @@
   (testing "opening a existing file"
     (h/clean-db!)
     (h/let-mock-chans
-      [mock-diagnostics-chan #'db/diagnostics-chan]
+      [mock-diagnostics-chan db/diagnostics-chan]
       (let [_ (h/load-code-and-locs "(ns a) (when)")]
         (is (some? (get-in @db/db* [:analysis (h/file-path "/a.clj")])))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
@@ -44,7 +44,7 @@
                          :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                          :project-root-uri (h/file-uri "file:///project")})
     (h/let-mock-chans
-      [mock-edits-chan #'db/edits-chan]
+      [mock-edits-chan db/edits-chan]
       (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj"))
       (h/assert-submaps
         [{:edits [{:range {:start {:line 0, :character 0}
@@ -59,7 +59,7 @@
                          :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                          :project-root-uri (h/file-uri "file:///project")})
     (h/let-mock-chans
-      [mock-edits-chan #'db/edits-chan]
+      [mock-edits-chan db/edits-chan]
       (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn"))
       (h/assert-no-take mock-edits-chan 500)
       (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))

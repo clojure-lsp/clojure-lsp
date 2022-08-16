@@ -141,10 +141,10 @@
         (not= :off depend-level)
         (concat (clj-depend-violations->diagnostics filename depend-level db))))))
 
-(defn publish-diagnostic!* [diagnostic]
+(defn ^:private publish-diagnostic!* [diagnostic]
   (async/put! db/diagnostics-chan diagnostic))
 
-(defn publish-all-diagnostics!* [diagnostics]
+(defn ^:private publish-all-diagnostics!* [diagnostics]
   (async/onto-chan! db/diagnostics-chan diagnostics false))
 
 (defn publish-diagnostics! [uri db]

@@ -141,38 +141,31 @@
         (not= :off depend-level)
         (concat (clj-depend-violations->diagnostics filename depend-level db))))))
 
-(defn sync-publish-diagnostics! [uri db]
-  (async/put! db/diagnostics-chan
-              {:uri uri
-               :diagnostics (find-diagnostics uri db)}))
+(defn publish-diagnostic!* [diagnostic]
+  (async/put! db/diagnostics-chan diagnostic))
 
-(defn async-publish-diagnostics! [uri db]
-  (if (#{:unit-test :api-test} (:env db)) ;; Avoid async on test which cause flakeness
-    (async/put! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics (find-diagnostics uri db)})
-    (async/go
-      (async/>! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics (find-diagnostics uri db)}))))
+(defn publish-all-diagnostics!* [diagnostics]
+  (async/onto-chan! db/diagnostics-chan diagnostics false))
+
+(defn publish-diagnostics! [uri db]
+  (publish-diagnostic!* {:uri uri
+                         :diagnostics (find-diagnostics uri db)}))
 
 (defn publish-all-diagnostics! [paths db]
-  (doseq [path paths]
-    (doseq [file (file-seq (io/file path))]
-      (let [filename (.getAbsolutePath ^java.io.File file)
-            uri (shared/filename->uri filename db)]
-        (when (not= :unknown (shared/uri->file-type uri))
-          (sync-publish-diagnostics! uri db))))))
+  (publish-all-diagnostics!*
+    (eduction (map io/file)
+              (mapcat file-seq)
+              (map #(.getAbsolutePath ^java.io.File %))
+              (map #(shared/filename->uri % db))
+              (remove #(= :unknown (shared/uri->file-type %)))
+              (map (fn [uri]
+                     {:uri uri
+                      :diagnostics (find-diagnostics uri db)}))
+              paths)))
 
-(defn publish-empty-diagnostics! [uri db]
-  (if (#{:unit-test :api-test} (:env db))
-    (async/put! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics []})
-    (async/go
-      (async/>! db/diagnostics-chan
-                {:uri uri
-                 :diagnostics []}))))
+(defn publish-empty-diagnostics! [uri]
+  (publish-diagnostic!* {:uri uri
+                         :diagnostics []}))
 
 (defn ^:private unused-public-vars [var-defs kw-defs project-db kondo-config]
   (let [var-definitions (remove (partial exclude-public-diagnostic-definition? kondo-config) var-defs)

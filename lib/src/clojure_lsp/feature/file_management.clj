@@ -43,7 +43,7 @@
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
                      (lsp.depend/db-with-results depend-result))))
-    (f.diagnostic/async-publish-diagnostics! uri @db*))
+    (f.diagnostic/publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
       (async/>!! db/edits-chan create-ns-edits))))
@@ -162,9 +162,7 @@
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
             (analyze-reference-filenames! filenames db*))
-          (let [db @db*]
-            (doseq [filename filenames]
-              (f.diagnostic/sync-publish-diagnostics! (shared/filename->uri filename db) db)))
+          (f.diagnostic/publish-all-diagnostics! filenames @db*)
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line character end-line end-character]
@@ -229,7 +227,7 @@
                                     (lsp.depend/db-with-results depend-result)
                                     (update :processing-changes disj uri)))
             (let [db @db*]
-              (f.diagnostic/sync-publish-diagnostics! uri db)
+              (f.diagnostic/publish-diagnostics! uri db)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-db db components))
               (producer/refresh-test-tree producer [uri]))
@@ -264,7 +262,7 @@
 
 (defn ^:private file-deleted [db* uri filename]
   (swap! db* db-without-file uri filename)
-  (f.diagnostic/publish-empty-diagnostics! uri @db*))
+  (f.diagnostic/publish-empty-diagnostics! uri))
 
 (defn did-change-watched-files [changes db*]
   (doseq [{:keys [uri type]} changes]

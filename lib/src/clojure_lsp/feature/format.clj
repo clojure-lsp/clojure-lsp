@@ -18,7 +18,7 @@
 (set! *warn-on-reflection* true)
 
 (defn resolve-user-cljfmt-config [db]
-  (when-let [project-root (shared/uri->filename (:project-root-uri db))]
+  (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]
     (let [config-path (settings/get db [:cljfmt-config-path] ".cljfmt.edn")
           cljfmt-config-file (if (string/starts-with? config-path "/")
                                (io/file config-path)

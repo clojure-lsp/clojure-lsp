@@ -104,7 +104,8 @@
     (-> element :name name)))
 
 (defn add-unresolved [completion-item unresolved-type args]
-  (update-in completion-item [:data "unresolved"] (fnil conj []) [unresolved-type args]))
+  (update-in completion-item [:data "unresolved"] (fnil conj [])
+             [unresolved-type (shared/preserve-kebab-case args)]))
 
 (defn ^:private completion-item-with-documentation
   [completion-item element var-name db* docs-config]
@@ -139,9 +140,9 @@
     ;; client supports postponing the expensive edit calculation
     (add-unresolved completion-item
                     "alias"
-                    {"ns-to-add"    (name ns-to-add)
-                     "alias-to-add" (name alias-to-add)
-                     "uri"          uri})
+                    {:ns-to-add    (name ns-to-add)
+                     :alias-to-add (name alias-to-add)
+                     :uri          uri})
     ;; client can't postpone the edit calculation, so do it now, even though it's expensive
     (completion-item-with-alias-edit completion-item cursor-loc alias-to-add ns-to-add db)))
 
@@ -180,10 +181,10 @@
       kind (assoc :kind kind)
       detail (assoc :detail detail)
       :always (completion-item-with-unresolved-documentation
-                {"name" (-> element :name str)
-                 "filename" (:filename element)
-                 "name-row" (:name-row element)
-                 "name-col" (:name-col element)}
+                {:name (-> element :name str)
+                 :filename (:filename element)
+                 :name-row (:name-row element)
+                 :name-col (:name-col element)}
                 resolve-support))))
 
 (defn ^:private name-matches-xf [matches-fn]
@@ -369,9 +370,9 @@
                    :detail   (str ns-name "/" sym-name)
                    :priority priority}
                   (completion-item-with-unresolved-documentation
-                    {"filename" filename
-                     "name"     sym-name
-                     "ns"       ns-name}
+                    {:filename filename
+                     :name     sym-name
+                     :ns       ns-name}
                     resolve-support)))))
         symbols))
 

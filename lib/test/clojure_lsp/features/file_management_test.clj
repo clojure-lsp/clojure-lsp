@@ -27,7 +27,7 @@
   (h/load-code-and-locs "(ns some-jar)" (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj"))
   (testing "when file exists on disk"
     (h/let-mock-chans
-      [mock-diagnostics-chan #'db/diagnostics-chan]
+      [mock-diagnostics-chan db/diagnostics-chan]
       (with-redefs [shared/file-exists? (constantly true)]
         (f.file-management/did-close "file:///user/project/src/clj/foo.clj" db/db*))
       (is (get-in @db/db* [:analysis "/user/project/src/clj/foo.clj"]))
@@ -38,7 +38,7 @@
       (h/assert-no-take mock-diagnostics-chan 500)))
   (testing "when local file not exists on disk"
     (h/let-mock-chans
-      [mock-diagnostics-chan #'db/diagnostics-chan]
+      [mock-diagnostics-chan db/diagnostics-chan]
       (with-redefs [shared/file-exists? (constantly false)]
         (f.file-management/did-close "file:///user/project/src/clj/bar.clj" db/db*))
       (is (nil? (get-in @db/db* [:analysis "/user/project/src/clj/bar.clj"])))
@@ -51,7 +51,7 @@
              (h/take-or-timeout mock-diagnostics-chan 500)))))
   (testing "when file is external we do not remove analysis"
     (h/let-mock-chans
-      [mock-diagnostics-chan #'db/diagnostics-chan]
+      [mock-diagnostics-chan db/diagnostics-chan]
       (with-redefs [shared/file-exists? (constantly false)]
         (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" db/db*))
       (is (get-in @db/db* [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
@@ -64,8 +64,8 @@
 (deftest did-open
   (testing "on an empty file"
     (h/let-mock-chans
-      [mock-edits-chan #'db/edits-chan
-       mock-diagnostics-chan #'db/diagnostics-chan]
+      [mock-edits-chan db/edits-chan
+       mock-diagnostics-chan db/diagnostics-chan]
       (let [filename "/user/project/src/aaa/bbb.clj"
             uri (h/file-uri (str "file://" filename))]
         (swap! db/db* shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
@@ -92,7 +92,7 @@
 
 (deftest did-change
   (h/let-mock-chans
-    [mock-changes-chan #'db/current-changes-chan]
+    [mock-changes-chan db/current-changes-chan]
     (let [original-text (h/code "(ns aaa)"
                                 "(def foo 1)")
           edited-text (h/code "(ns aaa)"
@@ -112,7 +112,7 @@
 (deftest did-change-watched-files
   (testing "created file"
     (h/let-mock-chans
-      [mock-created-chan #'db/created-watched-files-chan]
+      [mock-created-chan db/created-watched-files-chan]
       (f.file-management/did-change-watched-files
         [{:type :created
           :uri h/default-uri}]
@@ -120,7 +120,7 @@
       (is (= h/default-uri (h/take-or-timeout mock-created-chan 500)))))
   (testing "deleted file"
     (h/let-mock-chans
-      [mock-diagnostics-chan #'db/diagnostics-chan]
+      [mock-diagnostics-chan db/diagnostics-chan]
       (f.file-management/did-change-watched-files
         [{:type :deleted
           :uri h/default-uri}]

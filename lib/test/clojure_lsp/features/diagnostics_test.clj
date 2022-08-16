@@ -291,7 +291,7 @@
                   (foo 1 ['a 'b])
                   (foo 1 2 3 {:k 1 :v 2})"]
         (h/let-mock-chans
-          [mock-diagnostics-chan #'db/diagnostics-chan]
+          [mock-diagnostics-chan db/diagnostics-chan]
           (h/load-code-and-locs code)
           (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
             (is (= "file:///a.clj" uri))
@@ -326,7 +326,7 @@
                     (foo 1)
                     (bar))"]
         (h/let-mock-chans
-          [mock-diagnostics-chan #'db/diagnostics-chan]
+          [mock-diagnostics-chan db/diagnostics-chan]
           (h/load-code-and-locs code)
           (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
             (is (= "file:///a.clj" uri))
@@ -346,7 +346,7 @@
                   (bar :a)
                   (bar :a :b)"]
         (h/let-mock-chans
-          [mock-diagnostics-chan #'db/diagnostics-chan]
+          [mock-diagnostics-chan db/diagnostics-chan]
           (h/load-code-and-locs code)
           (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
             (is (= "file:///a.clj" uri))
@@ -362,7 +362,7 @@
                   (foo 1 2)
                   (foo 1)"]
         (h/let-mock-chans
-          [mock-diagnostics-chan #'db/diagnostics-chan]
+          [mock-diagnostics-chan db/diagnostics-chan]
           (h/load-code-and-locs code)
           (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
             (is (= "file:///a.clj" uri))
@@ -372,7 +372,7 @@
   (testing "custom unused namespace declaration"
     (h/clean-db!)
     (h/let-mock-chans
-      [mock-diagnostics-chan #'db/diagnostics-chan]
+      [mock-diagnostics-chan db/diagnostics-chan]
       (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///foo/bar.clj"))
       (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
         (is (= "file:///foo/bar.clj" uri))

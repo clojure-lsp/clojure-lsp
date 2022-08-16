@@ -85,17 +85,17 @@
        (f)))))
 
 (defmacro let-mock-chans [bindings & body]
-  (assert (even? (count bindings)))
+  {:pre [(even? (count bindings))]}
   (let [bs (partition 2 bindings)
         let-bindings (mapcat (fn [[binding _]]
-                               `[~binding (async/chan 1)])
+                               [binding `(async/chan 1)])
                              bs)
-        alter-vars (map (fn [[binding chan-var]]
-                          `(alter-var-root ~chan-var (constantly ~binding)))
-                        bs)]
+        redef-bindings (mapcat (fn [[binding chan-var]]
+                                 [chan-var binding])
+                               bs)]
     `(let [~@let-bindings]
-       ~@alter-vars
-       ~@body)))
+       (with-redefs [~@redef-bindings]
+         ~@body))))
 
 (defn take-or-timeout [c timeout-ms]
   (let [timeout (async/timeout timeout-ms)

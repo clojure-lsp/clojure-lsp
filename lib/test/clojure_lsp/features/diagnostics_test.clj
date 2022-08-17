@@ -9,7 +9,7 @@
 
 (def findings (atom []))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest lint-project-public-vars
   (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
@@ -271,7 +271,7 @@
 (deftest test-find-diagnostics
   (testing "wrong arity"
     (testing "for argument destructuring"
-      (h/clean-db!)
+      (h/reset-components!)
       (let [code "(defn foo ([x] x) ([x y] (x y)))
                   (defn bar [y & rest] ((foo y y y) (bar rest)))
                   (defn baz [{x :x y :y :as long}
@@ -303,7 +303,7 @@
                   "user/foo is called with 4 args but expects 1 or 2"]
                  (map :message diagnostics))))))
     (testing "for threading macros"
-      (h/clean-db!)
+      (h/reset-components!)
       (let [code "(defn foo ([x] x) ([x y z] (z x y)))
                   (defn bar [] :bar)
                   (defn baz [arg & rest] (apply arg rest))
@@ -338,7 +338,7 @@
                   "user/bar is called with 1 arg but expects 0"]
                  (map :message diagnostics))))))
     (testing "with annotations"
-      (h/clean-db!)
+      (h/reset-components!)
       (let [code "(defn foo {:added \"1.0\"} [x] (inc x))
                   (defn ^:private bar ^String [^Class x & rest] (str x rest))
                   (foo foo)
@@ -353,7 +353,7 @@
           (is (= ["user/foo is called with 2 args but expects 1"]
                  (map :message diagnostics))))))
     (testing "for schema defs"
-      (h/clean-db!)
+      (h/reset-components!)
       (let [code "(ns user (:require [schema.core :as s]))
                   (s/defn foo :- s/Str
                     [x :- Long y :- Long]
@@ -370,7 +370,7 @@
                   "user/foo is called with 1 arg but expects 2"]
                  (map :message diagnostics)))))))
   (testing "custom unused namespace declaration"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [mock-diagnostics-chan (async/chan 1)]
       (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///foo/bar.clj") (assoc (h/components)
                                                                                      :diagnostics-chan mock-diagnostics-chan))

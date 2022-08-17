@@ -5,7 +5,7 @@
    [clojure.test :refer [are deftest is testing]]
    [rewrite-clj.zip :as z]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest safe-zloc-of-string
   (are [s] (= s (z/root-string (parser/safe-zloc-of-string s)))

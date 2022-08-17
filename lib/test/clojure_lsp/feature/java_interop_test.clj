@@ -5,7 +5,7 @@
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest uri->translated-uri-test
   (is (= "" (f.java-interop/uri->translated-uri "" (h/db))))

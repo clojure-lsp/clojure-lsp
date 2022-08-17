@@ -5,7 +5,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest test-formatting
   (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})

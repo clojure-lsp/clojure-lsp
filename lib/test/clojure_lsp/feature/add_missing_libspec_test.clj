@@ -6,7 +6,7 @@
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest resolve-best-alias-suggestions-test
   (testing "alias not exists"
@@ -201,38 +201,38 @@
 (deftest add-missing-libspec-test
   (testing "aliases"
     (testing "known aliases in project"
-      (h/clean-db!)
+      (h/reset-components!)
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))" "file:///b.clj")
       (is (= '(ns foo (:require [foo.s :as s]))
              (-> "(ns foo) |s/thing"
                  add-missing-libspec
                  as-sexp))))
     (testing "Do not add from wrong language"
-      (h/clean-db!)
+      (h/reset-components!)
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))" "file:///b.cljs")
       (h/load-code-and-locs "(ns foo.s)" "file:///c.cljs")
       (is (= nil
              (-> "(ns foo) |s/thing"
                  add-missing-libspec))))
     (testing "common ns aliases"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= '(ns foo (:require [clojure.set :as set]))
              (-> "(ns foo) |set/subset?"
                  add-missing-libspec
                  as-sexp))))
     (testing "Don't add an alias that already exists"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= nil
              (-> "(ns foo (:require [foo.set :as set])) |set/subset?"
                  add-missing-libspec))))
     (testing "Don't add a namespace that already exists, but fix alias."
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= "s/subset?"
              (-> "(ns foo (:require [clojure.set :as s])) |set/subset?"
                  add-missing-libspec
                  as-str))))
     (testing "Don't add a namespace that already exists, but fix alias."
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= "s/subset?"
              (-> "(ns foo (:require [clojure.set :as s])) |c.s/subset?"
                  add-missing-libspec
@@ -283,13 +283,13 @@
                    as-str))))))
   (testing "common refers"
     (testing "when require doesn't exists"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= '(ns foo (:require [clojure.test :refer [deftest]]))
              (-> "(ns foo) |deftest"
                  add-missing-libspec
                  as-sexp))))
     (testing "when already exists another require"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= '(ns foo (:require
                        [clojure.set :refer [subset?]]
                        [clojure.test :refer [deftest]]))
@@ -297,34 +297,34 @@
                  add-missing-libspec
                  as-sexp))))
     (testing "when already exists that ns with alias and no refers"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= '(ns foo (:require [clojure.test :as t :refer [testing]]))
              (-> "(ns foo (:require [clojure.test :as t])) |testing t/deftest"
                  add-missing-libspec
                  as-sexp))))
     (testing "when already exists that ns with another refer"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= '(ns foo (:require [clojure.test :refer [deftest testing]]))
              (-> "(ns foo (:require [clojure.test :refer [deftest]])) |testing deftest"
                  add-missing-libspec
                  as-sexp))))
     (testing "we don't add existing refers"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (nil? (add-missing-libspec "(ns foo (:require [clojure.test :refer [testing]])) |testing"))))
     (testing "we can add multiple refers"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= '(ns foo (:require
                        [clojure.test :refer [deftest is testing]]))
              (-> "(ns foo (:require [clojure.test :refer [deftest testing]])) |is deftest testing"
                  add-missing-libspec
                  as-sexp)))))
   (testing "when on invalid location"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (nil? (-> "(ns foo) |;; comment"
                   add-missing-libspec)))))
 
 (defn add-import-to-namespace [code import-name & [settings]]
-  (h/clean-db!)
+  (h/reset-components!)
   (swap! (h/db*) shared/deep-merge {:settings (merge
                                               {:clean {:automatically-after-ns-refactor false}}
                                               settings)})

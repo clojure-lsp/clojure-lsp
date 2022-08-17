@@ -5,11 +5,11 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest internal-analysis
   (testing "when dependency-scheme is zip"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
@@ -23,7 +23,7 @@
 
 (deftest external-analysis
   (testing "when dependency-scheme is zip"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
@@ -181,7 +181,7 @@
 
 (deftest find-last-order-by-project-analysis
   (testing "with pred that applies for both project and external analysis"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (let [element (#'q/find-last-order-by-project-analysis
@@ -190,7 +190,7 @@
                    (h/db))]
       (is (= (h/file-path "/a.clj") (:filename element)))))
   (testing "with pred that applies for both project and external analysis with multiple on project"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
@@ -644,7 +644,7 @@
         {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
         (q/find-definition-from-cursor db (h/file-path "/b.cljc") bar-r-cljs bar-c-cljs))))
   (testing "when a macro is require-macros on cljs, being the var-definition on a clj/cljc file."
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs (h/code "(ns some.foo) (defmacro bar [& body] @body)") (h/file-uri "file:///some/foo.clj"))
     (h/load-code-and-locs (h/code "(ns some.foo (:require-macros [some.foo])) (def baz)") (h/file-uri "file:///some/foo.cljs"))
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns a (:require [some.foo :as f])) (f/|bar 1)") (h/file-uri "file:///a.cljs"))

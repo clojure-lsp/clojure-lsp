@@ -6,7 +6,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [are deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (defn load-code [file & lines]
   (h/load-code-and-locs
@@ -15,7 +15,7 @@
 
 (deftest maintaining-dep-graph
   (testing "initial external analysis"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs (h/code "(ns xxx"
                                   "  (:require [xxx.yyy]))")
                           (h/file-uri "jar:file:///some.jar!/xxx.clj"))
@@ -43,7 +43,7 @@
       '{:internal? false, :langs #{:clj}, :namespaces #{xxx.yyy} :filename "/some.jar:xxx/yyy.clj"}
       (get-in (h/db) [:documents "zipfile:///some.jar::xxx/yyy.clj"])))
   (testing "initial internal analysis"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/aaa.clj"
                "(ns aaa"
                " (:require [bbb :as b]"
@@ -85,7 +85,7 @@
       '{:internal? true, :langs #{:clj}, :namespaces #{ccc}, :filename "/ccc.clj"}
       (get-in (h/db) [:documents "file:///ccc.clj"])))
   (testing "extending initial external analysis with internal analysis"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs (h/code "(ns xxx"
                                   "  (:require [xxx.yyy]))")
                           (h/file-uri "jar:file:///some.jar!/xxx.clj"))
@@ -109,7 +109,7 @@
       (is (not (:internal? xxx-yyy)))
       (is (not (:dependents-internal? xxx-yyy)))))
   (testing "adding dependency"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/bbb.clj"
                "(ns bbb)")
     (load-code "/aaa.clj"
@@ -124,7 +124,7 @@
       (is (get-in db [:dep-graph 'aaa :dependencies 'bbb]))
       (is (get-in db [:dep-graph 'bbb :dependents 'aaa]))))
   (testing "removing dependency"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/bbb.clj"
                "(ns bbb)")
     (load-code "/aaa.clj"
@@ -139,7 +139,7 @@
       (is (= '{clojure.core 1} (get-in db [:dep-graph 'aaa :dependencies])))
       (is (empty? (get-in db [:dep-graph 'bbb :dependents])))))
   (testing "removing duplicate dependency"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/bbb.clj"
                "(ns bbb)")
     (load-code "/aaa.clj"
@@ -158,7 +158,7 @@
       (is (get-in db [:dep-graph 'bbb :dependents 'aaa]))
       (is (= '{b 1} (get-in db [:dep-graph 'bbb :aliases])))))
   (testing "deleting file"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/bbb.clj"
                "(ns bbb)")
     (load-code "/aaa.clj"
@@ -183,21 +183,21 @@
       (is (empty? (get-in db [:dep-graph 'bbb :dependents])))
       (is (nil? (get-in db [:documents "file:///aaa.clj"])))))
   (testing "in implicit user ns"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/scratch.clj"
                "(def x 1)")
     (let [db (h/db)]
       (is (= #{"file:///scratch.clj"} (get-in db [:dep-graph 'user :uris])))
       (is (= '#{user} (get-in db [:documents "file:///scratch.clj" :namespaces])))))
   (testing "with implicit dependency on clojure.core"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/aaa.clj"
                "(ns aaa)")
     (let [db (h/db)]
       (is (get-in db [:dep-graph 'aaa :dependencies 'clojure.core]))
       (is (get-in db [:dep-graph 'clojure.core :dependents 'aaa]))))
   (testing "with implicit dependency on cljs.core"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/aaa.cljs"
                "(ns aaa)")
     (let [db (h/db)]
@@ -205,7 +205,7 @@
       (is (get-in db [:dep-graph 'cljs.core :dependents 'aaa])))))
 
 (deftest uri-filtering
-  (h/clean-db!)
+  (h/reset-components!)
   (testing "internal namespaces"
     (load-code "/aaa.clj"
                "(ns aaa"
@@ -242,13 +242,13 @@
       (is (= #{"file:///aaa.clj" "file:///bbb.clj" "file:///ccc.clj"}
              (dep-graph/nses-and-dependents-uris db '#{bbb ccc})))))
   (testing "external namespaces"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/aaa.clj" "(ns aaa)")
     (h/load-code-and-locs "(ns bbb)" (h/file-uri "jar:file:///some.jar!/bbb.clj"))
     (let [db (h/db)]
       (is (= ["file:///aaa.clj"] (dep-graph/internal-uris db)))))
   (testing "namespaces defined internally and externally"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/aaa.clj" "(ns aaa)")
     (h/load-code-and-locs "(ns aaa)" (h/file-uri "jar:file:///some.jar!/aaa.clj"))
     (let [db (h/db)]
@@ -256,7 +256,7 @@
       (is (= ["file:///aaa.clj"] (dep-graph/ns-internal-uris db 'aaa)))
       (is (= ["file:///aaa.clj"] (dep-graph/internal-uris db)))))
   (testing "file with multiple namespaces"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/aaa.clj"
                "(ns aaa)"
                "(ns aaa2)")
@@ -265,7 +265,7 @@
       (is (= #{"file:///aaa.clj"} (dep-graph/ns-uris db 'aaa2)))
       (is (= '#{aaa aaa2} (get-in db [:documents "file:///aaa.clj" :namespaces])))))
   (testing "namespace with multiple files"
-    (h/clean-db!)
+    (h/reset-components!)
     (load-code "/aaa.clj" "(ns aaa)")
     (load-code "/also/aaa.clj" "(ns aaa)")
     (let [db (h/db)]

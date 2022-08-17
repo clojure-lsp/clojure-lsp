@@ -8,7 +8,7 @@
    [clojure.test :refer [are deftest is testing]]
    [rewrite-clj.zip :as z]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (defn as-strings [results]
   (map (comp z/string :loc) results))
@@ -88,13 +88,13 @@
                  "     (get-in foo))")
          (thread-last-all "|(get-in foo [:a :b])")))
   (testing "Removing unecessary parens when 1 arg"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= (h/code "(->> [1 2]"
                    "     foo"
                    "     bar)")
            (thread-last-all "|(bar (foo [1 2]))"))))
   (testing "Not removing unecessary parens when 1 arg"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) shared/deep-merge {:settings {:keep-parens-when-threading? true}})
     (is (= (h/code "(->> [1 2]"
                    "     (foo)"
@@ -369,7 +369,7 @@
 
 (deftest promote-fn-test
   (testing "literal to fn"
-    (h/clean-db!)
+    (h/reset-components!)
     (are [expected fn-literal] (= [expected] (promote-fn fn-literal))
       ;; basic params
       "(fn [])"                                                      "|#()"
@@ -403,7 +403,7 @@
       "(fn [] (+ 1 2))"                                              "#|(+ 1 2)"
       "(fn [] (+ 1 2))"                                              "#(+ 1| 2)"))
   (testing "fn to defn"
-    (h/clean-db!)
+    (h/reset-components!)
     (are [expected-defn expected-replacement code]
          (= [expected-defn expected-replacement] (promote-fn code))
       ;; basic params
@@ -419,7 +419,7 @@
       ;; from inside
       "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"))
   (testing "fn to defn with locals"
-    (h/clean-db!)
+    (h/reset-components!)
     (are [expected-defn expected-replacement code]
          (= [expected-defn expected-replacement] (promote-fn code))
       ;; basic params
@@ -436,14 +436,14 @@
       ;; multi-arity
       "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"   "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"))
   (testing "naming"
-    (h/clean-db!)
+    (h/reset-components!)
     ;; previously named fn
     (is (= ["\n(defn- previously-named [])\n" "previously-named"] (promote-fn "|(fn previously-named [])")))
     ;; provided name
     (is (= ["\n(defn- my-name [])\n" "my-name"] (promote-fn "|(fn [])" "my-name")))
     (is (= ["(fn my-name [])"] (promote-fn "|#()" "my-name"))))
   (testing "when nested"
-    (h/clean-db!)
+    (h/reset-components!)
     ;; literal within fn
     (is (= ["(fn [element1] (+ element1))"] (promote-fn "(fn [a] (+ a #(+ |%1)))")))
     ;; fn within literal
@@ -518,7 +518,7 @@
 (deftest extract-function-test
   (testing "simple extract"
     (are [filepath] (do
-                      (h/clean-db!)
+                      (h/reset-components!)
                       (= [(h/code ""
                                   "(defn- foo [b]"
                                   "  (let [c 1] (b c)))"
@@ -542,7 +542,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "with-setting"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= [(h/code ""
                     "(defn ^:private foo []"
@@ -553,7 +553,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "after local usage"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [b c]"
                     "  (+ 2 b c))"
@@ -563,7 +563,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "On multi-arity function"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a b]"
                     "  (= a b))"
@@ -577,7 +577,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "from comment"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a]"
                     "  (+ 1 a))"
@@ -590,7 +590,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "from whitespace"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a]"
                     "  (+ 1 a))"
@@ -603,7 +603,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "from trailing comment"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo []"
                     "  (let [a 1 b 2 c 3]"
@@ -619,7 +619,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "with comments above origin function"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/assert-submaps
       [{:loc   (h/code ""
                        "(defn- foo [b]"
@@ -634,7 +634,7 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "with comments above origin function with spaces"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/assert-submaps
       [{:loc   (h/code ""
                        "(defn- foo [b]"
@@ -651,7 +651,7 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "with comments above origin function with multi line comments"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/assert-submaps
       [{:loc   (h/code ""
                        "(defn- foo [b]"
@@ -668,7 +668,7 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "from end of file"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" (h/db))))
     (h/assert-submaps
       []
@@ -681,7 +681,7 @@
 (deftest create-function-test
   (testing "function on same file"
     (testing "creating with no args"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func []"
                      "  )"
@@ -690,7 +690,7 @@
                  create-function
                  as-string))))
     (testing "creating with 1 known arg"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [b]"
                      "  )"
@@ -699,7 +699,7 @@
                  create-function
                  as-string))))
     (testing "creating with 1 known arg and a unknown arg"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [b arg2]"
                      "  )"
@@ -708,7 +708,7 @@
                  create-function
                  as-string))))
     (testing "creating from a fn call of other function"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [arg1]"
                      "  )"
@@ -717,7 +717,7 @@
                  create-function
                  as-string))))
     (testing "creating from a fn call of other function nested"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [arg1 arg2]"
                      "  )"
@@ -726,7 +726,7 @@
                  create-function
                  as-string))))
     (testing "creating from an anonymous function"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [arg1 element]"
                      "  )"
@@ -735,7 +735,7 @@
                  create-function
                  as-string))))
     (testing "creating from an anonymous function with many args"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [arg1 b element3 element2]"
                      "  )"
@@ -744,7 +744,7 @@
                  create-function
                  as-string))))
     (testing "creating from a thread first macro with single arg"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [b]"
                      "  )"
@@ -753,7 +753,7 @@
                  create-function
                  as-string))))
     (testing "creating from a thread first macro with multiple args"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [b a arg3]"
                      "  )"
@@ -762,7 +762,7 @@
                  create-function
                  as-string))))
     (testing "creating from a thread last macro with multiple args"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [a arg2 b]"
                      "  )"
@@ -772,7 +772,7 @@
                  as-string)))))
   (testing "on other files"
     (testing "when namespace is already required and exists"
-      (h/clean-db!)
+      (h/reset-components!)
       (h/load-code-and-locs "(ns bar)" "file:///bar.clj")
       (let [{:keys [changes-by-uri]} (create-function "(ns foo (:require [bar :as b])) (|b/something)")
             result (update-map changes-by-uri h/with-strings)]
@@ -787,7 +787,7 @@
                           :end-row 999999 :end-col 1}}]}
                result))))
     (testing "when namespace is not required and not exists"
-      (h/clean-db!)
+      (h/reset-components!)
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                    (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) (|b/something)"
@@ -817,7 +817,7 @@
                           :end-row 999999 :end-col 1}}]}
                result))))
     (testing "when namespace is not required and not exists not calling it as function"
-      (h/clean-db!)
+      (h/reset-components!)
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                    (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) |b/something"
@@ -853,7 +853,7 @@
     (transform/extract-to-def zloc new-def-name)))
 
 (deftest extract-to-def-test
-  (h/clean-db!)
+  (h/reset-components!)
   (is (= [(h/code ""
                   "(def ^:private foo"
                   "  {:a 1})"
@@ -862,7 +862,7 @@
          (-> "|{:a 1}"
              (extract-to-def "foo")
              as-strings)))
-  (h/clean-db!)
+  (h/reset-components!)
   (is (= [(h/code ""
                   "(def ^:private new-value"
                   "  {:a 1})"
@@ -976,7 +976,7 @@
 
 (deftest inline-symbol
   (testing "simple let"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs "(let [something 1] something something)")
     (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 (h/db)))
           a-results (get results (h/file-uri "file:///a.clj"))]
@@ -991,7 +991,7 @@
                   (update :loc z/string)
                   (update :range select-keys [:row :col :end-row :end-col])) a-results))))
   (testing "multiple binding let"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs "(let [something 1 other 2] something other something)")
     (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 (h/db)))
           a-results (get results (h/file-uri "file:///a.clj"))]
@@ -1006,7 +1006,7 @@
                   (update :loc z/string)
                   (update :range select-keys [:row :col :end-row :end-col])) a-results))))
   (testing "def in another file"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
           _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
           results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c (h/db)))

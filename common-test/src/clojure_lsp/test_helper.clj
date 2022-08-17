@@ -58,29 +58,24 @@
   (-debug [_this _fmeta _arg1 _arg2])
   (-debug [_this _fmeta _arg1 _arg2 _arg3]))
 
-(defn make-components []
-  {:db* (atom (assoc db/initial-db :env :unit-test))
-   :logger (->TestLogger)
-   :producer (->TestProducer)
-   :current-changes-chan (async/chan 1)
-   :diagnostics-chan (async/chan 1)
-   :created-watched-files-chan (async/chan 1)
-   :edits-chan (async/chan 1)})
-
 (def components* (atom nil))
 (defn components [] (deref components*))
 
 (defn db* [] (:db* (components)))
 (defn db [] (deref (db*)))
 
-(defn clean-db! []
-  (reset! components* (make-components)))
+(defn reset-components! []
+  (reset! components*
+          {:db* (atom (assoc db/initial-db :env :unit-test))
+           :logger (->TestLogger)
+           :producer (->TestProducer)
+           :current-changes-chan (async/chan 1)
+           :diagnostics-chan (async/chan 1)
+           :created-watched-files-chan (async/chan 1)
+           :edits-chan (async/chan 1)}))
 
-(defn reset-db-after-test []
-  (use-fixtures :each
-    (fn [f]
-      (clean-db!)
-      (f))))
+(defn reset-components-before-test []
+  (use-fixtures :each (fn [f] (reset-components!) (f))))
 
 (defn take-or-timeout [c timeout-ms]
   (let [timeout (async/timeout timeout-ms)

@@ -4,11 +4,11 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest move-form-test
   (testing "simple"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [a-uri (h/file-uri "file:///a.clj")
           b-uri (h/file-uri "file:///b.clj")
           zloc (h/load-code-and-zloc (h/code "(ns apple)" "|(def bar inc)" "(bar 1)"))
@@ -24,7 +24,7 @@
                      ""
                      "(def bar inc)") b-results))))
   (testing "complex"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [a-uri (h/file-uri "file:///a.clj")
           b-uri (h/file-uri "file:///b.clj")
           c-uri (h/file-uri "file:///c.clj")

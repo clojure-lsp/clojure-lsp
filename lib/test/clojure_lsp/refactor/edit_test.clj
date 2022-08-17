@@ -5,7 +5,7 @@
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest find-at-pos
   (is (= "foo/bar" (-> "(foo/bar 1)" z/of-string (edit/find-at-pos 1 2) z/string)))
@@ -87,7 +87,7 @@
                z/sexpr)))))
 
 (defn ^:private assert-function-name [code]
-  (h/clean-db!)
+  (h/reset-components!)
   (h/load-code-and-locs code)
   (let [zloc (-> code z/of-string (z/find-next-value z/next 'd))]
     (is (= "foo"

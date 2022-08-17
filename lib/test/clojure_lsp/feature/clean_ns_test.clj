@@ -6,7 +6,7 @@
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (defn- test-clean-ns
   ([db input-code expected-code]
@@ -14,7 +14,7 @@
   ([db input-code expected-code in-form]
    (test-clean-ns db input-code expected-code in-form "file:///a.clj"))
   ([db input-code expected-code in-form uri]
-   (h/clean-db!)
+   (h/reset-components!)
    (swap! (h/db*) shared/deep-merge db)
    (h/load-code-and-locs input-code (h/file-uri uri))
    (let [zloc (when in-form

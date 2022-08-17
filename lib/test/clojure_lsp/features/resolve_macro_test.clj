@@ -4,7 +4,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest find-full-macro-symbol-to-resolve
   (let [a-code (h/code "(ns some-ns)"

@@ -5,7 +5,7 @@
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest deep-merge
   (testing "simple deep merge"
@@ -45,11 +45,11 @@
 
 (deftest filename->uri
   (testing "when it is not a jar"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= (if h/windows? "file:///c:/some%20project/foo/bar_baz.clj" "file:///some%20project/foo/bar_baz.clj")
            (shared/filename->uri (h/file-path "/some project/foo/bar_baz.clj") (h/db)))))
   (testing "when it is a jar via zipfile"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= (if h/windows? "zipfile:///c:/home/some/.m2/some-jar.jar::clojure/core.clj" "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj")
            (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") (h/db)))))
   (testing "when it is a jar via jarfile"
@@ -57,13 +57,13 @@
     (is (= (if h/windows? "jar:file:///c:/home/some/.m2/some-jar.jar!/clojure/core.clj" "jar:file:///home/some/.m2/some-jar.jar!/clojure/core.clj")
            (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") (h/db)))))
   (testing "Windows URIs"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= (when h/windows? "file:///c:/c.clj")
            (when h/windows? (shared/filename->uri "c:\\c.clj" (h/db)))))))
 
 (deftest uri->namespace
   (testing "when don't have a project root"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db)))))
   (testing "when it has a project root and not a source-path"
     (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true

@@ -5,7 +5,7 @@
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (defn code [& strings] (string/join "\n" strings))
 

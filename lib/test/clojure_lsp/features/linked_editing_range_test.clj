@@ -4,7 +4,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest ranges
   (h/load-code-and-locs

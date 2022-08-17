@@ -5,7 +5,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest rename-simple-keywords
   (let [[a-start _a-stop
@@ -135,7 +135,7 @@
 
 (deftest rename-namespaces
   (testing "when client has valid source-paths but no document-changes capability"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
@@ -146,7 +146,7 @@
                :message "Can't rename namespace, client does not support file renames."}}
       (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
   (testing "when client has document-changes capability but no valid source-paths"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/bla")}}
@@ -157,7 +157,7 @@
                :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
       (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
   (testing "when source-paths are valid and client capabilities has document-changes"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
@@ -176,7 +176,7 @@
            (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))))
 
 (deftest rename-defrecord
-  (h/clean-db!)
+  (h/reset-components!)
   (let [[def-start-pos def-end-pos
          use1-start-pos use1-end-pos
          use2-start-pos use2-end-pos
@@ -197,27 +197,27 @@
 
 (deftest prepare-rename
   (testing "rename local var"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "(let [|a 1] a)")
           result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:start {:line 0, :character 6}, :end {:line 0, :character 7}}
              result))))
   (testing "should not rename when on unnamed element"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "|[]")
           result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:error {:code :invalid-params
                       :message "Can't rename, no element found."}}
              result))))
   (testing "should not rename plain keywords"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "|:a")
           result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:error {:code :invalid-params
                       :message "Can't rename, only namespaced keywords can be renamed."}}
              result))))
   (testing "when client has valid source-paths but no document-changes capability"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///")
             :settings {:source-paths #{(h/file-path "/")}}
@@ -228,7 +228,7 @@
                  :message "Can't rename namespace, client does not support file renames."}}
         (f.rename/prepare-rename h/default-uri row col (h/db)))))
   (testing "when client has document-changes capability but no valid source-paths"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///")
             :settings {:source-paths #{(h/file-path "/bla")}}

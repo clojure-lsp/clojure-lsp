@@ -7,7 +7,7 @@
    [clojure.test :refer [are deftest is testing]]
    [medley.core :as medley]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest update-text
   (is (= "(comment\n   )" (#'f.file-management/replace-text "(comment)" "\n   " 0 8 0 8)))

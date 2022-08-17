@@ -5,7 +5,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest kwd-string-test
   (is (= :foo (settings/kwd-string :foo)))

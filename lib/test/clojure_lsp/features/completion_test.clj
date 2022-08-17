@@ -4,7 +4,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest test-completion
   (h/load-code-and-locs (h/code "(ns alpaca.ns (:require [user :as alpaca]))"

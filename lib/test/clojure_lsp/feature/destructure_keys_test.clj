@@ -4,7 +4,7 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (defn ^:private can-destructure-zloc? [zloc]
   (f.destructure-keys/can-destructure-keys? zloc h/default-uri (h/db)))

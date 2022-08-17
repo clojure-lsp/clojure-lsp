@@ -6,18 +6,18 @@
    [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest initialize
   (testing "detects URI format with lower-case drive letter and encoded colons"
-    (h/clean-db!)
+    (h/reset-components!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
       (handlers/initialize (h/components) "file:///c%3A/project/root" {} {} nil))
     (is (= {:encode-colons-in-path?   true
             :upper-case-drive-letter? false}
            (get-in (h/db) [:settings :uri-format]))))
   (testing "detects URI format with upper-case drive letter and non-encoded colons"
-    (h/clean-db!)
+    (h/reset-components!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
       (handlers/initialize (h/components) "file:///C:/project/root" {} {} nil))
     (is (= {:encode-colons-in-path?   false
@@ -26,7 +26,7 @@
 
 (deftest did-open
   (testing "opening a existing file"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [mock-diagnostics-chan (async/chan 1)]
       (h/load-code-and-locs "(ns a) (when)" h/default-uri (assoc (h/components)
                                                                  :diagnostics-chan mock-diagnostics-chan))
@@ -38,7 +38,7 @@
            {:code "invalid-arity"}]
           diagnostics))))
   (testing "opening a new clojure file adding the ns"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
                                      :source-paths #{(h/file-path "/project/src")}}
                           :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
@@ -53,7 +53,7 @@
         (:document-changes (h/take-or-timeout mock-edits-chan 500)))
       (is (some? (get-in (h/db) [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
   (testing "opening a new edn file not adding the ns"
-    (h/clean-db!)
+    (h/reset-components!)
     (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
                                      :source-paths #{(h/file-path "/project/src")}}
                           :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}

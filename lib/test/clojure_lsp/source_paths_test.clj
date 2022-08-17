@@ -5,7 +5,7 @@
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest classpath->source-paths
   (testing "when classpath is empty"

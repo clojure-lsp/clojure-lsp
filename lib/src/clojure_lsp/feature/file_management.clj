@@ -233,16 +233,16 @@
               (producer/refresh-test-tree producer [uri]))
             (recur @db*)))))))
 
-(defn did-change [uri changes version db*]
+(defn did-change [uri changes version {:keys [db* current-changes-chan]}]
   (let [old-text (get-in @db* [:documents uri :text])
         final-text (reduce handle-change old-text changes)]
     (swap! db* (fn [state-db] (-> state-db
                                   (assoc-in [:documents uri :v] version)
                                   (assoc-in [:documents uri :text] final-text)
                                   (update :processing-changes conj uri))))
-    (async/>!! db/current-changes-chan {:uri uri
-                                        :text final-text
-                                        :version version})))
+    (async/>!! current-changes-chan {:uri uri
+                                     :text final-text
+                                     :version version})))
 
 (defn analyze-watched-created-files! [uris {:keys [db* producer]}]
   (let [filenames (map shared/uri->filename uris)
@@ -264,7 +264,7 @@
   (swap! db* db-without-file uri filename)
   (f.diagnostic/publish-empty-diagnostics! uri))
 
-(defn did-change-watched-files [changes db*]
+(defn did-change-watched-files [changes {:keys [db*] :as components}]
   (doseq [{:keys [uri type]} changes]
     (case type
       :created (async/>!! db/created-watched-files-chan uri)
@@ -275,7 +275,7 @@
                      (did-change uri
                                  [{:text text}]
                                  (get-in @db* [:documents uri :v] 0)
-                                 db*))))
+                                 components))))
       :deleted (shared/logging-task
                  :delete-watched-file
                  (file-deleted db* uri (shared/uri->filename uri))))))

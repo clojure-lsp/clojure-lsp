@@ -130,16 +130,16 @@
     (when (get-in @db [:documents (:uri text-document) :saved-on-disk])
       (swap! db #(update % :documents dissoc (:uri text-document)))))
 
-(defn did-change [{:keys [db*]} {:keys [text-document content-changes]}]
-  (f.file-management/did-change (:uri text-document) content-changes (:version text-document) db*))
+(defn did-change [components {:keys [text-document content-changes]}]
+  (f.file-management/did-change (:uri text-document) content-changes (:version text-document) components))
 
 (defn did-close [{:keys [db*]} {:keys [text-document]}]
   (shared/logging-task
     :did-close
     (f.file-management/did-close (:uri text-document) db*)))
 
-(defn did-change-watched-files [{:keys [db*]} {:keys [changes]}]
-  (f.file-management/did-change-watched-files changes db*))
+(defn did-change-watched-files [components {:keys [changes]}]
+  (f.file-management/did-change-watched-files changes components))
 
 (defn completion [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-results

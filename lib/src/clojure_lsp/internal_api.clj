@@ -128,11 +128,11 @@
           edit-summary)))))
 
 (defn ^:private apply-workspace-change-edit-summary!
-  [{:keys [uri new-text version changed?]} db*]
+  [{:keys [uri new-text version changed?]} {:keys [db*] :as components}]
   (spit uri new-text)
   (when (and changed?
              (get-in @db* [:documents uri :text]))
-    (f.file-management/did-change uri new-text (inc version) db*)))
+    (f.file-management/did-change uri new-text (inc version) components)))
 
 (defn ^:private apply-workspace-rename-edit-summary!
   [{:keys [old-uri new-uri]} db*]
@@ -145,10 +145,10 @@
     (f.file-management/did-open new-uri (slurp new-file) db* false)))
 
 (defn ^:private apply-workspace-edit-summary!
-  [change db*]
+  [change {:keys [db*] :as components}]
   (if (= :rename (:kind change))
     (apply-workspace-rename-edit-summary! change db*)
-    (apply-workspace-change-edit-summary! change db*))
+    (apply-workspace-change-edit-summary! change components))
   change)
 
 (defn ^:private project-root->uri [project-root db]
@@ -298,7 +298,7 @@
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Cleaned" (uri->ns (:uri %) ns+uris))
-                      #(apply-workspace-edit-summary! % db*)) edits)
+                      #(apply-workspace-edit-summary! % components)) edits)
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
@@ -369,7 +369,7 @@
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Formatted" (uri->ns (:uri %) ns+uris))
-                      #(apply-workspace-edit-summary! % db*)) edits)
+                      #(apply-workspace-edit-summary! % components)) edits)
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to format!"})))
@@ -397,7 +397,7 @@
                  :message (edits->diff-string edits options db)
                  :edits edits}
                 (do
-                  (mapv #(apply-workspace-edit-summary! % db*) edits)
+                  (mapv #(apply-workspace-edit-summary! % components) edits)
                   {:result-code 0
                    :message (format "Renamed %s to %s" from to)
                    :edits edits}))

@@ -61,7 +61,8 @@
 (defn make-components []
   {:db* (atom (assoc db/initial-db :env :unit-test))
    :logger (->TestLogger)
-   :producer (->TestProducer)})
+   :producer (->TestProducer)
+   :current-changes-chan (async/chan 1)})
 
 (def components* (atom nil))
 (defn components [] (deref components*))
@@ -71,7 +72,6 @@
 
 (defn clean-db! []
   (reset! components* (make-components))
-  (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
   (alter-var-root #'db/created-watched-files-chan (constantly (async/chan 1)))
   (alter-var-root #'db/edits-chan (constantly (async/chan 1))))

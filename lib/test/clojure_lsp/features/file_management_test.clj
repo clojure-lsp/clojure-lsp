@@ -4,6 +4,7 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
+   [clojure.core.async :as async]
    [clojure.test :refer [are deftest is testing]]
    [medley.core :as medley]))
 
@@ -91,23 +92,23 @@
                  (h/take-or-timeout mock-edits-chan 500))))))))
 
 (deftest did-change
-  (h/let-mock-chans
-    [mock-changes-chan db/current-changes-chan]
-    (let [original-text (h/code "(ns aaa)"
-                                "(def foo 1)")
-          edited-text (h/code "(ns aaa)"
-                              "(def bar 1)")]
-      (h/load-code-and-locs original-text)
-      (f.file-management/did-change h/default-uri
-                                    [{:text "bar"
-                                      :range {:start {:line 1 :character 5}
-                                              :end {:line 1 :character 8}}}]
-                                    2
-                                    (h/db*))
-      (is (= 2 (get-in (h/db) [:documents h/default-uri :v])))
-      (is (= edited-text (get-in (h/db) [:documents h/default-uri :text])))
-      (is (= {:uri h/default-uri, :text edited-text, :version 2}
-             (h/take-or-timeout mock-changes-chan 500))))))
+  (let [mock-changes-chan (async/chan 1)
+        original-text (h/code "(ns aaa)"
+                              "(def foo 1)")
+        edited-text (h/code "(ns aaa)"
+                            "(def bar 1)")]
+    (h/load-code-and-locs original-text)
+    (f.file-management/did-change h/default-uri
+                                  [{:text "bar"
+                                    :range {:start {:line 1 :character 5}
+                                            :end {:line 1 :character 8}}}]
+                                  2
+                                  (assoc (h/components)
+                                         :current-changes-chan mock-changes-chan))
+    (is (= 2 (get-in (h/db) [:documents h/default-uri :v])))
+    (is (= edited-text (get-in (h/db) [:documents h/default-uri :text])))
+    (is (= {:uri h/default-uri, :text edited-text, :version 2}
+           (h/take-or-timeout mock-changes-chan 500)))))
 
 (deftest did-change-watched-files
   (testing "created file"
@@ -116,7 +117,7 @@
       (f.file-management/did-change-watched-files
         [{:type :created
           :uri h/default-uri}]
-        (h/db*))
+        (h/components))
       (is (= h/default-uri (h/take-or-timeout mock-created-chan 500)))))
   (testing "deleted file"
     (h/let-mock-chans
@@ -124,7 +125,7 @@
       (f.file-management/did-change-watched-files
         [{:type :deleted
           :uri h/default-uri}]
-        (h/db*))
+        (h/components))
       (is (= {:uri h/default-uri, :diagnostics []}
              (h/take-or-timeout mock-diagnostics-chan 500))))))
 

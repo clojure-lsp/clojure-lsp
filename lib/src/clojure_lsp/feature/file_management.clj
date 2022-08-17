@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.file-management
   (:require
    [clojure-lsp.clj-depend :as lsp.depend]
-   [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
@@ -33,7 +32,7 @@
 (defn load-document! [uri text db*]
   (swap! db* update-in [:documents uri] assoc :v 0 :text text :saved-on-disk false))
 
-(defn did-open [uri text db* allow-create-ns]
+(defn did-open [uri text {:keys [db* edits-chan]} allow-create-ns]
   (load-document! uri text db*)
   (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
         depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))
@@ -46,7 +45,7 @@
     (f.diagnostic/publish-diagnostics! uri @db*))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
-      (async/>!! db/edits-chan create-ns-edits))))
+      (async/>!! edits-chan create-ns-edits))))
 
 (defn ^:private set-xor [a b]
   (into (set/difference a b)
@@ -289,10 +288,10 @@
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
-  [uri db*]
+  [uri {:keys [db*] :as components}]
   (or (get-in @db* [:documents uri :text])
       (when-let [text (shared/slurp-uri uri)]
-        (did-open uri text db* false)
+        (did-open uri text components false)
         (get-in @db* [:documents uri :text]))))
 
 (defn did-save [uri db*]

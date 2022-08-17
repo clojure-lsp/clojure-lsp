@@ -11,8 +11,8 @@
 
 (set! *warn-on-reflection* true)
 
-(defn ^:private safe-zloc-of-forced-uri [db* uri]
-  (some-> (f.file-management/force-get-document-text uri db*)
+(defn ^:private safe-zloc-of-forced-uri [components uri]
+  (some-> (f.file-management/force-get-document-text uri components)
           (parser/safe-zloc-of-string)))
 
 (defn ^:private element-by-uri->call-hierarchy-item
@@ -69,7 +69,7 @@
        :usage-element element
        :parent-element definition})))
 
-(defn incoming [uri row col db*]
+(defn incoming [uri row col {:keys [db*] :as components}]
   (let [db @db*
         references (q/find-references-from-cursor db (shared/uri->filename uri) row col false)
         filenames (->> references (map :filename) distinct)
@@ -77,7 +77,7 @@
                           (map (fn [filename]
                                  (let [uri (shared/filename->uri filename db)]
                                    {:uri uri
-                                    :root-zloc (safe-zloc-of-forced-uri db* uri)}))
+                                    :root-zloc (safe-zloc-of-forced-uri components uri)}))
                                filenames))
         db @db*]
     (->> references
@@ -87,9 +87,9 @@
                  {:from-ranges []
                   :from (element-by-uri->call-hierarchy-item element-by-uri)})))))
 
-(defn outgoing [uri row col db*]
+(defn outgoing [uri row col {:keys [db*] :as components}]
   (let [filename (shared/uri->filename uri)
-        root-zloc (safe-zloc-of-forced-uri db* uri)
+        root-zloc (safe-zloc-of-forced-uri components uri)
         db @db*]
     (when-let [definition (parent-var-def root-zloc db filename row col)]
       (->> (q/find-var-usages-under-form db

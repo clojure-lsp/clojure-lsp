@@ -65,14 +65,15 @@
 (deftest did-open
   (testing "on an empty file"
     (h/let-mock-chans
-      [mock-edits-chan db/edits-chan
-       mock-diagnostics-chan db/diagnostics-chan]
-      (let [filename "/user/project/src/aaa/bbb.clj"
+      [mock-diagnostics-chan db/diagnostics-chan]
+      (let [mock-edits-chan (async/chan 1)
+            filename "/user/project/src/aaa/bbb.clj"
             uri (h/file-uri (str "file://" filename))]
         (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                     :source-paths #{(h/file-path "/user/project/src")}}
                                          :project-root-uri (h/file-uri "file:///user/project")})
-        (h/load-code-and-locs "" uri)
+        (h/load-code-and-locs "" uri (assoc (h/components)
+                                            :edits-chan mock-edits-chan))
         (is (get-in (h/db) [:analysis filename]))
         (is (get-in (h/db) [:findings filename]))
         (is (get-in (h/db) [:file-meta filename]))

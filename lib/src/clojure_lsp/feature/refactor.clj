@@ -116,7 +116,7 @@
   (r.transform/create-test loc uri db components))
 
 (defmethod refactor :move-form [{:keys [loc uri args components]}]
-  (apply f.move-form/move-form loc uri (:db* components) args))
+  (apply f.move-form/move-form loc uri components args))
 
 (def available-refactors
   (->> refactor

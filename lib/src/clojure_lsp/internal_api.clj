@@ -135,19 +135,19 @@
     (f.file-management/did-change uri new-text (inc version) components)))
 
 (defn ^:private apply-workspace-rename-edit-summary!
-  [{:keys [old-uri new-uri]} db*]
+  [{:keys [old-uri new-uri]} {:keys [db*] :as components}]
   (let [old-file (-> old-uri shared/uri->filename io/file)
         new-file (-> new-uri shared/uri->filename io/file)]
     (io/make-parents new-file)
     (io/copy old-file new-file)
     (io/delete-file old-file)
     (f.file-management/did-close old-uri db*)
-    (f.file-management/did-open new-uri (slurp new-file) db* false)))
+    (f.file-management/did-open new-uri (slurp new-file) components false)))
 
 (defn ^:private apply-workspace-edit-summary!
-  [change {:keys [db*] :as components}]
+  [change components]
   (if (= :rename (:kind change))
-    (apply-workspace-rename-edit-summary! change db*)
+    (apply-workspace-rename-edit-summary! change components)
     (apply-workspace-change-edit-summary! change components))
   change)
 

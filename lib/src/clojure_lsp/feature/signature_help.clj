@@ -74,8 +74,8 @@
              (assoc-some :documentation (:doc definition))))
        arglist-strs))
 
-(defn signature-help [uri row col db*]
-  (when-let [function-loc (some-> (f.file-management/force-get-document-text uri db*)
+(defn signature-help [uri row col {:keys [db*] :as components}]
+  (when-let [function-loc (some-> (f.file-management/force-get-document-text uri components)
                                   parser/safe-zloc-of-string
                                   (parser/to-pos row col)
                                   edit/find-function-usage-name-loc)]

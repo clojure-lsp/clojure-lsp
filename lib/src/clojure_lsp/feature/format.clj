@@ -40,8 +40,8 @@
 (def cljfmt-config
   (memoize/ttl resolve-cljfmt-config :ttl/threshold memoize-ttl-threshold-milis))
 
-(defn formatting [uri db*]
-  (if-let [text (f.file-management/force-get-document-text uri db*)]
+(defn formatting [uri {:keys [db*] :as components}]
+  (if-let [text (f.file-management/force-get-document-text uri components)]
     (let [cljfmt-settings (cljfmt-config @db*)
           new-text (cljfmt/reformat-string text cljfmt-settings)]
       (if (= new-text text)

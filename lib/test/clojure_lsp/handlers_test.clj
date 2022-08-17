@@ -4,6 +4,7 @@
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.test-helper :as h]
+   [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-db-after-test)
@@ -40,12 +41,12 @@
   (testing "opening a new clojure file adding the ns"
     (h/clean-db!)
     (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
-                                    :source-paths #{(h/file-path "/project/src")}}
-                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                         :project-root-uri (h/file-uri "file:///project")})
-    (h/let-mock-chans
-      [mock-edits-chan db/edits-chan]
-      (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj"))
+                                     :source-paths #{(h/file-path "/project/src")}}
+                          :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                          :project-root-uri (h/file-uri "file:///project")})
+    (let [mock-edits-chan (async/chan 1)]
+      (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj") (assoc (h/components)
+                                                                                     :edits-chan mock-edits-chan))
       (h/assert-submaps
         [{:edits [{:range {:start {:line 0, :character 0}
                            :end {:line 999998, :character 999998}}
@@ -55,12 +56,12 @@
   (testing "opening a new edn file not adding the ns"
     (h/clean-db!)
     (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
-                                    :source-paths #{(h/file-path "/project/src")}}
-                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                         :project-root-uri (h/file-uri "file:///project")})
-    (h/let-mock-chans
-      [mock-edits-chan db/edits-chan]
-      (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn"))
+                                     :source-paths #{(h/file-path "/project/src")}}
+                          :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                          :project-root-uri (h/file-uri "file:///project")})
+    (let [mock-edits-chan (async/chan 1)]
+      (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn") (assoc (h/components)
+                                                                                     :edits-chan mock-edits-chan))
       (h/assert-no-take mock-edits-chan 500)
       (is (some? (get-in (h/db) [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))
 

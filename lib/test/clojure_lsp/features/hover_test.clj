@@ -15,7 +15,7 @@
   ([row col]
    (hover row col {}))
   ([row col opts]
-   (f.hover/hover (h/file-uri "file:///a.clj") row col (h/db*) opts)))
+   (f.hover/hover (h/file-uri "file:///a.clj") row col (h/components) opts)))
 
 (def ^:private capabilities-markdown {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
 (def ^:private settings-one-line {:settings {:hover {:arity-on-same-line? true}}})
@@ -282,4 +282,4 @@
                    :value "some-a"}
                   "Some cool docstring"
                   "/some_a.clj"]
-                 (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col (h/db*))))))))))
+                 (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col (h/components))))))))))

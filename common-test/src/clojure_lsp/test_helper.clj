@@ -63,7 +63,8 @@
    :logger (->TestLogger)
    :producer (->TestProducer)
    :current-changes-chan (async/chan 1)
-   :created-watched-files-chan (async/chan 1)})
+   :created-watched-files-chan (async/chan 1)
+   :edits-chan (async/chan 1)})
 
 (def components* (atom nil))
 (defn components [] (deref components*))
@@ -73,8 +74,7 @@
 
 (defn clean-db! []
   (reset! components* (make-components))
-  (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
-  (alter-var-root #'db/edits-chan (constantly (async/chan 1))))
+  (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1))))
 
 (defn reset-db-after-test []
   (use-fixtures :each
@@ -166,14 +166,19 @@
 
 (def default-uri (file-uri "file:///a.clj"))
 
-(defn load-code [code & [uri]]
-  (let [uri (or uri default-uri)]
-    (handlers/did-open (components) {:text-document {:uri uri :text code}})))
+(defn load-code
+  ([code] (load-code code default-uri))
+  ([code uri] (load-code code uri (components)))
+  ([code uri components]
+   (handlers/did-open components {:text-document {:uri uri :text code}})))
 
-(defn load-code-and-locs [code & [uri]]
-  (let [[code positions] (positions-from-text code)]
-    (load-code code uri)
-    positions))
+(defn load-code-and-locs
+  ([code] (load-code-and-locs code default-uri))
+  ([code uri] (load-code-and-locs code uri (components)))
+  ([code uri components]
+   (let [[code positions] (positions-from-text code)]
+     (load-code code uri components)
+     positions)))
 
 (defn ->position [[row col]]
   {:line (dec row) :character (dec col)})

@@ -12,7 +12,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [<! go-loop]]
+   [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
    [clojure.string :as string])
   (:import
@@ -91,7 +91,11 @@
     {:db* db*
      :logger (doto (->CLILogger options)
                (logger/setup))
-     :producer (->APIProducer db* options)}))
+     :producer (->APIProducer db* options)
+     :current-changes-chan (async/chan 1)
+     :diagnostics-chan (async/chan 1)
+     :created-watched-files-chan (async/chan 1)
+     :edits-chan (async/chan 1)}))
 
 (defn ^:private edit->summary
   ([db uri edit]
@@ -135,13 +139,13 @@
     (f.file-management/did-change uri new-text (inc version) components)))
 
 (defn ^:private apply-workspace-rename-edit-summary!
-  [{:keys [old-uri new-uri]} {:keys [db*] :as components}]
+  [{:keys [old-uri new-uri]} components]
   (let [old-file (-> old-uri shared/uri->filename io/file)
         new-file (-> new-uri shared/uri->filename io/file)]
     (io/make-parents new-file)
     (io/copy old-file new-file)
     (io/delete-file old-file)
-    (f.file-management/did-close old-uri db*)
+    (f.file-management/did-close old-uri components)
     (f.file-management/did-open new-uri (slurp new-file) components false)))
 
 (defn ^:private apply-workspace-edit-summary!
@@ -156,10 +160,10 @@
       .getCanonicalPath
       (shared/filename->uri db)))
 
-(defn ^:private setup-api! [{:keys [producer db*]}]
+(defn ^:private setup-api! [{:keys [producer db* diagnostics-chan]}]
   (swap! db* assoc :api? true)
   (go-loop []
-    (producer/publish-diagnostic producer (<! db/diagnostics-chan))
+    (producer/publish-diagnostic producer (<! diagnostics-chan))
     (recur)))
 
 (defn ^:private analyze!

@@ -63,6 +63,7 @@
    :logger (->TestLogger)
    :producer (->TestProducer)
    :current-changes-chan (async/chan 1)
+   :diagnostics-chan (async/chan 1)
    :created-watched-files-chan (async/chan 1)
    :edits-chan (async/chan 1)})
 
@@ -73,27 +74,13 @@
 (defn db [] (deref (db*)))
 
 (defn clean-db! []
-  (reset! components* (make-components))
-  (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1))))
+  (reset! components* (make-components)))
 
 (defn reset-db-after-test []
   (use-fixtures :each
     (fn [f]
       (clean-db!)
       (f))))
-
-(defmacro let-mock-chans [bindings & body]
-  {:pre [(even? (count bindings))]}
-  (let [bs (partition 2 bindings)
-        let-bindings (mapcat (fn [[binding _]]
-                               [binding `(async/chan 1)])
-                             bs)
-        redef-bindings (mapcat (fn [[binding chan-var]]
-                                 [chan-var binding])
-                               bs)]
-    `(let [~@let-bindings]
-       (with-redefs [~@redef-bindings]
-         ~@body))))
 
 (defn take-or-timeout [c timeout-ms]
   (let [timeout (async/timeout timeout-ms)

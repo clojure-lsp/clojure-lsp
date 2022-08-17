@@ -1,6 +1,5 @@
 (ns clojure-lsp.features.file-management-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
@@ -22,15 +21,15 @@
 
 (deftest did-close
   (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
-                                   :project-root-uri (h/file-uri "file:///user/project")})
+                                    :project-root-uri (h/file-uri "file:///user/project")})
   (h/load-code-and-locs "(ns foo) a b c" (h/file-uri "file:///user/project/src/clj/foo.clj"))
   (h/load-code-and-locs "(ns bar) d e f" (h/file-uri "file:///user/project/src/clj/bar.clj"))
   (h/load-code-and-locs "(ns some-jar)" (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj"))
   (testing "when file exists on disk"
-    (h/let-mock-chans
-      [mock-diagnostics-chan db/diagnostics-chan]
+    (let [mock-diagnostics-chan (async/chan 1)]
       (with-redefs [shared/file-exists? (constantly true)]
-        (f.file-management/did-close "file:///user/project/src/clj/foo.clj" (h/db*)))
+        (f.file-management/did-close "file:///user/project/src/clj/foo.clj" (assoc (h/components)
+                                                                                   :diagnostics-chan mock-diagnostics-chan)))
       (is (get-in (h/db) [:analysis "/user/project/src/clj/foo.clj"]))
       (is (get-in (h/db) [:findings "/user/project/src/clj/foo.clj"]))
       (is (get-in (h/db) [:file-meta "/user/project/src/clj/foo.clj"]))
@@ -38,10 +37,10 @@
       (is (get-in (h/db) [:documents "file:///user/project/src/clj/foo.clj"]))
       (h/assert-no-take mock-diagnostics-chan 500)))
   (testing "when local file not exists on disk"
-    (h/let-mock-chans
-      [mock-diagnostics-chan db/diagnostics-chan]
+    (let [mock-diagnostics-chan (async/chan 1)]
       (with-redefs [shared/file-exists? (constantly false)]
-        (f.file-management/did-close "file:///user/project/src/clj/bar.clj" (h/db*)))
+        (f.file-management/did-close "file:///user/project/src/clj/bar.clj" (assoc (h/components)
+                                                                                   :diagnostics-chan mock-diagnostics-chan)))
       (is (nil? (get-in (h/db) [:analysis "/user/project/src/clj/bar.clj"])))
       (is (nil? (get-in (h/db) [:findings "/user/project/src/clj/bar.clj"])))
       (is (nil? (get-in (h/db) [:file-meta "/user/project/src/clj/bar.clj"])))
@@ -51,10 +50,10 @@
               :diagnostics []}
              (h/take-or-timeout mock-diagnostics-chan 500)))))
   (testing "when file is external we do not remove analysis"
-    (h/let-mock-chans
-      [mock-diagnostics-chan db/diagnostics-chan]
+    (let [mock-diagnostics-chan (async/chan 1)]
       (with-redefs [shared/file-exists? (constantly false)]
-        (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" (h/db*)))
+        (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" (assoc (h/components)
+                                                                                   :diagnostics-chan mock-diagnostics-chan)))
       (is (get-in (h/db) [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
       (is (get-in (h/db) [:findings "/some/path/to/jar.jar:/some/file.clj"]))
       (is (get-in (h/db) [:file-meta "/some/path/to/jar.jar:/some/file.clj"]))
@@ -64,33 +63,33 @@
 
 (deftest did-open
   (testing "on an empty file"
-    (h/let-mock-chans
-      [mock-diagnostics-chan db/diagnostics-chan]
-      (let [mock-edits-chan (async/chan 1)
-            filename "/user/project/src/aaa/bbb.clj"
-            uri (h/file-uri (str "file://" filename))]
-        (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                                    :source-paths #{(h/file-path "/user/project/src")}}
-                                         :project-root-uri (h/file-uri "file:///user/project")})
-        (h/load-code-and-locs "" uri (assoc (h/components)
-                                            :edits-chan mock-edits-chan))
-        (is (get-in (h/db) [:analysis filename]))
-        (is (get-in (h/db) [:findings filename]))
-        (is (get-in (h/db) [:file-meta filename]))
+    (let [mock-edits-chan (async/chan 1)
+          mock-diagnostics-chan (async/chan 1)
+          filename "/user/project/src/aaa/bbb.clj"
+          uri (h/file-uri (str "file://" filename))]
+      (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
+                                                   :source-paths #{(h/file-path "/user/project/src")}}
+                                        :project-root-uri (h/file-uri "file:///user/project")})
+      (h/load-code-and-locs "" uri (assoc (h/components)
+                                          :edits-chan mock-edits-chan
+                                          :diagnostics-chan mock-diagnostics-chan))
+      (is (get-in (h/db) [:analysis filename]))
+      (is (get-in (h/db) [:findings filename]))
+      (is (get-in (h/db) [:file-meta filename]))
         ;; The ns won't be in the dep graph until after the edit adding it is applied.
-        (is (not (contains? (get (h/db) :dep-graph) 'aaa.bbb)))
-        (is (get-in (h/db) [:documents uri]))
-        (testing "should publish empty diagnostics"
-          (is (= {:uri uri, :diagnostics []}
-                 (h/take-or-timeout mock-diagnostics-chan 500))))
-        (testing "should add ns"
-          (is (= {:changes
-                  {uri
-                   [{:range
-                     {:start {:line 0, :character 0},
-                      :end {:line 999998, :character 999998}},
-                     :new-text "(ns aaa.bbb)"}]}}
-                 (h/take-or-timeout mock-edits-chan 500))))))))
+      (is (not (contains? (get (h/db) :dep-graph) 'aaa.bbb)))
+      (is (get-in (h/db) [:documents uri]))
+      (testing "should publish empty diagnostics"
+        (is (= {:uri uri, :diagnostics []}
+               (h/take-or-timeout mock-diagnostics-chan 500))))
+      (testing "should add ns"
+        (is (= {:changes
+                {uri
+                 [{:range
+                   {:start {:line 0, :character 0},
+                    :end {:line 999998, :character 999998}},
+                   :new-text "(ns aaa.bbb)"}]}}
+               (h/take-or-timeout mock-edits-chan 500)))))))
 
 (deftest did-change
   (let [mock-changes-chan (async/chan 1)
@@ -121,12 +120,12 @@
                :created-watched-files-chan mock-created-chan))
       (is (= h/default-uri (h/take-or-timeout mock-created-chan 500)))))
   (testing "deleted file"
-    (h/let-mock-chans
-      [mock-diagnostics-chan db/diagnostics-chan]
+    (let [mock-diagnostics-chan (async/chan 1)]
       (f.file-management/did-change-watched-files
         [{:type :deleted
           :uri h/default-uri}]
-        (h/components))
+        (assoc (h/components)
+               :diagnostics-chan mock-diagnostics-chan))
       (is (= {:uri h/default-uri, :diagnostics []}
              (h/take-or-timeout mock-diagnostics-chan 500))))))
 

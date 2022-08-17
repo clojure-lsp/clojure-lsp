@@ -95,7 +95,7 @@
           components)
         (let [db @db*]
           (when (settings/get db [:lint-project-files-after-startup?] true)
-            (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) db))
+            (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) components))
           (async/go
             (f.clojuredocs/refresh-cache! db*))
           (async/go
@@ -133,10 +133,10 @@
 (defn did-change [components {:keys [text-document content-changes]}]
   (f.file-management/did-change (:uri text-document) content-changes (:version text-document) components))
 
-(defn did-close [{:keys [db*]} {:keys [text-document]}]
+(defn did-close [components {:keys [text-document]}]
   (shared/logging-task
     :did-close
-    (f.file-management/did-close (:uri text-document) db*)))
+    (f.file-management/did-close (:uri text-document) components)))
 
 (defn did-change-watched-files [components {:keys [changes]}]
   (f.file-management/did-change-watched-files changes components))

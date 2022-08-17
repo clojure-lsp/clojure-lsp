@@ -1,6 +1,5 @@
 (ns clojure-lsp.handlers-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.test-helper :as h]
@@ -28,16 +27,16 @@
 (deftest did-open
   (testing "opening a existing file"
     (h/clean-db!)
-    (h/let-mock-chans
-      [mock-diagnostics-chan db/diagnostics-chan]
-      (let [_ (h/load-code-and-locs "(ns a) (when)")]
-        (is (some? (get-in (h/db) [:analysis (h/file-path "/a.clj")])))
-        (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-          (is (= "file:///a.clj" uri))
-          (h/assert-submaps
-            [{:code "missing-body-in-when"}
-             {:code "invalid-arity"}]
-            diagnostics)))))
+    (let [mock-diagnostics-chan (async/chan 1)]
+      (h/load-code-and-locs "(ns a) (when)" h/default-uri (assoc (h/components)
+                                                                 :diagnostics-chan mock-diagnostics-chan))
+      (is (some? (get-in (h/db) [:analysis (h/file-path "/a.clj")])))
+      (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
+        (is (= "file:///a.clj" uri))
+        (h/assert-submaps
+          [{:code "missing-body-in-when"}
+           {:code "invalid-arity"}]
+          diagnostics))))
   (testing "opening a new clojure file adding the ns"
     (h/clean-db!)
     (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true

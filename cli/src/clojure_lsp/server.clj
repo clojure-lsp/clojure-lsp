@@ -457,8 +457,8 @@
        (recur))))
 
 (defn ^:private spawn-async-tasks!
-  [{:keys [producer current-changes-chan created-watched-files-chan edits-chan] :as components}]
-  (let [debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
+  [{:keys [producer current-changes-chan diagnostics-chan created-watched-files-chan edits-chan] :as components}]
+  (let [debounced-diags (shared/debounce-by diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by current-changes-chan change-debounce-ms :uri)
         debounced-created-watched-files (shared/debounce-all created-watched-files-chan created-watched-files-debounce-ms)]
     (safe-async-task
@@ -518,6 +518,7 @@
                       :producer producer
                       :server server
                       :current-changes-chan (async/chan 1)
+                      :diagnostics-chan (async/chan 1)
                       :created-watched-files-chan (async/chan 1)
                       :edits-chan (async/chan 1)}]
       (logger/info "[SERVER]" "Starting server...")

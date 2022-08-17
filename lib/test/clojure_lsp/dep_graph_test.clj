@@ -175,7 +175,7 @@
       (is (not (nil? (get-in db [:documents "file:///aaa.clj"])))))
     #_(alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
     (with-redefs [shared/file-exists? (constantly false)]
-      (f.file-management/did-close "file:///aaa.clj" (h/db*)))
+      (f.file-management/did-close "file:///aaa.clj" (h/components)))
     (let [db (h/db)]
       (is (empty? (get-in db [:dep-graph 'aaa :dependencies])))
       (is (= '{ccc 1} (get-in db [:dep-graph 'aaa :dependents]))) ;; <-- no change, because ccc stil depends on aaa, even though aaa is now undefined

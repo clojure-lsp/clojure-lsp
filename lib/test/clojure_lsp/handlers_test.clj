@@ -300,3 +300,15 @@
             "1 reference"]
            (map #(get-in % [:command :title])
                 resolved-code-lenses)))))
+
+(deftest server-info-raw
+  (testing "returns kebab-case strings, to avoid camelCase conversion of keywords"
+    (is (seq (get (handlers/server-info-raw h/components) "server-version")))))
+
+(deftest cursor-info-raw
+  (testing "returns kebab-case strings, to avoid camelCase conversion of keywords"
+    (let [[row-and-col] (h/load-code-and-locs "(ns |a)")]
+      (is (seq (get (handlers/cursor-info-raw h/components
+                                              {:text-document {:uri h/default-uri}
+                                               :position (h/->position row-and-col)})
+                    "elements"))))))

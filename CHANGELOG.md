@@ -22,6 +22,7 @@
   - Fix documentation on completion items. #1181
   - Fix rename of defrecords. #1165
   - Fix to send all diagnostics to client at startup, even in very large projects. #1153
+  - Fix to preserve kebab-casing in server-info-raw. #1195
 
 ## 2022.07.24-18.25.43
 

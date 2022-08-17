@@ -1,5 +1,7 @@
 (ns clojure-lsp.shared
   (:require
+   [camel-snake-kebab.core :as csk]
+   [camel-snake-kebab.extras :as cske]
    [clojure-lsp.logger :as logger]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
@@ -473,3 +475,11 @@
                                       paths)]
     {:new-checksums new-checksums
      :paths-not-on-checksum paths-not-on-checksum}))
+
+(defn preserve-kebab-case
+  "Recursively convert map keywords to kebab-case strings, to avoid automatic
+  camelCase conversion that happens in lsp4clj. This is useful when the client
+  expects Clojure style JSON, or when a map needs to be round-tripped from
+  clojure-lsp to the client and back without case changes."
+  [m]
+  (cske/transform-keys csk/->kebab-case-string m))

@@ -261,7 +261,8 @@
       :info
       nil)))
 
-(def server-info-raw #'server-info)
+(defn server-info-raw [components]
+  (shared/preserve-kebab-case (server-info components)))
 
 (defn ^:private cursor-info [{:keys [db*]} [uri line character]]
   (let [db @db*
@@ -287,8 +288,9 @@
 (defn cursor-info-raw [components {:keys [text-document position]}]
   (shared/logging-task
     :cursor-info-raw
-    (cursor-info components
-                 [(:uri text-document) (:line position) (:character position)])))
+    (-> components
+        (cursor-info [(:uri text-document) (:line position) (:character position)])
+        (shared/preserve-kebab-case))))
 
 (defn clojuredocs-raw [{:keys [db*]} {:keys [sym-name sym-ns]}]
   (shared/logging-task

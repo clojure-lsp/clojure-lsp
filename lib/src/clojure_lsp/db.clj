@@ -17,7 +17,6 @@
                  :file-meta {}})
 (defonce db* (atom initial-db))
 (defonce diagnostics-chan (async/chan 1))
-(defonce created-watched-files-chan (async/chan 1))
 (defonce edits-chan (async/chan 1))
 
 (def version 5)

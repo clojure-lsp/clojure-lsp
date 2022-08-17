@@ -264,10 +264,10 @@
   (swap! db* db-without-file uri filename)
   (f.diagnostic/publish-empty-diagnostics! uri))
 
-(defn did-change-watched-files [changes {:keys [db*] :as components}]
+(defn did-change-watched-files [changes {:keys [db* created-watched-files-chan] :as components}]
   (doseq [{:keys [uri type]} changes]
     (case type
-      :created (async/>!! db/created-watched-files-chan uri)
+      :created (async/>!! created-watched-files-chan uri)
       :changed (when (settings/get @db* [:compute-external-file-changes] true)
                  (shared/logging-task
                    :changed-watched-file

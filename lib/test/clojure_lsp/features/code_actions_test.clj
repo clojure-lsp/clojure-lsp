@@ -1,6 +1,5 @@
 (ns clojure-lsp.features.code-actions-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.shared :as shared]
@@ -11,7 +10,7 @@
 (h/reset-db-after-test)
 
 (defn zloc-of [uri]
-  (parser/safe-zloc-of-file @db/db* uri))
+  (parser/safe-zloc-of-file (h/db) uri))
 
 (deftest add-alias-suggestion-code-actions
   (h/load-code-and-locs "(ns clojure.set)" (h/file-uri "file:///clojure.core.clj"))
@@ -32,7 +31,7 @@
                           4
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 1 :character 3}}}] {}
-                          @db/db*)))
+                          (h/db))))
   (testing "core ns"
     (h/assert-contains-submaps
       [{:title "Add require '[medley.core :as medley]'"
@@ -43,7 +42,7 @@
                           4
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 2 :character 3}}}] {}
-                          @db/db*)))
+                          (h/db))))
   (testing "already used alias, we add proper suggestion"
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.data.json :as data.json]'"
@@ -54,7 +53,7 @@
                           4
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 3 :character 3}}}] {}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest add-refer-suggestion-code-actions
   (h/load-code-and-locs "(ns clojure.set) (defn union [])" (h/file-uri "file:///clojure.core.clj"))
@@ -74,7 +73,7 @@
                           [{:code    "unresolved-symbol"
                             :message "Unresolved symbol: unit"
                             :range   {:start {:line 1 :character 2}}}] {}
-                          @db/db*)))
+                          (h/db))))
   (testing "multiple suggestions"
     (h/assert-contains-submaps
       [{:title   "Add require '[clojure.set :refer [union]]'"
@@ -86,7 +85,7 @@
                           [{:code    "unresolved-symbol"
                             :message "Unresolved symbol: union"
                             :range   {:start {:line 2 :character 2}}}] {}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest add-missing-namespace-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -112,7 +111,7 @@
                                       2
                                       10
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when it has unresolved-namespace and can find namespace"
     (h/assert-contains-submaps
       [{:title "Add require '[some-ns :as sns]' × 1"
@@ -123,7 +122,7 @@
                           11
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 2 :character 10}}}] {}
-                          @db/db*)))
+                          (h/db))))
   (testing "when it has unresolved-namespace but cannot find namespace"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
                   (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
@@ -132,7 +131,7 @@
                                       11
                                       [{:code "unresolved-namespace"
                                         :range {:start {:line 1 :character 10}}}] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when it has unresolved-symbol and it's a known refer"
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.test :refer [deftest]]'"
@@ -143,7 +142,7 @@
                           2
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 3 :character 1}}}] {}
-                          @db/db*)))
+                          (h/db))))
   (testing "when it has unresolved-symbol but it's not a known refer"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
                   (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
@@ -153,7 +152,7 @@
                                       [{:code "unresolved-symbol"
                                         :message "Unresolved symbol: foo"
                                         :range {:start {:line 3 :character 15}}}] {}
-                                      @db/db*)))))
+                                      (h/db))))))
 
 (deftest add-common-missing-import-code-action
   (h/load-code-and-locs (str "(ns another-ns)\n"
@@ -171,7 +170,7 @@
                                       5
                                       2
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
 
   (testing "when it has unresolved-symbol but it's not a common import"
     (is (not-any? #(string/starts-with? (:title %) "Add import")
@@ -182,7 +181,7 @@
                                       [{:code "unresolved-symbol"
                                         :message "Unresolved symbol: foo"
                                         :range {:start {:line 4 :character 2}}}] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when it has unresolved-symbol and it's a common import"
     (h/assert-contains-submaps
       [{:title "Add import 'java.util.Date'"
@@ -194,7 +193,7 @@
                           [{:code    "unresolved-symbol"
                             :message "Unresolved symbol: foo"
                             :range   {:start {:line 5 :character 2}}}] {}
-                          @db/db*)))
+                          (h/db))))
   (testing "when it has unresolved-namespace and it's a common import via method"
     (h/assert-contains-submaps
       [{:title "Add import 'java.util.Date'"
@@ -205,7 +204,7 @@
                           2
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 6 :character 2}}}] {}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest inline-symbol-code-action
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
@@ -220,7 +219,7 @@
                                       4
                                       8
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when in let/def symbol"
     (h/assert-contains-submaps
       [{:title "Inline symbol"
@@ -230,7 +229,7 @@
                           4
                           5
                           [] {}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest change-coll-code-action
   (h/load-code-and-locs (h/code "\"some string\""
@@ -246,27 +245,27 @@
                                       1
                                       1
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when in a list"
     (h/assert-contains-submaps
       [{:title "Change coll to map"
         :command {:command "change-coll"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 2 1 [] {} @db/db*)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 2 1 [] {} (h/db))))
   (testing "when in a map"
     (h/assert-contains-submaps
       [{:title   "Change coll to vector"
         :command {:command "change-coll"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 3 1 [] {} @db/db*)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 3 1 [] {} (h/db))))
   (testing "when in a vector"
     (h/assert-contains-submaps
       [{:title "Change coll to set"
         :command {:command "change-coll"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 4 1 [] {} @db/db*)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 4 1 [] {} (h/db))))
   (testing "when in a set"
     (h/assert-contains-submaps
       [{:title "Change coll to list"
         :command {:command "change-coll"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 5 1 [] {} @db/db*))))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj")) (h/file-uri "file:///b.clj") 5 1 [] {} (h/db)))))
 
 (deftest introduce-let-code-action
   (h/load-code-and-locs (h/code "(+ (- 10 3) 2)")
@@ -280,7 +279,7 @@
                           1
                           4
                           [] {}
-                          @db/db*)))
+                          (h/db))))
   (testing "when not a valid zloc"
     (is (not-any? #(= (:title %) "Introduce let")
                   (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
@@ -288,7 +287,7 @@
                                       4
                                       14
                                       [] {}
-                                      @db/db*)))))
+                                      (h/db))))))
 
 (deftest move-to-let-code-action
   (h/load-code-and-locs (h/code "(let [a 1"
@@ -303,7 +302,7 @@
                                       4
                                       14
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when inside let form"
     (h/assert-contains-submaps
       [{:title "Move to let"
@@ -313,7 +312,7 @@
                           3
                           3
                           [] {}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest cycle-privacy-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -326,7 +325,7 @@
                                       1
                                       5
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when on function location"
     (h/assert-contains-submaps
       [{:title "Cycle privacy"
@@ -336,7 +335,7 @@
                           2
                           5
                           [] {}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest destructure-keys-code-action
   (let [[[non-local-r non-local-c]
@@ -353,7 +352,7 @@
                                         non-local-r
                                         non-local-c
                                         [] {}
-                                        @db/db*))))
+                                        (h/db)))))
     (testing "when on local"
       (h/assert-contains-submaps
         [{:title "Destructure keys"
@@ -363,7 +362,7 @@
                             local-r
                             local-c
                             [] {}
-                            @db/db*)))))
+                            (h/db))))))
 
 (deftest extract-function-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -376,7 +375,7 @@
                                       1
                                       5
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when on function location"
     (h/assert-contains-submaps
       [{:title "Extract function"
@@ -386,7 +385,7 @@
                           2
                           5
                           [] {}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest extract-to-def-code-action
   (h/load-code-and-locs "{:a 1}"
@@ -399,7 +398,7 @@
                         1
                         1
                         [] {}
-                        @db/db*)))
+                        (h/db))))
 
 (deftest create-private-function-code-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -412,7 +411,7 @@
                                       1
                                       10
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
   (testing "when in a unresolved symbol"
     (h/assert-contains-submaps
       [{:title "Create private function 'some-func'"
@@ -424,7 +423,7 @@
                           [{:code    "unresolved-symbol"
                             :message "Unresolved symbol: some-func"
                             :range   {:start {:line 2 :character 11}}}] {}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest thread-first-all-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -433,23 +432,23 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when in a ns or :require"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} @db/db*))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} (h/db)))))
   (testing "when in a def similar location"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} @db/db*))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} (h/db)))))
   (testing "when on a def non-list node"
     (is (not-any? #(= (:title %) "Thread first all")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 2 [] {} @db/db*))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 2 [] {} (h/db)))))
   (testing "when on a valid function that can be threaded"
     (h/assert-contains-submaps
       [{:title "Thread first all"
         :command {:command "thread-first-all"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} @db/db*)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} (h/db))))
   (testing "when on a non-list node"
     (h/assert-contains-submaps
       [{:title "Thread first all"
         :command {:command "thread-first-all"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 3 [] {} @db/db*))))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 3 [] {} (h/db)))))
 
 (deftest thread-last-all-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -458,23 +457,23 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when in a ns or :require"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} @db/db*))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} (h/db)))))
   (testing "when in a def similar location"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} @db/db*))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} (h/db)))))
   (testing "when on a def non-list node"
     (is (not-any? #(= (:title %) "Thread last all")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} @db/db*))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 2 1 [] {} (h/db)))))
   (testing "when on a valid function that can be threaded"
     (h/assert-contains-submaps
       [{:title "Thread last all"
         :command {:command "thread-last-all"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} @db/db*)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} (h/db))))
   (testing "when on a non-list node"
     (h/assert-contains-submaps
       [{:title "Thread last all"
         :command {:command "thread-last-all"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 3 [] {} @db/db*))))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 3 [] {} (h/db)))))
 
 (deftest unwind-thread-action
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -485,22 +484,22 @@
                         (h/file-uri "file:///a.clj"))
   (testing "when not in a thread"
     (is (not-any? #(= (:title %) "Unwind thread once")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} @db/db*))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 1 1 [] {} (h/db)))))
   (testing "when inside thread call"
     (h/assert-contains-submaps
       [{:title "Unwind thread once"
         :command {:command "unwind-thread"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} @db/db*)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 1 [] {} (h/db))))
   (testing "when inside thread symbol"
     (h/assert-contains-submaps
       [{:title "Unwind thread once"
         :command {:command "unwind-thread"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 2 [] {} @db/db*)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 2 [] {} (h/db))))
   (testing "when inside any threading call"
     (h/assert-contains-submaps
       [{:title "Unwind thread once"
         :command {:command "unwind-thread"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 5 7 [] {} @db/db*))))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 5 7 [] {} (h/db)))))
 
 (deftest clean-ns-code-actions
   (h/load-code-and-locs (str "(ns some-ns)\n"
@@ -526,10 +525,10 @@
                                       2
                                       2
                                       [] {}
-                                      @db/db*))))
+                                      (h/db)))))
 
   (testing "with workspace edit client capability"
-    (swap! db/db* assoc-in [:client-capabilities :workspace :workspace-edit] true)
+    (swap! (h/db*) assoc-in [:client-capabilities :workspace :workspace-edit] true)
     (h/assert-contains-submaps
       [{:title "Clean namespace"
         :command {:command "clean-ns"}}]
@@ -538,7 +537,7 @@
                           2
                           2
                           [] {:workspace {:workspace-edit true}}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest resolve-macro-as-code-actions
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -549,10 +548,10 @@
     (h/assert-contains-submaps
       [{:title "Resolve macro 'some-ns/foo' as..."
         :command {:command "resolve-macro-as"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 7 [] {} @db/db*)))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 3 7 [] {} (h/db))))
   (testing "when not inside a macro usage"
     (is (not-any? #(= (:title %) "Resolve macro 'some-ns/foo' as...")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 4 4 [] {} @db/db*)))))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj")) (h/file-uri "file:///a.clj") 4 4 [] {} (h/db))))))
 
 (deftest suppress-diagnostic-code-actions
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -570,10 +569,10 @@
                             :message "Unused private var: a"
                             :range   {:start {:line 3 :character 11}}}]
                           {:workspace {:workspace-edit true}}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest sort-map-actions
-  (swap! db/db* shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+  (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
   (h/load-code-and-locs (h/code "(ns some-ns)"
                                 ""
                                 "(defn foo []"
@@ -588,7 +587,7 @@
                           3
                           []
                           {:workspace {:workspace-edit true}}
-                          @db/db*)))
+                          (h/db))))
   (testing "On map's key"
     (h/assert-contains-submaps
       [{:title "Sort map"
@@ -599,7 +598,7 @@
                           5
                           []
                           {:workspace {:workspace-edit true}}
-                          @db/db*)))
+                          (h/db))))
   (testing "not on map"
     (is (not-any? #(= (:title %) "Sort map")
                   (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
@@ -608,10 +607,10 @@
                                       7
                                       []
                                       {:workspace {:workspace-edit true}}
-                                      @db/db*)))))
+                                      (h/db))))))
 
 (deftest create-test-code-actions
-  (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+  (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
                                   :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                   :project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs (h/code "(ns some-ns)"
@@ -628,7 +627,7 @@
                           6
                           []
                           {:workspace {:workspace-edit true}}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest promote-fn-actions
   (let [[[row col]] (h/load-code-and-locs (h/code "|(fn [] (+ 1 2))"))]
@@ -641,7 +640,7 @@
                           col
                           []
                           {:workspace {:workspace-edit true}}
-                          @db/db*)))
+                          (h/db))))
   (let [[[row col]] (h/load-code-and-locs (h/code "|#(+ 1 2)"))]
     (h/assert-contains-submaps
       [{:title "Promote #() to fn"
@@ -652,7 +651,7 @@
                           col
                           []
                           {:workspace {:workspace-edit true}}
-                          @db/db*))))
+                          (h/db)))))
 
 (deftest demote-fn-actions
   (let [[[row col]] (h/load-code-and-locs (h/code "|(fn [] (+ 1 2))"))]
@@ -665,4 +664,4 @@
                           col
                           []
                           {:workspace {:workspace-edit true}}
-                          @db/db*))))
+                          (h/db)))))

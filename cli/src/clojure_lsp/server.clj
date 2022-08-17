@@ -496,11 +496,11 @@
   ;; We don't have an ENV=development flag, so the next best indication that
   ;; we're in a development environment is whether we're able to start an nREPL.
   (when-let [nrepl-port (nrepl/setup-nrepl)]
-    ;; We're in the development environment, so make the db* atom available
-    ;; globally as db/db*. In other environments it's empty (except for unit
-    ;; tests, which set it via a different mechanism).
-    (alter-var-root #'db/db* (constantly db*))
-    (swap! db/db* assoc :port nrepl-port)))
+    ;; Save the port in the db, so it can be reported in server-info.
+    (swap! db* assoc :port nrepl-port)
+    ;; In the development environment, make the db* atom available globally as
+    ;; db/db*, so it can be inspected in the nREPL.
+    (alter-var-root #'db/db* (constantly db*))))
 
 (defn run-server! []
   (lsp.server/discarding-stdout

@@ -80,8 +80,14 @@
 
   (refresh-test-tree [_this _uris]))
 
+(def db* (atom nil))
+
+(defn clean-db! [env]
+  (doto db*
+    (reset! (assoc db/initial-db :env env))))
+
 (defn ^:private build-components [options]
-  (let [db* db/db*]
+  (let [db* (if @db* db* (clean-db! nil))]
     {:db* db*
      :logger (doto (->CLILogger options)
                (logger/setup))

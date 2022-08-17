@@ -58,31 +58,29 @@
   (-debug [_this _fmeta _arg1 _arg2])
   (-debug [_this _fmeta _arg1 _arg2 _arg3]))
 
-(def components
-  {:db* db/db*
+(defn make-components []
+  {:db* (atom (assoc db/initial-db :env :unit-test))
    :logger (->TestLogger)
    :producer (->TestProducer)})
 
-(defn clean-db!
-  ([]
-   (clean-db! :unit-test))
-  ([env]
-   (reset! db/db* (assoc db/initial-db
-                         :env env))
-   (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
-   (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
-   (alter-var-root #'db/created-watched-files-chan (constantly (async/chan 1)))
-   (alter-var-root #'db/edits-chan (constantly (async/chan 1)))))
+(def components* (atom nil))
+(defn components [] (deref components*))
 
-(defn reset-db-after-test
-  ([]
-   (reset-db-after-test :unit-test))
-  ([env]
-   (use-fixtures
-     :each
-     (fn [f]
-       (clean-db! env)
-       (f)))))
+(defn db* [] (:db* (components)))
+(defn db [] (deref (db*)))
+
+(defn clean-db! []
+  (reset! components* (make-components))
+  (alter-var-root #'db/current-changes-chan (constantly (async/chan 1)))
+  (alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
+  (alter-var-root #'db/created-watched-files-chan (constantly (async/chan 1)))
+  (alter-var-root #'db/edits-chan (constantly (async/chan 1))))
+
+(defn reset-db-after-test []
+  (use-fixtures :each
+    (fn [f]
+      (clean-db!)
+      (f))))
 
 (defmacro let-mock-chans [bindings & body]
   {:pre [(even? (count bindings))]}
@@ -170,7 +168,7 @@
 
 (defn load-code [code & [uri]]
   (let [uri (or uri default-uri)]
-    (handlers/did-open components {:text-document {:uri uri :text code}})))
+    (handlers/did-open (components) {:text-document {:uri uri :text code}})))
 
 (defn load-code-and-locs [code & [uri]]
   (let [[code positions] (positions-from-text code)]
@@ -194,7 +192,7 @@
      (let [position-count (count positions)]
        (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
      {:position {:row row :col col}
-      :zloc (-> (parser/zloc-of-file @db/db* uri)
+      :zloc (-> (parser/zloc-of-file (db) uri)
                 (parser/to-pos row col))})))
 
 (defn load-code-and-zloc

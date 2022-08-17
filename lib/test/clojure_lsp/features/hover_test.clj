@@ -1,6 +1,5 @@
 (ns clojure-lsp.features.hover-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
@@ -16,7 +15,7 @@
   ([row col]
    (hover row col {}))
   ([row col opts]
-   (f.hover/hover (h/file-uri "file:///a.clj") row col db/db* opts)))
+   (f.hover/hover (h/file-uri "file:///a.clj") row col (h/db*) opts)))
 
 (def ^:private capabilities-markdown {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}}}})
 (def ^:private settings-one-line {:settings {:hover {:arity-on-same-line? true}}})
@@ -26,12 +25,12 @@
 (def ^:private settings-edits-warning {:settings {:completion {:additional-edits-warning-text "* includes additional edits"}}})
 
 (defmacro with-db [temp-config & body]
-  `(let [db-before# @db/db*]
+  `(let [db-before# (h/db)]
      (try
-       (swap! db/db* shared/deep-merge ~temp-config)
+       (swap! (h/db*) shared/deep-merge ~temp-config)
        ~@body
        (finally
-         (reset! db/db* db-before#)))))
+         (reset! (h/db*) db-before#)))))
 
 (deftest test-hover
   (with-db
@@ -283,4 +282,4 @@
                    :value "some-a"}
                   "Some cool docstring"
                   "/some_a.clj"]
-                 (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col db/db*)))))))))
+                 (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col (h/db*))))))))))

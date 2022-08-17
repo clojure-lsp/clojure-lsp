@@ -22,7 +22,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
@@ -39,7 +39,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
@@ -56,7 +56,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
@@ -73,7 +73,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
     (h/assert-submaps
@@ -90,7 +90,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
@@ -107,7 +107,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
     (h/assert-submaps
@@ -117,7 +117,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
     (h/assert-submaps
@@ -127,7 +127,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/a.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
     (h/assert-submaps
@@ -137,7 +137,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/b.clj"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
@@ -147,7 +147,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/c.cljs"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
@@ -172,7 +172,7 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
       "/d.cljs"
-      @db/db*
+      (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps [] @findings)))
@@ -181,62 +181,62 @@
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some_ns.clj"))
   (h/load-code-and-locs "(ns other-ns) (assert )" (h/file-uri "file:///other_ns.clj"))
   (testing "when linter level is :off"
-    (swap! db/db* shared/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
+    (swap! (h/db*) shared/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") @db/db*))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") (h/db)))))
   (testing "when linter level is not :off but has matching :ns-exclude-regex"
     (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///project/src/some_ns.clj"))
-    (swap! db/db* merge {:project-root-uri (h/file-uri "file:///project")
+    (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                          :settings {:source-paths ["/project/src"]
                                     :linters {:clj-kondo {:ns-exclude-regex "some-ns.*"}}}})
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/some_ns.clj") @db/db*))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/some_ns.clj") (h/db)))))
   (testing "when linter level is not :off"
-    (swap! db/db* merge {:settings {:linters {:clj-kondo {:level :error}}}})
+    (swap! (h/db*) merge {:settings {:linters {:clj-kondo {:level :error}}}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
                         :message "Unused private var some-ns/foo"
                         :code "unused-private-var"
                         :tags [1]
                         :severity 2
                         :source "clj-kondo"}]
-                      (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") @db/db*)))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") (h/db))))
   (testing "when linter is not specified"
-    (swap! db/db* merge {:settings {}})
+    (swap! (h/db*) merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 29} :end {:line 0 :character 32}}
                         :message "Unused private var some-ns/foo"
                         :code "unused-private-var"
                         :tags [1]
                         :severity 2
                         :source "clj-kondo"}]
-                      (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") @db/db*)))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") (h/db))))
   (testing "when inside expression?"
-    (swap! db/db* merge {:settings {}})
+    (swap! (h/db*) merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 23}}
                         :message "clojure.core/assert is called with 0 args but expects 1 or 2"
                         :code "invalid-arity"
                         :tags []
                         :severity 1
                         :source "clj-kondo"}]
-                      (f.diagnostic/find-diagnostics (h/file-uri "file:///other_ns.clj") @db/db*)))
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///other_ns.clj") (h/db))))
   (testing "when file is external"
     (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some/place.jar:some/file.clj"))
-    (swap! db/db* merge {:project-root-uri (h/file-uri "file:///project")
+    (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                          :settings {:source-paths ["/project/src"]}})
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///some/place.jar:some/file.clj") @db/db*)))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///some/place.jar:some/file.clj") (h/db))))))
 
 (deftest lint-clj-depend-findings
   (testing "when no clj-depend config is found"
-    (swap! db/db* shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
+    (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
                                      :settings {:source-paths ["/project/src"]}})
 
     (with-redefs [clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
       (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
       (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") @db/db*))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") (h/db)))))
   (testing "when clj-depend config is found but linter level is :off"
-    (swap! db/db* shared/deep-merge {:settings {:source-paths ["/project/src"]
+    (swap! (h/db*) shared/deep-merge {:settings {:source-paths ["/project/src"]
                                                 :clj-depend {:layers {:foo {:defined-by ".*foo.*"
                                                                             :accessed-by-layers #{}}
                                                                       :bar {:defined-by ".*bar.*"
@@ -246,9 +246,9 @@
       (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
       (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") @db/db*))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") (h/db)))))
   (testing "when clj-depend config is found and a violation is present"
-    (swap! db/db* shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
+    (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
                                      :settings {:linters {:clj-depend {:level :info}}
                                                 :source-paths ["/project/src"]
                                                 :clj-depend {:layers {:foo {:defined-by ".*foo.*"
@@ -266,7 +266,7 @@
              :code "clj-depend"
              :severity 3
              :source "clj-depend"}]
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") @db/db*)))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") (h/db))))))
 
 (deftest test-find-diagnostics
   (testing "wrong arity"

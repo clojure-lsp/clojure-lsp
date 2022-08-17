@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.add-missing-libspec-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
@@ -141,7 +140,7 @@
             {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))))
 
 (defn find-require-suggestions [code]
-  (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" @db/db*))
+  (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
 
 (deftest find-require-suggestions-test
   (testing "Suggested namespaces"
@@ -185,7 +184,7 @@
       (find-require-suggestions "|;; comment"))))
 
 (defn ^:private add-missing-libspec [code]
-  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" @db/db*))
+  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
 
 (defn ^:private as-sexp [[{:keys [loc]} :as locs]]
   (assert (= 1 (count locs)))
@@ -240,14 +239,14 @@
                  as-str))))
     (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
-        (swap! db/db* shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (is (= (h/code "(ns foo "
                        "  (:require [clojure.set :as set]))")
                (-> "(ns foo) |set/subset?"
                    add-missing-libspec
                    as-str))))
       (testing "next requires follow the same pattern"
-        (swap! db/db* shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (is (= (h/code "(ns foo "
                        "  (:require [clojure.set :as set]"
                        "            [foo :as bar]))")
@@ -256,7 +255,7 @@
                    add-missing-libspec
                    as-str)))))
     (testing "do not clean if disbled"
-      (swap! db/db* shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor false}}})
+      (swap! (h/db*) shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor false}}})
       (is (= (h/code "(ns foo "
                      "  (:require [foo :as bar]"
                      "            [clojure.set :as set]))")
@@ -266,7 +265,7 @@
                  as-str))))
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
-        (swap! db/db* shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor true
+        (swap! (h/db*) shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor true
                                                            :ns-inner-blocks-indentation :same-line}}})
         (is (= (h/code "(ns foo "
                        "  (:require [clojure.set :as set]))")
@@ -274,7 +273,7 @@
                    add-missing-libspec
                    as-str))))
       (testing "next requires follow the same pattern"
-        (swap! db/db* shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
         (is (= (h/code "(ns foo "
                        "  (:require [clojure.set :as set]"
                        "            [foo :as bar]))")
@@ -326,10 +325,10 @@
 
 (defn add-import-to-namespace [code import-name & [settings]]
   (h/clean-db!)
-  (swap! db/db* shared/deep-merge {:settings (merge
+  (swap! (h/db*) shared/deep-merge {:settings (merge
                                               {:clean {:automatically-after-ns-refactor false}}
                                               settings)})
-  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name @db/db*))
+  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db)))
 
 (deftest add-import-to-namespace-test
   (testing "when there is no :import form"
@@ -398,7 +397,7 @@
                    "    java.util.Date)) ;; comment")
            (-> (h/code "(ns foo.bar) |;; comment")
                (add-import-to-namespace "java.util.Date")
-               (h/changes->code @db/db*))))))
+               (h/changes->code (h/db)))))))
 
 (deftest add-common-import-to-namespace-test
   (testing "when we known the import"
@@ -414,7 +413,7 @@
     (is (nil? (add-import-to-namespace "(ns foo.bar) |;; comment" nil)))))
 
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer @db/db*))
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db)))
 
 (deftest add-require-suggestion-test
   (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))

@@ -1,6 +1,5 @@
 (ns clojure-lsp.queries-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
@@ -14,13 +13,13 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-    (is (= 2 (count (q/internal-analysis @db/db*)))))
+    (is (= 2 (count (q/internal-analysis (h/db))))))
   (testing "when dependency-scheme is jar"
-    (swap! db/db* shared/deep-merge {:settings {:dependency-scheme "jar"}})
+    (swap! (h/db*) shared/deep-merge {:settings {:dependency-scheme "jar"}})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-    (is (= 2 (count (q/internal-analysis @db/db*))))))
+    (is (= 2 (count (q/internal-analysis (h/db)))))))
 
 (deftest external-analysis
   (testing "when dependency-scheme is zip"
@@ -28,79 +27,79 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-    (is (= 1 (count (q/external-analysis @db/db*)))))
+    (is (= 1 (count (q/external-analysis (h/db))))))
   (testing "when dependency-scheme is jar"
-    (swap! db/db* shared/deep-merge {:settings {:dependency-scheme "jar"}})
+    (swap! (h/db*) shared/deep-merge {:settings {:dependency-scheme "jar"}})
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-    (is (= 1 (count (q/external-analysis @db/db*))))))
+    (is (= 1 (count (q/external-analysis (h/db)))))))
 
 (defn ^:private dg? []
-  (h/use-dep-graph? @db/db*))
+  (h/use-dep-graph? (h/db)))
 
 (deftest ns-analysis
   (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
   (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
   (h/load-code-and-locs "(ns foo.baz)" (h/file-uri "file:///c.clj"))
-  (is (= (if (dg?) 2 3) (count (q/ns-analysis @db/db* 'foo.bar)))))
+  (is (= (if (dg?) 2 3) (count (q/ns-analysis (h/db) 'foo.bar)))))
 
 (deftest ns-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 0 3) (count (q/ns-dependents-analysis @db/db* 'aaa))))
-  (is (= (if (dg?) 1 3) (count (q/ns-dependents-analysis @db/db* 'bbb))))
-  (is (= (if (dg?) 2 3) (count (q/ns-dependents-analysis @db/db* 'ccc)))))
+  (is (= (if (dg?) 0 3) (count (q/ns-dependents-analysis (h/db) 'aaa))))
+  (is (= (if (dg?) 1 3) (count (q/ns-dependents-analysis (h/db) 'bbb))))
+  (is (= (if (dg?) 2 3) (count (q/ns-dependents-analysis (h/db) 'ccc)))))
 
 (deftest ns-and-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 1 3) (count (q/ns-and-dependents-analysis @db/db* 'aaa))))
-  (is (= (if (dg?) 2 3) (count (q/ns-and-dependents-analysis @db/db* 'bbb))))
-  (is (= (if (dg?) 3 3) (count (q/ns-and-dependents-analysis @db/db* 'ccc)))))
+  (is (= (if (dg?) 1 3) (count (q/ns-and-dependents-analysis (h/db) 'aaa))))
+  (is (= (if (dg?) 2 3) (count (q/ns-and-dependents-analysis (h/db) 'bbb))))
+  (is (= (if (dg?) 3 3) (count (q/ns-and-dependents-analysis (h/db) 'ccc)))))
 
 (deftest ns-dependencies-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 2 3) (count (q/ns-dependencies-analysis @db/db* 'aaa))))
-  (is (= (if (dg?) 1 3) (count (q/ns-dependencies-analysis @db/db* 'bbb))))
-  (is (= (if (dg?) 0 3) (count (q/ns-dependencies-analysis @db/db* 'ccc)))))
+  (is (= (if (dg?) 2 3) (count (q/ns-dependencies-analysis (h/db) 'aaa))))
+  (is (= (if (dg?) 1 3) (count (q/ns-dependencies-analysis (h/db) 'bbb))))
+  (is (= (if (dg?) 0 3) (count (q/ns-dependencies-analysis (h/db) 'ccc)))))
 
 (deftest nses-analysis
   (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 1 3) (count (q/nses-analysis @db/db* '#{aaa}))))
-  (is (= (if (dg?) 2 3) (count (q/nses-analysis @db/db* '#{aaa bbb}))))
-  (is (= (if (dg?) 3 3) (count (q/nses-analysis @db/db* '#{aaa bbb ccc})))))
+  (is (= (if (dg?) 1 3) (count (q/nses-analysis (h/db) '#{aaa}))))
+  (is (= (if (dg?) 2 3) (count (q/nses-analysis (h/db) '#{aaa bbb}))))
+  (is (= (if (dg?) 3 3) (count (q/nses-analysis (h/db) '#{aaa bbb ccc})))))
 
 (deftest nses-and-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 1 3) (count (q/nses-and-dependents-analysis @db/db* '#{aaa}))))
-  (is (= (if (dg?) 2 3) (count (q/nses-and-dependents-analysis @db/db* '#{bbb}))))
-  (is (= (if (dg?) 3 3) (count (q/nses-and-dependents-analysis @db/db* '#{ccc}))))
-  (is (= (if (dg?) 2 3) (count (q/nses-and-dependents-analysis @db/db* '#{aaa bbb})))))
+  (is (= (if (dg?) 1 3) (count (q/nses-and-dependents-analysis (h/db) '#{aaa}))))
+  (is (= (if (dg?) 2 3) (count (q/nses-and-dependents-analysis (h/db) '#{bbb}))))
+  (is (= (if (dg?) 3 3) (count (q/nses-and-dependents-analysis (h/db) '#{ccc}))))
+  (is (= (if (dg?) 2 3) (count (q/nses-and-dependents-analysis (h/db) '#{aaa bbb})))))
 
 (deftest uri-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 0 3) (count (q/uri-dependents-analysis @db/db* "file:///aaa.clj"))))
-  (is (= (if (dg?) 1 3) (count (q/uri-dependents-analysis @db/db* "file:///bbb.clj"))))
-  (is (= (if (dg?) 2 3) (count (q/uri-dependents-analysis @db/db* "file:///ccc.clj")))))
+  (is (= (if (dg?) 0 3) (count (q/uri-dependents-analysis (h/db) "file:///aaa.clj"))))
+  (is (= (if (dg?) 1 3) (count (q/uri-dependents-analysis (h/db) "file:///bbb.clj"))))
+  (is (= (if (dg?) 2 3) (count (q/uri-dependents-analysis (h/db) "file:///ccc.clj")))))
 
 (deftest uri-dependencies-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 2 3) (count (q/uri-dependencies-analysis @db/db* "file:///aaa.clj"))))
-  (is (= (if (dg?) 1 3) (count (q/uri-dependencies-analysis @db/db* "file:///bbb.clj"))))
-  (is (= (if (dg?) 0 3) (count (q/uri-dependencies-analysis @db/db* "file:///ccc.clj")))))
+  (is (= (if (dg?) 2 3) (count (q/uri-dependencies-analysis (h/db) "file:///aaa.clj"))))
+  (is (= (if (dg?) 1 3) (count (q/uri-dependencies-analysis (h/db) "file:///bbb.clj"))))
+  (is (= (if (dg?) 0 3) (count (q/uri-dependencies-analysis (h/db) "file:///ccc.clj")))))
 
 (deftest test-ns-aliases
   (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))
@@ -108,7 +107,7 @@
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
   (is (= '#{{:alias c :to ccc}
             {:alias b :to bbb}}
-         (q/ns-aliases @db/db*))))
+         (q/ns-aliases (h/db)))))
 
 (deftest ns-aliases-for-langs
   (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))
@@ -119,15 +118,15 @@
   (h/load-code-and-locs "(ns lll)" (h/file-uri "file:///ccc.cljs"))
   (is (= '#{{:alias c :to ccc}
             {:alias b :to bbb}}
-         (q/ns-aliases-for-langs @db/db* #{:clj})))
+         (q/ns-aliases-for-langs (h/db) #{:clj})))
   (is (= '#{{:alias k :to kkk}
             {:alias l :to lll}}
-         (q/ns-aliases-for-langs @db/db* #{:cljs})))
+         (q/ns-aliases-for-langs (h/db) #{:cljs})))
   (is (= '#{{:alias c :to ccc}
             {:alias b :to bbb}
             {:alias k :to kkk}
             {:alias l :to lll}}
-         (q/ns-aliases-for-langs @db/db* #{:clj :cljs}))))
+         (q/ns-aliases-for-langs (h/db) #{:clj :cljs}))))
 
 (deftest ns-names-for-langs
   (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
@@ -137,18 +136,18 @@
   (h/load-code-and-locs "(ns kkk)" (h/file-uri "file:///bbb.cljs"))
   (h/load-code-and-locs "(ns lll)" (h/file-uri "file:///ccc.cljs"))
   (is (= '#{aaa ccc bbb}
-         (q/ns-names-for-langs @db/db* #{:clj})))
+         (q/ns-names-for-langs (h/db) #{:clj})))
   (is (= '#{jjj kkk lll}
-         (q/ns-names-for-langs @db/db* #{:cljs})))
+         (q/ns-names-for-langs (h/db) #{:cljs})))
   (is (= '#{aaa ccc bbb
             jjj kkk lll}
-         (q/ns-names-for-langs @db/db* #{:clj :cljs}))))
+         (q/ns-names-for-langs (h/db) #{:clj :cljs}))))
 
 (deftest ns-names-for-file
   (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
   (is (= '[aaa ccc]
-         (q/ns-names-for-uri @db/db* (h/file-uri "file:///aaa.clj") "/aaa.clj"))))
+         (q/ns-names-for-uri (h/db) (h/file-uri "file:///aaa.clj") "/aaa.clj"))))
 
 (deftest ns-names
   (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
@@ -157,13 +156,13 @@
   (is (= (if (dg?)
            '#{aaa bbb ccc jjj clojure.core cljs.core}
            '#{aaa bbb ccc jjj})
-         (q/ns-names @db/db*))))
+         (q/ns-names (h/db)))))
 
 (deftest internal-ns-names
   (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns some)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-  (is (= '#{aaa bbb} (q/internal-ns-names @db/db*))))
+  (is (= '#{aaa bbb} (q/internal-ns-names (h/db)))))
 
 (deftest nses-some-internal-uri
   (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
@@ -178,7 +177,7 @@
   (is (= (if (dg?)
            '{aaa "file:///aaa.clj"}
            '{aaa "file:///bbb.clj"})
-         (q/nses-some-internal-uri @db/db* '#{aaa}))))
+         (q/nses-some-internal-uri (h/db) '#{aaa}))))
 
 (deftest find-last-order-by-project-analysis
   (testing "with pred that applies for both project and external analysis"
@@ -188,7 +187,7 @@
     (let [element (#'q/find-last-order-by-project-analysis
                    (comp q/xf-analysis->namespace-definitions
                          (q/xf-same-name 'foo.bar))
-                   @db/db*)]
+                   (h/db))]
       (is (= (h/file-path "/a.clj") (:filename element)))))
   (testing "with pred that applies for both project and external analysis with multiple on project"
     (h/clean-db!)
@@ -198,7 +197,7 @@
     (let [element (#'q/find-last-order-by-project-analysis
                    (comp q/xf-analysis->namespace-definitions
                          (q/xf-same-name 'foo.bar))
-                   @db/db*)]
+                   (h/db))]
       (is (= (h/file-path "/b.clj") (:filename element))))))
 
 (deftest find-element-under-cursor
@@ -210,7 +209,7 @@
          [param-r param-c]
          [x-r x-c]
          [unknown-r unknown-c]] (h/load-code-and-locs code)
-        db @db/db*]
+        db (h/db)]
     (h/assert-submap
       '{:alias f-alias}
       (q/find-element-under-cursor db (h/file-path "/a.clj") alias-r alias-c))
@@ -245,7 +244,7 @@
          [b-baz-kw-r b-baz-kw-c]] (h/load-code-and-locs (h/code "(ns baz)"
                                                                 "|::foo/foo-kw"
                                                                 "|::baz-kw") (h/file-uri "file:///baz.clj"))
-        db @db/db*]
+        db (h/db)]
     (h/assert-submaps
       [{:name 'x :name-row x-r :name-col x-c}
        {:name 'x :name-row x-use-r :name-col x-use-c}]
@@ -285,7 +284,7 @@
          [alias-use-r alias-use-c]
          [x-use-r x-use-c]
          [unknown-r unknown-c]] (h/load-code-and-locs code (h/file-uri "file:///a.cljc"))
-        db @db/db*]
+        db (h/db)]
     (h/assert-submaps
       [{:name 'x :name-row x-r :name-col x-c}
        {:name 'x :name-row x-use-r :name-col x-use-c}]
@@ -321,14 +320,14 @@
     (testing "from ns definition"
       (h/assert-submaps
         common-references
-        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") ns-def-r ns-def-c false)))
+        (q/find-references-from-cursor (h/db) (h/file-path "/a.clj") ns-def-r ns-def-c false)))
     (testing "Including definition"
       (h/assert-submaps
         (concat [{:filename (h/file-path "/a.clj")
                   :name 'some.cool-ns
                   :bucket :namespace-definitions}]
                 common-references)
-        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") ns-def-r ns-def-c true)))))
+        (q/find-references-from-cursor (h/db) (h/file-path "/a.clj") ns-def-r ns-def-c true)))))
 
 (deftest find-references-from-namespace-usage
   (let [_ (h/load-code-and-locs (h/code "(ns some.cool-ns) (def foo 1)"))
@@ -348,7 +347,7 @@
           :from 'another.cool-ns
           :name "bar"
           :ns 'some.cool-ns}]
-        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") usage-r usage-c false)))))
+        (q/find-references-from-cursor (h/db) (h/file-path "/b.clj") usage-r usage-c false)))))
 
 (deftest find-references-from-defrecord
   (let [code (str "(defrecord |MyRecord [])\n"
@@ -359,7 +358,7 @@
          [raw-r raw-c]
          [to-r to-c]
          [map-to-r map-to-c]] (h/load-code-and-locs code (h/file-uri "file:///a.clj"))
-        db @db/db*]
+        db (h/db)]
     (h/assert-submaps
       [{:name 'MyRecord :bucket :var-usages :name-row raw-r :name-col raw-c}
        {:name '->MyRecord :bucket :var-usages :name-row to-r :name-col to-c}
@@ -380,7 +379,7 @@
         [[bar-def-r bar-def-c]
          [bar-usa-r bar-usa-c]] (h/load-code-and-locs a-code (h/file-uri "file:///a.clj"))
         [[bar-usa-b-r bar-usa-b-c]] (h/load-code-and-locs b-code (h/file-uri "file:///b.clj"))
-        db @db/db*]
+        db (h/db)]
     (testing "from definition"
       (h/assert-submaps
         '[{:name-row 6
@@ -455,7 +454,7 @@
          :row 9 :col 1 :end-row 9 :end-col 27
          :bucket :var-usages
          :to a}]
-      (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") 7 9 false))))
+      (q/find-references-from-cursor (h/db) (h/file-path "/b.clj") 7 9 false))))
 
 (deftest find-references-for-defmulti
   (let [[[defmulti-r defmulti-c]]
@@ -491,15 +490,15 @@
     (testing "from defmulti method name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") defmulti-r defmulti-c false)))
+        (q/find-references-from-cursor (h/db) (h/file-path "/a.clj") defmulti-r defmulti-c false)))
     (testing "from defmethod method name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") defmethod-r defmethod-c false)))
+        (q/find-references-from-cursor (h/db) (h/file-path "/b.clj") defmethod-r defmethod-c false)))
     (testing "from usage name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") usage-r usage-c false)))))
+        (q/find-references-from-cursor (h/db) (h/file-path "/b.clj") usage-r usage-c false)))))
 
 (deftest find-references-for-defmulti-without-usages
   (let [[[defmulti-r defmulti-c]]
@@ -523,11 +522,11 @@
     (testing "from defmulti method name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") defmulti-r defmulti-c false)))
+        (q/find-references-from-cursor (h/db) (h/file-path "/a.clj") defmulti-r defmulti-c false)))
     (testing "from defmethod method name"
       (h/assert-submaps
         references
-        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") defmethod-r defmethod-c false)))))
+        (q/find-references-from-cursor (h/db) (h/file-path "/b.clj") defmethod-r defmethod-c false)))))
 
 (deftest find-references-from-declare
   (let [[[declare-r declare-c]
@@ -547,15 +546,15 @@
     (testing "from declare"
       (h/assert-submaps
         [usage-element]
-        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") declare-r declare-c false)))
+        (q/find-references-from-cursor (h/db) (h/file-path "/a.clj") declare-r declare-c false)))
     (testing "from def"
       (h/assert-submaps
         [usage-element]
-        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") def-r def-c false)))
+        (q/find-references-from-cursor (h/db) (h/file-path "/a.clj") def-r def-c false)))
     (testing "from usage name"
       (h/assert-submaps
         [usage-element]
-        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") usage-r usage-c false)))))
+        (q/find-references-from-cursor (h/db) (h/file-path "/a.clj") usage-r usage-c false)))))
 
 (deftest find-references-from-declare-without-usages
   (let [[[declare-r declare-c]
@@ -566,11 +565,11 @@
     (testing "from declare"
       (h/assert-submaps
         '[]
-        (q/find-references-from-cursor @db/db* (h/file-path "/a.clj") declare-r declare-c false)))
+        (q/find-references-from-cursor (h/db) (h/file-path "/a.clj") declare-r declare-c false)))
     (testing "from def"
       (h/assert-submaps
         '[]
-        (q/find-references-from-cursor @db/db* (h/file-path "/b.clj") def-r def-c false)))))
+        (q/find-references-from-cursor (h/db) (h/file-path "/b.clj") def-r def-c false)))))
 
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"
@@ -584,7 +583,7 @@
          [x-use-r x-use-c]
          [unknown-r unknown-c]] (h/load-code-and-locs code)
         _ (h/load-code-and-locs "(ns d.e.f) (def foo 1)" (h/file-uri "file:///b.clj"))
-        db @db/db*]
+        db (h/db)]
     (h/assert-submap
       {:name 'x :name-row x-r :name-col x-c}
       (q/find-definition-from-cursor db (h/file-path "/a.clj") x-use-r x-use-c))
@@ -605,7 +604,7 @@
         _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "file:///a.clj"))
         [[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                       "|f/bar") (h/file-uri "file:///b.clj"))
-        db @db/db*]
+        db (h/db)]
     (h/assert-submap
       {:name 'bar :filename (h/file-path "/a.clj")}
       (q/find-definition-from-cursor db (h/file-path "/b.clj") bar-r bar-c))))
@@ -614,21 +613,21 @@
   (testing "when on a clj file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.clj"))
-          db @db/db*]
+          db (h/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
         (q/find-definition-from-cursor db (h/file-path "/b.clj") bar-r bar-c))))
   (testing "when on a cljs file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.cljs"))
-          db @db/db*]
+          db (h/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:other-jar.cljs")}
         (q/find-definition-from-cursor db (h/file-path "/b.cljs") bar-r bar-c))))
   (testing "when on a cljc file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.cljc"))
-          db @db/db*]
+          db (h/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
         (q/find-definition-from-cursor db (h/file-path "/b.cljc") bar-r bar-c))))
@@ -637,7 +636,7 @@
            [bar-r-cljs bar-c-cljs]] (h/load-code-and-locs (h/code "(ns baz #?(:clj (:require [foo :as fc]) :cljs (:require [foo :as fs])))"
                                                                   "|fc/bar"
                                                                   "|fs/bar") (h/file-uri "file:///b.cljc"))
-          db @db/db*]
+          db (h/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some.jar:some-jar.clj")}
         (q/find-definition-from-cursor db (h/file-path "/b.cljc") bar-r-clj bar-c-clj))
@@ -649,7 +648,7 @@
     (h/load-code-and-locs (h/code "(ns some.foo) (defmacro bar [& body] @body)") (h/file-uri "file:///some/foo.clj"))
     (h/load-code-and-locs (h/code "(ns some.foo (:require-macros [some.foo])) (def baz)") (h/file-uri "file:///some/foo.cljs"))
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns a (:require [some.foo :as f])) (f/|bar 1)") (h/file-uri "file:///a.cljs"))
-          db @db/db*]
+          db (h/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/some/foo.clj")}
         (q/find-definition-from-cursor db (h/file-path "/a.cljs") bar-r bar-c)))))
@@ -672,7 +671,7 @@
                                  "(declare bar)"
                                  "(|bar)"
                                  "(defn |bar [] 1)") (h/file-uri "file:///a.clj"))
-          db @db/db*]
+          db (h/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/defn :row defn-r}
         (q/find-definition-from-cursor db (h/file-path "/a.clj") usage-r usage-c))))
@@ -682,7 +681,7 @@
                                 (h/code "(ns foo)"
                                         "(declare |bar)"
                                         "(|bar)") (h/file-uri "file:///a.clj"))
-          db @db/db*]
+          db (h/db)]
       (h/assert-submap
         {:name 'bar :filename (h/file-path "/a.clj") :defined-by 'clojure.core/declare :row decl-r}
         (q/find-definition-from-cursor db (h/file-path "/a.clj") usage-r usage-c)))))
@@ -690,7 +689,7 @@
 (deftest find-definition-from-namespace-alias
   (h/load-code-and-locs (h/code "(ns foo.bar) (def a 1)") (h/file-uri "file:///a.clj"))
   (let [[[foob-r foob-c]] (h/load-code-and-locs (h/code "(ns foo.baz (:require [foo.bar :as |foob]))") (h/file-uri "file:///b.clj"))
-        db @db/db*]
+        db (h/db)]
     (h/assert-submap
       {:name-end-col 12 :name-end-row 1 :name-row 1 :name 'foo.bar :filename "/a.clj" :col 1 :name-col 5 :bucket :namespace-definitions :row 1}
       (q/find-definition-from-cursor db (h/file-path "/b.clj") foob-r foob-c))))
@@ -702,7 +701,7 @@
                                   "  (:require [potemkin :refer [import-vars]]"
                                   "            [foo.impl :as impl]))"
                                   "(import-vars |impl/bar)") (h/file-uri "file:///a.clj"))
-        db @db/db*]
+        db (h/db)]
     (h/assert-submap
       {:name 'bar :filename (h/file-path "/b.clj") :defined-by 'clojure.core/def :row 1 :col 15}
       (q/find-definition-from-cursor db (h/file-path "/a.clj") bar-r bar-c))))
@@ -720,7 +719,7 @@
                                       "|:simple-kw"
                                       "|:unregistered-kw")
                               (h/file-uri "file:///aaa.clj"))
-        db @db/db*]
+        db (h/db)]
     (h/assert-submap
       '{:ns namespaced, :name "kw", :filename "/bbb.clj", :bucket :keyword-definitions}
       (q/find-definition-from-cursor db (h/file-path "/aaa.clj") ns-kw-r ns-kw-c))
@@ -757,7 +756,7 @@
                                       "|orange"
                                       "|other")
                               "file:///b.clj")
-        db @db/db*]
+        db (h/db)]
     (testing "from usage with alias"
       (h/assert-submap
         {:alias 'foob
@@ -793,7 +792,7 @@
                                                 "#?(:clj foo/som|ething"
                                                 "   :cljs foo/som|ething)")
                                         "file:///b.cljc")
-        db @db/db*]
+        db (h/db)]
     (testing "from clj usage"
       (h/assert-submap
         {:name 'foo
@@ -850,7 +849,7 @@
          :from-var make-foo
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor @db/db* (h/file-path "/a.clj") 2 16)))
+      (q/find-implementations-from-cursor (h/db) (h/file-path "/a.clj") 2 16)))
   (testing "from protocol method definitions"
     (h/assert-submaps
       [{:impl-ns 'b
@@ -878,7 +877,7 @@
         :protocol-name 'Foo
         :filename "/b.clj"
         :bucket :protocol-impls}]
-      (q/find-implementations-from-cursor @db/db* (h/file-path "/a.clj") 3 4)))
+      (q/find-implementations-from-cursor (h/db) (h/file-path "/a.clj") 3 4)))
   (testing "from implementation usage"
     (h/assert-submaps
       [{:impl-ns 'b
@@ -906,7 +905,7 @@
         :protocol-name 'Foo
         :filename "/b.clj"
         :bucket :protocol-impls}]
-      (q/find-implementations-from-cursor @db/db* (h/file-path "/b.clj") 9 2))))
+      (q/find-implementations-from-cursor (h/db) (h/file-path "/b.clj") 9 2))))
 
 (deftest find-implementations-from-cursor-defmulti
   (h/load-code-and-locs (h/code "(ns a)"
@@ -938,7 +937,7 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor @db/db* (h/file-path "/a.clj") 2 12)))
+      (q/find-implementations-from-cursor (h/db) (h/file-path "/a.clj") 2 12)))
   (testing "from defmethod declaration"
     (h/assert-submaps
       '[{:name foo
@@ -957,7 +956,7 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor @db/db* (h/file-path "/b.clj") 2 13)))
+      (q/find-implementations-from-cursor (h/db) (h/file-path "/b.clj") 2 13)))
   (testing "from defmethod usage"
     (h/assert-submaps
       '[{:name foo
@@ -976,151 +975,151 @@
          :from b
          :bucket :var-usages
          :to a}]
-      (q/find-implementations-from-cursor @db/db* (h/file-path "/b.clj") 8 2))))
+      (q/find-implementations-from-cursor (h/db) (h/file-path "/b.clj") 8 2))))
 
 (deftest find-unused-aliases
   (testing "clj"
     (testing "used require via alias"
       (h/load-code-and-locs "(ns a (:require [x :as f])) f/foo")
       (is (= '#{}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.clj")))))
     (testing "used require via full-ns"
       (h/load-code-and-locs "(ns a (:require [x :as f])) x/foo")
       (is (= '#{}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.clj")))))
     (testing "full-ns require"
       (h/load-code-and-locs "(ns a (:require [x] y)) foo")
       (is (= '#{}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.clj")))))
     (testing "single unused-alias"
       (h/load-code-and-locs "(ns a (:require [x :as f]))")
       (is (= '#{x}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.clj")))))
     (testing "used and unused aliases"
       (h/load-code-and-locs "(ns a (:require [x :as f] [foo] x [bar :as b] [y :refer [m]] [z :refer [o i]])) o")
       (is (= '#{y bar}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.clj"))))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.clj"))))))
   (testing "cljc"
     (testing "used require via alias"
       (h/load-code-and-locs "(ns a (:require [x :as f])) f/foo" (h/file-uri "file:///a.cljc"))
       (is (= '#{}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.cljc")))))
     (testing "used require via full-ns"
       (h/load-code-and-locs "(ns a (:require [x :as f])) x/foo" (h/file-uri "file:///a.cljc"))
       (is (= '#{}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.cljc")))))
     (testing "full-ns require"
       (h/load-code-and-locs "(ns a (:require [x] y)) foo" (h/file-uri "file:///a.cljc"))
       (is (= '#{}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.cljc")))))
     (testing "single unused-alias"
       (h/load-code-and-locs "(ns a (:require [x :as f]))" (h/file-uri "file:///a.cljc"))
       (is (= '#{x}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.cljc")))))
     (testing "used and unused aliases"
       (h/load-code-and-locs "(ns a (:require [x :as f] [foo] x [bar :as b] [y :refer [m]] [z :refer [o i]])) o" (h/file-uri "file:///a.cljc"))
       (is (= '#{y bar}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.cljc")))))
     (testing "used alias in a reader conditional"
       (h/load-code-and-locs "(ns a (:require [y :as o] [x :as f])) #?(:clj f/foo)" (h/file-uri "file:///a.cljc"))
       (is (= '#{y}
-             (q/find-unused-aliases @db/db* (h/file-path "/a.cljc")))))))
+             (q/find-unused-aliases (h/db) (h/file-path "/a.cljc")))))))
 
 (deftest find-unused-refers
   (testing "clj"
     (testing "used require via refer"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo]])) foo")
       (is (= '#{}
-             (q/find-unused-refers @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.clj")))))
     (testing "multiple used refers"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo bar baz]])) foo bar baz")
       (is (= '#{}
-             (q/find-unused-refers @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.clj")))))
     (testing "single unused refer"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo]]))")
       (is (= '#{x/foo}
-             (q/find-unused-refers @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.clj")))))
     (testing "multiple unused refer"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo bar]]))")
       (is (= '#{x/foo x/bar}
-             (q/find-unused-refers @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.clj")))))
     (testing "multiple unused refer and used"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo bar baz]])) bar")
       (is (= '#{x/foo x/baz}
-             (q/find-unused-refers @db/db* (h/file-path "/a.clj"))))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.clj"))))))
   (testing "cljc"
     (testing "used require via refer"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo]])) foo" (h/file-uri "file:///a.cljc"))
       (is (= '#{}
-             (q/find-unused-refers @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.cljc")))))
     (testing "multiple used refers"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo bar baz]])) foo bar baz" (h/file-uri "file:///a.cljc"))
       (is (= '#{}
-             (q/find-unused-refers @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.cljc")))))
     (testing "single unused refer"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo]]))" (h/file-uri "file:///a.cljc"))
       (is (= '#{x/foo}
-             (q/find-unused-refers @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.cljc")))))
     (testing "multiple unused refer"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo bar]]))" (h/file-uri "file:///a.cljc"))
       (is (= '#{x/foo x/bar}
-             (q/find-unused-refers @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.cljc")))))
     (testing "multiple unused refer and used"
       (h/load-code-and-locs "(ns a (:require [x :refer [foo bar baz]])) bar" (h/file-uri "file:///a.cljc"))
       (is (= '#{x/foo x/baz}
-             (q/find-unused-refers @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.cljc")))))
     (testing "used refer in a reader conditional"
       (h/load-code-and-locs "(ns a (:require [y :refer [o]] [x :refer [f]])) #?(:clj f)" (h/file-uri "file:///a.cljc"))
       (is (= '#{y/o}
-             (q/find-unused-refers @db/db* (h/file-path "/a.cljc")))))))
+             (q/find-unused-refers (h/db) (h/file-path "/a.cljc")))))))
 
 (deftest find-unused-imports
   (testing "clj"
     (testing "single used full import"
       (h/load-code-and-locs "(ns a (:import java.util.Date)) Date.")
       (is (= '#{}
-             (q/find-unused-imports @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.clj")))))
     (testing "single unused full import"
       (h/load-code-and-locs "(ns a (:import java.util.Date))")
       (is (= '#{java.util.Date}
-             (q/find-unused-imports @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.clj")))))
     (testing "multiple unused full imports"
       (h/load-code-and-locs "(ns a (:import java.util.Date java.util.Calendar java.time.LocalDateTime))")
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
-             (q/find-unused-imports @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.clj")))))
     (testing "multiple unused package imports"
       (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalDateTime]))")
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
-             (q/find-unused-imports @db/db* (h/file-path "/a.clj")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.clj")))))
     (testing "multiple unused and used imports"
       (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalTime LocalDateTime])) LocalTime.")
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
-             (q/find-unused-imports @db/db* (h/file-path "/a.clj"))))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.clj"))))))
   (testing "cljc"
     (testing "single used full import"
       (h/load-code-and-locs "(ns a (:import java.util.Date)) Date." (h/file-uri "file:///a.cljc"))
       (is (= '#{}
-             (q/find-unused-imports @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.cljc")))))
     (testing "single unused full import"
       (h/load-code-and-locs "(ns a (:import java.util.Date))" (h/file-uri "file:///a.cljc"))
       (is (= '#{java.util.Date}
-             (q/find-unused-imports @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.cljc")))))
     (testing "multiple unused full imports"
       (h/load-code-and-locs "(ns a (:import java.util.Date java.util.Calendar java.time.LocalDateTime))" (h/file-uri "file:///a.cljc"))
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
-             (q/find-unused-imports @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.cljc")))))
     (testing "multiple unused package imports"
       (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalDateTime]))" (h/file-uri "file:///a.cljc"))
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
-             (q/find-unused-imports @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.cljc")))))
     (testing "multiple unused and used imports"
       (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalTime LocalDateTime])) LocalTime." (h/file-uri "file:///a.cljc"))
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
-             (q/find-unused-imports @db/db* (h/file-path "/a.cljc")))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.cljc")))))
     (testing "used import in a reader conditional"
       (h/load-code-and-locs "(ns a (:import [java.util Date Calendar] [java.time LocalTime LocalDateTime])) #?(:clj LocalTime.)" (h/file-uri "file:///a.cljc"))
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
-             (q/find-unused-imports @db/db* (h/file-path "/a.cljc")))))))
+             (q/find-unused-imports (h/db) (h/file-path "/a.cljc")))))))
 
 (deftest find-local-usages-under-cursor
   (testing "inside let"
@@ -1129,7 +1128,7 @@
           (h/load-code-and-locs "(ns a) (let [a 2 b 1] |(+ 2 b)| (- 2 a))")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-local-usages-under-form @db/db* (h/file-path "/a.clj")
+        (q/find-local-usages-under-form (h/db) (h/file-path "/a.clj")
                                         {:row sum-pos-r, :col sum-pos-c
                                          :end-row sum-end-pos-r, :end-col sum-end-pos-c}))))
   (testing "inside defn"
@@ -1138,6 +1137,6 @@
           (h/load-code-and-locs "(ns a) (defn ab [b] |(let [a 1] (b a))|) (defn other [c] c)")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-local-usages-under-form @db/db* (h/file-path "/a.clj")
+        (q/find-local-usages-under-form (h/db) (h/file-path "/a.clj")
                                         {:row let-pos-r, :col let-pos-c
                                          :end-row let-end-pos-r, :end-col let-end-pos-c})))))

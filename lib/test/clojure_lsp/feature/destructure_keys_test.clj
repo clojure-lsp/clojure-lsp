@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.destructure-keys-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
@@ -8,13 +7,13 @@
 (h/reset-db-after-test)
 
 (defn ^:private can-destructure-zloc? [zloc]
-  (f.destructure-keys/can-destructure-keys? zloc h/default-uri @db/db*))
+  (f.destructure-keys/can-destructure-keys? zloc h/default-uri (h/db)))
 
 (defn ^:private destructure-zloc [zloc]
-  (f.destructure-keys/destructure-keys zloc h/default-uri @db/db*))
+  (f.destructure-keys/destructure-keys zloc h/default-uri (h/db)))
 
 (defn ^:private as-string [changes]
-  (h/changes->code changes @db/db*))
+  (h/changes->code changes (h/db)))
 
 (defmacro ^:private assert-cannot-destructure [code]
   `(let [zloc# (h/load-code-and-zloc ~code)]

@@ -12,17 +12,17 @@
   (testing "detects URI format with lower-case drive letter and encoded colons"
     (h/clean-db!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
-      (handlers/initialize h/components "file:///c%3A/project/root" {} {} nil))
+      (handlers/initialize (h/components) "file:///c%3A/project/root" {} {} nil))
     (is (= {:encode-colons-in-path?   true
             :upper-case-drive-letter? false}
-           (get-in @db/db* [:settings :uri-format]))))
+           (get-in (h/db) [:settings :uri-format]))))
   (testing "detects URI format with upper-case drive letter and non-encoded colons"
     (h/clean-db!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
-      (handlers/initialize h/components "file:///C:/project/root" {} {} nil))
+      (handlers/initialize (h/components) "file:///C:/project/root" {} {} nil))
     (is (= {:encode-colons-in-path?   false
             :upper-case-drive-letter? true}
-           (get-in @db/db* [:settings :uri-format])))))
+           (get-in (h/db) [:settings :uri-format])))))
 
 (deftest did-open
   (testing "opening a existing file"
@@ -30,7 +30,7 @@
     (h/let-mock-chans
       [mock-diagnostics-chan db/diagnostics-chan]
       (let [_ (h/load-code-and-locs "(ns a) (when)")]
-        (is (some? (get-in @db/db* [:analysis (h/file-path "/a.clj")])))
+        (is (some? (get-in (h/db) [:analysis (h/file-path "/a.clj")])))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
           (is (= "file:///a.clj" uri))
           (h/assert-submaps
@@ -39,7 +39,7 @@
             diagnostics)))))
   (testing "opening a new clojure file adding the ns"
     (h/clean-db!)
-    (swap! db/db* merge {:settings {:auto-add-ns-to-new-files? true
+    (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
                                     :source-paths #{(h/file-path "/project/src")}}
                          :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                          :project-root-uri (h/file-uri "file:///project")})
@@ -51,10 +51,10 @@
                            :end {:line 999998, :character 999998}}
                    :new-text "(ns foo.bar)"}]}]
         (:document-changes (h/take-or-timeout mock-edits-chan 500)))
-      (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
+      (is (some? (get-in (h/db) [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
   (testing "opening a new edn file not adding the ns"
     (h/clean-db!)
-    (swap! db/db* merge {:settings {:auto-add-ns-to-new-files? true
+    (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
                                     :source-paths #{(h/file-path "/project/src")}}
                          :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                          :project-root-uri (h/file-uri "file:///project")})
@@ -62,7 +62,7 @@
       [mock-edits-chan db/edits-chan]
       (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn"))
       (h/assert-no-take mock-edits-chan 500)
-      (is (some? (get-in @db/db* [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))
+      (is (some? (get-in (h/db) [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))
 
 (deftest document-symbol
   (let [code "(ns a) (def bar ::bar) (def ^:m baz 1) (defmulti mult identity) (defmethod mult \"foo\")"
@@ -95,24 +95,24 @@
     (testing "clj files"
       (h/load-code-and-locs code)
       (h/assert-submaps result
-                        (handlers/document-symbol h/components
+                        (handlers/document-symbol (h/components)
                                                   {:text-document {:uri (h/file-uri "file:///a.clj")}})))
     (testing "cljs files"
       (h/load-code-and-locs code (h/file-uri "file:///b.cljs"))
       (h/assert-submaps result
-                        (handlers/document-symbol h/components
+                        (handlers/document-symbol (h/components)
                                                   {:text-document {:uri (h/file-uri "file:///b.cljs")}})))
     (testing "cljc files"
       (h/load-code-and-locs code (h/file-uri "file:///c.cljc"))
       (h/assert-submaps result
-                        (handlers/document-symbol h/components
+                        (handlers/document-symbol (h/components)
                                                   {:text-document {:uri (h/file-uri "file:///c.cljc")}})))))
 
 (deftest document-highlight
   (let [[bar-start] (h/load-code-and-locs "(ns a) (def |bar ::bar) (def ^:m baz 1)")]
     (h/assert-submaps
       [{:range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}]
-      (handlers/document-highlight h/components
+      (handlers/document-highlight (h/components)
                                    {:text-document {:uri (h/file-uri "file:///a.clj")}
                                     :position (h/->position bar-start)}))))
 
@@ -123,7 +123,7 @@
       (h/assert-submaps
         [{:uri (h/file-uri "file:///b.clj")
           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
-        (handlers/references h/components
+        (handlers/references (h/components)
                              {:text-document {:uri (h/file-uri "file:///a.clj")}
                               :position (h/->position bar-def-pos)}))))
   (testing "when including declaration"
@@ -134,7 +134,7 @@
           :range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
          {:uri (h/file-uri "file:///b.clj")
           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
-        (handlers/references h/components
+        (handlers/references (h/components)
                              {:text-document {:uri (h/file-uri "file:///a.clj")}
                               :position (h/->position bar-def-pos)
                               :context {:include-declaration true}})))))
@@ -167,7 +167,7 @@
         [uname-kw-start uname-kw-end] (h/load-code-and-locs (h/code "(ns user)"
                                                                     "(def name |::name|)") (h/file-uri "file:///user.cljc"))]
     (testing "on symbol without namespace"
-      (let [changes (:changes (handlers/rename h/components
+      (let [changes (:changes (handlers/rename (h/components)
                                                {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position abar-start)
                                                 :new-name "foo"}))]
@@ -176,7 +176,7 @@
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on symbol with metadata namespace"
-      (let [changes (:changes (handlers/rename h/components
+      (let [changes (:changes (handlers/rename (h/components)
                                                {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position abaz-start)
                                                 :new-name "qux"}))]
@@ -184,7 +184,7 @@
                 (h/file-uri "file:///c.clj") [{:new-text "qux" :range (h/->range cbaz-start cbaz-stop)}]}
                changes))))
     (testing "on symbol with namespace adds existing namespace"
-      (let [changes (:changes (handlers/rename h/components
+      (let [changes (:changes (handlers/rename (h/components)
                                                {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position [(first bbar-start) (dec (second bbar-start))])
                                                 :new-name "foo"}))]
@@ -193,7 +193,7 @@
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on symbol with namespace removes passed-in namespace"
-      (let [changes (:changes (handlers/rename h/components
+      (let [changes (:changes (handlers/rename (h/components)
                                                {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position bbar-start)
                                                 :new-name "aa/foo"}))]
@@ -202,7 +202,7 @@
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on ::keyword"
-      (let [changes (:changes (handlers/rename h/components
+      (let [changes (:changes (handlers/rename (h/components)
                                                {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position akwbar-start)
                                                 :new-name "::foo"}))]
@@ -210,7 +210,7 @@
                 (h/file-uri "file:///b.clj") [{:new-text "::aa/foo" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
                changes))))
     (testing "on single-name-namespace'd keyword"
-      (let [changes (:changes (handlers/rename h/components
+      (let [changes (:changes (handlers/rename (h/components)
                                                {:text-document {:uri (h/file-uri "file:///main.cljc")}
                                                 :position (h/->position main-uname-kw-start)
                                                 :new-name "::full-name"}))]
@@ -218,7 +218,7 @@
                 (h/file-uri "file:///user.cljc") [{:new-text "::full-name" :range (h/->range uname-kw-start uname-kw-end)}]}
                changes))))
     (testing "on qualified keyword without alias"
-      (let [changes (:changes (handlers/rename h/components
+      (let [changes (:changes (handlers/rename (h/components)
                                                {:text-document {:uri (h/file-uri "file:///d.clj")}
                                                 :position (h/->position d-name-kw-start)
                                                 :new-name "::other-name"}))]
@@ -227,7 +227,7 @@
                                               {:new-text ":d.dd/other-name" :range (h/->range kw-unaliased-start kw-unaliased-stop)}]}
                changes))))
     (testing "on alias changes namespaces inside file"
-      (let [changes (:changes (handlers/rename h/components
+      (let [changes (:changes (handlers/rename (h/components)
                                                {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position balias-start)
                                                 :new-name "xx"}))]
@@ -256,24 +256,24 @@
   (testing "when it has unresolved-namespace and can find namespace"
     (is (some #(= (:title %) "Add require '[some-ns :as sns]' × 1")
               (handlers/code-actions
-                h/components
+                (h/components)
                 {:text-document {:uri (h/file-uri "file:///c.clj")}
                  :context {:diagnostics [{:code "unresolved-namespace"
                                           :range {:start {:line 2 :character 10}}}]}
                  :range {:start {:line 2 :character 10}}}))))
   (testing "without workspace edit client capability"
-    (swap! db/db* merge {:client-capabilities {:workspace {:workspace-edit false}}})
+    (swap! (h/db*) merge {:client-capabilities {:workspace {:workspace-edit false}}})
     (is (not-any? #(= (:title %) "Clean namespace")
                   (handlers/code-actions
-                    h/components
+                    (h/components)
                     {:text-document {:uri (h/file-uri "file:///b.clj")}
                      :context {:diagnostics []}
                      :range {:start {:line 1 :character 1}}}))))
   (testing "with workspace edit client capability"
-    (swap! db/db* merge {:client-capabilities {:workspace {:workspace-edit true}}})
+    (swap! (h/db*) merge {:client-capabilities {:workspace {:workspace-edit true}}})
     (is (some #(= (:title %) "Clean namespace")
               (handlers/code-actions
-                h/components
+                (h/components)
                 {:text-document {:uri (h/file-uri "file:///b.clj")}
                  :context {:diagnostics []}
                  :range {:start {:line 1 :character 1}}})))))
@@ -287,9 +287,9 @@
                              "  (+ a b (foo2)))\n"
                              "(s/defn baz []\n"
                              "  (bar 2 3))\n"))
-  (let [code-lenses (handlers/code-lens h/components {:text-document {:uri h/default-uri}})
+  (let [code-lenses (handlers/code-lens (h/components) {:text-document {:uri h/default-uri}})
         resolved-code-lenses (map (fn [code-lens]
-                                    (handlers/code-lens-resolve h/components code-lens))
+                                    (handlers/code-lens-resolve (h/components) code-lens))
                                   code-lenses)]
     (is (= [0 1 2 4]
            (map #(get-in % [:range :start :line])
@@ -303,12 +303,12 @@
 
 (deftest server-info-raw
   (testing "returns kebab-case strings, to avoid camelCase conversion of keywords"
-    (is (seq (get (handlers/server-info-raw h/components) "server-version")))))
+    (is (seq (get (handlers/server-info-raw (h/components)) "server-version")))))
 
 (deftest cursor-info-raw
   (testing "returns kebab-case strings, to avoid camelCase conversion of keywords"
     (let [[row-and-col] (h/load-code-and-locs "(ns |a)")]
-      (is (seq (get (handlers/cursor-info-raw h/components
+      (is (seq (get (handlers/cursor-info-raw (h/components)
                                               {:text-document {:uri h/default-uri}
                                                :position (h/->position row-and-col)})
                     "elements"))))))

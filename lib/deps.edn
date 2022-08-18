@@ -16,7 +16,7 @@
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
         babashka/fs {:mvn/version "0.1.6"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.0.1"}
+        com.github.clojure-lsp/lsp4clj {:mvn/version "1.1.0"}
         ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
         }
  :paths ["src" "resources"]

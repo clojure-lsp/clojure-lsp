@@ -14,6 +14,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [lsp4clj.coercer :as coercer]
+   [lsp4clj.io-server :as lsp.io-server]
    [lsp4clj.json-rpc.messages :as lsp.messages]
    [lsp4clj.liveness-probe :as lsp.liveness-probe]
    [lsp4clj.server :as lsp.server]
@@ -508,13 +509,9 @@
           db (assoc db/initial-db :log-path log-path)
           db* (atom db)
           log-ch (async/chan (async/sliding-buffer 20))
-          server (lsp.server/stdio-server {:in System/in
-                                           :out System/out
-                                           :log-ch log-ch
-                                           ;; tracing
-                                           :trace? false
-                                           ;; merge log and trace, though only when `:trace?`
-                                           :trace-ch log-ch})
+          server (lsp.io-server/stdio-server {:log-ch log-ch
+                                              ;; uncomment for server-side traces
+                                              #_#_:trace-ch log-ch})
           producer (ClojureLspProducer. server db*)
           components {:db* db*
                       :logger timbre-logger

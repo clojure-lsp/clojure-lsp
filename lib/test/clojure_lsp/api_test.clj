@@ -7,7 +7,7 @@
    [clojure.test :as t :refer [deftest is testing]]))
 
 (defn clean-api-db! []
-  (internal-api/clean-db! :api-test))
+  (internal-api/clean-db!))
 
 (t/use-fixtures :each (fn [f] (clean-api-db!) (f)))
 

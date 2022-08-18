@@ -78,9 +78,8 @@
 (defn all
   "Get memoized settings from db.
   Refreshes settings if memoize threshold met."
-  [{:keys [settings-auto-refresh? env project-root-uri settings force-settings]}]
-  (if (or (not settings-auto-refresh?)
-          (#{:unit-test :api-test} env))
+  [{:keys [settings-auto-refresh? project-root-uri settings force-settings]}]
+  (if (not settings-auto-refresh?)
     (get-refreshed-settings project-root-uri settings force-settings)
     (memoized-settings project-root-uri settings force-settings)))
 

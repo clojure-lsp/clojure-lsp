@@ -83,12 +83,11 @@
 
 (def db* (atom nil))
 
-(defn clean-db! [env]
-  (doto db*
-    (reset! (assoc db/initial-db :env env))))
+(defn clean-db! []
+  (doto db* (reset! db/initial-db)))
 
 (defn ^:private build-components [options]
-  (let [db* (if @db* db* (clean-db! nil))]
+  (let [db* (if @db* db* (clean-db!))]
     {:db* db*
      :logger (doto (->CLILogger options)
                (logger/setup))

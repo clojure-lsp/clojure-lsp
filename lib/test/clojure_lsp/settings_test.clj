@@ -1,11 +1,8 @@
 (ns clojure-lsp.settings-test
   (:require
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is]]))
-
-(h/reset-components-before-test)
 
 (deftest kwd-string-test
   (is (= :foo (settings/kwd-string :foo)))
@@ -36,16 +33,16 @@
     (is (= #{:foo} (settings/parse-source-aliases [:foo b])))))
 
 (deftest all-test
-  (swap! (h/db*) shared/deep-merge {:settings {:a {:b {:c 2}}}})
-  (is (= {:a {:b {:c 2}}}
-         (settings/all (h/db)))))
+  (let [{:keys [db]} (h/make-components {:settings {:a {:b {:c 2}}}})]
+    (is (= {:a {:b {:c 2}}}
+           (settings/all db)))))
 
 (deftest get-test
-  (swap! (h/db*) shared/deep-merge {:settings {:a {:b {:c 2}}}})
-  (is (= 2 (settings/get (h/db) [:a :b :c])))
-  (is (= {:c 2} (settings/get (h/db) [:a :b])))
-  (is (= {:b {:c 2}} (settings/get (h/db) [:a])))
-  (is (= 10 (settings/get (h/db) [:d] 10))))
+  (let [{:keys [db]} (h/make-components {:settings {:a {:b {:c 2}}}})]
+    (is (= 2 (settings/get db [:a :b :c])))
+    (is (= {:c 2} (settings/get db [:a :b])))
+    (is (= {:b {:c 2}} (settings/get db [:a])))
+    (is (= 10 (settings/get db [:d] 10)))))
 
 (deftest clean-client-settings-test
   (let [raw-settings {:linters

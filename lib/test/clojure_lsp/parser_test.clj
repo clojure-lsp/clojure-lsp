@@ -1,11 +1,8 @@
 (ns clojure-lsp.parser-test
   (:require
    [clojure-lsp.parser :as parser]
-   [clojure-lsp.test-helper :as h]
    [clojure.test :refer [are deftest is testing]]
    [rewrite-clj.zip :as z]))
-
-(h/reset-components-before-test)
 
 (deftest safe-zloc-of-string
   (are [s] (= s (z/root-string (parser/safe-zloc-of-string s)))

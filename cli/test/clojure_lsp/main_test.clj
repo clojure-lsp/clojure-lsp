@@ -1,11 +1,8 @@
 (ns clojure-lsp.main-test
   (:require
    [clojure-lsp.main :as main]
-   [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]))
-
-(h/reset-components-before-test)
 
 (def default-root (.getAbsolutePath (io/file "src")))
 

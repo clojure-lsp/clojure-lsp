@@ -1,5 +1,6 @@
 (ns clojure-lsp.internal-api
   (:require
+   [clojure-lsp.components :as components]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
@@ -88,14 +89,15 @@
 
 (defn ^:private build-components [options]
   (let [db* (if @db* db* (clean-db!))]
-    {:db* db*
-     :logger (doto (->CLILogger options)
-               (logger/setup))
-     :producer (->APIProducer db* options)
-     :current-changes-chan (async/chan 1)
-     :diagnostics-chan (async/chan 1)
-     :watched-files-chan (async/chan 1)
-     :edits-chan (async/chan 1)}))
+    (components/snapc
+      {:db* db*
+       :logger (doto (->CLILogger options)
+                 (logger/setup))
+       :producer (->APIProducer db* options)
+       :current-changes-chan (async/chan 1)
+       :diagnostics-chan (async/chan 1)
+       :watched-files-chan (async/chan 1)
+       :edits-chan (async/chan 1)})))
 
 (defn ^:private edit->summary
   ([db uri edit]

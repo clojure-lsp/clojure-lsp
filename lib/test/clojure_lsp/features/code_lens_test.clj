@@ -4,114 +4,104 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-components-before-test)
+(defn ^:private code-lens [components]
+  (f.code-lens/reference-code-lens h/default-uri (h/db components)))
+
+(defn ^:private code-lens-submap [[start-r start-c :as start] end]
+  {:range (h/->range start end)
+   :data [h/default-uri start-r start-c]})
 
 (deftest reference-code-lens
   (testing "common lens"
-    (h/load-code-and-locs (str "(ns some-ns)\n"
-                               "(def foo 1)\n"
-                               "(defn- foo2 []\n"
-                               " foo)\n"
-                               "(defn bar [a b]\n"
-                               "  (+ a b (foo2)))\n"
-                               "(s/defn baz []\n"
-                               "  (bar 2 3))\n"))
-    (swap! (h/db*) assoc :kondo-config {})
-    (h/assert-submaps
-      [{}
-       {:range
-        {:start {:line 1 :character 5} :end {:line 1 :character 8}}
-        :data [(h/file-uri "file:///a.clj") 2 6]}
-       {:range
-        {:start {:line 2 :character 7} :end {:line 2 :character 11}}
-        :data [(h/file-uri "file:///a.clj") 3 8]}
-       {:range
-        {:start {:line 4 :character 6} :end {:line 4 :character 9}}
-        :data [(h/file-uri "file:///a.clj") 5 7]}]
-      (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") (h/db))))
+    (let [components (h/make-components {:kondo-config {}})
+          [def-start def-end
+           defnp-start defnp-end
+           defn-start defn-end]
+          (h/load-code (str "(ns some-ns)\n"
+                            "(def |foo| 1)\n"
+                            "(defn- |foo2| []\n"
+                            " foo)\n"
+                            "(defn |bar| [a b]\n"
+                            "  (+ a b (foo2)))\n"
+                            "(s/defn baz []\n"
+                            "  (bar 2 3))\n") h/default-uri components)]
+      (h/assert-submaps
+        [{}
+         (code-lens-submap def-start def-end)
+         (code-lens-submap defnp-start defnp-end)
+         (code-lens-submap defn-start defn-end)]
+        (code-lens components))))
   (testing "defrecord"
-    (h/load-code-and-locs (h/code "(defrecord MyRecord [])"
-                                  "(MyRecord)"
-                                  "(->MyRecord)"
-                                  "(map->MyRecord)"))
-    (swap! (h/db*) assoc :kondo-config {})
-    (is (= [{:range
-             {:start {:line 0, :character 11}, :end {:line 0, :character 19}},
-             :data [(h/file-uri "file:///a.clj") 1 12]}]
-           (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") (h/db)))))
+    (let [components (h/make-components {:kondo-config {}})
+          [rec-start rec-end]
+          (h/load-code (h/code "(defrecord |MyRecord| [])"
+                               "(MyRecord)"
+                               "(->MyRecord)"
+                               "(map->MyRecord)") h/default-uri components)]
+      (is (= [(code-lens-submap rec-start rec-end)]
+             (code-lens components)))))
   (testing "keyword definitions"
-    (h/load-code-and-locs (h/code "(ns foo (:require [re-frame.core :as r]))"
-                                  "(r/reg-event-db ::event identity)"
-                                  "(r/reg-sub ::sub identity)"))
-    (swap! (h/db*) assoc :kondo-config {})
-    (h/assert-submaps
-      [{}
-       {:range
-        {:start {:line 1, :character 16}, :end {:line 1, :character 23}},
-        :data [(h/file-uri "file:///a.clj") 2 17]}
-       {:range
-        {:start {:line 2, :character 11}, :end {:line 2, :character 16}},
-        :data [(h/file-uri "file:///a.clj") 3 12]}]
-      (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") (h/db))))
+    (let [components (h/make-components {:kondo-config {}})
+          [event-start event-end
+           sub-start sub-end]
+          (h/load-code (h/code "(ns foo (:require [re-frame.core :as r]))"
+                               "(r/reg-event-db |::event| identity)"
+                               "(r/reg-sub |::sub| identity)") h/default-uri components)]
+      (h/assert-submaps
+        [{}
+         (code-lens-submap event-start event-end)
+         (code-lens-submap sub-start sub-end)]
+        (code-lens components))))
   (testing "namespaces definitions"
-    (h/load-code-and-locs (h/code "(ns foo) (def a)"))
-    (h/load-code-and-locs (h/code "(ns bar (:require [foo :as f])) f/a"))
-    (swap! (h/db*) assoc :kondo-config {})
-    (h/assert-submaps
-      [{:range
-        {:start {:line 0, :character 4}, :end {:line 0, :character 7}}
-        :data [(h/file-uri "file:///a.clj") 1 5]}]
-      (f.code-lens/reference-code-lens (h/file-uri "file:///a.clj") (h/db)))))
+    (let [components (h/make-components {:kondo-config {}})
+          [ns-start ns-end]
+          (h/load-code (h/code "(ns |bar| (:require [foo :as f])) f/a") h/default-uri components)]
+      (h/assert-submaps
+        [(code-lens-submap ns-start ns-end)]
+        (code-lens components)))))
+
+(defn ^:private code-lens-resolve [components {:keys [range data]}]
+  (let [[uri row col] data]
+    (f.code-lens/resolve-code-lens uri row col range (h/db components))))
+
+(defn ^:private code-lens-resolve-submap [[start-r start-c :as start] end title]
+  {:range (h/->range start end)
+   :command {:title   title
+             :command "code-lens-references"
+             :arguments [h/default-uri start-r start-c]}})
 
 (deftest test-code-lens-resolve
-  (h/load-code-and-locs (str "(ns some-ns)\n"
-                             "(def foo 1)\n"
-                             "(defn- foo2 []\n"
-                             " foo)\n"
-                             "(defn bar [a b]\n"
-                             "  (+ a b (foo2)))\n"
-                             "(s/defn baz []\n"
-                             "  (bar 2 3))\n"))
-  (testing "references"
-    (testing "empty lens"
-      (is (= {:range   {:start {:line      0
-                                :character 5}
-                        :end   {:line      0
-                                :character 12}}
-              :command {:title   "0 references"
-                        :command "code-lens-references"
-                        :arguments [(h/file-uri "file:///a.clj") 0 5]}}
-             (f.code-lens/resolve-code-lens (h/file-uri "file:///a.clj") 0 5 {:start {:line 0 :character 5} :end {:line 0 :character 12}} (h/db)))))
-    (testing "some lens"
-      (is (= {:range   {:start {:line      1
-                                :character 5}
-                        :end   {:line      1
-                                :character 12}}
-              :command {:title   "1 reference"
-                        :command "code-lens-references"
-                        :arguments [(h/file-uri "file:///a.clj") 2 6]}}
-             (f.code-lens/resolve-code-lens (h/file-uri "file:///a.clj") 2 6 {:start {:line 1 :character 5} :end {:line 1 :character 12}} (h/db))))
-      (is (= {:range   {:start {:line      2
-                                :character 7}
-                        :end   {:line      2
-                                :character 11}}
-              :command {:title   "1 reference"
-                        :command "code-lens-references"
-                        :arguments [(h/file-uri "file:///a.clj") 3 8]}}
-             (f.code-lens/resolve-code-lens (h/file-uri "file:///a.clj") 3 8 {:start {:line 2 :character 7} :end {:line 2 :character 11}} (h/db)))))
-    (testing "defrecord lens"
-      (h/load-code-and-locs (h/code "(defrecord MyRecord [])"
-                                    "(MyRecord)"
-                                    "(->MyRecord)"
-                                    "(map->MyRecord)"))
-      (is (= {:range
-              {:start {:line 1, :character 5}, :end {:line 1, :character 12}},
-              :command
-              {:title "3 references",
-               :command "code-lens-references",
-               :arguments ["file:///a.clj" 1 13]}}
-             (f.code-lens/resolve-code-lens
-               (h/file-uri "file:///a.clj") 1 13
-               {:start {:line 1 :character 5}
-                :end {:line 1 :character 12}}
-               (h/db)))))))
+  (let [components (h/make-components)
+        [ns-start ns-end
+         def-start def-end
+         defn-start defn-end]
+        (h/load-code (str "(ns |some-ns|)\n"
+                          "(def |foo| 1)\n"
+                          "(defn- |foo2| []\n"
+                          " foo)\n"
+                          "(defn bar [a b]\n"
+                          "  (+ a b (foo2)))\n"
+                          "(s/defn baz []\n"
+                          "  (bar 2 3))\n") h/default-uri components)
+        [ns-code-lens
+         def-code-lens
+         defn-code-lens] (code-lens components)]
+    (testing "references"
+      (testing "empty lens"
+        (is (= (code-lens-resolve-submap ns-start ns-end "0 references")
+               (code-lens-resolve components ns-code-lens))))
+      (testing "some lens"
+        (is (= (code-lens-resolve-submap def-start def-end "1 reference")
+               (code-lens-resolve components def-code-lens)))
+        (is (= (code-lens-resolve-submap defn-start defn-end "1 reference")
+               (code-lens-resolve components defn-code-lens))))
+      (testing "defrecord lens"
+        (let [components (h/make-components)
+              [record-start record-end]
+              (h/load-code (h/code "(defrecord |MyRecord| [])"
+                                   "(MyRecord)"
+                                   "(->MyRecord)"
+                                   "(map->MyRecord)") h/default-uri components)
+              [record-code-lens] (code-lens components)]
+          (is (= (code-lens-resolve-submap record-start record-end "3 references")
+                 (code-lens-resolve components record-code-lens))))))))

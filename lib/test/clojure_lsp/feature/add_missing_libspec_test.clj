@@ -1,12 +1,9 @@
 (ns clojure-lsp.feature.add-missing-libspec-test
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
-   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
-
-(h/reset-components-before-test)
 
 (deftest resolve-best-alias-suggestions-test
   (testing "alias not exists"
@@ -139,196 +136,210 @@
             "c.t.l"
             {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))))
 
-(defn find-require-suggestions [code]
-  (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
+(defn find-require-suggestions [code components]
+  (f.add-missing-libspec/find-require-suggestions (h/zloc-from-code code)
+                                                  h/default-uri
+                                                  (h/db components)))
 
 (deftest find-require-suggestions-test
   (testing "Suggested namespaces"
-    (h/load-code-and-locs "(ns project.some.cool.namespace)" "file:///d.clj")
-    (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
-    (h/load-code-and-locs "(ns project.some.cool.namespace-test)" "file:///c.clj")
-    (h/assert-submaps
-      [{:ns "other-project.some.coolio.namespace" :alias "s.cool.namespace"}
-       {:ns "project.some.cool.namespace" :alias "s.cool.namespace"}]
-      (find-require-suggestions "|s.cool.namespace/foo")))
+    (let [components (h/make-components)]
+      (h/load-code "(ns project.some.cool.namespace)" "file:///d.clj" components)
+      (h/load-code "(ns other-project.some.coolio.namespace)" "file:///b.clj" components)
+      (h/load-code "(ns project.some.cool.namespace-test)" "file:///c.clj" components)
+      (h/assert-submaps
+        [{:ns "other-project.some.coolio.namespace" :alias "s.cool.namespace"}
+         {:ns "project.some.cool.namespace" :alias "s.cool.namespace"}]
+        (find-require-suggestions "|s.cool.namespace/foo" components))))
   (testing "Suggested alias"
-    (h/load-code-and-locs "(ns project.some.cool.namespace)")
-    (h/load-code-and-locs "(ns other-project.some.coolio.namespace)" "file:///b.clj")
-    (h/assert-submaps
-      [{:ns "project.some.cool.namespace" :alias "namespace"}
-       {:ns "project.some.cool.namespace"}]
-      (find-require-suggestions "|project.some.cool.namespace/foo")))
+    (let [components (h/make-components)]
+      (h/load-code "(ns project.some.cool.namespace)" "file:///c.clj" components)
+      (h/load-code "(ns other-project.some.coolio.namespace)" "file:///b.clj" components)
+      (h/assert-submaps
+        [{:ns "project.some.cool.namespace" :alias "namespace"}
+         {:ns "project.some.cool.namespace"}]
+        (find-require-suggestions "|project.some.cool.namespace/foo" components))))
   (testing "Suggested refers"
-    (h/load-code-and-locs "(ns project.some.cool.namespace) (def bla 1) (def blow 2)" "file:///c.clj")
-    (h/load-code-and-locs "(ns other-project.some.coolio.namespace) (def bli)" "file:///b.clj")
-    (h/assert-submaps
-      [{:ns "project.some.cool.namespace"
-        :refer "blow"}]
-      (find-require-suggestions "|blow")))
+    (let [components (h/make-components)]
+      (h/load-code "(ns project.some.cool.namespace) (def bla 1) (def blow 2)" "file:///c.clj" components)
+      (h/load-code "(ns other-project.some.coolio.namespace) (def bli)" "file:///b.clj" components)
+      (h/assert-submaps
+        [{:ns "project.some.cool.namespace"
+          :refer "blow"}]
+        (find-require-suggestions "|blow" components))))
   (testing "Suggested core"
     (h/assert-submaps
       [{:ns "clojure.set" :alias "set"}
        {:ns "clojure.set"}]
-      (find-require-suggestions "|set/intersection")))
+      (find-require-suggestions "|set/intersection" (h/make-components))))
   (testing "Suggested common"
     (h/assert-submaps
       [{:ns "clojure.core.async" :alias "async"} {:ns "clojure.core.async"}]
-      (find-require-suggestions "|async/go-loop")))
+      (find-require-suggestions "|async/go-loop" (h/make-components))))
   (testing "Suggested common refer"
     (h/assert-submaps
       [{:ns "clojure.core.async" :refer "go-loop"}]
-      (find-require-suggestions "|go-loop")))
+      (find-require-suggestions "|go-loop" (h/make-components))))
   (testing "Invalid location"
     (h/assert-submaps
       []
-      (find-require-suggestions "|;; comment"))))
+      (find-require-suggestions "|;; comment" (h/make-components)))))
 
-(defn ^:private add-missing-libspec [code]
-  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
+(defn ^:private add-missing-libspec [code components]
+  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code h/default-uri components)
+                                             h/default-uri
+                                             (h/db components)))
 
 (defn ^:private as-sexp [[{:keys [loc]} :as locs]]
-  (assert (= 1 (count locs)))
+  (is (= 1 (count locs)))
   (z/sexpr loc))
 
 (defn ^:private as-str [[{:keys [loc]} :as locs]]
-  (assert (= 1 (count locs)))
+  (is (= 1 (count locs)))
   (z/string loc))
 
 (defn ^:private as-root-str [[{:keys [loc]} :as locs]]
-  (assert (= 1 (count locs)))
+  (is (= 1 (count locs)))
   (z/root-string loc))
 
 (deftest add-missing-libspec-test
   (testing "aliases"
     (testing "known aliases in project"
-      (h/reset-components!)
-      (h/load-code-and-locs "(ns a (:require [foo.s :as s]))" "file:///b.clj")
-      (is (= '(ns foo (:require [foo.s :as s]))
-             (-> "(ns foo) |s/thing"
-                 add-missing-libspec
-                 as-sexp))))
+      (let [components (h/make-components)]
+        (h/load-code "(ns a (:require [foo.s :as s]))" "file:///b.clj" components)
+        (is (= '(ns foo (:require [foo.s :as s]))
+               (-> "(ns foo) |s/thing"
+                   (add-missing-libspec components)
+                   as-sexp)))))
     (testing "Do not add from wrong language"
-      (h/reset-components!)
-      (h/load-code-and-locs "(ns a (:require [foo.s :as s]))" "file:///b.cljs")
-      (h/load-code-and-locs "(ns foo.s)" "file:///c.cljs")
-      (is (= nil
-             (-> "(ns foo) |s/thing"
-                 add-missing-libspec))))
+      (let [components (h/make-components)]
+        (h/load-code "(ns a (:require [foo.s :as s]))" "file:///b.cljs" components)
+        (h/load-code "(ns foo.s)" "file:///c.cljs" components)
+        (is (= nil
+               (-> "(ns foo) |s/thing"
+                   (add-missing-libspec components))))))
     (testing "common ns aliases"
-      (h/reset-components!)
-      (is (= '(ns foo (:require [clojure.set :as set]))
-             (-> "(ns foo) |set/subset?"
-                 add-missing-libspec
-                 as-sexp))))
+      (let [components (h/make-components)]
+        (is (= '(ns foo (:require [clojure.set :as set]))
+               (-> "(ns foo) |set/subset?"
+                   (add-missing-libspec components)
+                   as-sexp)))))
     (testing "Don't add an alias that already exists"
-      (h/reset-components!)
-      (is (= nil
-             (-> "(ns foo (:require [foo.set :as set])) |set/subset?"
-                 add-missing-libspec))))
+      (let [components (h/make-components)]
+        (is (= nil
+               (-> "(ns foo (:require [foo.set :as set])) |set/subset?"
+                   (add-missing-libspec components))))))
     (testing "Don't add a namespace that already exists, but fix alias."
-      (h/reset-components!)
-      (is (= "s/subset?"
-             (-> "(ns foo (:require [clojure.set :as s])) |set/subset?"
-                 add-missing-libspec
-                 as-str))))
+      (let [components (h/make-components)]
+        (is (= "s/subset?"
+               (-> "(ns foo (:require [clojure.set :as s])) |set/subset?"
+                   (add-missing-libspec components)
+                   as-str)))))
     (testing "Don't add a namespace that already exists, but fix alias."
-      (h/reset-components!)
-      (is (= "s/subset?"
-             (-> "(ns foo (:require [clojure.set :as s])) |c.s/subset?"
-                 add-missing-libspec
-                 as-str))))
+      (let [components (h/make-components)]
+        (is (= "s/subset?"
+               (-> "(ns foo (:require [clojure.set :as s])) |c.s/subset?"
+                   (add-missing-libspec components)
+                   as-str)))))
     (testing "with ns-inner-blocks-indentation :same-line"
       (testing "we add first require without spaces"
-        (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
-        (is (= (h/code "(ns foo "
-                       "  (:require [clojure.set :as set]))")
-               (-> "(ns foo) |set/subset?"
-                   add-missing-libspec
-                   as-str))))
+        (let [components (h/make-components {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})]
+          (is (= (h/code "(ns foo "
+                         "  (:require [clojure.set :as set]))")
+                 (-> "(ns foo) |set/subset?"
+                     (add-missing-libspec components)
+                     as-str)))))
       (testing "next requires follow the same pattern"
-        (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
+        (let [components (h/make-components {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})]
+          (is (= (h/code "(ns foo "
+                         "  (:require [clojure.set :as set]"
+                         "            [foo :as bar]))")
+                 (-> (h/code "(ns foo "
+                             "  (:require [foo :as bar])) |set/subset?")
+                     (add-missing-libspec components)
+                     as-str))))))
+    (testing "do not clean if disbled"
+      (let [components (h/make-components {:settings {:clean {:automatically-after-ns-refactor false}}})]
         (is (= (h/code "(ns foo "
-                       "  (:require [clojure.set :as set]"
-                       "            [foo :as bar]))")
+                       "  (:require [foo :as bar]"
+                       "            [clojure.set :as set]))")
                (-> (h/code "(ns foo "
                            "  (:require [foo :as bar])) |set/subset?")
-                   add-missing-libspec
+                   (add-missing-libspec components)
                    as-str)))))
-    (testing "do not clean if disbled"
-      (swap! (h/db*) shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor false}}})
-      (is (= (h/code "(ns foo "
-                     "  (:require [foo :as bar]"
-                     "            [clojure.set :as set]))")
-             (-> (h/code "(ns foo "
-                         "  (:require [foo :as bar])) |set/subset?")
-                 add-missing-libspec
-                 as-str))))
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
-        (swap! (h/db*) shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor true
-                                                           :ns-inner-blocks-indentation :same-line}}})
-        (is (= (h/code "(ns foo "
-                       "  (:require [clojure.set :as set]))")
-               (-> "(ns foo) |set/subset?"
-                   add-missing-libspec
-                   as-str))))
+        (let [components (h/make-components {:settings {:clean {:automatically-after-ns-refactor true
+                                                                :ns-inner-blocks-indentation :same-line}}})]
+          (is (= (h/code "(ns foo "
+                         "  (:require [clojure.set :as set]))")
+                 (-> "(ns foo) |set/subset?"
+                     (add-missing-libspec components)
+                     as-str)))))
       (testing "next requires follow the same pattern"
-        (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})
-        (is (= (h/code "(ns foo "
-                       "  (:require [clojure.set :as set]"
-                       "            [foo :as bar]))")
-               (-> (h/code "(ns foo "
-                           "  (:require [foo :as bar])) |set/subset?")
-                   add-missing-libspec
-                   as-str))))))
+        (let [components (h/make-components {:settings {:clean {:ns-inner-blocks-indentation :same-line}}})]
+          (is (= (h/code "(ns foo "
+                         "  (:require [clojure.set :as set]"
+                         "            [foo :as bar]))")
+                 (-> (h/code "(ns foo "
+                             "  (:require [foo :as bar])) |set/subset?")
+                     (add-missing-libspec components)
+                     as-str)))))))
   (testing "common refers"
     (testing "when require doesn't exists"
-      (h/reset-components!)
-      (is (= '(ns foo (:require [clojure.test :refer [deftest]]))
-             (-> "(ns foo) |deftest"
-                 add-missing-libspec
-                 as-sexp))))
+      (let [components (h/make-components)]
+        (is (= '(ns foo (:require [clojure.test :refer [deftest]]))
+               (-> "(ns foo) |deftest"
+                   (add-missing-libspec components)
+                   as-sexp)))))
     (testing "when already exists another require"
-      (h/reset-components!)
-      (is (= '(ns foo (:require
-                       [clojure.set :refer [subset?]]
-                       [clojure.test :refer [deftest]]))
-             (-> "(ns foo (:require [clojure.set :refer [subset?]])) |deftest subset?"
-                 add-missing-libspec
-                 as-sexp))))
+      (let [components (h/make-components)]
+        (is (= '(ns foo (:require
+                         [clojure.set :refer [subset?]]
+                         [clojure.test :refer [deftest]]))
+               (-> "(ns foo (:require [clojure.set :refer [subset?]])) |deftest subset?"
+                   (add-missing-libspec components)
+                   as-sexp)))))
     (testing "when already exists that ns with alias and no refers"
-      (h/reset-components!)
-      (is (= '(ns foo (:require [clojure.test :as t :refer [testing]]))
-             (-> "(ns foo (:require [clojure.test :as t])) |testing t/deftest"
-                 add-missing-libspec
-                 as-sexp))))
+      (let [components (h/make-components)]
+        (is (= '(ns foo (:require [clojure.test :as t :refer [testing]]))
+               (-> "(ns foo (:require [clojure.test :as t])) |testing t/deftest"
+                   (add-missing-libspec components)
+                   as-sexp)))))
     (testing "when already exists that ns with another refer"
-      (h/reset-components!)
-      (is (= '(ns foo (:require [clojure.test :refer [deftest testing]]))
-             (-> "(ns foo (:require [clojure.test :refer [deftest]])) |testing deftest"
-                 add-missing-libspec
-                 as-sexp))))
+      (let [components (h/make-components)]
+        (is (= '(ns foo (:require [clojure.test :refer [deftest testing]]))
+               (-> "(ns foo (:require [clojure.test :refer [deftest]])) |testing deftest"
+                   (add-missing-libspec components)
+                   as-sexp)))))
     (testing "we don't add existing refers"
-      (h/reset-components!)
-      (is (nil? (add-missing-libspec "(ns foo (:require [clojure.test :refer [testing]])) |testing"))))
+      (let [components (h/make-components)]
+        (is (nil? (-> "(ns foo (:require [clojure.test :refer [testing]])) |testing"
+                      (add-missing-libspec components))))))
     (testing "we can add multiple refers"
-      (h/reset-components!)
-      (is (= '(ns foo (:require
-                       [clojure.test :refer [deftest is testing]]))
-             (-> "(ns foo (:require [clojure.test :refer [deftest testing]])) |is deftest testing"
-                 add-missing-libspec
-                 as-sexp)))))
+      (let [components (h/make-components)]
+        (is (= '(ns foo (:require
+                         [clojure.test :refer [deftest is testing]]))
+               (-> "(ns foo (:require [clojure.test :refer [deftest testing]])) |is deftest testing"
+                   (add-missing-libspec components)
+                   as-sexp))))))
   (testing "when on invalid location"
-    (h/reset-components!)
-    (is (nil? (-> "(ns foo) |;; comment"
-                  add-missing-libspec)))))
+    (let [components (h/make-components)]
+      (is (nil? (-> "(ns foo) |;; comment"
+                    (add-missing-libspec components)))))))
 
-(defn add-import-to-namespace [code import-name & [settings]]
-  (h/reset-components!)
-  (swap! (h/db*) shared/deep-merge {:settings (merge
-                                              {:clean {:automatically-after-ns-refactor false}}
-                                              settings)})
-  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db)))
+(defn make-import-components
+  ([] (make-import-components {}))
+  ([settings]
+   (h/make-components {:settings (merge
+                                   {:clean {:automatically-after-ns-refactor false}}
+                                   settings)})))
+
+(defn add-import-to-namespace
+  ([code import-name] (add-import-to-namespace code import-name (make-import-components)))
+  ([code import-name components]
+   (let [zloc (h/load-code-and-zloc code h/default-uri components)]
+    (f.add-missing-libspec/add-missing-import zloc h/default-uri import-name (h/db components)))))
 
 (deftest add-import-to-namespace-test
   (testing "when there is no :import form"
@@ -342,13 +353,13 @@
     (is (= (h/code "(ns foo.bar "
                    "  (:import java.util.Date))")
            (-> "(ns foo.bar) |Date."
-               (add-import-to-namespace "java.util.Date"  {:clean {:ns-inner-blocks-indentation :same-line}})
+               (add-import-to-namespace "java.util.Date" (make-import-components {:clean {:ns-inner-blocks-indentation :same-line}}))
                as-root-str))))
   (testing "when there is no :import form with deprecated :keep-require-at-start?"
     (is (= (h/code "(ns foo.bar "
                    "  (:import java.util.Date))")
            (-> "(ns foo.bar) |Date."
-               (add-import-to-namespace "java.util.Date"  {:keep-require-at-start? true})
+               (add-import-to-namespace "java.util.Date" (make-import-components {:keep-require-at-start? true}))
                as-root-str))))
   (testing "when there is a :import form already"
     (is (= (h/code "(ns foo.bar "
@@ -392,12 +403,13 @@
                (add-import-to-namespace "java.util.Date")
                as-root-str))))
   (testing "when on an invalid location"
-    (is (= (h/code "(ns foo.bar "
-                   "  (:import"
-                   "    java.util.Date)) ;; comment")
-           (-> (h/code "(ns foo.bar) |;; comment")
-               (add-import-to-namespace "java.util.Date")
-               (h/changes->code (h/db)))))))
+    (let [components (make-import-components)]
+      (is (= (h/code "(ns foo.bar "
+                     "  (:import"
+                     "    java.util.Date)) ;; comment")
+             (-> (h/code "(ns foo.bar) |;; comment")
+                 (add-import-to-namespace "java.util.Date" components)
+                 (h/changes->code (h/db components))))))))
 
 (deftest add-common-import-to-namespace-test
   (testing "when we known the import"
@@ -412,93 +424,94 @@
   (testing "when on invalid location"
     (is (nil? (add-import-to-namespace "(ns foo.bar) |;; comment" nil)))))
 
-(defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db)))
+(defn add-require-suggestion [code components chosen-ns chosen-alias chosen-refer]
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) h/default-uri chosen-ns chosen-alias chosen-refer (h/db components)))
 
 (deftest add-require-suggestion-test
-  (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
-  (testing "alias"
-    (testing "on empty ns"
-      (is (= (h/code "(ns foo.bar "
-                     "  (:require"
-                     "   [clojure.string :as str]))")
-             (-> (h/code "(ns foo.bar)"
-                         "|str/a")
-                 (add-require-suggestion "clojure.string" "str" nil)
-                 as-root-str))))
-    (testing "changing alias"
-      (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
-                                            "|clojure.string/a")
-                                    ;; The code actions will suggest clojure.string or string but it's possible
-                                    ;; to have a custom alias if invoked directly.
-                                    (add-require-suggestion "clojure.string" "my-str" nil))]
+  (let [components (h/make-components)]
+    (h/load-code (h/code "(ns clojure.string) (defn split [])") "file:///clojure/string.clj" components)
+    (testing "alias"
+      (testing "on empty ns"
         (is (= (h/code "(ns foo.bar "
                        "  (:require"
-                       "   [clojure.string :as my-str]))")
-               (z/root-string (:loc ns-edit))))
+                       "   [clojure.string :as str]))")
+               (-> (h/code "(ns foo.bar)"
+                           "|str/a")
+                   (add-require-suggestion components "clojure.string" "str" nil)
+                   as-root-str))))
+      (testing "changing alias"
+        (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
+                                              "|clojure.string/a")
+                                    ;; The code actions will suggest clojure.string or string but it's possible
+                                    ;; to have a custom alias if invoked directly.
+                                      (add-require-suggestion components "clojure.string" "my-str" nil))]
+          (is (= (h/code "(ns foo.bar "
+                         "  (:require"
+                         "   [clojure.string :as my-str]))")
+                 (z/root-string (:loc ns-edit))))
         ;; If we are aliasing to something other than the full namespace, we change
         ;; uses of the namespace to the alias.
-        (is (= (h/code "my-str/a")
-               (z/string (:loc form-edit))))))
-    (testing "on non empty ns"
-      (is (= (h/code "(ns foo.bar"
-                     "  (:require"
-                     "   [clojure.java.io :as io]"
-                     "   [clojure.string :as str]))")
-             (-> (h/code "(ns foo.bar"
-                         "  (:require"
-                         "   [clojure.java.io :as io]))"
-                         "|str/a")
-                 (add-require-suggestion "clojure.string" "str" nil)
-                 as-root-str))))
-    (testing "on invalid location"
-      (is (nil? (-> (h/code "(ns foo.bar)"
-                            "|;; comment")
-                    (add-require-suggestion "clojure.string" "str" nil))))))
-  (testing "refer"
-    (testing "on empty ns"
-      (is (= (h/code "(ns foo.bar "
-                     "  (:require"
-                     "   [clojure.string :refer [split]]))")
-             (-> (h/code "(ns foo.bar)"
-                         "|split")
-                 (add-require-suggestion "clojure.string" nil "split")
-                 as-root-str))))
-    (testing "on non empty ns"
-      (is (= (h/code "(ns foo.bar"
-                     "  (:require"
-                     "   [clojure.java.io :as io]"
-                     "   [clojure.string :refer [split]]))")
-             (-> (h/code "(ns foo.bar"
-                         "  (:require"
-                         "   [clojure.java.io :as io]))"
-                         "|split")
-                 (add-require-suggestion "clojure.string" nil "split")
-                 as-root-str))))
-    (testing "on existing ns with alias"
-      (is (= (h/code "(ns foo.bar"
-                     "  (:require"
-                     "   [clojure.string :as str :refer [split]]))")
-             (-> (h/code "(ns foo.bar"
-                         "  (:require"
-                         "   [clojure.string :as str]))"
-                         "|split")
-                 (add-require-suggestion "clojure.string" nil "split")
-                 as-root-str))))
-    (testing "on existing ns with refers"
-      (is (= (h/code "(ns foo.bar"
-                     "  (:require"
-                     "   [clojure.string :refer [join split]]))")
-             (-> (h/code "(ns foo.bar"
-                         "  (:require"
-                         "   [clojure.string :refer [join]]))"
-                         "|split")
-                 (add-require-suggestion "clojure.string" nil "split")
-                 as-root-str))))
-    (testing "on invalid location"
-      (is (nil? (-> (h/code "(ns foo.bar)"
-                            "|;; comment")
-                    (add-require-suggestion "clojure.string" nil "split")))))))
+          (is (= (h/code "my-str/a")
+                 (z/string (:loc form-edit))))))
+      (testing "on non empty ns"
+        (is (= (h/code "(ns foo.bar"
+                       "  (:require"
+                       "   [clojure.java.io :as io]"
+                       "   [clojure.string :as str]))")
+               (-> (h/code "(ns foo.bar"
+                           "  (:require"
+                           "   [clojure.java.io :as io]))"
+                           "|str/a")
+                   (add-require-suggestion components "clojure.string" "str" nil)
+                   as-root-str))))
+      (testing "on invalid location"
+        (is (nil? (-> (h/code "(ns foo.bar)"
+                              "|;; comment")
+                      (add-require-suggestion components "clojure.string" "str" nil))))))
+    (testing "refer"
+      (testing "on empty ns"
+        (is (= (h/code "(ns foo.bar "
+                       "  (:require"
+                       "   [clojure.string :refer [split]]))")
+               (-> (h/code "(ns foo.bar)"
+                           "|split")
+                   (add-require-suggestion components "clojure.string" nil "split")
+                   as-root-str))))
+      (testing "on non empty ns"
+        (is (= (h/code "(ns foo.bar"
+                       "  (:require"
+                       "   [clojure.java.io :as io]"
+                       "   [clojure.string :refer [split]]))")
+               (-> (h/code "(ns foo.bar"
+                           "  (:require"
+                           "   [clojure.java.io :as io]))"
+                           "|split")
+                   (add-require-suggestion components "clojure.string" nil "split")
+                   as-root-str))))
+      (testing "on existing ns with alias"
+        (is (= (h/code "(ns foo.bar"
+                       "  (:require"
+                       "   [clojure.string :as str :refer [split]]))")
+               (-> (h/code "(ns foo.bar"
+                           "  (:require"
+                           "   [clojure.string :as str]))"
+                           "|split")
+                   (add-require-suggestion components "clojure.string" nil "split")
+                   as-root-str))))
+      (testing "on existing ns with refers"
+        (is (= (h/code "(ns foo.bar"
+                       "  (:require"
+                       "   [clojure.string :refer [join split]]))")
+               (-> (h/code "(ns foo.bar"
+                           "  (:require"
+                           "   [clojure.string :refer [join]]))"
+                           "|split")
+                   (add-require-suggestion components "clojure.string" nil "split")
+                   as-root-str))))
+      (testing "on invalid location"
+        (is (nil? (-> (h/code "(ns foo.bar)"
+                              "|;; comment")
+                      (add-require-suggestion components "clojure.string" nil "split"))))))))
 
 (defn- find-missing-import [code]
   (f.add-missing-libspec/find-missing-import (h/zloc-from-code code)))

@@ -4,19 +4,21 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-components-before-test)
+(defn can-drag-zloc-backward? [zloc components]
+  (f.drag/can-drag-backward? zloc h/default-uri (h/db components)))
 
-(defn can-drag-zloc-backward? [zloc]
-  (f.drag/can-drag-backward? zloc h/default-uri (h/db)))
-
-(defn can-drag-zloc-forward? [zloc]
-  (f.drag/can-drag-forward? zloc h/default-uri (h/db)))
+(defn can-drag-zloc-forward? [zloc components]
+  (f.drag/can-drag-forward? zloc h/default-uri (h/db components)))
 
 (defn can-drag-code-backward? [code]
-  (can-drag-zloc-backward? (h/load-code-and-zloc code)))
+  (let [components (h/make-components)
+        zloc (h/load-code-and-zloc code h/default-uri components)]
+    (can-drag-zloc-backward? zloc components)))
 
 (defn can-drag-code-forward? [code]
-  (can-drag-zloc-forward? (h/load-code-and-zloc code)))
+  (let [components (h/make-components)
+        zloc (h/load-code-and-zloc code h/default-uri components)]
+    (can-drag-zloc-forward? zloc components)))
 
 ;; These are only the negative cases, proving when drag-backward is NOT offered
 ;; in the actions menu. The positive cases are all tested indirectly via
@@ -214,23 +216,25 @@
       ;; from invalid are
       (is (not (can-drag-code-forward? (h/code "(are [] (= 1 1) |1 2)")))))))
 
-(defn drag-zloc-backward [{:keys [zloc position]}]
-  (f.drag/drag-backward zloc position h/default-uri (h/db)))
+(defn drag-zloc-backward [{:keys [zloc position]} components]
+  (f.drag/drag-backward zloc position h/default-uri (h/db components)))
 
-(defn drag-zloc-forward [{:keys [zloc position]}]
-  (f.drag/drag-forward zloc position h/default-uri (h/db)))
+(defn drag-zloc-forward [{:keys [zloc position]} components]
+  (f.drag/drag-forward zloc position h/default-uri (h/db components)))
 
-(defn drag-code-backward [code]
-  (drag-zloc-backward (h/load-code-into-zloc-and-position code)))
+(defn drag-code-backward [code components]
+  (drag-zloc-backward (h/load-code-into-zloc-and-position code h/default-uri components)
+                      components))
 
-(defn drag-code-forward [code]
-  (drag-zloc-forward (h/load-code-into-zloc-and-position code)))
+(defn drag-code-forward [code components]
+  (drag-zloc-forward (h/load-code-into-zloc-and-position code h/default-uri components)
+                     components))
 
-(defn- as-string [change]
+(defn- as-string [change components]
   (some-> change
           :changes-by-uri
           (get h/default-uri)
-          (h/changes->code (h/db))))
+          (h/changes->code (h/db components))))
 
 (defn- as-position [change]
   (when-let [{:keys [row col end-row end-col]} (some-> change
@@ -240,15 +244,17 @@
 
 ;; These are macros so test failures have the right line numbers
 (defmacro assert-drag-backward [expected code]
-  `(let [moved#         (drag-code-backward ~code)
+  `(let [components# (h/make-components)
+         moved#         (drag-code-backward ~code components#)
          [text# [pos#]] (h/positions-from-text ~expected)]
-     (is (= text# (as-string moved#)))
+     (is (= text# (as-string moved# components#)))
      ;; Range should only be single char
      (is (= [pos# pos#] (as-position moved#)))))
 (defmacro assert-drag-forward [expected code]
-  `(let [moved#         (drag-code-forward ~code)
+  `(let [components# (h/make-components)
+         moved#         (drag-code-forward ~code components#)
          [text# [pos#]] (h/positions-from-text ~expected)]
-     (is (= text# (as-string moved#)))
+     (is (= text# (as-string moved# components#)))
      (is (= [pos# pos#] (as-position moved#)))))
 
 (deftest drag-backward
@@ -1050,13 +1056,15 @@
 
 ;; These are macros so test failures have the right line numbers
 (defmacro assert-no-erroneous-backwards [code]
-  `(let [zloc-and-position# (h/load-code-into-zloc-and-position ~code)]
-     (is (can-drag-zloc-backward? (:zloc zloc-and-position#)))
-     (is (nil? (as-string (drag-zloc-backward zloc-and-position#))))))
+  `(let [components# (h/make-components)
+         zloc-and-position# (h/load-code-into-zloc-and-position ~code h/default-uri components#)]
+     (is (can-drag-zloc-backward? (:zloc zloc-and-position#) components#))
+     (is (nil? (as-string (drag-zloc-backward zloc-and-position# components#) components#)))))
 (defmacro assert-no-erroneous-forwards [code]
-  `(let [zloc-and-position# (h/load-code-into-zloc-and-position ~code)]
-     (is (can-drag-zloc-forward? (:zloc zloc-and-position#)))
-     (is (nil? (as-string (drag-zloc-forward zloc-and-position#))))))
+  `(let [components# (h/make-components)
+         zloc-and-position# (h/load-code-into-zloc-and-position ~code h/default-uri components#)]
+     (is (can-drag-zloc-forward? (:zloc zloc-and-position#) components#))
+     (is (nil? (as-string (drag-zloc-forward zloc-and-position# components#) components#)))))
 
 (deftest erroneous-swaps
   ;; NOTE: ideally can-drag-*? and drag-* would always agree, but when they

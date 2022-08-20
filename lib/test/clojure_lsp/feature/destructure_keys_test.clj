@@ -4,30 +4,31 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-components-before-test)
+(defn ^:private can-destructure-zloc? [zloc db]
+  (f.destructure-keys/can-destructure-keys? zloc h/default-uri db))
 
-(defn ^:private can-destructure-zloc? [zloc]
-  (f.destructure-keys/can-destructure-keys? zloc h/default-uri (h/db)))
+(defn ^:private destructure-zloc [zloc db]
+  (f.destructure-keys/destructure-keys zloc h/default-uri db))
 
-(defn ^:private destructure-zloc [zloc]
-  (f.destructure-keys/destructure-keys zloc h/default-uri (h/db)))
+(defn ^:private as-string [changes db]
+  (h/changes->code changes db))
 
-(defn ^:private as-string [changes]
-  (h/changes->code changes (h/db)))
+(defn ^:private do-destructure [code]
+  (let [components (h/make-components)
+        zloc (h/load-code-and-zloc code h/default-uri components)
+        db (h/db components)]
+    {:can (can-destructure-zloc? zloc db)
+     :did (as-string (destructure-zloc zloc db) db)}))
 
 (defmacro ^:private assert-cannot-destructure [code]
-  `(let [zloc# (h/load-code-and-zloc ~code)]
-     (is (not (can-destructure-zloc? zloc#))
-         (as-string (destructure-zloc zloc#)))))
+  `(let [result# (do-destructure ~code)]
+     (is (not (:can result#)) (:did result#))))
 
 (defmacro ^:private assert-destructures [destructured-code original-code]
   `(let [original# ~original-code
-         zloc# (h/load-code-and-zloc original#)
-         expected# ~destructured-code]
-     (is (can-destructure-zloc? zloc#) original#)
-     (is (= expected#
-            (as-string (destructure-zloc zloc#)))
-          original#)))
+         result# (do-destructure original#)]
+     (is (:can result#) original#)
+     (is (= ~destructured-code (:did result#)) original#)))
 
 (deftest should-not-destructure
   (assert-cannot-destructure "{|:a 1}")

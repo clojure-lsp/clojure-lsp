@@ -4,19 +4,17 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(defn ^:private can-sort-zloc? [zloc]
-  (f.sort-clauses/can-sort? zloc h/default-uri (h/db)))
-
-(defn ^:private sort-zloc [zloc]
-  (f.sort-clauses/sort-clauses zloc h/default-uri (h/db)))
-
-(defn ^:private as-string [changes]
-  (h/changes->code changes (h/db)))
+(defn ^:private do-sort-clauses [code]
+  (let [components (h/make-components)
+        zloc (h/load-code-and-zloc code h/default-uri components)
+        db (h/db components)]
+    {:can (f.sort-clauses/can-sort? zloc h/default-uri db)
+     :did (-> (f.sort-clauses/sort-clauses zloc h/default-uri db)
+              (h/changes->code db))}))
 
 (defmacro ^:private assert-cannot-sort [code]
-  `(let [zloc# (h/load-code-and-zloc ~code)]
-     (is (not (can-sort-zloc? zloc#))
-         (as-string (sort-zloc zloc#)))))
+  `(let [result# (do-sort-clauses ~code)]
+     (is (not (:can result#)) (:did result#))))
 
 (deftest should-not-sort
   (testing "top-level forms"
@@ -31,12 +29,9 @@
 
 (defmacro ^:private assert-sorts [sorted-code original-code]
   `(let [original# ~original-code
-         zloc# (h/load-code-and-zloc original#)
-         expected# ~sorted-code]
-     (is (can-sort-zloc? zloc#) original#)
-     (is (= expected#
-            (as-string (sort-zloc zloc#)))
-         original#)))
+         result# (do-sort-clauses original#)]
+     (is (:can result#) original#)
+     (is (= ~sorted-code (:did result#)) original#)))
 
 (deftest should-sort-clauses
   (testing "sorts maps"

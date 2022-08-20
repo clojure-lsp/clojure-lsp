@@ -1,6 +1,7 @@
 (ns clojure-lsp.server
   (:require
    [clojure-lsp.clojure-coercer :as clojure-coercer]
+   [clojure-lsp.components :as components]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.feature.refactor :as f.refactor]
@@ -22,6 +23,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def snapc components/snapc)
+
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
 (def watched-files-debounce-ms 1000)
@@ -32,6 +35,7 @@
   (timbre/log! level :p args {:?line (:line fmeta)
                               :?file (:file fmeta)
                               :?ns-str (:ns-str fmeta)}))
+
 (defn log-wrapper-fn
   [level & args]
   ;; NOTE: this does not do compile-time elision because the level isn't a constant.
@@ -157,7 +161,7 @@
 
 (defmethod lsp.server/receive-request "clojure/dependencyContents" [_ components params]
   (->> params
-       (handler/dependency-contents components)
+       (handler/dependency-contents (snapc components))
        (conform-or-log ::coercer/uri)))
 
 (defmethod lsp.server/receive-request "clojure/serverInfo/raw" [_ components _params]
@@ -166,94 +170,94 @@
 (defmethod lsp.server/receive-notification "clojure/serverInfo/log" [_ components _params]
   (future
     (try
-      (handler/server-info-log components)
+      (handler/server-info-log (snapc components))
       (catch Throwable e
         (logger/error e)
         (throw e)))))
 
 (defmethod lsp.server/receive-request "clojure/cursorInfo/raw" [_ components params]
-  (handler/cursor-info-raw components params))
+  (handler/cursor-info-raw (snapc components) params))
 
 (defmethod lsp.server/receive-notification "clojure/cursorInfo/log" [_ components params]
   (future
     (try
-      (handler/cursor-info-log components params)
+      (handler/cursor-info-log (snapc components) params)
       (catch Throwable e
         (logger/error e)
         (throw e)))))
 
 (defmethod lsp.server/receive-request "clojure/clojuredocs/raw" [_ components params]
-  (handler/clojuredocs-raw components params))
+  (handler/clojuredocs-raw (snapc components) params))
 
 ;;;; Document sync features
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_synchronization
 
 (defmethod lsp.server/receive-notification "textDocument/didOpen" [_ components params]
-  (handler/did-open components params))
+  (handler/did-open (snapc components) params))
 
 (defmethod lsp.server/receive-notification "textDocument/didChange" [_ components params]
-  (handler/did-change components params))
+  (handler/did-change (snapc components) params))
 
 (defmethod lsp.server/receive-notification "textDocument/didSave" [_ components params]
   (future
     (try
-      (handler/did-save components params)
+      (handler/did-save (snapc components) params)
       (catch Throwable e
         (logger/error e)
         (throw e)))))
 
 (defmethod lsp.server/receive-notification "textDocument/didClose" [_ components params]
-  (handler/did-close components params))
+  (handler/did-close (snapc components) params))
 
 (defmethod lsp.server/receive-request "textDocument/references" [_ components params]
   (->> params
-       (handler/references components)
+       (handler/references (snapc components))
        (conform-or-log ::coercer/locations)))
 
 (defmethod lsp.server/receive-request "textDocument/completion" [_ components params]
   (->> params
-       (handler/completion components)
+       (handler/completion (snapc components))
        (conform-or-log ::coercer/completion-items)))
 
 (defmethod lsp.server/receive-request "completionItem/resolve" [_ components item]
   (->> item
        (conform-or-log ::coercer/input.completion-item)
-       (handler/completion-resolve-item components)
+       (handler/completion-resolve-item (snapc components))
        (conform-or-log ::coercer/completion-item)))
 
 (defmethod lsp.server/receive-request "textDocument/prepareRename" [_ components params]
   (->> params
-       (handler/prepare-rename components)
+       (handler/prepare-rename (snapc components))
        (conform-or-log ::coercer/prepare-rename-or-error)))
 
 (defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
-       (handler/rename components)
+       (handler/rename (snapc components))
        (conform-or-log ::coercer/workspace-edit-or-error)))
 
 (defmethod lsp.server/receive-request "textDocument/hover" [_ components params]
   (->> params
-       (handler/hover components)
+       (handler/hover (snapc components))
        (conform-or-log ::coercer/hover)))
 
 (defmethod lsp.server/receive-request "textDocument/signatureHelp" [_ components params]
   (->> params
-       (handler/signature-help components)
+       (handler/signature-help (snapc components))
        (conform-or-log ::coercer/signature-help)))
 
 (defmethod lsp.server/receive-request "textDocument/formatting" [_ components params]
   (->> params
-       (handler/formatting components)
+       (handler/formatting (snapc components))
        (conform-or-log ::coercer/edits)))
 
 (def ^:private formatting (atom false))
 
-(defmethod lsp.server/receive-request "textDocument/rangeFormatting" [_this components params]
+(defmethod lsp.server/receive-request "textDocument/rangeFormatting" [_ components params]
   (when (compare-and-set! formatting false true)
     (try
       (->> params
-           (handler/range-formatting components)
+           (handler/range-formatting (snapc components))
            (conform-or-log ::coercer/edits))
       (catch Exception e
         (logger/error e))
@@ -262,72 +266,72 @@
 
 (defmethod lsp.server/receive-request "textDocument/codeAction" [_ components params]
   (->> params
-       (handler/code-actions components)
+       (handler/code-actions (snapc components))
        (conform-or-log ::coercer/code-actions)))
 
 (defmethod lsp.server/receive-request "textDocument/codeLens" [_ components params]
   (->> params
-       (handler/code-lens components)
+       (handler/code-lens (snapc components))
        (conform-or-log ::coercer/code-lenses)))
 
 (defmethod lsp.server/receive-request "codeLens/resolve" [_ components params]
   (->> params
-       (handler/code-lens-resolve components)
+       (handler/code-lens-resolve (snapc components))
        (conform-or-log ::coercer/code-lens)))
 
 (defmethod lsp.server/receive-request "textDocument/definition" [_ components params]
   (->> params
-       (handler/definition components)
+       (handler/definition (snapc components))
        (conform-or-log ::coercer/location)))
 
 (defmethod lsp.server/receive-request "textDocument/declaration" [_ components params]
   (->> params
-       (handler/declaration components)
+       (handler/declaration (snapc components))
        (conform-or-log ::coercer/location)))
 
 (defmethod lsp.server/receive-request "textDocument/implementation" [_ components params]
   (->> params
-       (handler/implementation components)
+       (handler/implementation (snapc components))
        (conform-or-log ::coercer/locations)))
 
 (defmethod lsp.server/receive-request "textDocument/documentSymbol" [_ components params]
   (->> params
-       (handler/document-symbol components)
+       (handler/document-symbol (snapc components))
        (conform-or-log ::coercer/document-symbols)))
 
 (defmethod lsp.server/receive-request "textDocument/documentHighlight" [_ components params]
   (->> params
-       (handler/document-highlight components)
+       (handler/document-highlight (snapc components))
        (conform-or-log ::coercer/document-highlights)))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/full" [_ components params]
   (->> params
-       (handler/semantic-tokens-full components)
+       (handler/semantic-tokens-full (snapc components))
        (conform-or-log ::coercer/semantic-tokens)))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/range" [_ components params]
   (->> params
-       (handler/semantic-tokens-range components)
+       (handler/semantic-tokens-range (snapc components))
        (conform-or-log ::coercer/semantic-tokens)))
 
 (defmethod lsp.server/receive-request "textDocument/prepareCallHierarchy" [_ components params]
   (->> params
-       (handler/prepare-call-hierarchy components)
+       (handler/prepare-call-hierarchy (snapc components))
        (conform-or-log ::coercer/call-hierarchy-items)))
 
 (defmethod lsp.server/receive-request "callHierarchy/incomingCalls" [_ components params]
   (->> params
-       (handler/call-hierarchy-incoming components)
+       (handler/call-hierarchy-incoming (snapc components))
        (conform-or-log ::coercer/call-hierarchy-incoming-calls)))
 
 (defmethod lsp.server/receive-request "callHierarchy/outgoingCalls" [_ components params]
   (->> params
-       (handler/call-hierarchy-outgoing components)
+       (handler/call-hierarchy-outgoing (snapc components))
        (conform-or-log ::coercer/call-hierarchy-outgoing-calls)))
 
 (defmethod lsp.server/receive-request "textDocument/linkedEditingRange" [_ components params]
   (->> params
-       (handler/linked-editing-ranges components)
+       (handler/linked-editing-ranges (snapc components))
        (conform-or-log ::coercer/linked-editing-ranges-or-error)))
 
 ;;;; Workspace features
@@ -337,7 +341,7 @@
 (defmethod lsp.server/receive-request "workspace/executeCommand" [_ components params]
   (future
     (try
-      (handler/execute-command components params)
+      (handler/execute-command (snapc components) params)
       (catch Throwable e
         (logger/error e)
         (throw e))))
@@ -349,16 +353,16 @@
 (defmethod lsp.server/receive-notification "workspace/didChangeWatchedFiles" [_ components params]
   (->> params
        (conform-or-log ::coercer/did-change-watched-files-params)
-       (handler/did-change-watched-files components)))
+       (handler/did-change-watched-files (snapc components))))
 
 (defmethod lsp.server/receive-request "workspace/symbol" [_ components params]
   (->> params
-       (handler/workspace-symbols components)
+       (handler/workspace-symbols (snapc components))
        (conform-or-log ::coercer/workspace-symbols)))
 
 (defmethod lsp.server/receive-request "workspace/willRenameFiles" [_ components params]
   (->> params
-       (handler/will-rename-files components)
+       (handler/will-rename-files (snapc components))
        (conform-or-log ::coercer/workspace-edit)))
 
 (defn capabilities [settings]
@@ -413,7 +417,7 @@
   (shutdown-agents)
   (System/exit 0))
 
-(defmethod lsp.server/receive-request "initialize" [_ {:keys [db* server] :as components} params]
+(defmethod lsp.server/receive-request "initialize" [_ components params]
   (logger/info "Initializing...")
   ;; TODO: According to the spec, we shouldn't process any other requests or
   ;; notifications until we've received this request. Furthermore, we shouldn't
@@ -429,24 +433,27 @@
                       (:capabilities params)
                       (client-settings params)
                       (some-> params :work-done-token str))
-  (when-let [parent-process-id (:process-id params)]
-    (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(exit server)))
-  {:capabilities (capabilities (settings/all @db*))})
+  (let [{:keys [server settings]} (snapc components)]
+    (when-let [parent-process-id (:process-id params)]
+      (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(exit server)))
+    {:capabilities (capabilities settings)}))
 
-(defmethod lsp.server/receive-notification "initialized" [_ {:keys [server]} _params]
-  (logger/info "Initialized!")
-  (->> {:registrations [{:id "id"
-                         :method "workspace/didChangeWatchedFiles"
-                         :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
-       (lsp.server/send-request server "client/registerCapability")))
+(defmethod lsp.server/receive-notification "initialized" [_ components _params]
+  (let [{:keys [server]} (snapc components)]
+    (logger/info "Initialized!")
+    (->> {:registrations [{:id "id"
+                           :method "workspace/didChangeWatchedFiles"
+                           :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
+         (lsp.server/send-request server "client/registerCapability"))))
 
 (defmethod lsp.server/receive-request "shutdown" [_ {:keys [db*]} _params]
   (logger/info "Shutting down...")
   (reset! db* db/initial-db) ;; resets db for dev
   nil)
 
-(defmethod lsp.server/receive-notification "exit" [_ {:keys [server]} _params]
-  (exit server))
+(defmethod lsp.server/receive-notification "exit" [_ components _params]
+  (let [{:keys [server]} (snapc components)]
+    (exit server)))
 
 (defmacro ^:private safe-async-task [task-name & task-body]
   `(async/thread

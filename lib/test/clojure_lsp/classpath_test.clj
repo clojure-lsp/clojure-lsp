@@ -7,8 +7,6 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-components-before-test)
-
 (deftest default-project-specs-test
   (with-redefs [classpath/locate-executable identity]
 

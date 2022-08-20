@@ -1,14 +1,16 @@
 (ns clojure-lsp.test-helper
   (:require
+   [clojure-lsp.components :as components]
    [clojure-lsp.db :as db]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
-   [clojure.test :refer [is use-fixtures]]
+   [clojure.test :refer [is]]
    [rewrite-clj.zip :as z]))
 
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
@@ -57,25 +59,31 @@
   (-debug [_this _fmeta _arg1 _arg2])
   (-debug [_this _fmeta _arg1 _arg2 _arg3]))
 
-(defn ^:private make-components []
-  {:db* (atom db/initial-db)
-   :logger (->TestLogger)
-   :producer (->TestProducer)
-   :current-changes-chan (async/chan 1)
-   :diagnostics-chan (async/chan 1)
-   :watched-files-chan (async/chan 1)
-   :edits-chan (async/chan 1)})
+(def snapc components/snapc)
 
-(def components* (atom (make-components)))
-(defn components [] (deref components*))
+(defn make-components
+  ([] (make-components {}))
+  ([db-override]
+   (snapc
+     {:db* (atom (shared/deep-merge db/initial-db db-override))
+      :logger (->TestLogger)
+      :producer (->TestProducer)
+      :current-changes-chan (async/chan 1)
+      :diagnostics-chan (async/chan 1)
+      :watched-files-chan (async/chan 1)
+      :edits-chan (async/chan 1)})))
 
-(defn db* [] (:db* (components)))
-(defn producer [] (:producer (components)))
-(defn db [] (deref (db*)))
+(defn db [components]
+  (:db (snapc components)))
 
-(defn reset-components! [] (reset! components* (make-components)))
-(defn reset-components-before-test []
-  (use-fixtures :each (fn [f] (reset-components!) (f))))
+(defmacro with-db [components temp-config & body]
+  `(let [components# ~components
+         db-before# (db components#)]
+     (try
+       (swap! (:db* components#) shared/deep-merge ~temp-config)
+       ~@body
+       (finally
+         (reset! (:db* components#) db-before#)))))
 
 (defn take-or-timeout [c timeout-ms]
   (let [timeout (async/timeout timeout-ms)
@@ -149,18 +157,10 @@
 (def default-uri (file-uri "file:///a.clj"))
 
 (defn load-code
-  ([code] (load-code code default-uri))
-  ([code uri] (load-code code uri (components)))
-  ([code uri components]
-   (handlers/did-open components {:text-document {:uri uri :text code}})))
-
-(defn load-code-and-locs
-  ([code] (load-code-and-locs code default-uri))
-  ([code uri] (load-code-and-locs code uri (components)))
-  ([code uri components]
-   (let [[code positions] (positions-from-text code)]
-     (load-code code uri components)
-     positions)))
+  [code uri components]
+  (let [[text positions] (positions-from-text code)]
+    (handlers/did-open components {:text-document {:uri uri :text text}})
+    positions))
 
 (defn ->position [[row col]]
   {:line (dec row) :character (dec col)})
@@ -172,31 +172,31 @@
 (defn load-code-into-zloc-and-position
   "Load a `code` block into the kondo db at the provided `uri` and return a map
   containing the `:zloc` parsed from the code and the `:position` of the cursor.
-  Useful for refactorings that consult the kondo db."
-  ([code] (load-code-into-zloc-and-position code default-uri))
-  ([code uri]
-   (let [[[row col] :as positions] (load-code-and-locs code uri)]
-     (let [position-count (count positions)]
-       (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-     {:position {:row row :col col}
-      :zloc (-> (parser/zloc-of-file (db) uri)
-                (parser/to-pos row col))})))
+  Useful for refactorings that consult both the rewrite-clj parse and the
+  clj-kondo analysis."
+  [code uri components]
+  (let [[[row col] :as positions] (load-code code uri components)]
+    (let [position-count (count positions)]
+      (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
+    {:position {:row row :col col}
+     :zloc (-> (parser/zloc-of-file (db components) uri)
+               (parser/to-pos row col))}))
 
 (defn load-code-and-zloc
   "Load a `code` block into the kondo db at the provided `uri` and return a
-  zloc parsed from the code. Useful for refactorings that consult the kondo db."
-  ([code] (load-code-and-zloc code default-uri))
-  ([code uri]
-   (:zloc (load-code-into-zloc-and-position code uri))))
+  zloc parsed from the code. Useful for refactorings that consult both the
+  rewrite-clj parse and the clj-kondo analysis."
+  [code uri components]
+  (:zloc (load-code-into-zloc-and-position code uri components)))
 
 (defn zloc-from-code
-  "Parse a zloc from a `code` block. Useful for refactorings that do not consult
-  the kondo db."
+  "Parse a zloc from a `code` block. Useful for refactorings that consult the
+  rewrite-clj parse but not the clj-kondo analysis."
   [code]
-  (let [[code [[row col] :as positions]] (positions-from-text code)]
+  (let [[text [[row col] :as positions]] (positions-from-text code)]
     (let [position-count (count positions)]
       (assert (= 1 position-count) (format "Expected one cursor, got %s" position-count)))
-    (let [zloc (parser/safe-zloc-of-string code)]
+    (let [zloc (parser/safe-zloc-of-string text)]
       (assert zloc "Unable to parse code")
       (parser/to-pos zloc row col))))
 

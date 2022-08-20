@@ -6,31 +6,29 @@
    [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-components-before-test)
-
 (deftest initialize
   (testing "detects URI format with lower-case drive letter and encoded colons"
-    (h/reset-components!)
-    (with-redefs [lsp.kondo/config-hash (constantly "123")]
-      (handlers/initialize (h/components) "file:///c%3A/project/root" {} {} nil))
-    (is (= {:encode-colons-in-path?   true
-            :upper-case-drive-letter? false}
-           (get-in (h/db) [:settings :uri-format]))))
+    (let [components (h/make-components)]
+      (with-redefs [lsp.kondo/config-hash (constantly "123")]
+        (handlers/initialize components "file:///c%3A/project/root" {} {} nil))
+      (is (= {:encode-colons-in-path?   true
+              :upper-case-drive-letter? false}
+             (get-in (h/db components) [:settings :uri-format])))))
   (testing "detects URI format with upper-case drive letter and non-encoded colons"
-    (h/reset-components!)
-    (with-redefs [lsp.kondo/config-hash (constantly "123")]
-      (handlers/initialize (h/components) "file:///C:/project/root" {} {} nil))
-    (is (= {:encode-colons-in-path?   false
-            :upper-case-drive-letter? true}
-           (get-in (h/db) [:settings :uri-format])))))
+    (let [components (h/make-components)]
+      (with-redefs [lsp.kondo/config-hash (constantly "123")]
+        (handlers/initialize components "file:///C:/project/root" {} {} nil))
+      (is (= {:encode-colons-in-path?   false
+              :upper-case-drive-letter? true}
+             (get-in (h/db components) [:settings :uri-format]))))))
 
 (deftest did-open
   (testing "opening a existing file"
-    (h/reset-components!)
-    (let [mock-diagnostics-chan (async/chan 1)]
-      (h/load-code-and-locs "(ns a) (when)" h/default-uri (assoc (h/components)
-                                                                 :diagnostics-chan mock-diagnostics-chan))
-      (is (some? (get-in (h/db) [:analysis (h/file-path "/a.clj")])))
+    (let [mock-diagnostics-chan (async/chan 1)
+          components (assoc (h/make-components)
+                            :diagnostics-chan mock-diagnostics-chan)]
+      (h/load-code "(ns a) (when)" h/default-uri components)
+      (is (some? (get-in (h/db components) [:analysis (h/file-path "/a.clj")])))
       (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
         (is (= "file:///a.clj" uri))
         (h/assert-submaps
@@ -38,136 +36,151 @@
            {:code "invalid-arity"}]
           diagnostics))))
   (testing "opening a new clojure file adding the ns"
-    (h/reset-components!)
-    (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
-                                     :source-paths #{(h/file-path "/project/src")}}
-                          :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                          :project-root-uri (h/file-uri "file:///project")})
-    (let [mock-edits-chan (async/chan 1)]
-      (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/bar.clj") (assoc (h/components)
-                                                                                     :edits-chan mock-edits-chan))
+    (let [mock-edits-chan (async/chan 1)
+          components (assoc (h/make-components {:settings {:auto-add-ns-to-new-files? true
+                                                           :source-paths #{(h/file-path "/project/src")}}
+                                                :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                                :project-root-uri (h/file-uri "file:///project")})
+                            :edits-chan mock-edits-chan)]
+      (h/load-code "" (h/file-uri "file:///project/src/foo/bar.clj") components)
       (h/assert-submaps
         [{:edits [{:range {:start {:line 0, :character 0}
                            :end {:line 999998, :character 999998}}
                    :new-text "(ns foo.bar)"}]}]
         (:document-changes (h/take-or-timeout mock-edits-chan 500)))
-      (is (some? (get-in (h/db) [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
+      (is (some? (get-in (h/db components) [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
   (testing "opening a new edn file not adding the ns"
-    (h/reset-components!)
-    (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
-                                     :source-paths #{(h/file-path "/project/src")}}
-                          :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                          :project-root-uri (h/file-uri "file:///project")})
-    (let [mock-edits-chan (async/chan 1)]
-      (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn") (assoc (h/components)
-                                                                                     :edits-chan mock-edits-chan))
+    (let [mock-edits-chan (async/chan 1)
+          components (assoc (h/make-components {:settings {:auto-add-ns-to-new-files? true
+                                                           :source-paths #{(h/file-path "/project/src")}}
+                                                :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                                :project-root-uri (h/file-uri "file:///project")})
+                            :edits-chan mock-edits-chan)]
+      (h/load-code "" (h/file-uri "file:///project/src/foo/baz.edn") components)
       (h/assert-no-take mock-edits-chan 500)
-      (is (some? (get-in (h/db) [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))
+      (is (some? (get-in (h/db components) [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))
 
 (deftest document-symbol
-  (let [code "(ns a) (def bar ::bar) (def ^:m baz 1) (defmulti mult identity) (defmethod mult \"foo\")"
+  (let [components (h/make-components)
+        [text
+         [ns-selection-start ns-selection-end
+          def-1-start def-1-selection-start def-1-selection-end def-1-end
+          def-2-start def-2-selection-start def-2-selection-end def-2-end
+          defmulti-start defmulti-selection-start defmulti-selection-end defmulti-end
+          defmethod-selection-start defmethod-selection-end]]
+        (h/positions-from-text (h/code "|(ns a)|"
+                                       "|(def |bar| ::bar)|"
+                                       "|(def ^:m |baz| 1)|"
+                                       "|(defmulti |mult| identity)|"
+                                       "(defmethod |mult| \"foo\")"))
         result [{:name "a"
                  :kind :namespace
                  :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
-                 :selection-range {:start {:line 0 :character 0} :end {:line 0 :character 6}}
+                 :selection-range (h/->range ns-selection-start ns-selection-end)
                  :children [{:name "bar"
                              :kind :variable
-                             :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
-                             :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}
+                             :range (h/->range def-1-start def-1-end)
+                             :selection-range (h/->range def-1-selection-start def-1-selection-end)
                              :tags []}
                             {:name "baz"
                              :kind :variable
-                             :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
-                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}
+                             :range (h/->range def-2-start def-2-end)
+                             :selection-range (h/->range def-2-selection-start def-2-selection-end)
                              :tags []}
                             ;; defmulti
                             {:name "mult",
                              :kind :variable,
-                             :range {:start {:line 0, :character 39}, :end {:line 0, :character 63}},
-                             :selection-range {:start {:line 0, :character 49}, :end {:line 0, :character 53}}
+                             :range (h/->range defmulti-start defmulti-end),
+                             :selection-range (h/->range defmulti-selection-start defmulti-selection-end)
                              :tags []}
                             ;; defmethod
                             {:name "mult \"foo\"",
                              :kind :variable,
-                             :range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},
-                             :selection-range {:start {:line 0, :character 75}, :end {:line 0, :character 79}}
+                             :range (h/->range defmethod-selection-start defmethod-selection-end),
+                             :selection-range (h/->range defmethod-selection-start defmethod-selection-end)
                              :tags []}]}]]
     (testing "clj files"
-      (h/load-code-and-locs code)
+      (h/load-code text h/default-uri components)
       (h/assert-submaps result
-                        (handlers/document-symbol (h/components)
+                        (handlers/document-symbol components
                                                   {:text-document {:uri (h/file-uri "file:///a.clj")}})))
     (testing "cljs files"
-      (h/load-code-and-locs code (h/file-uri "file:///b.cljs"))
+      (h/load-code text (h/file-uri "file:///b.cljs") components)
       (h/assert-submaps result
-                        (handlers/document-symbol (h/components)
+                        (handlers/document-symbol components
                                                   {:text-document {:uri (h/file-uri "file:///b.cljs")}})))
     (testing "cljc files"
-      (h/load-code-and-locs code (h/file-uri "file:///c.cljc"))
+      (h/load-code text (h/file-uri "file:///c.cljc") components)
       (h/assert-submaps result
-                        (handlers/document-symbol (h/components)
+                        (handlers/document-symbol components
                                                   {:text-document {:uri (h/file-uri "file:///c.cljc")}})))))
 
 (deftest document-highlight
-  (let [[bar-start] (h/load-code-and-locs "(ns a) (def |bar ::bar) (def ^:m baz 1)")]
+  (let [components (h/make-components)
+        [bar-start bar-end] (h/load-code "(ns a) (def |bar| ::bar) (def ^:m baz 1)" h/default-uri components)]
     (h/assert-submaps
-      [{:range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}]
-      (handlers/document-highlight (h/components)
+      [{:range (h/->range bar-start bar-end)}]
+      (handlers/document-highlight components
                                    {:text-document {:uri (h/file-uri "file:///a.clj")}
                                     :position (h/->position bar-start)}))))
 
 (deftest references
   (testing "simple single reference"
-    (let [[bar-def-pos] (h/load-code-and-locs "(ns a) (def |bar 1)")
-          _ (h/load-code-and-locs "(ns b (:require [a :as foo])) (foo/bar)" (h/file-uri "file:///b.clj"))]
+    (let [components (h/make-components)
+          [bar-def-pos] (h/load-code "(ns a) (def |bar 1)" h/default-uri components)
+          [usage-start usage-end]
+          (h/load-code "(ns b (:require [a :as foo])) (|foo/bar|)" (h/file-uri "file:///b.clj") components)]
       (h/assert-submaps
         [{:uri (h/file-uri "file:///b.clj")
-          :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
-        (handlers/references (h/components)
+          :range (h/->range usage-start usage-end)}]
+        (handlers/references components
                              {:text-document {:uri (h/file-uri "file:///a.clj")}
                               :position (h/->position bar-def-pos)}))))
   (testing "when including declaration"
-    (let [[bar-def-pos] (h/load-code-and-locs "(ns a) (def |bar 1)")
-          _ (h/load-code-and-locs "(ns b (:require [a :as foo])) (foo/bar)" (h/file-uri "file:///b.clj"))]
+    (let [components (h/make-components)
+          [def-start def-end] (h/load-code "(ns a) (def |bar| 1)" h/default-uri components)
+          [usage-start usage-end] (h/load-code "(ns b (:require [a :as foo])) (|foo/bar|)" (h/file-uri "file:///b.clj") components)]
       (h/assert-submaps
         [{:uri (h/file-uri "file:///a.clj")
-          :range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
+          :range (h/->range def-start def-end)}
          {:uri (h/file-uri "file:///b.clj")
-          :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
-        (handlers/references (h/components)
+          :range (h/->range usage-start usage-end)}]
+        (handlers/references components
                              {:text-document {:uri (h/file-uri "file:///a.clj")}
-                              :position (h/->position bar-def-pos)
+                              :position (h/->position def-start)
                               :context {:include-declaration true}})))))
 
 (deftest test-rename
-  (let [[abar-start abar-stop
+  (let [components (h/make-components)
+        [abar-start abar-stop
          akw-start akwbar-start akwbar-stop
-         abaz-start abaz-stop] (h/load-code-and-locs (h/code "(ns a.aa)"
-                                                             "(def |bar| |::|bar|)"
-                                                             "(def ^:m |baz| 1)") (h/file-uri "file:///a.clj"))
+         abaz-start abaz-stop] (h/load-code (h/code "(ns a.aa)"
+                                                    "(def |bar| |::|bar|)"
+                                                    "(def ^:m |baz| 1)") (h/file-uri "file:///a.clj") components)
         [balias-start balias-stop
          ba1-start _ba1-stop
          bbar-start bbar-stop
-         ba2-kw-start ba2-kw-stop] (h/load-code-and-locs (h/code "(ns b.bb (:require [a.aa :as |aa|]))"
-                                                                 "(def x |aa|/|bar|)"
-                                                                 "|::aa/bar|"
-                                                                 ":aa/bar") (h/file-uri "file:///b.clj"))
+         ba2-kw-start ba2-kw-stop] (h/load-code (h/code "(ns b.bb (:require [a.aa :as |aa|]))"
+                                                        "(def x |aa|/|bar|)"
+                                                        "|::aa/bar|"
+                                                        ":aa/bar") (h/file-uri "file:///b.clj") components)
         [cbar-start cbar-stop
-         cbaz-start cbaz-stop] (h/load-code-and-locs (h/code "(ns c.cc (:require [a.aa :as aa]))"
-                                                             "(def x aa/|bar|)"
-                                                             "^:xab aa/|baz|") (h/file-uri "file:///c.clj"))
-        [d-name-kw-start d-name-kw-stop] (h/load-code-and-locs (h/code "(ns d.dd)"
-                                                                       "(def name |::name|)") (h/file-uri "file:///d.clj"))
+         cbaz-start cbaz-stop] (h/load-code (h/code "(ns c.cc (:require [a.aa :as aa]))"
+                                                    "(def x aa/|bar|)"
+                                                    "^:xab aa/|baz|") (h/file-uri "file:///c.clj") components)
+        [d-name-kw-start d-name-kw-stop] (h/load-code (h/code "(ns d.dd)"
+                                                              "(def name |::name|)") (h/file-uri "file:///d.clj") components)
         [kw-aliased-start kw-aliased-stop
-         kw-unaliased-start kw-unaliased-stop] (h/load-code-and-locs (h/code "(ns e.ee (:require [d.dd :as dd]))"
-                                                                             "(def name |::dd/name|)"
-                                                                             "(def other-name |:d.dd/name|)") (h/file-uri "file:///e.clj"))
-        [main-uname-kw-start main-uname-kw-end] (h/load-code-and-locs (h/code "(ns main (:require [user :as u]))"
-                                                                              "(def name |::u/name|)") (h/file-uri "file:///main.cljc"))
-        [uname-kw-start uname-kw-end] (h/load-code-and-locs (h/code "(ns user)"
-                                                                    "(def name |::name|)") (h/file-uri "file:///user.cljc"))]
+         kw-unaliased-start kw-unaliased-stop] (h/load-code (h/code "(ns e.ee (:require [d.dd :as dd]))"
+                                                                    "(def name |::dd/name|)"
+                                                                    "(def other-name |:d.dd/name|)") (h/file-uri "file:///e.clj") components)
+        [main-uname-kw-start main-uname-kw-end] (h/load-code (h/code "(ns main (:require [user :as u]))"
+                                                                     "(def name |::u/name|)") (h/file-uri "file:///main.cljc") components)
+        [uname-kw-start uname-kw-end] (h/load-code (h/code "(ns user)"
+                                                           "(def name |::name|)") (h/file-uri "file:///user.cljc") components)
+        components (h/snapc components)]
     (testing "on symbol without namespace"
-      (let [changes (:changes (handlers/rename (h/components)
+      (let [changes (:changes (handlers/rename components
                                                {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position abar-start)
                                                 :new-name "foo"}))]
@@ -176,7 +189,7 @@
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on symbol with metadata namespace"
-      (let [changes (:changes (handlers/rename (h/components)
+      (let [changes (:changes (handlers/rename components
                                                {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position abaz-start)
                                                 :new-name "qux"}))]
@@ -184,7 +197,7 @@
                 (h/file-uri "file:///c.clj") [{:new-text "qux" :range (h/->range cbaz-start cbaz-stop)}]}
                changes))))
     (testing "on symbol with namespace adds existing namespace"
-      (let [changes (:changes (handlers/rename (h/components)
+      (let [changes (:changes (handlers/rename components
                                                {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position [(first bbar-start) (dec (second bbar-start))])
                                                 :new-name "foo"}))]
@@ -193,7 +206,7 @@
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on symbol with namespace removes passed-in namespace"
-      (let [changes (:changes (handlers/rename (h/components)
+      (let [changes (:changes (handlers/rename components
                                                {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position bbar-start)
                                                 :new-name "aa/foo"}))]
@@ -202,7 +215,7 @@
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on ::keyword"
-      (let [changes (:changes (handlers/rename (h/components)
+      (let [changes (:changes (handlers/rename components
                                                {:text-document {:uri (h/file-uri "file:///a.clj")}
                                                 :position (h/->position akwbar-start)
                                                 :new-name "::foo"}))]
@@ -210,7 +223,7 @@
                 (h/file-uri "file:///b.clj") [{:new-text "::aa/foo" :range (h/->range ba2-kw-start ba2-kw-stop)}]}
                changes))))
     (testing "on single-name-namespace'd keyword"
-      (let [changes (:changes (handlers/rename (h/components)
+      (let [changes (:changes (handlers/rename components
                                                {:text-document {:uri (h/file-uri "file:///main.cljc")}
                                                 :position (h/->position main-uname-kw-start)
                                                 :new-name "::full-name"}))]
@@ -218,7 +231,7 @@
                 (h/file-uri "file:///user.cljc") [{:new-text "::full-name" :range (h/->range uname-kw-start uname-kw-end)}]}
                changes))))
     (testing "on qualified keyword without alias"
-      (let [changes (:changes (handlers/rename (h/components)
+      (let [changes (:changes (handlers/rename components
                                                {:text-document {:uri (h/file-uri "file:///d.clj")}
                                                 :position (h/->position d-name-kw-start)
                                                 :new-name "::other-name"}))]
@@ -227,7 +240,7 @@
                                               {:new-text ":d.dd/other-name" :range (h/->range kw-unaliased-start kw-unaliased-stop)}]}
                changes))))
     (testing "on alias changes namespaces inside file"
-      (let [changes (:changes (handlers/rename (h/components)
+      (let [changes (:changes (handlers/rename components
                                                {:text-document {:uri (h/file-uri "file:///b.clj")}
                                                 :position (h/->position balias-start)
                                                 :new-name "xx"}))]
@@ -238,77 +251,85 @@
                changes))))))
 
 (deftest test-code-actions-handle
-  (h/load-code-and-locs (str "(ns some-ns)\n"
-                             "(def foo)")
-                        (h/file-uri "file:///a.clj"))
-  (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
-                             "(def bar 1)\n"
-                             "(defn baz []\n"
-                             "  bar)")
-                        (h/file-uri "file:///b.clj"))
-  (h/load-code-and-locs (str "(ns another-ns)\n"
-                             "(def bar ons/bar)\n"
-                             "(def foo sns/foo)\n"
-                             "(deftest some-test)\n"
-                             "MyClass.\n"
-                             "Date.")
-                        (h/file-uri "file:///c.clj"))
-  (testing "when it has unresolved-namespace and can find namespace"
-    (is (some #(= (:title %) "Add require '[some-ns :as sns]' × 1")
-              (handlers/code-actions
-                (h/components)
-                {:text-document {:uri (h/file-uri "file:///c.clj")}
-                 :context {:diagnostics [{:code "unresolved-namespace"
-                                          :range {:start {:line 2 :character 10}}}]}
-                 :range {:start {:line 2 :character 10}}}))))
-  (testing "without workspace edit client capability"
-    (swap! (h/db*) merge {:client-capabilities {:workspace {:workspace-edit false}}})
-    (is (not-any? #(= (:title %) "Clean namespace")
+  (let [components (h/make-components)]
+    (h/load-code (str "(ns some-ns)\n"
+                      "(def foo)")
+                 (h/file-uri "file:///a.clj") components)
+    (h/load-code (str "(ns other-ns (:require [some-ns :as sns]))\n"
+                      "(def bar 1)\n"
+                      "(defn baz []\n"
+                      "  bar)")
+                 (h/file-uri "file:///b.clj") components)
+    (h/load-code (str "(ns another-ns)\n"
+                      "(def bar ons/bar)\n"
+                      "(def foo sns/foo)\n"
+                      "(deftest some-test)\n"
+                      "MyClass.\n"
+                      "Date.")
+                 (h/file-uri "file:///c.clj") components)
+    (testing "when it has unresolved-namespace and can find namespace"
+      (is (some #(= (:title %) "Add require '[some-ns :as sns]' × 1")
+                (handlers/code-actions
+                  components
+                  {:text-document {:uri (h/file-uri "file:///c.clj")}
+                   :context {:diagnostics [{:code "unresolved-namespace"
+                                            :range {:start {:line 2 :character 10}}}]}
+                   :range {:start {:line 2 :character 10}}}))))
+    (testing "without workspace edit client capability"
+      (h/with-db
+        components
+        {:client-capabilities {:workspace {:workspace-edit false}}}
+        (is (not-any? #(= (:title %) "Clean namespace")
+                      (handlers/code-actions
+                        components
+                        {:text-document {:uri (h/file-uri "file:///b.clj")}
+                         :context {:diagnostics []}
+                         :range {:start {:line 1 :character 1}}})))))
+    (testing "with workspace edit client capability"
+      (h/with-db
+        components
+        {:client-capabilities {:workspace {:workspace-edit true}}}
+        (is (some #(= (:title %) "Clean namespace")
                   (handlers/code-actions
-                    (h/components)
+                    components
                     {:text-document {:uri (h/file-uri "file:///b.clj")}
                      :context {:diagnostics []}
-                     :range {:start {:line 1 :character 1}}}))))
-  (testing "with workspace edit client capability"
-    (swap! (h/db*) merge {:client-capabilities {:workspace {:workspace-edit true}}})
-    (is (some #(= (:title %) "Clean namespace")
-              (handlers/code-actions
-                (h/components)
-                {:text-document {:uri (h/file-uri "file:///b.clj")}
-                 :context {:diagnostics []}
-                 :range {:start {:line 1 :character 1}}})))))
+                     :range {:start {:line 1 :character 1}}})))))))
 
 (deftest code-lens-can-be-resolved
-  (h/load-code-and-locs (str "(ns some-ns)\n"
-                             "(def foo 1)\n"
-                             "(defn- foo2 []\n"
-                             " foo)\n"
-                             "(defn bar [a b]\n"
-                             "  (+ a b (foo2)))\n"
-                             "(s/defn baz []\n"
-                             "  (bar 2 3))\n"))
-  (let [code-lenses (handlers/code-lens (h/components) {:text-document {:uri h/default-uri}})
-        resolved-code-lenses (map (fn [code-lens]
-                                    (handlers/code-lens-resolve (h/components) code-lens))
-                                  code-lenses)]
-    (is (= [0 1 2 4]
-           (map #(get-in % [:range :start :line])
-                resolved-code-lenses)))
-    (is (= ["0 references"
-            "1 reference"
-            "1 reference"
-            "1 reference"]
-           (map #(get-in % [:command :title])
-                resolved-code-lenses)))))
+  (let [components (h/make-components)]
+    (h/load-code (str "(ns some-ns)\n"
+                      "(def foo 1)\n"
+                      "(defn- foo2 []\n"
+                      " foo)\n"
+                      "(defn bar [a b]\n"
+                      "  (+ a b (foo2)))\n"
+                      "(s/defn baz []\n"
+                      "  (bar 2 3))\n") h/default-uri components)
+    (let [components (h/snapc components)
+          code-lenses (handlers/code-lens components {:text-document {:uri h/default-uri}})
+          resolved-code-lenses (map (fn [code-lens]
+                                      (handlers/code-lens-resolve components code-lens))
+                                    code-lenses)]
+      (is (= [0 1 2 4]
+             (map #(get-in % [:range :start :line])
+                  resolved-code-lenses)))
+      (is (= ["0 references"
+              "1 reference"
+              "1 reference"
+              "1 reference"]
+             (map #(get-in % [:command :title])
+                  resolved-code-lenses))))))
 
 (deftest server-info-raw
   (testing "returns kebab-case strings, to avoid camelCase conversion of keywords"
-    (is (seq (get (handlers/server-info-raw (h/components)) "server-version")))))
+    (is (seq (get (handlers/server-info-raw (h/make-components)) "server-version")))))
 
 (deftest cursor-info-raw
   (testing "returns kebab-case strings, to avoid camelCase conversion of keywords"
-    (let [[row-and-col] (h/load-code-and-locs "(ns |a)")]
-      (is (seq (get (handlers/cursor-info-raw (h/components)
+    (let [components (h/make-components)
+          [row-and-col] (h/load-code "(ns |a)" h/default-uri components)]
+      (is (seq (get (handlers/cursor-info-raw components
                                               {:text-document {:uri h/default-uri}
                                                :position (h/->position row-and-col)})
                     "elements"))))))

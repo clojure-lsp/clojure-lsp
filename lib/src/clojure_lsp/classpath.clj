@@ -1,5 +1,6 @@
 (ns clojure-lsp.classpath
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
@@ -49,14 +50,62 @@
        flatten
        (reduce str)))
 
+(defn ^:private psh-cmd
+  "Return the command vector that uses the PowerShell executable PSH to
+  invoke CMD-AND-ARGS."
+  ([psh & cmd-and-args]
+   (into [psh "-NoProfile" "-Command"] cmd-and-args)))
+
+(defn ^:private locate-executable
+  "Locate and return the full path to the EXECUTABLE."
+  [executable]
+  (some-> ^java.nio.file.Path (fs/which executable) .toString))
+
+(defn ^:private shell
+  "Execute CMD-AND-ARGS with `clojure.java.shell/sh`, of which see."
+  [& cmd-and-args]
+  (apply shell/sh cmd-and-args))
+
+(defn ^:private classpath-cmd->normalize
+  "Return CLASSPATH-CMD, but with the EXEC expanded to its full path (if found).
+
+  If the EXEC cannot be found, is one of clojure or lein and the
+  program is running on MS-Windows, then, if possible, it tries to
+  replace it with a PowerShell cmd invocation sequence in the
+  following manner, while keeping ARGS the same.
+
+  There could be two PowerShell executable available in the system
+  path: powershell.exe (up to version 5.1, comes with windows) and/or
+  pwsh.exe (versions 6 and beyond, can be installed on demand).
+
+  If powershell.exe is available, it checks if the EXEC is installed
+  in it as a module, and creates an invocation sequence as such to
+  replace the EXEC. If not, it tries the same with pwsh.exe."
+  [[exec & args :as classpath-cmd]]
+
+  (if (and shared/windows-os?
+           (#{"clojure" "lein"} exec)
+           (not (locate-executable exec)))
+    (if-let [up (some #(when-let [ps (locate-executable %)]
+                         (when (= 0 (:exit (apply shell (psh-cmd ps "Get-Command" exec))))
+                           (psh-cmd ps exec)))
+                      ["powershell" "pwsh"])]
+      (into up args)
+
+      classpath-cmd)
+
+    (or (some->> (locate-executable exec)
+                 (assoc classpath-cmd 0))
+        classpath-cmd)))
+
 (defn ^:private lookup-classpath! [root-path {:keys [classpath-cmd env]}]
   (let [command (string/join " " classpath-cmd)]
     (logger/info (format "Finding classpath via `%s`" command))
     (try
       (let [sep (re-pattern (System/getProperty "path.separator"))
-            {:keys [exit out err]} (apply shell/sh (into classpath-cmd
-                                                         (cond-> [:dir (str root-path)]
-                                                           env (conj :env (merge {} (System/getenv) env)))))]
+            {:keys [exit out err]} (apply shell (into classpath-cmd
+                                                      (cond-> [:dir (str root-path)]
+                                                        env (conj :env (merge {} (System/getenv) env)))))]
         (if (= 0 exit)
           (let [paths (-> out
                           string/split-lines
@@ -102,11 +151,7 @@
          (mapv #(lookup-classpath-handling-error! % root-path producer))
          (reduce set/union))))
 
-(defn ^:private classpath-cmd->windows-safe-classpath-cmd
-  [classpath]
-  (if shared/windows-os?
-    (into ["pwsh" "-NoProfile" "-Command"] classpath)
-    classpath))
+
 
 (defn ^:private lein-source-aliases [source-aliases]
   (some->> source-aliases
@@ -140,4 +185,4 @@
          :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
         {:project-path "bb.edn"
          :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
-       (map #(update % :classpath-cmd classpath-cmd->windows-safe-classpath-cmd))))
+       (map #(update % :classpath-cmd classpath-cmd->normalize))))

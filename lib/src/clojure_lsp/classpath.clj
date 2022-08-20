@@ -151,8 +151,6 @@
          (mapv #(lookup-classpath-handling-error! % root-path producer))
          (reduce set/union))))
 
-
-
 (defn ^:private lein-source-aliases [source-aliases]
   (some->> source-aliases
            (map #(str "+" (name %)))

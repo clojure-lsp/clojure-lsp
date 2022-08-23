@@ -28,3 +28,6 @@ cli/integration-test/sample-test/clojure-lsp.integration-test.out
 output.calva-repl
 
 result
+
+# emacs
+*~

@@ -457,13 +457,13 @@
        (recur))))
 
 (defn ^:private spawn-async-tasks!
-  [{:keys [producer] :as components}]
-  (let [debounced-diags (shared/debounce-by db/diagnostics-chan diagnostics-debounce-ms :uri)
-        debounced-changes (shared/debounce-by db/current-changes-chan change-debounce-ms :uri)
-        debounced-created-watched-files (shared/debounce-all db/created-watched-files-chan created-watched-files-debounce-ms)]
+  [{:keys [producer current-changes-chan diagnostics-chan created-watched-files-chan edits-chan] :as components}]
+  (let [debounced-diags (shared/debounce-by diagnostics-chan diagnostics-debounce-ms :uri)
+        debounced-changes (shared/debounce-by current-changes-chan change-debounce-ms :uri)
+        debounced-created-watched-files (shared/debounce-all created-watched-files-chan created-watched-files-debounce-ms)]
     (safe-async-task
       :edits
-      (when-let [edit (async/<!! db/edits-chan)]
+      (when-let [edit (async/<!! edits-chan)]
         (producer/publish-workspace-edit producer edit)))
     (safe-async-task
       :diagnostics
@@ -496,11 +496,11 @@
   ;; We don't have an ENV=development flag, so the next best indication that
   ;; we're in a development environment is whether we're able to start an nREPL.
   (when-let [nrepl-port (nrepl/setup-nrepl)]
-    ;; We're in the development environment, so make the db* atom available
-    ;; globally as db/db*. In other environments it's empty (except for unit
-    ;; tests, which set it via a different mechanism).
-    (alter-var-root #'db/db* (constantly db*))
-    (swap! db/db* assoc :port nrepl-port)))
+    ;; Save the port in the db, so it can be reported in server-info.
+    (swap! db* assoc :port nrepl-port)
+    ;; In the development environment, make the db* atom available globally as
+    ;; db/db*, so it can be inspected in the nREPL.
+    (alter-var-root #'db/db* (constantly db*))))
 
 (defn run-server! []
   (lsp.server/discarding-stdout
@@ -516,7 +516,11 @@
           components {:db* db*
                       :logger timbre-logger
                       :producer producer
-                      :server server}]
+                      :server server
+                      :current-changes-chan (async/chan 1)
+                      :diagnostics-chan (async/chan 1)
+                      :created-watched-files-chan (async/chan 1)
+                      :edits-chan (async/chan 1)}]
       (logger/info "[SERVER]" "Starting server...")
       (monitor-server-logs log-ch)
       (setup-dev-environment db*)

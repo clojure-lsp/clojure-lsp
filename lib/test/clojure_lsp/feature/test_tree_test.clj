@@ -1,11 +1,10 @@
 (ns clojure-lsp.feature.test-tree-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest tree-test
   (testing "valid test tree"
@@ -60,4 +59,4 @@
               :name-range {:start {:line 6 :character 5}
                            :end {:line 6 :character 12}}
               :kind :testing}]}]}]}}
-      (f.test-tree/tree "file:///a.clj" @db/db*))))
+      (f.test-tree/tree "file:///a.clj" (h/db)))))

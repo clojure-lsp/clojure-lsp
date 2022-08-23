@@ -1,12 +1,11 @@
 (ns clojure-lsp.features.call-hierarchy-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
    [clojure-lsp.test-helper :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (defn code [& strings] (string/join "\n" strings))
 
@@ -46,7 +45,7 @@
   (h/load-code-and-locs c-code (h/file-uri "file:///some/c.clj"))
   (h/load-code-and-locs d-code (h/file-uri "file:///some/d.clj"))
   (testing "single element"
-    (let [items (f.call-hierarchy/prepare (h/file-uri "file:///some/d.clj") 2 7 db/db*)]
+    (let [items (f.call-hierarchy/prepare (h/file-uri "file:///some/d.clj") 2 7 (h/db*))]
       (is (= 1 (count items)))
       (is (= {:name            "d-func []"
               :kind            :function
@@ -72,7 +71,7 @@
                :uri (h/file-uri "file:///some/c.clj")
                :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
                :selection-range {:start {:line 3 :character 3} :end {:line 3 :character 11}}}}]
-      (f.call-hierarchy/incoming (h/file-uri "file:///some/d.clj") 2 7 db/db*)))
+      (f.call-hierarchy/incoming (h/file-uri "file:///some/d.clj") 2 7 (h/components))))
 
   (testing "for multiple elements"
     (h/assert-submaps
@@ -100,7 +99,7 @@
                :uri (h/file-uri "file:///some/b.clj")
                :range {:start {:line 5 :character 6} :end {:line 5 :character 14}}
                :selection-range {:start {:line 6 :character 3} :end {:line 6 :character 11}}}}]
-      (f.call-hierarchy/incoming (h/file-uri "file:///some/c.clj") 3 7 db/db*))))
+      (f.call-hierarchy/incoming (h/file-uri "file:///some/c.clj") 3 7 (h/components)))))
 
 (deftest outgoing
   (h/load-code-and-locs core-code (h/file-uri "jar:file:///.m2/clojure.jar!/clojure/core.clj"))
@@ -119,7 +118,7 @@
              :uri (h/file-uri "file:///some/b.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
              :selection-range {:start {:line 3 :character 3} :end {:line 3 :character 11}}}}]
-      (f.call-hierarchy/outgoing (h/file-uri "file:///some/a.clj") 3 7 db/db*)))
+      (f.call-hierarchy/outgoing (h/file-uri "file:///some/a.clj") 3 7 (h/components))))
 
   (testing "for multiple elements"
     (h/assert-submaps
@@ -139,7 +138,7 @@
              :uri (h/file-uri "file:///some/c.clj")
              :range {:start {:line 2 :character 6} :end {:line 2 :character 12}}
              :selection-range {:start {:line 4 :character 3} :end {:line 4 :character 11}}}}]
-      (f.call-hierarchy/outgoing (h/file-uri "file:///some/b.clj") 3 7 db/db*)))
+      (f.call-hierarchy/outgoing (h/file-uri "file:///some/b.clj") 3 7 (h/components))))
 
   (testing "with external elements"
     (h/assert-submaps
@@ -151,4 +150,4 @@
              :uri "zipfile:///.m2/clojure.jar::clojure/core.clj"
              :range {:start {:line 1 :character 6} :end {:line 1 :character 13}}
              :selection-range {:start {:line 2 :character 3} :end {:line 2 :character 10}}}}]
-      (f.call-hierarchy/outgoing (h/file-uri "file:///some/d.clj") 2 7 db/db*))))
+      (f.call-hierarchy/outgoing (h/file-uri "file:///some/d.clj") 2 7 (h/components)))))

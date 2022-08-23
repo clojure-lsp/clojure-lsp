@@ -1,19 +1,21 @@
 (ns clojure-lsp.feature.java-interop-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.java-interop :as f.java-interop]
+   [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))
 
+(h/reset-components-before-test)
+
 (deftest uri->translated-uri-test
-  (is (= "" (f.java-interop/uri->translated-uri "" @db/db*)))
-  (is (= "/foo/bar.clj" (f.java-interop/uri->translated-uri "/foo/bar.clj" @db/db*)))
-  (is (= "file:///foo/bar.clj" (f.java-interop/uri->translated-uri "file:///foo/bar.clj" @db/db*)))
-  (is (= "jar:file:///foo/bar.clj" (f.java-interop/uri->translated-uri "jar:file:///foo/bar.clj" @db/db*)))
-  (is (= "jar:file:///foo.jar!/bar.clj" (f.java-interop/uri->translated-uri "jar:file:///foo.jar!/bar.clj" @db/db*)))
-  (is (= "jar:file:///foo.jar!/Bar.java" (f.java-interop/uri->translated-uri "jar:file:///foo.jar!/Bar.java" @db/db*)))
-  (is (= "zipfile:///foo.jar::/bar.clj" (f.java-interop/uri->translated-uri "zipfile:///foo.jar::/bar.clj" @db/db*)))
-  (is (= "zipfile:///foo.jar::/bar.java" (f.java-interop/uri->translated-uri "zipfile:///foo.jar::/bar.java" @db/db*))))
+  (is (= "" (f.java-interop/uri->translated-uri "" (h/db))))
+  (is (= "/foo/bar.clj" (f.java-interop/uri->translated-uri "/foo/bar.clj" (h/db))))
+  (is (= "file:///foo/bar.clj" (f.java-interop/uri->translated-uri "file:///foo/bar.clj" (h/db))))
+  (is (= "jar:file:///foo/bar.clj" (f.java-interop/uri->translated-uri "jar:file:///foo/bar.clj" (h/db))))
+  (is (= "jar:file:///foo.jar!/bar.clj" (f.java-interop/uri->translated-uri "jar:file:///foo.jar!/bar.clj" (h/db))))
+  (is (= "jar:file:///foo.jar!/Bar.java" (f.java-interop/uri->translated-uri "jar:file:///foo.jar!/Bar.java" (h/db))))
+  (is (= "zipfile:///foo.jar::/bar.clj" (f.java-interop/uri->translated-uri "zipfile:///foo.jar::/bar.clj" (h/db))))
+  (is (= "zipfile:///foo.jar::/bar.java" (f.java-interop/uri->translated-uri "zipfile:///foo.jar::/bar.java" (h/db)))))
 
 (defn ->decision [& args]
   (-> (apply #'f.java-interop/jdk-analysis-decision args)

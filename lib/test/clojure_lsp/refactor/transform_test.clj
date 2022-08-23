@@ -1,6 +1,5 @@
 (ns clojure-lsp.refactor.transform-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as transform]
    [clojure-lsp.shared :as shared]
@@ -9,7 +8,7 @@
    [clojure.test :refer [are deftest is testing]]
    [rewrite-clj.zip :as z]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (defn as-strings [results]
   (map (comp z/string :loc) results))
@@ -51,16 +50,16 @@
     (is (= "((a) (b))" (z/root-string zloc)))))
 
 (defn- thread-first [code]
-  (as-root-string (transform/thread-first (h/zloc-from-code code) @db/db*)))
+  (as-root-string (transform/thread-first (h/zloc-from-code code) (h/db))))
 
 (defn- thread-first-all [code]
-  (as-root-string (transform/thread-first-all (h/zloc-from-code code) @db/db*)))
+  (as-root-string (transform/thread-first-all (h/zloc-from-code code) (h/db))))
 
 (defn- thread-last [code]
-  (as-root-string (transform/thread-last (h/zloc-from-code code) @db/db*)))
+  (as-root-string (transform/thread-last (h/zloc-from-code code) (h/db))))
 
 (defn- thread-last-all [code]
-  (as-root-string (transform/thread-last-all (h/zloc-from-code code) @db/db*)))
+  (as-root-string (transform/thread-last-all (h/zloc-from-code code) (h/db))))
 
 (deftest thread-test
   (let [code "|(remove nil? (filter :id (map (comp now doit) xs)))"]
@@ -89,21 +88,21 @@
                  "     (get-in foo))")
          (thread-last-all "|(get-in foo [:a :b])")))
   (testing "Removing unecessary parens when 1 arg"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= (h/code "(->> [1 2]"
                    "     foo"
                    "     bar)")
            (thread-last-all "|(bar (foo [1 2]))"))))
   (testing "Not removing unecessary parens when 1 arg"
-    (h/clean-db!)
-    (swap! db/db* shared/deep-merge {:settings {:keep-parens-when-threading? true}})
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:keep-parens-when-threading? true}})
     (is (= (h/code "(->> [1 2]"
                    "     (foo)"
                    "     (bar))")
            (thread-last-all "|(bar (foo [1 2]))")))))
 
 (defn- move-to-let [code new-sym]
-  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) "file:///a.clj" @db/db* new-sym)))
+  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) "file:///a.clj" (h/db) new-sym)))
 
 (deftest move-to-let-test
   (is (= (h/code "(let [a 1"
@@ -176,7 +175,7 @@
                         "     |;; comment"
                         "))")
                 (move-to-let 'x))))
-  (is (nil? (transform/move-to-let nil "file:///a.clj" @db/db* 'x))))
+  (is (nil? (transform/move-to-let nil "file:///a.clj" (h/db) 'x))))
 
 (defn- introduce-let [code new-sym]
   (as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
@@ -226,7 +225,7 @@
   (is (nil? (transform/introduce-let nil 'b))))
 
 (defn- expand-let [code]
-  (as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" @db/db*)))
+  (as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" (h/db))))
 
 (deftest expand-let-test
   (testing "simple"
@@ -301,17 +300,17 @@
     (is (= "(d (c x y (b (a))))" (z/string loc)))))
 
 (defn cycle-privacy [code]
-  (as-string (transform/cycle-privacy (h/zloc-from-code code) @db/db*)))
+  (as-string (transform/cycle-privacy (h/zloc-from-code code) (h/db))))
 
 (deftest cycle-privacy-test
   (testing "without-setting"
-    (swap! db/db* shared/deep-merge {:settings {}})
+    (swap! (h/db*) shared/deep-merge {:settings {}})
     (is (= "defn-" (cycle-privacy "(defn |a [])")))
     (is (= "defn" (cycle-privacy "(defn- |a [])")))
     (is (= "^:private a" (cycle-privacy "(def |a [])")))
     (is (= "a" (cycle-privacy "(def ^:private |a [])"))))
   (testing "with-setting"
-    (swap! db/db* shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
+    (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= "^:private a" (cycle-privacy "(defn |a [])")))
     (is (= "a" (cycle-privacy "(defn ^:private |a [])")))))
 
@@ -366,11 +365,11 @@
 (defn promote-fn
   ([code] (promote-fn code nil))
   ([code provided-name]
-   (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri @db/db* provided-name))))
+   (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri (h/db) provided-name))))
 
 (deftest promote-fn-test
   (testing "literal to fn"
-    (h/clean-db!)
+    (h/reset-components!)
     (are [expected fn-literal] (= [expected] (promote-fn fn-literal))
       ;; basic params
       "(fn [])"                                                      "|#()"
@@ -404,7 +403,7 @@
       "(fn [] (+ 1 2))"                                              "#|(+ 1 2)"
       "(fn [] (+ 1 2))"                                              "#(+ 1| 2)"))
   (testing "fn to defn"
-    (h/clean-db!)
+    (h/reset-components!)
     (are [expected-defn expected-replacement code]
          (= [expected-defn expected-replacement] (promote-fn code))
       ;; basic params
@@ -420,7 +419,7 @@
       ;; from inside
       "\n(defn- new-function [] (+ 1 2))\n"                          "new-function" "(|fn [] (+ 1 2))"))
   (testing "fn to defn with locals"
-    (h/clean-db!)
+    (h/reset-components!)
     (are [expected-defn expected-replacement code]
          (= [expected-defn expected-replacement] (promote-fn code))
       ;; basic params
@@ -437,14 +436,14 @@
       ;; multi-arity
       "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"   "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"))
   (testing "naming"
-    (h/clean-db!)
+    (h/reset-components!)
     ;; previously named fn
     (is (= ["\n(defn- previously-named [])\n" "previously-named"] (promote-fn "|(fn previously-named [])")))
     ;; provided name
     (is (= ["\n(defn- my-name [])\n" "my-name"] (promote-fn "|(fn [])" "my-name")))
     (is (= ["(fn my-name [])"] (promote-fn "|#()" "my-name"))))
   (testing "when nested"
-    (h/clean-db!)
+    (h/reset-components!)
     ;; literal within fn
     (is (= ["(fn [element1] (+ element1))"] (promote-fn "(fn [a] (+ a #(+ |%1)))")))
     ;; fn within literal
@@ -453,7 +452,7 @@
     (is (= ["\n(defn- new-function [a x] (+ x a))\n" "(partial new-function a)"] (promote-fn "(let [a 1] #(map |(fn [x] (+ x a)) [1 2 3]))")))
     (is (= ["\n(defn- new-function [a b x] (+ x a b))\n" "(partial new-function a b)"] (promote-fn "(let [a 1 b 2] #(map |(fn [x] (+ x a b)) [1 2 3]))"))))
   (testing "with metadata privacy"
-    (swap! db/db* shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
+    (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= ["\n(defn ^:private new-function [])\n" "new-function"] (promote-fn "|(fn [])")))
     (is (= ["\n(defn ^:private new-function [a] a)\n" "#(new-function a)"] (promote-fn "(let [a 1] |(fn [] a))")))))
 
@@ -514,12 +513,12 @@
      (transform/extract-function zloc
                                  file-uri
                                  new-fn-name
-                                 @db/db*))))
+                                 (h/db)))))
 
 (deftest extract-function-test
   (testing "simple extract"
     (are [filepath] (do
-                      (h/clean-db!)
+                      (h/reset-components!)
                       (= [(h/code ""
                                   "(defn- foo [b]"
                                   "  (let [c 1] (b c)))"
@@ -543,8 +542,8 @@
                (extract-function "foo")
                as-strings))))
   (testing "with-setting"
-    (h/clean-db!)
-    (swap! db/db* shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= [(h/code ""
                     "(defn ^:private foo []"
                     "  (inc 1))"
@@ -554,7 +553,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "after local usage"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [b c]"
                     "  (+ 2 b c))"
@@ -564,7 +563,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "On multi-arity function"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a b]"
                     "  (= a b))"
@@ -578,7 +577,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "from comment"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a]"
                     "  (+ 1 a))"
@@ -591,7 +590,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "from whitespace"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a]"
                     "  (+ 1 a))"
@@ -604,7 +603,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "from trailing comment"
-    (h/clean-db!)
+    (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo []"
                     "  (let [a 1 b 2 c 3]"
@@ -620,7 +619,7 @@
                (extract-function "foo")
                as-strings))))
   (testing "with comments above origin function"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/assert-submaps
       [{:loc   (h/code ""
                        "(defn- foo [b]"
@@ -635,7 +634,7 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "with comments above origin function with spaces"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/assert-submaps
       [{:loc   (h/code ""
                        "(defn- foo [b]"
@@ -652,7 +651,7 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "with comments above origin function with multi line comments"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/assert-submaps
       [{:loc   (h/code ""
                        "(defn- foo [b]"
@@ -669,20 +668,20 @@
           (extract-function "foo")
           h/with-strings)))
   (testing "from end of file"
-    (h/clean-db!)
-    (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" @db/db*)))
+    (h/reset-components!)
+    (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" (h/db))))
     (h/assert-submaps
       []
       (extract-function "|;; comment"
                         "foo"))))
 
 (defn- create-function [code]
-  (transform/create-function (h/load-code-and-zloc code) "file:///a.clj" @db/db*))
+  (transform/create-function (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
 
 (deftest create-function-test
   (testing "function on same file"
     (testing "creating with no args"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func []"
                      "  )"
@@ -691,7 +690,7 @@
                  create-function
                  as-string))))
     (testing "creating with 1 known arg"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [b]"
                      "  )"
@@ -700,7 +699,7 @@
                  create-function
                  as-string))))
     (testing "creating with 1 known arg and a unknown arg"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [b arg2]"
                      "  )"
@@ -709,7 +708,7 @@
                  create-function
                  as-string))))
     (testing "creating from a fn call of other function"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [arg1]"
                      "  )"
@@ -718,7 +717,7 @@
                  create-function
                  as-string))))
     (testing "creating from a fn call of other function nested"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [arg1 arg2]"
                      "  )"
@@ -727,7 +726,7 @@
                  create-function
                  as-string))))
     (testing "creating from an anonymous function"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [arg1 element]"
                      "  )"
@@ -736,7 +735,7 @@
                  create-function
                  as-string))))
     (testing "creating from an anonymous function with many args"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [arg1 b element3 element2]"
                      "  )"
@@ -745,7 +744,7 @@
                  create-function
                  as-string))))
     (testing "creating from a thread first macro with single arg"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [b]"
                      "  )"
@@ -754,7 +753,7 @@
                  create-function
                  as-string))))
     (testing "creating from a thread first macro with multiple args"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [b a arg3]"
                      "  )"
@@ -763,7 +762,7 @@
                  create-function
                  as-string))))
     (testing "creating from a thread last macro with multiple args"
-      (h/clean-db!)
+      (h/reset-components!)
       (is (= (h/code ""
                      "(defn- my-func [a arg2 b]"
                      "  )"
@@ -773,7 +772,7 @@
                  as-string)))))
   (testing "on other files"
     (testing "when namespace is already required and exists"
-      (h/clean-db!)
+      (h/reset-components!)
       (h/load-code-and-locs "(ns bar)" "file:///bar.clj")
       (let [{:keys [changes-by-uri]} (create-function "(ns foo (:require [bar :as b])) (|b/something)")
             result (update-map changes-by-uri h/with-strings)]
@@ -788,12 +787,12 @@
                           :end-row 999999 :end-col 1}}]}
                result))))
     (testing "when namespace is not required and not exists"
-      (h/clean-db!)
-      (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                  (h/file-path "/project/test")}}})
+      (h/reset-components!)
+      (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                   (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) (|b/something)"
                                        "file:///project/src/foo.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" @db/db*)
+            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" (h/db))
             result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
@@ -818,12 +817,12 @@
                           :end-row 999999 :end-col 1}}]}
                result))))
     (testing "when namespace is not required and not exists not calling it as function"
-      (h/clean-db!)
-      (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                  (h/file-path "/project/test")}}})
+      (h/reset-components!)
+      (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                   (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) |b/something"
                                        "file:///project/src/foo.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" @db/db*)
+            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" (h/db))
             result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
@@ -854,7 +853,7 @@
     (transform/extract-to-def zloc new-def-name)))
 
 (deftest extract-to-def-test
-  (h/clean-db!)
+  (h/reset-components!)
   (is (= [(h/code ""
                   "(def ^:private foo"
                   "  {:a 1})"
@@ -863,7 +862,7 @@
          (-> "|{:a 1}"
              (extract-to-def "foo")
              as-strings)))
-  (h/clean-db!)
+  (h/reset-components!)
   (is (= [(h/code ""
                   "(def ^:private new-value"
                   "  {:a 1})"
@@ -875,8 +874,8 @@
 
 (deftest can-create-test?
   (testing "when on multiples functions"
-    (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                (h/file-path "/project/test")}}})
+    (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                 (h/file-path "/project/test")}}})
     (let [zloc (h/load-code-and-zloc (h/code "(ns foo)"
                                              "(defn bar []"
                                              "  |2)"
@@ -890,18 +889,18 @@
               :function-name-loc "bar"}
              (update (transform/can-create-test? zloc
                                                  "file:///project/src/foo.clj"
-                                                 @db/db*)
+                                                 (h/db))
                      :function-name-loc z/string))))))
 
 (deftest create-test-test
   (testing "when only one available source-path besides current"
     (testing "when the test file doesn't exists for clj file"
-      (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                       :project-root-uri (h/file-uri "file:///project")})
+      (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                                        :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                        :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" @db/db* h/components)
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" (h/db) (h/components))
             results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.clj")
@@ -920,12 +919,12 @@
              :range {:row 1 :col 1 :end-row 8 :end-col 26}}]}
           results-to-assert)))
     (testing "when the test file doesn't exists for cljs file"
-      (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                       :project-root-uri (h/file-uri "file:///project")})
+      (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                                        :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                        :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                        "file:///project/src/some/ns.cljs")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" @db/db* h/components)
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" (h/db) (h/components))
             results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
@@ -944,10 +943,10 @@
              :range {:row 1 :col 1 :end-row 8 :end-col 26}}]}
           results-to-assert)))
     (testing "when the test file exists for clj file"
-      (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                  (h/file-path "/project/test")}}
-                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                       :project-root-uri (h/file-uri "file:///project")})
+      (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                   (h/file-path "/project/test")}}
+                                        :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                        :project-root-uri (h/file-uri "file:///project")})
       (let [test-code (h/code "(ns some.ns-test)"
                               "(deftest some-other-test)")]
         (with-redefs [shared/file-exists? #(not (string/ends-with? % "config.edn"))
@@ -955,7 +954,7 @@
           (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
                                            "file:///project/src/some/ns.clj")
-                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" @db/db* h/components)
+                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" (h/db) (h/components))
                 results-to-assert (update-map changes-by-uri h/with-strings)]
             (is (= nil resource-changes))
             (h/assert-submap
@@ -966,20 +965,20 @@
                  :range {:row 3 :col 1 :end-row 5 :end-col 1}}]}
               results-to-assert)))))
     (testing "when the current source path is already a test"
-      (swap! db/db* shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                                       :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                       :project-root-uri (h/file-uri "file:///project")})
+      (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
+                                        :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                        :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns-test) (deftest |foo [b] (+ 1 2))"
                                        "file:///project/test/some/ns_test.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" @db/db* h/components)]
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" (h/db) (h/components))]
         (is (= nil resource-changes))
         (is (= nil changes-by-uri))))))
 
 (deftest inline-symbol
   (testing "simple let"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs "(let [something 1] something something)")
-    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 @db/db*))
+    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 (h/db)))
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -992,9 +991,9 @@
                   (update :loc z/string)
                   (update :range select-keys [:row :col :end-row :end-col])) a-results))))
   (testing "multiple binding let"
-    (h/clean-db!)
+    (h/reset-components!)
     (h/load-code-and-locs "(let [something 1 other 2] something other something)")
-    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 @db/db*))
+    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 (h/db)))
           a-results (get results (h/file-uri "file:///a.clj"))]
       (is (map? results))
       (is (= 1 (count results)))
@@ -1007,10 +1006,10 @@
                   (update :loc z/string)
                   (update :range select-keys [:row :col :end-row :end-col])) a-results))))
   (testing "def in another file"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
           _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
-          results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c @db/db*))
+          results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c (h/db)))
           a-results (get results (h/file-uri "file:///a.clj"))
           b-results (get results (h/file-uri "file:///b.clj"))]
       (is (map? results))
@@ -1019,14 +1018,14 @@
       (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results)))))
   (testing "invalid location"
     (let [[[pos-l pos-c]] (h/load-code-and-locs "|;; comment")]
-      (is (nil? (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c @db/db*))))))
+      (is (nil? (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c (h/db)))))))
 
 (defn suppress-diagnostic [code diagnostic-code]
   (h/with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))
 
 (deftest suppress-diagnostic-test
   (testing "when op has no spaces"
-    (swap! db/db* shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (h/assert-submaps
       [{:loc   (h/code "#_{:clj-kondo/ignore [:unused-var]}"
                        "")
@@ -1038,7 +1037,7 @@
                                    "(foo 1)")
                            "unused-var")))
   (testing "when op has spaces"
-    (swap! db/db* shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (h/assert-submaps
       [{:loc   (h/code "#_{:clj-kondo/ignore [:unresolved-var]}"
                        "  ")
@@ -1050,7 +1049,7 @@
                                    "(foo 1)")
                            "unresolved-var")))
   (testing "when diagnostic is from clojure-lsp"
-    (swap! db/db* shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (h/assert-submaps
       [{:loc   (h/code "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}"
                        "")
@@ -1060,7 +1059,7 @@
                                    "(def |foo 1)")
                            "clojure-lsp/unused-public-var")))
   (testing "when outside of form"
-    (swap! db/db* shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (h/assert-submaps
       [{:loc   (h/code "#_{:clj-kondo/ignore [:unresolved-symbol]}"
                        "")

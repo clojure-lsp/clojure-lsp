@@ -1,31 +1,30 @@
 (ns clojure-lsp.features.format-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest test-formatting
-  (swap! db/db* shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
+  (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs "(a  )\n(b c d)")
   (testing "when custom config file doesn't exists"
     (with-redefs [shared/file-exists? (constantly false)]
       (is (= "(a)\n(b c d)"
-             (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") db/db*)))))))
+             (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") (h/components))))))))
   (testing "when custom config file exists"
     (with-redefs [shared/file-exists? (constantly true)
                   slurp (constantly "{}")]
       (is (= "(a)\n(b c d)"
-             (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") db/db*))))))))
+             (:new-text (first (f.format/formatting (h/file-uri "file:///a.clj") (h/components)))))))))
 
 (deftest test-formatting-noop
-  (swap! db/db* shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
+  (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs "(a)\n(b c d)")
   (with-redefs [shared/file-exists? (constantly false)]
-    (let [r (f.format/formatting (h/file-uri "file:///a.clj") db/db*)]
+    (let [r (f.format/formatting (h/file-uri "file:///a.clj") (h/components))]
       (is (empty? r))
       (is (vector? r)))))
 
@@ -33,10 +32,10 @@
   (let [[[row col] [end-row end-col] :as positions] (h/load-code-and-locs code)]
     (let [position-count (count positions)]
        (assert (= 2 position-count) (format "Expected two cursors, got %s" position-count)))
-    (f.format/range-formatting (h/file-uri "file:///a.clj") {:row row :col col :end-row end-row :end-col end-col} @db/db*)))
+    (f.format/range-formatting (h/file-uri "file:///a.clj") {:row row :col col :end-row end-row :end-col end-col} (h/db))))
 
 (deftest test-range-formatting
-  (swap! db/db* shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
+  (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})
   (testing "when custom config file doesn't exists"
     (with-redefs [shared/file-exists? (constantly false)]
       (is (= [{:range {:start {:line 0 :character 0}

@@ -92,7 +92,7 @@
                :range (meta (z/node namespace-loc))}]
              (f.add-missing-libspec/cleaning-ns-edits uri db))))))
 
-(defn move-form [zloc source-uri db* dest-filename]
+(defn move-form [zloc source-uri {:keys [db*] :as components} dest-filename]
   (let [db @db*
         source-filename (shared/uri->filename source-uri)
         source-nses (q/ns-names-for-uri db source-uri source-filename)
@@ -123,7 +123,7 @@
                 refs (q/find-references db def-to-move false)
                 dest-refs (filter (comp #(= % dest-filename) :filename) refs)
                 per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
-                insertion-loc (some-> (f.file-management/force-get-document-text dest-uri db*)
+                insertion-loc (some-> (f.file-management/force-get-document-text dest-uri components)
                                       z/of-string
                                       z/rightmost)
                 insertion-pos (meta (z/node insertion-loc))
@@ -145,7 +145,7 @@
                                             (fn [file-uri usages]
                                               (let [usage (first usages)
                                                     filename (:filename usage)
-                                                    file-loc (some-> (f.file-management/force-get-document-text file-uri db*)
+                                                    file-loc (some-> (f.file-management/force-get-document-text file-uri components)
                                                                      z/of-string)
                                                     db @db*
                                                     local-buckets (get-in db [:analysis filename])

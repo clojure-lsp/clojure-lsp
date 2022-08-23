@@ -3,7 +3,6 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]
    [clojure.java.io :as io]
    [cognitect.transit :as transit]))
 
@@ -16,10 +15,6 @@
                  :dep-graph {}
                  :file-meta {}})
 (defonce db* (atom initial-db))
-(defonce current-changes-chan (async/chan 1))
-(defonce diagnostics-chan (async/chan 1))
-(defonce created-watched-files-chan (async/chan 1))
-(defonce edits-chan (async/chan 1))
 
 (def version 5)
 

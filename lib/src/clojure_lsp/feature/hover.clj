@@ -121,12 +121,12 @@
         , (conj filename)))))
 
 (defn hover
-  ([uri row col db*] (hover uri row col db* {}))
-  ([uri row col db* docs-config]
+  ([uri row col components] (hover uri row col components {}))
+  ([uri row col {:keys [db*] :as components} docs-config]
    (let [db @db*
          filename (shared/uri->filename uri)
          cursor-element (q/find-element-under-cursor db filename row col)
-         cursor-loc (some-> (f.file-management/force-get-document-text uri db*)
+         cursor-loc (some-> (f.file-management/force-get-document-text uri components)
                             parser/safe-zloc-of-string
                             (parser/to-pos row col))
          func-position (some-> cursor-loc

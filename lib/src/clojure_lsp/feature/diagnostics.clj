@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.diagnostics
   (:require
    [clj-kondo.impl.config :as kondo.config]
-   [clojure-lsp.db :as db]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
@@ -141,31 +140,33 @@
         (not= :off depend-level)
         (concat (clj-depend-violations->diagnostics filename depend-level db))))))
 
-(defn ^:private publish-diagnostic!* [diagnostic]
-  (async/put! db/diagnostics-chan diagnostic))
+(defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
+  (async/put! diagnostics-chan diagnostic))
 
-(defn ^:private publish-all-diagnostics!* [diagnostics]
-  (async/onto-chan! db/diagnostics-chan diagnostics false))
+(defn ^:private publish-all-diagnostics!* [{:keys [diagnostics-chan]} diagnostics]
+  (async/onto-chan! diagnostics-chan diagnostics false))
 
-(defn publish-diagnostics! [uri db]
-  (publish-diagnostic!* {:uri uri
-                         :diagnostics (find-diagnostics uri db)}))
+(defn publish-diagnostics! [uri {:keys [db*], :as components}]
+  (publish-diagnostic!* components {:uri uri
+                                    :diagnostics (find-diagnostics uri @db*)}))
 
-(defn publish-all-diagnostics! [paths db]
-  (publish-all-diagnostics!*
-    (eduction (map io/file)
-              (mapcat file-seq)
-              (map #(.getAbsolutePath ^java.io.File %))
-              (map #(shared/filename->uri % db))
-              (remove #(= :unknown (shared/uri->file-type %)))
-              (map (fn [uri]
-                     {:uri uri
-                      :diagnostics (find-diagnostics uri db)}))
-              paths)))
+(defn publish-all-diagnostics! [paths {:keys [db*], :as components}]
+  (let [db @db*]
+    (publish-all-diagnostics!*
+      components
+      (eduction (map io/file)
+                (mapcat file-seq)
+                (map #(.getAbsolutePath ^java.io.File %))
+                (map #(shared/filename->uri % db))
+                (remove #(= :unknown (shared/uri->file-type %)))
+                (map (fn [uri]
+                       {:uri uri
+                        :diagnostics (find-diagnostics uri db)}))
+                paths))))
 
-(defn publish-empty-diagnostics! [uri]
-  (publish-diagnostic!* {:uri uri
-                         :diagnostics []}))
+(defn publish-empty-diagnostics! [uri components]
+  (publish-diagnostic!* components {:uri uri
+                                    :diagnostics []}))
 
 (defn ^:private unused-public-vars [var-defs kw-defs project-db kondo-config]
   (let [var-definitions (remove (partial exclude-public-diagnostic-definition? kondo-config) var-defs)

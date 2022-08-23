@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.file-management
   (:require
    [clojure-lsp.clj-depend :as lsp.depend]
-   [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
@@ -33,7 +32,7 @@
 (defn load-document! [uri text db*]
   (swap! db* update-in [:documents uri] assoc :v 0 :text text :saved-on-disk false))
 
-(defn did-open [uri text db* allow-create-ns]
+(defn did-open [uri text {:keys [db* edits-chan] :as components} allow-create-ns]
   (load-document! uri text db*)
   (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
         depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))
@@ -43,10 +42,10 @@
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
                      (lsp.depend/db-with-results depend-result))))
-    (f.diagnostic/publish-diagnostics! uri @db*))
+    (f.diagnostic/publish-diagnostics! uri components))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
-      (async/>!! db/edits-chan create-ns-edits))))
+      (async/>!! edits-chan create-ns-edits))))
 
 (defn ^:private set-xor [a b]
   (into (set/difference a b)
@@ -131,7 +130,7 @@
   (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]
     (swap! db* lsp.kondo/db-with-results result)))
 
-(defn ^:private notify-references [filename db-before db-after {:keys [db* producer]}]
+(defn ^:private notify-references [filename db-before db-after {:keys [db* producer] :as components}]
   (async/thread
     (shared/logging-task
       :notify-references
@@ -162,7 +161,7 @@
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
             (analyze-reference-filenames! filenames db*))
-          (f.diagnostic/publish-all-diagnostics! filenames @db*)
+          (f.diagnostic/publish-all-diagnostics! filenames components)
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line character end-line end-character]
@@ -227,30 +226,30 @@
                                     (lsp.depend/db-with-results depend-result)
                                     (update :processing-changes disj uri)))
             (let [db @db*]
-              (f.diagnostic/publish-diagnostics! uri db)
+              (f.diagnostic/publish-diagnostics! uri components)
               (when (settings/get db [:notify-references-on-file-change] true)
                 (notify-references filename old-db db components))
               (producer/refresh-test-tree producer [uri]))
             (recur @db*)))))))
 
-(defn did-change [uri changes version db*]
+(defn did-change [uri changes version {:keys [db* current-changes-chan]}]
   (let [old-text (get-in @db* [:documents uri :text])
         final-text (reduce handle-change old-text changes)]
     (swap! db* (fn [state-db] (-> state-db
                                   (assoc-in [:documents uri :v] version)
                                   (assoc-in [:documents uri :text] final-text)
                                   (update :processing-changes conj uri))))
-    (async/>!! db/current-changes-chan {:uri uri
-                                        :text final-text
-                                        :version version})))
+    (async/>!! current-changes-chan {:uri uri
+                                     :text final-text
+                                     :version version})))
 
-(defn analyze-watched-created-files! [uris {:keys [db* producer]}]
+(defn analyze-watched-created-files! [uris {:keys [db* producer] :as components}]
   (let [filenames (map shared/uri->filename uris)
         result (shared/logging-time
                  "Created watched files analyzed, took %s"
                  (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil))]
     (swap! db* lsp.kondo/db-with-results result)
-    (f.diagnostic/publish-all-diagnostics! filenames @db*)
+    (f.diagnostic/publish-all-diagnostics! filenames components)
     (producer/refresh-test-tree producer uris)))
 
 (defn ^:private db-without-file [state-db uri filename]
@@ -260,14 +259,14 @@
       (shared/dissoc-in [:analysis filename])
       (shared/dissoc-in [:findings filename])))
 
-(defn ^:private file-deleted [db* uri filename]
+(defn ^:private file-deleted [{:keys [db*], :as components} uri filename]
   (swap! db* db-without-file uri filename)
-  (f.diagnostic/publish-empty-diagnostics! uri))
+  (f.diagnostic/publish-empty-diagnostics! uri components))
 
-(defn did-change-watched-files [changes db*]
+(defn did-change-watched-files [changes {:keys [db* created-watched-files-chan] :as components}]
   (doseq [{:keys [uri type]} changes]
     (case type
-      :created (async/>!! db/created-watched-files-chan uri)
+      :created (async/>!! created-watched-files-chan uri)
       :changed (when (settings/get @db* [:compute-external-file-changes] true)
                  (shared/logging-task
                    :changed-watched-file
@@ -275,24 +274,24 @@
                      (did-change uri
                                  [{:text text}]
                                  (get-in @db* [:documents uri :v] 0)
-                                 db*))))
+                                 components))))
       :deleted (shared/logging-task
                  :delete-watched-file
-                 (file-deleted db* uri (shared/uri->filename uri))))))
+                 (file-deleted components uri (shared/uri->filename uri))))))
 
-(defn did-close [uri db*]
+(defn did-close [uri {:keys [db*], :as components}]
   (let [filename (shared/uri->filename uri)
         source-paths (settings/get @db* [:source-paths])]
     (when (and (not (shared/external-filename? filename source-paths))
                (not (shared/file-exists? (io/file filename))))
-      (file-deleted db* uri filename))))
+      (file-deleted components uri filename))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
-  [uri db*]
+  [uri {:keys [db*] :as components}]
   (or (get-in @db* [:documents uri :text])
       (when-let [text (shared/slurp-uri uri)]
-        (did-open uri text db* false)
+        (did-open uri text components false)
         (get-in @db* [:documents uri :text]))))
 
 (defn did-save [uri db*]

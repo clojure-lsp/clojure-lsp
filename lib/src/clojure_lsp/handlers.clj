@@ -95,7 +95,7 @@
           components)
         (let [db @db*]
           (when (settings/get db [:lint-project-files-after-startup?] true)
-            (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) db))
+            (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) components))
           (async/go
             (f.clojuredocs/refresh-cache! db*))
           (async/go
@@ -111,12 +111,12 @@
               (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
 
-(defn did-open [{:keys [producer db*]} {:keys [text-document]}]
+(defn did-open [{:keys [producer] :as components} {:keys [text-document]}]
   (shared/logging-task
     :did-open
     (let [uri (:uri text-document)
           text (:text text-document)]
-      (f.file-management/did-open uri text db* true)
+      (f.file-management/did-open uri text components true)
       (producer/refresh-test-tree producer [uri])))
   nil)
 
@@ -130,16 +130,16 @@
     (when (get-in @db [:documents (:uri text-document) :saved-on-disk])
       (swap! db #(update % :documents dissoc (:uri text-document)))))
 
-(defn did-change [{:keys [db*]} {:keys [text-document content-changes]}]
-  (f.file-management/did-change (:uri text-document) content-changes (:version text-document) db*))
+(defn did-change [components {:keys [text-document content-changes]}]
+  (f.file-management/did-change (:uri text-document) content-changes (:version text-document) components))
 
-(defn did-close [{:keys [db*]} {:keys [text-document]}]
+(defn did-close [components {:keys [text-document]}]
   (shared/logging-task
     :did-close
-    (f.file-management/did-close (:uri text-document) db*)))
+    (f.file-management/did-close (:uri text-document) components)))
 
-(defn did-change-watched-files [{:keys [db*]} {:keys [changes]}]
-  (f.file-management/did-change-watched-files changes db*))
+(defn did-change-watched-files [components {:keys [changes]}]
+  (f.file-management/did-change-watched-files changes components))
 
 (defn completion [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-results
@@ -339,22 +339,22 @@
                (producer/show-document-request producer)))
         edit))))
 
-(defn hover [{:keys [db*]} {:keys [text-document position]}]
+(defn hover [components {:keys [text-document position]}]
   (shared/logging-task
     :hover
     (let [[row col] (shared/position->row-col position)]
-      (f.hover/hover (:uri text-document) row col db*))))
+      (f.hover/hover (:uri text-document) row col components))))
 
-(defn signature-help [{:keys [db*]} {:keys [text-document position _context]}]
+(defn signature-help [components {:keys [text-document position _context]}]
   (shared/logging-task
     :signature-help
     (let [[row col] (shared/position->row-col position)]
-      (f.signature-help/signature-help (:uri text-document) row col db*))))
+      (f.signature-help/signature-help (:uri text-document) row col components))))
 
-(defn formatting [{:keys [db*]} {:keys [text-document]}]
+(defn formatting [components {:keys [text-document]}]
   (shared/logging-task
     :formatting
-    (f.format/formatting (:uri text-document) db*)))
+    (f.format/formatting (:uri text-document) components)))
 
 (defn range-formatting [{:keys [db*]} {:keys [text-document range]}]
   (process-after-changes
@@ -425,18 +425,18 @@
       (f.call-hierarchy/prepare (:uri text-document) row col db*))))
 
 (defn call-hierarchy-incoming
-  [{:keys [db*]} {{:keys [uri range]} :item}]
+  [components {{:keys [uri range]} :item}]
   (shared/logging-task
     :call-hierarchy-incoming-calls
     (let [[row col] (shared/position->row-col (:start range))]
-      (f.call-hierarchy/incoming uri row col db*))))
+      (f.call-hierarchy/incoming uri row col components))))
 
 (defn call-hierarchy-outgoing
-  [{:keys [db*]} {{:keys [uri range]} :item}]
+  [components {{:keys [uri range]} :item}]
   (shared/logging-task
     :call-hierarchy-outgoing-calls
     (let [[row col] (shared/position->row-col (:start range))]
-      (f.call-hierarchy/outgoing uri row col db*))))
+      (f.call-hierarchy/outgoing uri row col components))))
 
 (defn linked-editing-ranges
   [{:keys [db*]} {:keys [text-document position]}]

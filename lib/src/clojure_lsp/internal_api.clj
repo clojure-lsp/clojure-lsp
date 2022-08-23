@@ -12,7 +12,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :refer [<! go-loop]]
+   [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
    [clojure.string :as string])
   (:import
@@ -80,12 +80,22 @@
 
   (refresh-test-tree [_this _uris]))
 
+(def db* (atom nil))
+
+(defn clean-db! [env]
+  (doto db*
+    (reset! (assoc db/initial-db :env env))))
+
 (defn ^:private build-components [options]
-  (let [db* db/db*]
+  (let [db* (if @db* db* (clean-db! nil))]
     {:db* db*
      :logger (doto (->CLILogger options)
                (logger/setup))
-     :producer (->APIProducer db* options)}))
+     :producer (->APIProducer db* options)
+     :current-changes-chan (async/chan 1)
+     :diagnostics-chan (async/chan 1)
+     :created-watched-files-chan (async/chan 1)
+     :edits-chan (async/chan 1)}))
 
 (defn ^:private edit->summary
   ([db uri edit]
@@ -122,27 +132,27 @@
           edit-summary)))))
 
 (defn ^:private apply-workspace-change-edit-summary!
-  [{:keys [uri new-text version changed?]} db*]
+  [{:keys [uri new-text version changed?]} {:keys [db*] :as components}]
   (spit uri new-text)
   (when (and changed?
              (get-in @db* [:documents uri :text]))
-    (f.file-management/did-change uri new-text (inc version) db*)))
+    (f.file-management/did-change uri new-text (inc version) components)))
 
 (defn ^:private apply-workspace-rename-edit-summary!
-  [{:keys [old-uri new-uri]} db*]
+  [{:keys [old-uri new-uri]} components]
   (let [old-file (-> old-uri shared/uri->filename io/file)
         new-file (-> new-uri shared/uri->filename io/file)]
     (io/make-parents new-file)
     (io/copy old-file new-file)
     (io/delete-file old-file)
-    (f.file-management/did-close old-uri db*)
-    (f.file-management/did-open new-uri (slurp new-file) db* false)))
+    (f.file-management/did-close old-uri components)
+    (f.file-management/did-open new-uri (slurp new-file) components false)))
 
 (defn ^:private apply-workspace-edit-summary!
-  [change db*]
+  [change components]
   (if (= :rename (:kind change))
-    (apply-workspace-rename-edit-summary! change db*)
-    (apply-workspace-change-edit-summary! change db*))
+    (apply-workspace-rename-edit-summary! change components)
+    (apply-workspace-change-edit-summary! change components))
   change)
 
 (defn ^:private project-root->uri [project-root db]
@@ -150,10 +160,10 @@
       .getCanonicalPath
       (shared/filename->uri db)))
 
-(defn ^:private setup-api! [{:keys [producer db*]}]
+(defn ^:private setup-api! [{:keys [producer db* diagnostics-chan]}]
   (swap! db* assoc :api? true)
   (go-loop []
-    (producer/publish-diagnostic producer (<! db/diagnostics-chan))
+    (producer/publish-diagnostic producer (<! diagnostics-chan))
     (recur)))
 
 (defn ^:private analyze!
@@ -292,7 +302,7 @@
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Cleaned" (uri->ns (:uri %) ns+uris))
-                      #(apply-workspace-edit-summary! % db*)) edits)
+                      #(apply-workspace-edit-summary! % components)) edits)
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
@@ -363,7 +373,7 @@
          :edits edits}
         (do
           (mapv (comp #(cli-println options "Formatted" (uri->ns (:uri %) ns+uris))
-                      #(apply-workspace-edit-summary! % db*)) edits)
+                      #(apply-workspace-edit-summary! % components)) edits)
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to format!"})))
@@ -391,7 +401,7 @@
                  :message (edits->diff-string edits options db)
                  :edits edits}
                 (do
-                  (mapv #(apply-workspace-edit-summary! % db*) edits)
+                  (mapv #(apply-workspace-edit-summary! % components) edits)
                   {:result-code 0
                    :message (format "Renamed %s to %s" from to)
                    :edits edits}))

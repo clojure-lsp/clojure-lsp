@@ -1,12 +1,11 @@
 (ns clojure-lsp.features.rename-test
   (:require
-   [clojure-lsp.db :as db]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
-(h/reset-db-after-test)
+(h/reset-components-before-test)
 
 (deftest rename-simple-keywords
   (let [[a-start _a-stop
@@ -16,14 +15,14 @@
                                                    (h/file-uri "file:///a.cljc"))]
     (testing "should not rename plain keywords"
       (let [[row col] a-start
-            result (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":b" row col @db/db*)]
+            result (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":b" row col (h/db))]
         (is (= {:error {:code :invalid-params
                         :message "Can't rename, only namespaced keywords can be renamed."}}
                result))))
 
     (testing "should rename local in destructure but not keywords"
       (let [[row col] a-binding-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":b" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":b" row col (h/db)))]
         (is (= {(h/file-uri "file:///a.cljc")
                 [{:new-text "b" :range (h/->range a-binding-start a-binding-stop)}
                  {:new-text "b" :range (h/->range a-local-usage-start a-local-usage-stop)}]}
@@ -38,7 +37,7 @@
                            (h/file-uri "file:///b.cljc"))]
     (testing "renaming only the name"
       (let [[row col] a-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":hello/bar" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":hello/bar" row col (h/db)))]
         (is (= {(h/file-uri "file:///a.cljc")
                 [{:new-text ":hello/bar" :range (h/->range a-start a-stop)}]
                 (h/file-uri "file:///b.cljc")
@@ -46,7 +45,7 @@
                changes))))
     (testing "renaming only the namespace"
       (let [[row col] a-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":bye/foo" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":bye/foo" row col (h/db)))]
         (is (= {(h/file-uri "file:///a.cljc")
                 [{:new-text ":bye/foo" :range (h/->range a-start a-stop)}]
                 (h/file-uri "file:///b.cljc")
@@ -54,7 +53,7 @@
                changes))))
     (testing "renaming namespace and name"
       (let [[row col] a-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":bye/bar" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":bye/bar" row col (h/db)))]
         (is (= {(h/file-uri "file:///a.cljc")
                 [{:new-text ":bye/bar" :range (h/->range a-start a-stop)}]
                 (h/file-uri "file:///b.cljc")
@@ -76,21 +75,21 @@
                                            (h/file-uri "file:///c.cljc"))]
     (testing "should rename local in destructure with ':' and keywords if namespaced"
       (let [[row col] a-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":a/c" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":a/c" row col (h/db)))]
         (is (= {(h/file-uri "file:///a.cljc")
                 [{:new-text ":a/c" :range (h/->range a-start a-stop)}
                  {:new-text ":a/c" :range (h/->range a-binding-start a-binding-stop)}]}
                changes))))
     (testing "should rename local in destructure without ':' and keywords if namespaced"
       (let [[row col] b-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///b.cljc") ":c/e" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///b.cljc") ":c/e" row col (h/db)))]
         (is (= {(h/file-uri "file:///b.cljc")
                 [{:new-text ":c/e" :range (h/->range b-start b-stop)}
                  {:new-text "c/e" :range (h/->range b-binding-start b-binding-stop)}]}
                changes))))
     (testing "should rename local in destructure with namespace on :keys"
       (let [[row col] c-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///c.cljc") ":e/f" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///c.cljc") ":e/f" row col (h/db)))]
         (is (= {(h/file-uri "file:///c.cljc")
                 [{:new-text ":e/f" :range (h/->range c-start c-stop)}
                  {:new-text "f" :range (h/->range c-binding-start c-binding-stop)}]}
@@ -118,13 +117,13 @@
           (h/file-uri "file:///b.cljc"))]
     (testing "renaming keywords renames correctly namespaced maps as well"
       (let [[row col] a-b-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":a/g" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":a/g" row col (h/db)))]
         (is (= {(h/file-uri "file:///a.cljc") [{:new-text ":a/g" :range (h/->range a-b-start a-b-stop)}
                                                {:new-text ":g" :range (h/->range b-ns-start b-ns-stop)}]}
                changes))))
     (testing "renaming from aliased namespace to namespace"
       (let [[row col] h1-start
-            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///b.cljc") ":hello/world" row col @db/db*))]
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///b.cljc") ":hello/world" row col (h/db)))]
         (is (= {(h/file-uri "file:///b.cljc") [{:new-text ":hello/world" :range (h/->range h1-start h1-stop)}
                                                {:new-text ":hello/world" :range (h/->range h2-start h2-stop)}]}
                changes))))
@@ -136,8 +135,8 @@
 
 (deftest rename-namespaces
   (testing "when client has valid source-paths but no document-changes capability"
-    (h/clean-db!)
-    (swap! db/db* shared/deep-merge
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes false}}}})
@@ -145,10 +144,10 @@
     (h/assert-submap
       {:error {:code :invalid-params
                :message "Can't rename namespace, client does not support file renames."}}
-      (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 @db/db*)))
+      (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
   (testing "when client has document-changes capability but no valid source-paths"
-    (h/clean-db!)
-    (swap! db/db* shared/deep-merge
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/bla")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
@@ -156,10 +155,10 @@
     (h/assert-submap
       {:error {:code :invalid-params
                :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
-      (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 @db/db*)))
+      (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
   (testing "when source-paths are valid and client capabilities has document-changes"
-    (h/clean-db!)
-    (swap! db/db* shared/deep-merge
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///my-project")
             :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
@@ -174,10 +173,10 @@
              {:kind "rename"
               :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")
               :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.clj")}]}
-           (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 @db/db*)))))
+           (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))))
 
 (deftest rename-defrecord
-  (h/clean-db!)
+  (h/reset-components!)
   (let [[def-start-pos def-end-pos
          use1-start-pos use1-end-pos
          use2-start-pos use2-end-pos
@@ -188,7 +187,7 @@
                                                                      "(|map->Foo| {:a 1})"
                                                                      "|Foo|"))
         [start-row start-col] def-start-pos
-        result (:changes (f.rename/rename-from-position h/default-uri "Bar" start-row start-col @db/db*))]
+        result (:changes (f.rename/rename-from-position h/default-uri "Bar" start-row start-col (h/db)))]
     (is (= {h/default-uri [{:new-text "Bar" :range (h/->range def-start-pos def-end-pos)}
                            {:new-text "Bar" :range (h/->range use1-start-pos use1-end-pos)}
                            {:new-text "->Bar" :range (h/->range use2-start-pos use2-end-pos)}
@@ -198,28 +197,28 @@
 
 (deftest prepare-rename
   (testing "rename local var"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "(let [|a 1] a)")
-          result (f.rename/prepare-rename h/default-uri row col @db/db*)]
+          result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:start {:line 0, :character 6}, :end {:line 0, :character 7}}
              result))))
   (testing "should not rename when on unnamed element"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "|[]")
-          result (f.rename/prepare-rename h/default-uri row col @db/db*)]
+          result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:error {:code :invalid-params
                       :message "Can't rename, no element found."}}
              result))))
   (testing "should not rename plain keywords"
-    (h/clean-db!)
+    (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "|:a")
-          result (f.rename/prepare-rename h/default-uri row col @db/db*)]
+          result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:error {:code :invalid-params
                       :message "Can't rename, only namespaced keywords can be renamed."}}
              result))))
   (testing "when client has valid source-paths but no document-changes capability"
-    (h/clean-db!)
-    (swap! db/db* shared/deep-merge
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///")
             :settings {:source-paths #{(h/file-path "/")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes false}}}})
@@ -227,10 +226,10 @@
       (h/assert-submap
         {:error {:code :invalid-params
                  :message "Can't rename namespace, client does not support file renames."}}
-        (f.rename/prepare-rename h/default-uri row col @db/db*))))
+        (f.rename/prepare-rename h/default-uri row col (h/db)))))
   (testing "when client has document-changes capability but no valid source-paths"
-    (h/clean-db!)
-    (swap! db/db* shared/deep-merge
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge
            {:project-root-uri (h/file-uri "file:///")
             :settings {:source-paths #{(h/file-path "/bla")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
@@ -238,4 +237,4 @@
       (h/assert-submap
         {:error {:code :invalid-params
                  :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
-        (f.rename/prepare-rename h/default-uri row col @db/db*)))))
+        (f.rename/prepare-rename h/default-uri row col (h/db))))))

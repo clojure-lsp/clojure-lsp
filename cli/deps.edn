@@ -6,7 +6,7 @@
         com.github.clojure-lsp/lsp4clj {:mvn/version "1.1.0"}
         ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
         clojure-lsp/lib {:local/root "../lib"}}
- :paths ["src" "resources" "target/lsp-classes"]
+ :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.68.1059"}}
                   :extra-paths ["test"]

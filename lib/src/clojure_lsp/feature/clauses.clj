@@ -1,4 +1,15 @@
 (ns clojure-lsp.feature.clauses
+  "Identify clauses.
+
+  What constitutes a clause is context dependent. In a map, it will be a
+  key/value pair. In a vector it will be a single element, unless the vector
+  establishes bindings as in `let`, in which case it will be a pair of elements.
+  This code tries to be aware of common functions, data structures and other
+  forms, and their conventions for establishing clauses.
+
+  It also tries to be aware of how comments are usually written in Clojure code.
+  It associates comments 'above' a clause and on the same line 'after' a clause
+  with the clause."
   (:require
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
@@ -156,25 +167,6 @@
                    (conj result
                          (map z/node (concat prefix [elem-loc] postfix))))))))))
 
-(defn start-point [node]
-  (let [{:keys [row col]} (meta node)]
-    [row col]))
-
-(defn end-point [node]
-  (let [{:keys [end-row end-col]} (meta node)]
-    [end-row end-col]))
-
-(defn offset [[first-row first-col] [second-row second-col]]
-  ;; See n.protocols/extent
-  (let [rows (- second-row first-row)]
-    [rows
-     (if (zero? rows)
-       (- second-col first-col)
-       second-col)]))
-
-(defn nodes-offset [nodes]
-  (offset (start-point (first nodes)) (end-point (last nodes))))
-
 (defn identify
   "Identifies the clauses described by the clause-spec."
   [{:keys [zloc breadth rind pulp]}]
@@ -297,12 +289,8 @@
   "Returns a partial clause spec for a vector node, `vector-zloc`."
   [vector-zloc uri db]
   (if (establishes-bindings? vector-zloc uri db)
-    {:context :binding
-     :breadth 2
-     :rind no-rind}
-    {:context :vector
-     :breadth 1
-     :rind no-rind}))
+    {:context :binding, :breadth 2, :rind no-rind}
+    {:context :vector,  :breadth 1, :rind no-rind}))
 
 (defn ^:private in-threading? [parent-zloc]
   (when-let [up-op-loc (some-> parent-zloc z-up z-down)]

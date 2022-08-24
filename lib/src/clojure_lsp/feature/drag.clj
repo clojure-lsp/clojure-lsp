@@ -3,12 +3,6 @@
 
   {:a 1, :b 2} -> {:b 2, :a 1}
 
-  What constitutes a clause is context dependent. In a map, it will be a
-  key/value pair. In a vector it will be a single element, unless the vector
-  establishes bindings as in `let`, in which case it will be a pair of elements.
-  This code tries to be aware of common functions, data structures and other
-  forms, and their conventions for establishing clauses.
-
   Though this feature was originally called 'move collection entry', it is now
   more generally used to drag any clause forward or backward, even if it isn't
   in an immutable collection."
@@ -18,20 +12,6 @@
    [rewrite-clj.node.protocols :as n.protocols]))
 
 (set! *warn-on-reflection* true)
-
-(defn ^:private count-siblings-left
-  "Count the number of sibling nodes to the left of the child node `zloc`."
-  [zloc]
-  (-> (f.clauses/z-left zloc)
-      (f.clauses/z-take-while f.clauses/z-left identity)
-      count))
-
-(defn ^:private count-siblings-right
-  "Count the number of sibling nodes to the right of the child node `zloc`."
-  [zloc]
-  (-> (f.clauses/z-right zloc)
-      (f.clauses/z-take-while f.clauses/z-right identity)
-      count))
 
 ;;;; Main algorithm
 
@@ -56,6 +36,25 @@
      {:range (f.clauses/nodes-range later-clause)
       :loc (f.clauses/loc-of-nodes (concat earlier-clause trailing-comment-fix))}]))
 
+(defn ^:private start-point [node]
+  (let [{:keys [row col]} (meta node)]
+    [row col]))
+
+(defn ^:private end-point [node]
+  (let [{:keys [end-row end-col]} (meta node)]
+    [end-row end-col]))
+
+(defn ^:private offset [[first-row first-col] [second-row second-col]]
+  ;; See n.protocols/extent
+  (let [rows (- second-row first-row)]
+    [rows
+     (if (zero? rows)
+       (- second-col first-col)
+       second-col)]))
+
+(defn ^:private nodes-offset [nodes]
+  (offset (start-point (first nodes)) (end-point (last nodes))))
+
 (defn ^:private final-position [dir cursor-offset earlier-clause interstitial later-clause]
   ;; The cursor-offset is how far the cursor was from the beginning of the origin clause.
   ;; If we are moving backward, we want to relocate the cursor this same offset
@@ -64,25 +63,25 @@
   ;; from that same start point, over the later-clause (which is taking the
   ;; place of the earlier-clause), over interstitial padding, and finally that
   ;; same cursor offset.
-  (let [earlier-point (f.clauses/start-point (first earlier-clause))
+  (let [earlier-point (start-point (first earlier-clause))
         [row col] (reduce n.protocols/+extent
                           earlier-point
                           (case dir
                             :backward [cursor-offset]
-                            :forward [(f.clauses/nodes-offset later-clause)
-                                      (f.clauses/nodes-offset interstitial)
+                            :forward [(nodes-offset later-clause)
+                                      (nodes-offset interstitial)
                                       cursor-offset]))]
     {:row row :col col
      :end-row row :end-col col}))
 
 (defn ^:private drag-clause
-  "Drag a clause of `breadth` elements around `zloc` in direction of `dir`
-  ignoring elements in `rind`.
+  "Drag a clause described by `clause-spec` in direction of `dir`, adjusting the
+  `cursor-position` to move with the clause.
 
   Returns two pieces of data:
   - The edits that swap the clauses, each with the old range and the new loc.
   - The position where the cursor should be placed after the edits."
-  [dir cursor-position clause-spec]
+  [clause-spec dir cursor-position]
   (let [{:keys [rind-before rind-after clauses+padding clause-count origin-clause]}
         (f.clauses/identify clause-spec)]
     (when origin-clause ;; otherwise, cursor wasn't in a clause
@@ -102,8 +101,8 @@
                 later-clause (:nodes later-clause)
                 after (mapcat :nodes (concat pulp-after rind-after))
 
-                cursor-offset (f.clauses/offset
-                                (f.clauses/start-point (first (:nodes origin-clause)))
+                cursor-offset (offset
+                                (start-point (first (:nodes origin-clause)))
                                 [(:row cursor-position)
                                  (:col cursor-position)])]
             [(edited-nodes before earlier-clause later-clause after)
@@ -112,6 +111,20 @@
 
 ;;;; Plan
 ;; Form a plan about how to drag
+
+(defn ^:private count-siblings-left
+  "Count the number of sibling nodes to the left of the child node `zloc`."
+  [zloc]
+  (-> (f.clauses/z-left zloc)
+      (f.clauses/z-take-while f.clauses/z-left identity)
+      count))
+
+(defn ^:private count-siblings-right
+  "Count the number of sibling nodes to the right of the child node `zloc`."
+  [zloc]
+  (-> (f.clauses/z-right zloc)
+      (f.clauses/z-take-while f.clauses/z-right identity)
+      count))
 
 (defn ^:private probable-valid-movement?
   "Checks whether `zloc` can be dragged in direction `dir`, assuming it is part of
@@ -149,7 +162,7 @@
 
 (defn ^:private drag [zloc dir cursor-position uri db]
   (when-let [clause-spec (plan zloc dir uri db)]
-    (when-let [[edits cursor-position] (drag-clause dir cursor-position clause-spec)]
+    (when-let [[edits cursor-position] (drag-clause clause-spec dir cursor-position)]
       {:show-document-after-edit {:uri        uri
                                   :take-focus true
                                   :range      cursor-position}

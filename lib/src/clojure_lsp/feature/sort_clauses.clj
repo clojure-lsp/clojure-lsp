@@ -2,16 +2,20 @@
   (:require
    [clojure-lsp.feature.clauses :as f.clauses]
    [medley.core :as medley]
-   [rewrite-clj.node :as n]))
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]))
 
 (defn ^:private clause-spec [zloc uri db]
-  (let [clause-spec (f.clauses/clause-spec zloc uri db)]
-    ;; don't sort the top-level, nor within let bindings
+  (let [zloc (or (and (n/inner? (z/node zloc)) ;; sort from map/vector/list bracket
+                      (z/down zloc))
+                 zloc)
+        clause-spec (f.clauses/clause-spec zloc uri db)]
+    ;; don't sort in places that establish bindings, which are order dependent
     (when-not (contains? #{:forms :binding} (:context clause-spec))
       clause-spec)))
 
 (defn can-sort? [zloc uri db]
-  (boolean (clause-spec zloc uri db)))
+  (clause-spec zloc uri db))
 
 (defn sort-clauses [zloc uri db]
   (when-let [clause-spec (clause-spec zloc uri db)]

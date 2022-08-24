@@ -38,6 +38,7 @@
   - Add new question to skip or retry classpath scan during startup if failed. 
   - Improve performance of processing of changed files outside editor calling clj-kondo in batch. #1205
   - When renaming a keyword that is also a destructured key, rename its local usages too. #1192
+  - Add refactorings similar to `Sort map` that sort within lists, vectors, sets, and functions like `assoc` that have clauses. #1155
 
 ## 2022.07.24-18.25.43
 

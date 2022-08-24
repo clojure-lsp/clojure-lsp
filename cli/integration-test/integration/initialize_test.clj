@@ -50,6 +50,7 @@
                                             "promote-fn"
                                             "resolve-macro-as"
                                             "restructure-keys"
+                                            "sort-clauses"
                                             "sort-map"
                                             "suppress-diagnostic"
                                             "thread-first"

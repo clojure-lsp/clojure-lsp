@@ -5,7 +5,7 @@
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
-   [clojure-lsp.feature.sort-map :as f.sort-map]
+   [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
    [clojure-lsp.feature.thread-get :as f.thread-get]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
@@ -215,12 +215,18 @@
              :command   "unwind-all"
              :arguments [uri line character]}})
 
-(defn ^:private sort-map-action [uri line character]
-  {:title   "Sort map"
-   :kind    :refactor-rewrite
-   :command {:title     "Sort map"
-             :command   "sort-map"
-             :arguments [uri line character]}})
+(defn ^:private sort-clauses-action [uri line character {:keys [context]}]
+  (let [title (case context
+                :map    "Sort map"
+                :vector "Sort vector"
+                :set    "Sort set"
+                :list   "Sort list"
+                "Sort clauses")]
+    {:title   title
+     :kind    :refactor-rewrite
+     :command {:title     title
+               :command   "sort-clauses"
+               :arguments [uri line character]}}))
 
 (defn ^:private drag-backward-action [uri line character]
   {:title   "Drag backward"
@@ -325,7 +331,7 @@
         missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
         require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
-        allow-sort-map?* (future (f.sort-map/sortable-map-zloc zloc))
+        can-sort-clauses?* (future (f.sort-clauses/can-sort? zloc uri db))
         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
         allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
         can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
@@ -398,8 +404,8 @@
             (get-in-none-action uri line character))
 
       (and workspace-edit-capability?
-           @allow-sort-map?*)
-      (conj (sort-map-action uri line character))
+           @can-sort-clauses?*)
+      (conj (sort-clauses-action uri line character @can-sort-clauses?*))
 
       (and workspace-edit-capability?
            @allow-drag-backward?*)

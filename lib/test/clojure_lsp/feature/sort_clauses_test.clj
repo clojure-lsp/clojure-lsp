@@ -40,6 +40,8 @@
 
 (deftest should-sort-clauses
   (testing "sorts maps"
+    (assert-sorts "{:a 1 :b 2}" "{|:b 2 :a 1}")
+    (assert-sorts "{:a 1 :b 2}" "|{:b 2 :a 1}") ;; outside map
     (assert-sorts "{:g 1}" "{|:g 1}")
     (assert-sorts "{:g 1}" "{|:g 1}")
     (assert-sorts "{:d 3 :g 1}" "{|:d 3 :g 1}")

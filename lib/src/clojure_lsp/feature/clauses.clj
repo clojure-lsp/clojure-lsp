@@ -43,9 +43,9 @@
 (defn ^:private skip-whitespace-left [zloc] (skip-whitespace z/left* zloc))
 (defn z-right [zloc] (some-> zloc z/right* skip-whitespace-right))
 (defn z-left [zloc] (some-> zloc z/left* skip-whitespace-left))
-(defn ^:private z-down [zloc] (some-> zloc z/down* skip-whitespace-right))
-(defn ^:private z-up [zloc] (some-> zloc z/up* skip-whitespace-left))
-(defn ^:private z-leftmost? [zloc] (nil? (skip-whitespace-left (z/left* zloc))))
+(defn z-down [zloc] (some-> zloc z/down* skip-whitespace-right))
+(defn z-up [zloc] (some-> zloc z/up* skip-whitespace-left))
+(defn z-leftmost? [zloc] (nil? (skip-whitespace-left (z/left* zloc))))
 
 ;;;; More helpers
 

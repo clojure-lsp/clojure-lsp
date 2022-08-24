@@ -43,19 +43,26 @@
                 clause-spec))))))))
 
 (defn ^:private usage-edit [root-zloc clause-idx uri db dir {:keys [name-row name-col]}]
-  (let [var-usage-loc (parser/to-pos root-zloc name-row name-col)
-        arg-loc (->> (f.clauses/z-right var-usage-loc)
-                     (iterate f.clauses/z-right)
-                     (take-while identity)
-                     (drop clause-idx)
-                     first)
-        edits (some-> arg-loc
-                      (f.clauses/clause-spec uri db)
-                      (f.drag/identify-clauses)
-                      (f.drag/nodes-to-drag dir)
-                      (f.drag/node-edits))]
-    (if (seq edits)
-      {:edits edits}
+  (let [var-usage-loc (parser/to-pos root-zloc name-row name-col)]
+    ;; exclude locations where usage is not in function-call position
+    (if (and (z/list? (f.clauses/z-up var-usage-loc))
+             (or (f.clauses/z-leftmost? var-usage-loc)
+                 (let [left-loc (f.clauses/z-left var-usage-loc)] ;; except for `(partial f ...)` which we can sometimes handle.
+                   (and (f.clauses/z-leftmost? left-loc)
+                        (= 'partial (z-safe-sexpr left-loc))))))
+      (let [arg-loc (->> (f.clauses/z-right var-usage-loc)
+                         (iterate f.clauses/z-right)
+                         (take-while identity)
+                         (drop clause-idx)
+                         first)
+            edits (some-> arg-loc
+                          (f.clauses/clause-spec uri db)
+                          (f.drag/identify-clauses)
+                          (f.drag/nodes-to-drag dir)
+                          (f.drag/node-edits))]
+        (if (seq edits)
+          {:edits edits}
+          {:skipped? true}))
       {:skipped? true})))
 
 (defn ^:private usage-edits [zloc dir clause-idx uri {:keys [db db*] :as components}]

@@ -296,8 +296,13 @@
 (defn ^:private vector-clause-spec
   "Returns a partial clause spec for a vector node, `vector-zloc`."
   [vector-zloc uri db]
-  {:breadth (if (establishes-bindings? vector-zloc uri db) 2 1)
-   :rind no-rind})
+  (if (establishes-bindings? vector-zloc uri db)
+    {:context :binding
+     :breadth 2
+     :rind no-rind}
+    {:context :vector
+     :breadth 1
+     :rind no-rind}))
 
 (defn ^:private in-threading? [parent-zloc]
   (when-let [up-op-loc (some-> parent-zloc z-up z-down)]
@@ -322,25 +327,25 @@
   ;; condp has a variation with ternary expressions.
   (case (some-> list-zloc z-down z-safe-simple-sym)
     cond
-    #_=> {:breadth 2, :rind [1 0]}
+    #_=> {:context :call, :breadth 2, :rind [1 0]}
     (cond-> cond->> assoc assoc!)
-    #_=> {:breadth 2, :rind [(if (in-threading? list-zloc) 1 2) 0]}
+    #_=> {:context :call, :breadth 2, :rind [(if (in-threading? list-zloc) 1 2) 0]}
     case
-    #_=> {:breadth 2, :rind (if (in-threading? list-zloc)
-                              [1 (if (odd? child-count) 0 1)]
-                              [2 (if (even? child-count) 0 1)])}
+    #_=> {:context :call, :breadth 2, :rind (if (in-threading? list-zloc)
+                                              [1 (if (odd? child-count) 0 1)]
+                                              [2 (if (even? child-count) 0 1)])}
     condp
     #_=> (let [breadth (if (z/find-next-value (z-down list-zloc) z-right :>>) 3 2)
                ignore-left 3
                ignore-right (mod (- child-count ignore-left) breadth)
                invalid-ternary? (= 2 ignore-right)]
            (when-not invalid-ternary?
-             {:breadth breadth, :rind [ignore-left ignore-right]}))
+             {:context :call, :breadth breadth, :rind [ignore-left ignore-right]}))
     are
     #_=> (let [param-count (-> list-zloc z-down z-right count-children)]
            (when (< 0 param-count)
-             {:breadth param-count, :rind [3 0]}))
-    {:breadth 1, :rind no-rind}))
+             {:context :call, :breadth param-count, :rind [3 0]}))
+    {:context :list, :breadth 1, :rind no-rind}))
 
 (defn ^:private pulp [[ignore-left ignore-right] child-count]
   (- child-count ignore-left ignore-right))
@@ -363,13 +368,14 @@
   [zloc uri db]
   (when zloc
     (let [[zloc parent-zloc] (target-locs zloc)
-          child-count (count-children parent-zloc)]
+          child-count        (count-children parent-zloc)]
       (when-let [{:keys [breadth rind], :as spec}
                  (case (z/tag parent-zloc)
-                   :map          {:breadth 2, :rind no-rind}
-                   (:set :forms) {:breadth 1, :rind no-rind}
-                   :vector       (vector-clause-spec parent-zloc uri db)
-                   (:list :fn)   (list-clause-spec parent-zloc child-count)
+                   :map        {:context :map, :breadth 2, :rind no-rind}
+                   :set        {:context :set, :breadth 1, :rind no-rind}
+                   :forms      {:context :forms, :breadth 1, :rind no-rind}
+                   :vector     (vector-clause-spec parent-zloc uri db)
+                   (:list :fn) (list-clause-spec parent-zloc child-count)
                    nil)]
         (let [pulp (pulp rind child-count)]
           (when (zero? (mod pulp breadth)) ;; Can the expression be split into clauses?

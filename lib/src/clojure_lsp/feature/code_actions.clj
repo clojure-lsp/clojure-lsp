@@ -4,6 +4,7 @@
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
+   [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
@@ -138,6 +139,13 @@
    :kind    :refactor-rewrite
    :command {:title     "Destructure keys"
              :command   "destructure-keys"
+             :arguments [uri line character]}})
+
+(defn ^:private restructure-keys-action [uri line character]
+  {:title   "Restructure keys"
+   :kind    :refactor-rewrite
+   :command {:title     "Restructure keys"
+             :command   "restructure-keys"
              :arguments [uri line character]}})
 
 (defn ^:private demote-fn-action [uri line character]
@@ -292,6 +300,7 @@
         can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
         can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
         can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
+        can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
         definition (q/find-definition-from-cursor db (shared/uri->filename uri) row col)
         inline-symbol?* (future (r.transform/inline-symbol? definition db))
@@ -334,6 +343,9 @@
 
       @can-destructure-keys?*
       (conj (destructure-keys-action uri line character))
+
+      @can-restructure-keys?*
+      (conj (restructure-keys-action uri line character))
 
       @can-extract-to-def?*
       (conj (extract-to-def-action uri line character))

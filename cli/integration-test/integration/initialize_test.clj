@@ -45,6 +45,7 @@
                                             "move-to-let"
                                             "promote-fn"
                                             "resolve-macro-as"
+                                            "restructure-keys"
                                             "sort-map"
                                             "suppress-diagnostic"
                                             "thread-first"

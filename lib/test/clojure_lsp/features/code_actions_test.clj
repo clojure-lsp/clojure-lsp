@@ -364,6 +364,33 @@
                             [] {}
                             (h/db))))))
 
+(deftest restructure-keys-code-action
+  (let [[[non-restructurable-r non-restructurable-c]
+         [restructurable-r restructurable-c]]
+        (h/load-code-and-locs (h/code "(ns some-ns)"
+                                      "(def |foo)"
+                                      "(defn bar [|{:keys [shape/type]}]"
+                                      "  type)")
+                              (h/file-uri "file:///a.clj"))]
+    (testing "when not on restructurable map"
+      (is (not-any? #(= (:title %) "Restructure keys")
+                    (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                        (h/file-uri "file:///a.clj")
+                                        non-restructurable-r
+                                        non-restructurable-c
+                                        [] {}
+                                        (h/db)))))
+    (testing "when on restructurable map"
+      (h/assert-contains-submaps
+        [{:title "Restructure keys"
+          :command {:command "restructure-keys"}}]
+        (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                            (h/file-uri "file:///a.clj")
+                            restructurable-r
+                            restructurable-c
+                            [] {}
+                            (h/db))))))
+
 (deftest extract-function-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")

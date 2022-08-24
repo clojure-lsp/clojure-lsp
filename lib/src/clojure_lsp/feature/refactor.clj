@@ -6,6 +6,7 @@
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
+   [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
    [clojure-lsp.feature.sort-map :as f.sort-map]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.refactor.transform :as r.transform]
@@ -43,6 +44,9 @@
 
 (defmethod refactor :destructure-keys [{:keys [loc uri db]}]
   (f.destructure-keys/destructure-keys loc uri db))
+
+(defmethod refactor :restructure-keys [{:keys [loc uri db]}]
+  (f.restructure-keys/restructure-keys loc uri db))
 
 (defmethod refactor :promote-fn [{:keys [loc uri db args]}]
   (apply r.transform/promote-fn loc uri db args))

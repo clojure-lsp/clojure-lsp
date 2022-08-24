@@ -4,6 +4,7 @@
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
@@ -41,31 +42,46 @@
               (when (f.drag/probable-valid-movement? zloc dir clause-spec)
                 clause-spec))))))))
 
+(defn ^:private usage-edit [root-zloc clause-idx uri db dir {:keys [name-row name-col]}]
+  (let [var-usage-loc (parser/to-pos root-zloc name-row name-col)
+        arg-loc (->> (f.clauses/z-right var-usage-loc)
+                     (iterate f.clauses/z-right)
+                     (take-while identity)
+                     (drop clause-idx)
+                     first)
+        edits (some-> arg-loc
+                      (f.clauses/clause-spec uri db)
+                      (f.drag/identify-clauses)
+                      (f.drag/nodes-to-drag dir)
+                      (f.drag/node-edits))]
+    (if (seq edits)
+      {:edits edits}
+      {:skipped? true})))
+
 (defn ^:private usage-edits [zloc dir clause-idx uri {:keys [db db*] :as components}]
   (let [{:keys [row col]} (meta (z/node (edit/find-var-definition-name-loc zloc)))
         elem (q/find-element-under-cursor db (shared/uri->filename uri) row col)]
     (when (= :var-definitions (:bucket elem))
-      (let [var-usages (q/find-references db elem false)]
-        (->> var-usages
-             (group-by :filename)
-             (medley/map-kv (fn [filename var-usages]
-                              (let [uri (shared/filename->uri filename db)]
-                                (when-let [usage-text (f.file-management/force-get-document-text uri components)]
-                                  (let [db @db*
-                                        root-zloc (parser/safe-zloc-of-string usage-text)]
-                                    [uri (mapcat (fn [{:keys [name-row name-col]}]
-                                                   (let [var-usage-loc (parser/to-pos root-zloc name-row name-col)
-                                                         arg-loc (->> (f.clauses/z-right var-usage-loc)
-                                                                      (iterate f.clauses/z-right)
-                                                                      (take-while identity)
-                                                                      (drop clause-idx)
-                                                                      first)]
-                                                     (some-> arg-loc
-                                                             (f.clauses/clause-spec uri db)
-                                                             (f.drag/identify-clauses)
-                                                             (f.drag/nodes-to-drag dir)
-                                                             (f.drag/node-edits))))
-                                                 var-usages)]))))))))))
+      (let [var-usages (q/find-references db elem false)
+            edits-by-uri (->> var-usages
+                              (group-by :filename)
+                              (medley/map-kv (fn [filename var-usages]
+                                               (let [uri (shared/filename->uri filename db)]
+                                                 (when-let [usage-text (f.file-management/force-get-document-text uri components)]
+                                                   (let [db @db*
+                                                         root-zloc (parser/safe-zloc-of-string usage-text)
+                                                         usage-edits (map #(usage-edit root-zloc clause-idx uri db dir %1)
+                                                                          var-usages)
+                                                         skipped-any? (some :skipped? usage-edits)
+                                                         edits (mapcat :edits usage-edits)]
+                                                     [uri {:skipped? skipped-any?
+                                                           :edits edits}]))))))]
+        [(->> edits-by-uri
+              (keep (fn [[uri {:keys [edits]}]]
+                      (when (seq edits)
+                        [uri edits])))
+              (into {}))
+         (some :skipped? (vals edits-by-uri))]))))
 
 ;;;; Public API
 
@@ -76,20 +92,28 @@
 
 (defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
 
-(defn ^:private drag [zloc dir cursor-position uri {:keys [db*] :as components}]
+(defn ^:private ignore-skipped-usages? [producer]
+  (= "Yes"
+     (producer/show-message-request producer
+                                    "Not all call sites can be reordered. Continue anyway?"
+                                    :warning
+                                    [{:title "Yes"}
+                                     {:title "No"}])))
+
+(defn ^:private drag [zloc dir cursor-position uri {:keys [db* producer] :as components}]
   (let [db @db*]
     (when-let [clause-spec (plan zloc dir uri db)]
       (when-let [clause-data (f.drag/identify-clauses clause-spec)]
-        (when-let [[edits cursor-position] (f.drag/drag-clause clause-data dir cursor-position)]
-          {:show-document-after-edit {:uri        uri
-                                      :take-focus true
-                                      :range      cursor-position}
-           :changes-by-uri (shared/deep-merge {uri edits}
-                                              (usage-edits (:zloc clause-spec)
-                                                           dir
-                                                           (:idx (:origin-clause clause-data))
-                                                           uri
-                                                           (assoc components :db db)))})))))
+        (when-let [defn-edits (f.drag/drag-clause clause-data dir cursor-position uri)]
+          (let [[usage-edits usages-skipped?]
+                (usage-edits (:zloc clause-spec)
+                             dir
+                             (:idx (:origin-clause clause-data))
+                             uri
+                             (assoc components :db db))]
+            (when (or (not usages-skipped?)
+                      (ignore-skipped-usages? producer))
+              (update defn-edits :changes-by-uri shared/deep-merge usage-edits))))))))
 
 (defn drag-backward [zloc cursor-position uri components] (drag zloc :backward cursor-position uri components))
 (defn drag-forward [zloc cursor-position uri components] (drag zloc :forward cursor-position uri components))

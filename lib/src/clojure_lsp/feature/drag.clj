@@ -119,17 +119,19 @@
   "Drag the `origin-clause` in direction of `dir`, adjusting the
   `cursor-position` to move with the clause.
 
-  Returns two pieces of data:
-  - The edits that swap the clauses, each with the old range and the new loc.
-  - The position where the cursor should be placed after the edits."
-  [{:keys [origin-clause] :as clause-data} dir cursor-position]
+  Instructs the client to:
+  - Apply edits that swap the clauses.
+  - Re-position the cursor after the edits."
+  [{:keys [origin-clause] :as clause-data} dir cursor-position uri]
   (when-let [nodes (nodes-to-drag clause-data dir)]
     (let [cursor-offset (offset
                           (start-point (first (:nodes origin-clause)))
                           [(:row cursor-position)
                            (:col cursor-position)])]
-      [(node-edits nodes)
-       (final-position dir cursor-offset nodes)])))
+      {:show-document-after-edit {:uri        uri
+                                  :take-focus true
+                                  :range      (final-position dir cursor-offset nodes)}
+       :changes-by-uri {uri (node-edits nodes)}})))
 
 ;;;; Plan
 ;; Form a plan about how to drag
@@ -183,14 +185,9 @@
 (defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
 
 (defn ^:private drag [zloc dir cursor-position uri db]
-  (when-let [clause-spec (plan zloc dir uri db)]
-    (when-let [[edits cursor-position] (some-> clause-spec
-                                               identify-clauses
-                                               (drag-clause dir cursor-position))]
-      {:show-document-after-edit {:uri        uri
-                                  :take-focus true
-                                  :range      cursor-position}
-       :changes-by-uri {uri edits}})))
+  (some-> (plan zloc dir uri db)
+          identify-clauses
+          (drag-clause dir cursor-position uri)))
 
 (defn drag-backward [zloc cursor-position uri db] (drag zloc :backward cursor-position uri db))
 (defn drag-forward [zloc cursor-position uri db] (drag zloc :forward cursor-position uri db))

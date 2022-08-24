@@ -4,6 +4,8 @@
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
+(h/reset-components-before-test)
+
 (defn can-drag-zloc-backward? [zloc]
   (f.drag-param/can-drag-backward? zloc h/default-uri (h/db)))
 
@@ -106,16 +108,23 @@
                                  "(partial f 2 1)")
                          (h/code "(defn f [|a b c])"
                                  "(partial f 1 2)"))
-    ;; TODO: this breaks the var-usage, but what else could we do?
-    (assert-drag-backward (h/code "(defn f [a |c b])"
-                                  "(partial f 1 2)")
-                          (h/code "(defn f [a b |c])"
-                                  "(partial f 1 2)"))
-    ;; TODO: this breaks the var-usage, but what else could we do?
-    (assert-drag-forward (h/code "(defn f [a c |b])"
-                                 "(partial f 1 2)")
-                         (h/code "(defn f [a |b c])"
-                                 "(partial f 1 2)")))
+    (testing "where usage cannot be refactored"
+      (with-redefs [f.drag-param/ignore-skipped-usages? (constantly true)]
+        (assert-drag-backward (h/code "(defn f [a |c b])"
+                                      "(partial f 1 2)")
+                              (h/code "(defn f [a b |c])"
+                                      "(partial f 1 2)")))
+      (with-redefs [f.drag-param/ignore-skipped-usages? (constantly false)]
+        (is (nil? (drag-code-backward (h/code "(defn f [a b |c])"
+                                              "(partial f 1 2)")))))
+      (with-redefs [f.drag-param/ignore-skipped-usages? (constantly true)]
+        (assert-drag-forward (h/code "(defn f [a c |b])"
+                                     "(partial f 1 2)")
+                             (h/code "(defn f [a |b c])"
+                                     "(partial f 1 2)")))
+      (with-redefs [f.drag-param/ignore-skipped-usages? (constantly false)]
+        (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
+                                             "(partial f 1 2)")))))))
   (testing "from defmacro"
     (assert-drag-backward (h/code "(defmacro f [|b a c])")
                           (h/code "(defmacro f [a |b c])"))

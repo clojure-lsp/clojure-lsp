@@ -3,6 +3,7 @@
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
+   [clojure-lsp.feature.drag-param :as f.drag-param]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
    [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
@@ -241,6 +242,20 @@
              :command   "drag-forward"
              :arguments [uri line character]}})
 
+(defn ^:private drag-param-backward-action [uri line character]
+  {:title   "Drag param backward"
+   :kind    :refactor-rewrite
+   :command {:title     "Drag param backward"
+             :command   "drag-param-backward"
+             :arguments [uri line character]}})
+
+(defn ^:private drag-param-forward-action [uri line character]
+  {:title   "Drag param forward"
+   :kind    :refactor-rewrite
+   :command {:title     "Drag param forward"
+             :command   "drag-param-forward"
+             :arguments [uri line character]}})
+
 (defn ^:private suppress-diagnostic-actions [diagnostics uri]
   (->> diagnostics
        (map (fn [{:keys [code]
@@ -333,6 +348,8 @@
         can-sort-clauses?* (future (f.sort-clauses/can-sort? zloc uri db))
         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
         allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
+        allow-drag-param-backward?* (future (f.drag-param/can-drag-backward? zloc uri db))
+        allow-drag-param-forward?* (future (f.drag-param/can-drag-forward? zloc uri db))
         can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
         can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
         can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
@@ -412,6 +429,14 @@
       (and workspace-edit-capability?
            @allow-drag-forward?*)
       (conj (drag-forward-action uri line character))
+
+      (and workspace-edit-capability?
+           @allow-drag-param-backward?*)
+      (conj (drag-param-backward-action uri line character))
+
+      (and workspace-edit-capability?
+           @allow-drag-param-forward?*)
+      (conj (drag-param-forward-action uri line character))
 
       can-add-let?
       (conj (introduce-let-action uri line character))

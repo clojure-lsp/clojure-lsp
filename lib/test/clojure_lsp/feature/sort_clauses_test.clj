@@ -97,7 +97,7 @@
                           " :b {:c 2"
                           "     :d 3}}")))
   (testing "comments"
-    ;; fixes trailing comment
+    ;; adds extra line to fix trailing comment
     (assert-sorts (h/code "{:a 1"
                           " :b 2"
                           " :c 3 ;; something"
@@ -105,6 +105,30 @@
                   (h/code "{|:a 1"
                           " :c 3 ;; something"
                           " :b 2}"))
+    ;; doesn't add extra line when rind provides extra line
+    (assert-sorts (h/code "(case x"
+                          "  :a 1"
+                          "  :b 2"
+                          "  :c 3 ;; something"
+                          "  :default)")
+                  (h/code "(case x"
+                          "  :a 1"
+                          "  |:c 3 ;; something"
+                          "  :b 2"
+                          "  :default)"))
+    ;; even if rind ends in a comment a comment
+    (assert-sorts (h/code "(case x"
+                          "  :a 1"
+                          "  :b 2"
+                          "  :c 3 ;; something"
+                          "  :default ;; default comment"
+                          "  )")
+                  (h/code "(case x"
+                          "  :a 1"
+                          "  |:c 3 ;; something"
+                          "  :b 2"
+                          "  :default ;; default comment"
+                          "  )"))
     ;; does not remove existing trailing comment fix
     (assert-sorts (h/code "{:a 1"
                           " :b 2 ;; something"

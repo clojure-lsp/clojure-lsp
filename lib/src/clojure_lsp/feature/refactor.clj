@@ -4,6 +4,7 @@
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
+   [clojure-lsp.feature.drag-param :as f.drag-param]
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
@@ -63,6 +64,12 @@
 
 (defmethod refactor :drag-forward [{:keys [loc row col uri db]}]
   (f.drag/drag-forward loc {:row row :col col} uri db))
+
+(defmethod refactor :drag-param-backward [{:keys [loc row col uri components]}]
+  (f.drag-param/drag-backward loc {:row row :col col} uri components))
+
+(defmethod refactor :drag-param-forward [{:keys [loc row col uri components]}]
+  (f.drag-param/drag-forward loc {:row row :col col} uri components))
 
 (defmethod refactor :extract-function [{:keys [loc uri args db]}]
   (apply r.transform/extract-function loc uri (concat args [db])))

@@ -729,3 +729,18 @@
                           []
                           {:workspace {:workspace-edit true}}
                           (h/db)))))
+
+(deftest drag-param-actions
+  (let [[[row col]] (h/load-code-and-locs (h/code "(defn f [a |b c])"))]
+    (h/assert-contains-submaps
+      [{:title "Drag param forward"
+        :command {:command "drag-param-forward"}}
+       {:title "Drag param backward"
+        :command {:command "drag-param-backward"}}]
+      (f.code-actions/all (zloc-of h/default-uri)
+                          h/default-uri
+                          row
+                          col
+                          []
+                          {:workspace {:workspace-edit true}}
+                          (h/db)))))

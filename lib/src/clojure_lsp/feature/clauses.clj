@@ -11,7 +11,6 @@
   It associates comments 'above' a clause and on the same line 'after' a clause
   with the clause."
   (:require
-   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
@@ -170,8 +169,7 @@
 (defn identify
   "Identifies the clauses described by the clause-spec."
   [{:keys [zloc breadth rind pulp]}]
-  (let [zloc (edit/mark-position zloc ::orig)
-        parent-zloc (z-up zloc)
+  (let [parent-zloc (z-up zloc)
 
         elems+padding (divide-parent parent-zloc)
 
@@ -188,20 +186,16 @@
                        (let [[clause-nodes padding-nodes]
                              (->> clause-elems+padding
                                   (split-at clause-width)
-                                  (map flatten))
-                             origin? (some #(edit/node-marked? % ::orig) clause-nodes)]
+                                  (map flatten))]
                          [;; clause
                           {:idx clause-idx
-                           :nodes clause-nodes
-                           :origin? origin?}
+                           :nodes clause-nodes}
                           ;; padding
-                          {:nodes padding-nodes}]))))
-        origin-clause (->> clauses+padding (filter :origin?) first)]
+                          {:nodes padding-nodes}]))))]
     {:rind-before {:nodes (flatten rind-before)}
      :rind-after {:nodes (flatten rind-after)}
      :clauses+padding clauses+padding
-     :clause-count (quot pulp breadth)
-     :origin-clause origin-clause}))
+     :clause-count (quot pulp breadth)}))
 
 (defn loc-of-nodes [clause-nodes]
   (z/up (z/of-node (n/forms-node clause-nodes))))

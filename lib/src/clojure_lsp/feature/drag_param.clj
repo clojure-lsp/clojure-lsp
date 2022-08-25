@@ -55,14 +55,16 @@
                          (take-while identity)
                          (drop clause-idx)
                          first)
-            edits (some-> arg-loc
-                          (f.clauses/clause-spec uri db)
-                          (f.drag/identify-clauses)
-                          (f.drag/nodes-to-drag dir)
-                          (f.drag/node-edits))]
-        (if (seq edits)
-          {:edits edits}
-          {:skipped? true}))
+            clause-spec (some-> arg-loc (f.clauses/clause-spec uri db))]
+        (if (:in-threading? clause-spec)
+          {:skipped? true}
+          (let [edits (some-> clause-spec
+                              (f.drag/identify-clauses)
+                              (f.drag/nodes-to-drag dir)
+                              (f.drag/node-edits))]
+            (if (seq edits)
+              {:edits edits}
+              {:skipped? true}))))
       {:skipped? true})))
 
 (defn ^:private usage-edits [zloc dir clause-idx uri {:keys [db db*] :as components}]

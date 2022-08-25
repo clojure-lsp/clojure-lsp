@@ -307,27 +307,30 @@
   ;; case and condp permit final default expression, which should not be dragged.
   ;; assoc, assoc!, cond->, cond->>, and case sometimes appear inside other threading expressions.
   ;; condp has a variation with ternary expressions.
-  (case (some-> list-zloc z-down z-safe-simple-sym)
-    cond
-    #_=> {:context :call, :breadth 2, :rind [1 0]}
-    (cond-> cond->> assoc assoc!)
-    #_=> {:context :call, :breadth 2, :rind [(if (in-threading? list-zloc) 1 2) 0]}
-    case
-    #_=> {:context :call, :breadth 2, :rind (if (in-threading? list-zloc)
-                                              [1 (if (odd? child-count) 0 1)]
-                                              [2 (if (even? child-count) 0 1)])}
-    condp
-    #_=> (let [breadth (if (z/find-next-value (z-down list-zloc) z-right :>>) 3 2)
-               ignore-left 3
-               ignore-right (mod (- child-count ignore-left) breadth)
-               invalid-ternary? (= 2 ignore-right)]
-           (when-not invalid-ternary?
-             {:context :call, :breadth breadth, :rind [ignore-left ignore-right]}))
-    are
-    #_=> (let [param-count (-> list-zloc z-down z-right count-children)]
-           (when (< 0 param-count)
-             {:context :call, :breadth param-count, :rind [3 0]}))
-    {:context :list, :breadth 1, :rind no-rind}))
+  (let [in-threading? (in-threading? list-zloc)
+        spec
+        (case (some-> list-zloc z-down z-safe-simple-sym)
+          cond
+          #_=> {:context :call, :breadth 2, :rind [1 0]}
+          (cond-> cond->> assoc assoc!)
+          #_=> {:context :call, :breadth 2, :rind [(if in-threading? 1 2) 0]}
+          case
+          #_=> {:context :call, :breadth 2, :rind (if in-threading?
+                                                    [1 (if (odd? child-count) 0 1)]
+                                                    [2 (if (even? child-count) 0 1)])}
+          condp
+          #_=> (let [breadth (if (z/find-next-value (z-down list-zloc) z-right :>>) 3 2)
+                     ignore-left 3
+                     ignore-right (mod (- child-count ignore-left) breadth)
+                     invalid-ternary? (= 2 ignore-right)]
+                 (when-not invalid-ternary?
+                   {:context :call, :breadth breadth, :rind [ignore-left ignore-right]}))
+          are
+          #_=> (let [param-count (-> list-zloc z-down z-right count-children)]
+                 (when (< 0 param-count)
+                   {:context :call, :breadth param-count, :rind [3 0]}))
+          {:context :list, :breadth 1, :rind no-rind})]
+    (some-> spec (assoc :in-threading? in-threading?))))
 
 (defn ^:private pulp [[ignore-left ignore-right] child-count]
   (- child-count ignore-left ignore-right))

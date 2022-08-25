@@ -72,7 +72,7 @@
       (h/code "(defn foo [|{::keys [:a]}] a)")
       (h/code "(defn foo [|#::{:keys [a]}] a)")
       (h/code "(defn foo [|#::{:keys [:a]}] a)"))
-    (testing "overriding default ns"
+    (testing "overriding implied ns"
       (assert-restructures-variations
         (h/code "(defn foo [element] (:override/a element))")
         (h/code "(defn foo [|{:prefix/keys [override/a]}] a)")
@@ -116,7 +116,7 @@
       (h/code "(defn foo [|{:prefix/syms [:a]}] a)")
       (h/code "(defn foo [|#:prefix{:syms [a]}] a)")
       (h/code "(defn foo [|#:prefix{:syms [:a]}] a)"))
-    (testing "overriding default ns"
+    (testing "overriding implied ns"
       (assert-restructures-variations
         (h/code "(defn foo [element] ('override/a element))")
         (h/code "(defn foo [|{:prefix/syms [override/a]}] a)")
@@ -142,11 +142,21 @@
     (assert-restructures (h/code "(defn foo [element] (+ ('a element) (:b element)))")
                          (h/code "(defn foo [|{:syms [a], :keys [b]}] (+ a b))")))
   (testing "uses :as for element name"
+    (assert-restructures (h/code "(defn foo [loc] (:a loc))")
+                         (h/code "(defn foo [|{:keys [a], :as loc}] a)"))
+    (assert-restructures (h/code "(defn foo [loc] (:prefix/a loc))")
+                         (h/code "(defn foo [|#:prefix{:keys [a], :as loc}] a)"))
+    (assert-restructures (h/code "(defn foo [loc] (::a loc))")
+                         (h/code "(defn foo [|#::{:keys [a], :as loc}] a)"))
     (assert-restructures (h/code "(defn foo [loc] (+ (:a loc) (tangent loc)))")
                          (h/code "(defn foo [|{:keys [a], :as loc}] (+ a (tangent loc)))")))
   (testing "uses :or for default values"
     (assert-restructures (h/code "(defn foo [element] (get element :a 1))")
-                         (h/code "(defn foo [|{:keys [a] :or {a 1}}] a)")))
+                         (h/code "(defn foo [|{:keys [a] :or {a 1}}] a)"))
+    (assert-restructures (h/code "(defn foo [element] (get element :prefix/a 1))")
+                         (h/code "(defn foo [|#:prefix{:keys [a] :or {a 1}}] a)"))
+    (assert-restructures (h/code "(defn foo [element] (get element ::a 1))")
+                         (h/code "(defn foo [|#::{:keys [a] :or {a 1}}] a)")))
   (testing "of named keys that resolve to symbols"
     (assert-restructures (h/code "(defn foo [element] (:a element))")
                          (h/code "(defn foo [|{a :a}] a)")))

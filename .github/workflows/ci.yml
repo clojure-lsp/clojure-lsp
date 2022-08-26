@@ -85,13 +85,13 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
 
-      - name: Install Clojure
+      - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
 
       - name: Generate embedded binary
         run: make prod-cli

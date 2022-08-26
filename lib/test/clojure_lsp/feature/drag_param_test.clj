@@ -112,30 +112,30 @@
     ;; from partialed location
     (is (nil? (drag-code-backward (h/code "(defn f [a b |c])"
                                           "(partial f 1 2)"))))
-        ;; to partialed location
+    ;; to partialed location
     (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
                                          "(partial f 1 2)"))))
-        ;; from threaded spot
+    ;; from threaded spot
     (is (nil? (drag-code-forward (h/code "(defn f [|a b c])"
                                          "(-> a (f :b :c))"))))
     (is (nil? (drag-code-backward (h/code "(defn f [a b |c])"
                                           "(->> c (f :a :b))"))))
-        ;; to threaded spot
+    ;; to threaded spot
     (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
                                          "(->> c (f :a :b))"))))
     (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
                                           "(-> a (f :b :c))"))))
-        ;; from applied location
+    ;; from applied location
     (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
                                           "(apply f args)"))))
     (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
                                           "(apply f :a args)"))))
-        ;; to applied location
+    ;; to applied location
     (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
                                          "(apply f args)"))))
     (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
                                          "(apply f :a args)"))))
-        ;; in function lookup
+    ;; in function lookup
     (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
                                          "(defn exec [k a b c]"
                                          "  (let [fns {:x f :y g :z h}]"

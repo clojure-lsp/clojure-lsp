@@ -101,13 +101,11 @@
 
 (defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
 
-(defn ^:private ignore-skipped-usages? [producer]
-  (= "Yes"
-     (producer/show-message-request producer
-                                    "Not all call sites can be reordered. Continue anyway?"
-                                    :warning
-                                    [{:title "Yes"}
-                                     {:title "No"}])))
+(defn ^:private warn-skipped-usages [producer]
+  (producer/show-message producer
+                         "Cannot drag. Call sites include ->, ->>, partial, apply, or certain other forms which cannot be safely refactored."
+                         :error
+                         nil))
 
 (defn ^:private drag [zloc dir cursor-position uri {:keys [db* producer] :as components}]
   (let [db @db*]
@@ -120,8 +118,8 @@
                              (:idx (:origin-clause clause-data))
                              uri
                              (assoc components :db db))]
-            (when (or (not usages-skipped?)
-                      (ignore-skipped-usages? producer))
+            (if usages-skipped?
+              (warn-skipped-usages producer)
               (update defn-edits :changes-by-uri shared/deep-merge usage-edits))))))))
 
 (defn drag-backward [zloc cursor-position uri components] (drag zloc :backward cursor-position uri components))

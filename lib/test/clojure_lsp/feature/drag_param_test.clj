@@ -99,7 +99,8 @@
                                  "(f 1 3 2)")
                          (h/code "(defn f [a |b c])"
                                  "(f 1 2 3)")))
-  (testing "with partial usages"
+  (testing "with hard-to-process usages"
+    ;; within partial, but not involving partialed location
     (assert-drag-backward (h/code "(defn f [|b a c])"
                                   "(partial f 2 1)")
                           (h/code "(defn f [a |b c])"
@@ -108,64 +109,37 @@
                                  "(partial f 2 1)")
                          (h/code "(defn f [|a b c])"
                                  "(partial f 1 2)"))
-    (testing "where usage cannot be refactored"
-      (with-redefs [f.drag-param/ignore-skipped-usages? (constantly true)]
-        (assert-drag-backward (h/code "(defn f [a |c b])"
-                                      "(partial f 1 2)")
-                              (h/code "(defn f [a b |c])"
-                                      "(partial f 1 2)"))
-        (assert-drag-forward (h/code "(defn f [a c |b])"
-                                     "(partial f 1 2)")
-                             (h/code "(defn f [a |b c])"
-                                     "(partial f 1 2)"))
-        (assert-drag-forward (h/code "(defn f [a c |b])"
-                                     "(->> c (f :a :b))")
-                             (h/code "(defn f [a |b c])"
-                                     "(->> c (f :a :b))"))
-        (assert-drag-forward (h/code "(defn f [a c |b])"
-                                     "(apply f args)")
-                             (h/code "(defn f [a |b c])"
-                                     "(apply f args)"))
-        (assert-drag-forward (h/code "(defn f [a c |b])"
-                                     "(defn exec [k a b c]"
-                                     "  (let [fns {:x f :y g :z h}]"
-                                     "    ((get fns k) a b c)))")
-                             (h/code "(defn f [a |b c])"
-                                     "(defn exec [k a b c]"
-                                     "  (let [fns {:x f :y g :z h}]"
-                                     "    ((get fns k) a b c)))")))
-      (with-redefs [f.drag-param/ignore-skipped-usages? (constantly false)]
-        ;; from partialed location
-        (is (nil? (drag-code-backward (h/code "(defn f [a b |c])"
-                                              "(partial f 1 2)"))))
+    ;; from partialed location
+    (is (nil? (drag-code-backward (h/code "(defn f [a b |c])"
+                                          "(partial f 1 2)"))))
         ;; to partialed location
-        (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
-                                             "(partial f 1 2)"))))
+    (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
+                                         "(partial f 1 2)"))))
         ;; from threaded spot
-        (is (nil? (drag-code-forward (h/code "(defn f [|a b c])"
-                                             "(-> a (f :b :c))"))))
-        (is (nil? (drag-code-backward (h/code "(defn f [a b |c])"
-                                              "(->> c (f :a :b))"))))
+    (is (nil? (drag-code-forward (h/code "(defn f [|a b c])"
+                                         "(-> a (f :b :c))"))))
+    (is (nil? (drag-code-backward (h/code "(defn f [a b |c])"
+                                          "(->> c (f :a :b))"))))
         ;; to threaded spot
-        (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
-                                             "(->> c (f :a :b))"))))
-        (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
-                                              "(-> a (f :b :c))"))))
+    (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
+                                         "(->> c (f :a :b))"))))
+    (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
+                                          "(-> a (f :b :c))"))))
         ;; from applied location
-        (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
-                                              "(apply f args)"))))
-        (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
-                                              "(apply f :a args)"))))
+    (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
+                                          "(apply f args)"))))
+    (is (nil? (drag-code-backward (h/code "(defn f [a |b c])"
+                                          "(apply f :a args)"))))
         ;; to applied location
-        (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
-                                             "(apply f args)"))))
-        (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
-                                             "(apply f :a args)"))))
+    (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
+                                         "(apply f args)"))))
+    (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
+                                         "(apply f :a args)"))))
         ;; in function lookup
-        (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
-                                             "(defn exec [k a b c]"
-                                             "  (let [fns {:x f :y g :z h}]"
-                                             "    ((get fns k) a b c)))")))))))
+    (is (nil? (drag-code-forward (h/code "(defn f [a |b c])"
+                                         "(defn exec [k a b c]"
+                                         "  (let [fns {:x f :y g :z h}]"
+                                         "    ((get fns k) a b c)))")))))
   (testing "from defmacro"
     (assert-drag-backward (h/code "(defmacro f [|b a c])")
                           (h/code "(defmacro f [a |b c])"))

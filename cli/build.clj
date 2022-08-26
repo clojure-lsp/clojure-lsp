@@ -1,8 +1,11 @@
 (ns build
   (:require
+   [babashka.fs :as fs]
+   [babashka.process :as p]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.tools.build.api :as b]))
+   [clojure.tools.build.api :as b]
+   [clojure.xml :as xml]))
 
 (def lib 'com.github.clojure-lsp/clojure-lsp)
 (def clojars-lib 'com.github.clojure-lsp/clojure-lsp-standalone)
@@ -49,13 +52,74 @@
              :main 'clojure-lsp.main
              :basis basis})))
 
-(defn ^:private bin [opts]
+(defn ^:private l4j-xml
+  "Return a launch4j configuration xml document to convert the JAR file
+  to an executable at OUTFILE using the java installation at JRE-PATH
+  and JRE-OPTS."
+  [jar outfile jre-path jvm-opts]
+  (-> (with-out-str (xml/emit-element
+                      {:tag :launch4jConfig :attrs nil
+                       :content [{:tag :dontWrapJar :attrs nil :content ["false"]}
+                                 {:tag :headerType :attrs nil  :content ["console"]}
+                                 {:tag :jar :attrs nil :content [jar]}
+                                 {:tag :outfile :attrs nil :content [outfile]}
+                                 {:tag :chdir :attrs nil :content ["."]}
+                                 {:tag :priority :attrs nil :content ["normal"]}
+                                 {:tag :stayAlive :attrs nil :content ["false"]}
+                                 {:tag :restartOnCrash :attrs nil :content ["false"]}
+                                 {:tag :jre :attrs nil :content
+                                  (into [{:tag :path :attrs nil :content [jre-path]}
+                                         {:tag :bundledJre64Bit :attrs nil :content ["true"]}
+                                         {:tag :bundledJreAsFallback :attrs nil :content ["false"]}
+                                         {:tag :jdkPreference :attrs nil :content ["preferJre"]}
+                                         {:tag :runtimeBits :attrs nil :content ["64/32"]}]
+                                        (for [opt jvm-opts]
+                                          {:tag :opt :attrs nil :content [opt]}))}]}))
+      (string/replace #"\r\n" "")))
+
+(defn ^:private bin
+  "Create a binary out of UBER-FILE jar with OPTS.
+
+  OPTS can be a map of
+  :jvm-opts A vector of options ot pass to the JVM.
+
+  launch4j is uses on MS-Windows for the conversion to binary file. It
+  requires its installation path to be either set in the LAUNCH4J_HOME
+  environment variable or included in the PATH env variable. It also
+  requires a java installation path to be set in the JAVA_HOME
+  environment variable."
+  [opts]
   (println "Generating bin...")
-  ((requiring-resolve 'deps-bin.impl.bin/build-bin)
-   {:jar uber-file
-    :name "clojure-lsp"
-    :jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server"])
-    :skip-realign true}))
+
+  (let [jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server"])]
+    (if (fs/windows?)
+      (if-let [l4j (or (some-> (System/getenv "LAUNCH4J_HOME") (fs/path "launch4jc.exe")
+                               (#(when (fs/executable? %) %)))
+                       (fs/which "launch4jc.exe"))]
+        (let [jar (-> (fs/real-path uber-file) .toString)
+              outfile (-> "../clojure-lsp.exe"  fs/absolutize fs/path .toString)
+              java-home (System/getenv "JAVA_HOME")]
+          (fs/with-temp-dir
+            [temp-dir]
+            (let [l4jxml (-> (fs/path temp-dir "l4j.xml") .toString)]
+              (spit l4jxml (l4j-xml jar outfile java-home jvm-opts))
+              (let [{:keys [exit] :as _proc} @(p/process [(.toString l4j) l4jxml]
+                                                         {:dir "."
+                                                          :out :inherit
+                                                          :err :inherit})]
+                (System/exit exit)))))
+
+        (throw (Exception. "Cannot locate launch4j.exe either in LAUNCH4J_HOME environment variable or in PATH.")))
+
+      ((requiring-resolve 'deps-bin.impl.bin/build-bin)
+       {:jar uber-file
+        :name "clojure-lsp"
+        :jvm-opts jvm-opts
+        :skip-realign true}))))
+
+(defn debug-jar [opts]
+  (uber-aot (merge opts {:extra-aliases [:debug :test]
+                         :extra-dirs ["dev"]})))
 
 (def prod-jar uber-aot)
 

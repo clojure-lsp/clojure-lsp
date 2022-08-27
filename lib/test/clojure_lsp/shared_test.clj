@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
+   [clojure.string :as str]
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))
 
@@ -46,20 +47,20 @@
 (deftest filename->uri
   (testing "when it is not a jar"
     (h/reset-components!)
-    (is (= (if h/windows? "file:///c:/some%20project/foo/bar_baz.clj" "file:///some%20project/foo/bar_baz.clj")
+    (is (= (if h/windows? "file:///C:/some%20project/foo/bar_baz.clj" "file:///some%20project/foo/bar_baz.clj")
            (shared/filename->uri (h/file-path "/some project/foo/bar_baz.clj") (h/db)))))
   (testing "when it is a jar via zipfile"
     (h/reset-components!)
-    (is (= (if h/windows? "zipfile:///c:/home/some/.m2/some-jar.jar::clojure/core.clj" "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj")
+    (is (= (if h/windows? "zipfile:///C:/home/some/.m2/some-jar.jar::clojure/core.clj" "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj")
            (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") (h/db)))))
   (testing "when it is a jar via jarfile"
     (swap! (h/db*) shared/deep-merge {:settings {:dependency-scheme "jar"}})
-    (is (= (if h/windows? "jar:file:///c:/home/some/.m2/some-jar.jar!/clojure/core.clj" "jar:file:///home/some/.m2/some-jar.jar!/clojure/core.clj")
+    (is (= (if h/windows? "jar:file:///C:/home/some/.m2/some-jar.jar!/clojure/core.clj" "jar:file:///home/some/.m2/some-jar.jar!/clojure/core.clj")
            (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") (h/db)))))
   (testing "Windows URIs"
     (h/reset-components!)
-    (is (= (when h/windows? "file:///c:/c.clj")
-           (when h/windows? (shared/filename->uri "c:\\c.clj" (h/db)))))))
+    (is (= (when h/windows? "file:///C:/c.clj")
+           (when h/windows? (shared/filename->uri "C:\\c.clj" (h/db)))))))
 
 (deftest uri->namespace
   (testing "when don't have a project root"
@@ -175,10 +176,10 @@
                     {:name-row 1 :name-col 2 :name-end-row 1 :name-end-col 4}))))))
 
 (deftest namespace+source-path->filename
-  (is (= "/project/test/some/cool_ns.clj"
-         (shared/namespace+source-path->filename "some.cool-ns" "/project/test" :clj)))
-  (is (= "/project/test/some/cool_ns.clj"
-         (shared/namespace+source-path->filename "some.cool-ns" "/project/test/" :clj))))
+  (is (= (h/file-path "/project/test/some/cool_ns.clj")
+         (shared/namespace+source-path->filename "some.cool-ns" (h/file-path "/project/test") :clj)))
+  (is (= (h/file-path "/project/test/some/cool_ns.clj")
+         (shared/namespace+source-path->filename "some.cool-ns" (h/file-path "/project/test/") :clj))))
 
 (deftest jar-file?-test
   (is (= false (shared/jar-file? "")))

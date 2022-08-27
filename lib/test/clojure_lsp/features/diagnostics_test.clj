@@ -21,12 +21,12 @@
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/a.clj"
+      (h/file-path "/a.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
-      [{:filename "/a.clj"
+      [{:filename (h/file-path "/a.clj")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -38,12 +38,12 @@
   (testing "when linter level is :warning"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/a.clj"
+      (h/file-path "/a.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
-      [{:filename "/a.clj"
+      [{:filename (h/file-path "/a.clj")
         :level :warning
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -55,12 +55,12 @@
   (testing "when linter level is :error"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/a.clj"
+      (h/file-path "/a.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
-      [{:filename "/a.clj"
+      [{:filename (h/file-path "/a.clj")
         :level :error
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -72,12 +72,12 @@
   (testing "when linter level is :off"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/a.clj"
+      (h/file-path "/a.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
     (h/assert-submaps
-      [{:filename "/a.clj"
+      [{:filename (h/file-path "/a.clj")
         :level :off
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -89,12 +89,12 @@
   (testing "linter level by default is :info"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/a.clj"
+      (h/file-path "/a.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
-      [{:filename "/a.clj"
+      [{:filename (h/file-path "/a.clj")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -106,7 +106,7 @@
   (testing "excluding the whole ns"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/a.clj"
+      (h/file-path "/a.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
@@ -116,7 +116,7 @@
   (testing "excluding the simple var from ns"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/a.clj"
+      (h/file-path "/a.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
@@ -126,7 +126,7 @@
   (testing "excluding the specific var"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/a.clj"
+      (h/file-path "/a.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
@@ -136,7 +136,7 @@
   (testing "excluding specific syms"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/b.clj"
+      (h/file-path "/b.clj")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
@@ -146,12 +146,12 @@
   (testing "unused keyword definitions"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/c.cljs"
+      (h/file-path "/c.cljs")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
-      [{:filename "/c.cljs"
+      [{:filename (h/file-path "/c.cljs")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public keyword ':some/thing'"
@@ -159,7 +159,7 @@
         :col 17
         :end-row 2
         :end-col 28}
-       {:filename "/c.cljs"
+       {:filename (h/file-path "/c.cljs")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public keyword ':otherthing'"
@@ -171,7 +171,7 @@
   (testing "var marked ^:export is excluded"
     (reset! findings [])
     (f.diagnostic/custom-lint-file!
-      "/d.cljs"
+      (h/file-path "/d.cljs")
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
@@ -187,7 +187,7 @@
   (testing "when linter level is not :off but has matching :ns-exclude-regex"
     (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///project/src/some_ns.clj"))
     (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
-                          :settings {:source-paths ["/project/src"]
+                          :settings {:source-paths [(h/file-path "/project/src")]
                                      :linters {:clj-kondo {:ns-exclude-regex "some-ns.*"}}}})
     (is (= []
            (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/some_ns.clj") (h/db)))))
@@ -250,7 +250,7 @@
   (testing "when clj-depend config is found and a violation is present"
     (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
                                       :settings {:linters {:clj-depend {:level :info}}
-                                                 :source-paths ["/project/src"]
+                                                 :source-paths [(h/file-path "/project/src")]
                                                  :clj-depend {:layers {:foo {:defined-by ".*foo.*"
                                                                              :accessed-by-layers #{}}
                                                                        :bar {:defined-by ".*bar.*"
@@ -294,7 +294,7 @@
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-          (is (= "file:///a.clj" uri))
+          (is (= (h/file-uri "file:///a.clj") uri))
           (is (= ["user/foo is called with 3 args but expects 1 or 2"
                   "user/baz is called with 1 arg but expects 3"
                   "user/bar is called with 0 args but expects 1 or more"
@@ -329,7 +329,7 @@
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-          (is (= "file:///a.clj" uri))
+          (is (= (h/file-uri "file:///a.clj") uri))
           (is (= ["user/foo is called with 2 args but expects 1 or 3"
                   "user/bar is called with 1 arg but expects 0"
                   "user/bar is called with 1 arg but expects 0"
@@ -349,7 +349,7 @@
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-          (is (= "file:///a.clj" uri))
+          (is (= (h/file-uri "file:///a.clj") uri))
           (is (= ["user/foo is called with 2 args but expects 1"]
                  (map :message diagnostics))))))
     (testing "for schema defs"
@@ -365,7 +365,7 @@
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-          (is (= "file:///a.clj" uri))
+          (is (= (h/file-uri "file:///a.clj") uri))
           (is (= ["user/foo is called with 0 args but expects 2"
                   "user/foo is called with 1 arg but expects 2"]
                  (map :message diagnostics)))))))
@@ -375,5 +375,5 @@
       (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///foo/bar.clj") (assoc (h/components)
                                                                                      :diagnostics-chan mock-diagnostics-chan))
       (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-        (is (= "file:///foo/bar.clj" uri))
+        (is (= (h/file-uri "file:///foo/bar.clj") uri))
         (is (= [] diagnostics))))))

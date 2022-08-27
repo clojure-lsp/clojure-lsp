@@ -102,7 +102,7 @@
            (thread-last-all "|(bar (foo [1 2]))")))))
 
 (defn- move-to-let [code new-sym]
-  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) "file:///a.clj" (h/db) new-sym)))
+  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db) new-sym)))
 
 (deftest move-to-let-test
   (is (= (h/code "(let [a 1"
@@ -676,7 +676,7 @@
                         "foo"))))
 
 (defn- create-function [code]
-  (transform/create-function (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
+  (transform/create-function (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db)))
 
 (deftest create-function-test
   (testing "function on same file"
@@ -773,7 +773,7 @@
   (testing "on other files"
     (testing "when namespace is already required and exists"
       (h/reset-components!)
-      (h/load-code-and-locs "(ns bar)" "file:///bar.clj")
+      (h/load-code-and-locs "(ns bar)" (h/file-uri "file:///bar.clj"))
       (let [{:keys [changes-by-uri]} (create-function "(ns foo (:require [bar :as b])) (|b/something)")
             result (update-map changes-by-uri h/with-strings)]
         (is (= {(h/file-uri "file:///bar.clj")
@@ -791,8 +791,8 @@
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                    (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) (|b/something)"
-                                       "file:///project/src/foo.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" (h/db))
+                                       (h/file-uri "file:///project/src/foo.clj"))
+            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc (h/file-uri "file:///project/src/foo.clj") (h/db))
             result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
@@ -821,8 +821,8 @@
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                    (h/file-path "/project/test")}}})
       (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) |b/something"
-                                       "file:///project/src/foo.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc "file:///project/src/foo.clj" (h/db))
+                                       (h/file-uri "file:///project/src/foo.clj"))
+            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc (h/file-uri "file:///project/src/foo.clj") (h/db))
             result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/src/bar.clj")
@@ -883,12 +883,12 @@
                                              "  3)"
                                              "(defn zaz []"
                                              "  4)")
-                                     "file:///project/src/foo.clj")]
-      (is (= {:source-paths #{"/project/src" "/project/test"},
-              :current-source-path "/project/src",
+                                     (h/file-uri "file:///project/src/foo.clj"))]
+      (is (= {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")},
+              :current-source-path (h/file-path "/project/src"),
               :function-name-loc "bar"}
              (update (transform/can-create-test? zloc
-                                                 "file:///project/src/foo.clj"
+                                                 (h/file-uri "file:///project/src/foo.clj")
                                                  (h/db))
                      :function-name-loc z/string))))))
 
@@ -899,8 +899,8 @@
                                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                         :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
-                                       "file:///project/src/some/ns.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" (h/db) (h/components))
+                                       (h/file-uri "file:///project/src/some/ns.clj"))
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc (h/file-uri "file:///project/src/some/ns.clj") (h/db) (h/components))
             results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.clj")
@@ -923,8 +923,8 @@
                                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                         :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
-                                       "file:///project/src/some/ns.cljs")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.cljs" (h/db) (h/components))
+                                       (h/file-uri "file:///project/src/some/ns.cljs"))
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc (h/file-uri "file:///project/src/some/ns.cljs") (h/db) (h/components))
             results-to-assert (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
                  :uri (h/file-uri "file:///project/test/some/ns_test.cljs")
@@ -951,10 +951,10 @@
                               "(deftest some-other-test)")]
         (with-redefs [shared/file-exists? #(not (string/ends-with? % "config.edn"))
                       shared/slurp-uri (constantly test-code)]
-          (h/load-code-and-locs test-code "file:///project/test/some/ns_test.clj")
+          (h/load-code-and-locs test-code (h/file-uri "file:///project/test/some/ns_test.clj"))
           (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
-                                           "file:///project/src/some/ns.clj")
-                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/src/some/ns.clj" (h/db) (h/components))
+                                           (h/file-uri "file:///project/src/some/ns.clj"))
+                {:keys [changes-by-uri resource-changes]} (transform/create-test zloc (h/file-uri "file:///project/src/some/ns.clj") (h/db) (h/components))
                 results-to-assert (update-map changes-by-uri h/with-strings)]
             (is (= nil resource-changes))
             (h/assert-submap
@@ -969,8 +969,8 @@
                                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
                                         :project-root-uri (h/file-uri "file:///project")})
       (let [zloc (h/load-code-and-zloc "(ns some.ns-test) (deftest |foo [b] (+ 1 2))"
-                                       "file:///project/test/some/ns_test.clj")
-            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc "file:///project/test/some/ns_test.clj" (h/db) (h/components))]
+                                       (h/file-uri "file:///project/test/some/ns_test.clj"))
+            {:keys [changes-by-uri resource-changes]} (transform/create-test zloc (h/file-uri "file:///project/test/some/ns_test.clj") (h/db) (h/components))]
         (is (= nil resource-changes))
         (is (= nil changes-by-uri))))))
 

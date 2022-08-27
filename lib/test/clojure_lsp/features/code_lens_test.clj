@@ -109,7 +109,7 @@
               :command
               {:title "3 references",
                :command "code-lens-references",
-               :arguments ["file:///a.clj" 1 13]}}
+               :arguments [(h/file-uri "file:///a.clj") 1 13]}}
              (f.code-lens/resolve-code-lens
                (h/file-uri "file:///a.clj") 1 13
                {:start {:line 1 :character 5}

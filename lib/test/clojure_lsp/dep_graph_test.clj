@@ -1,5 +1,6 @@
 (ns clojure-lsp.dep-graph-test
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.shared :as shared]
@@ -11,7 +12,7 @@
 (defn load-code [file & lines]
   (h/load-code-and-locs
     (apply h/code lines)
-    (h/file-uri (str "file://" file))))
+    (-> (fs/path file) .toUri .toString)))
 
 (deftest maintaining-dep-graph
   (testing "initial external analysis"
@@ -21,69 +22,69 @@
                           (h/file-uri "jar:file:///some.jar!/xxx.clj"))
     (h/load-code-and-locs "(ns xxx.yyy)"
                           (h/file-uri "jar:file:///some.jar!/xxx/yyy.clj"))
-    (is (= '{xxx {:dependencies {clojure.core 1, xxx.yyy 1}
+    (is (= {'xxx {:dependencies '{clojure.core 1, xxx.yyy 1}
                   :internal? false
-                  :uris #{"zipfile:///some.jar::xxx.clj"}}
-             xxx.yyy {:aliases {nil 1}
-                      :dependencies {clojure.core 1}
-                      :dependents {xxx 1}
+                  :uris #{(h/file-uri "zipfile:///some.jar::xxx.clj")}}
+            'xxx.yyy {:aliases {nil 1}
+                      :dependencies '{clojure.core 1}
+                      :dependents '{xxx 1}
                       :dependents-internal? false
                       :dependents-langs {:clj 1}
                       :internal? false
-                      :uris #{"zipfile:///some.jar::xxx/yyy.clj"}}
-             clojure.core {:aliases {nil 2},
-                           :dependents {xxx 1, xxx.yyy 1},
+                      :uris #{(h/file-uri "zipfile:///some.jar::xxx/yyy.clj")}}
+            'clojure.core {:aliases {nil 2},
+                           :dependents '{xxx 1, xxx.yyy 1},
                            :dependents-internal? false,
                            :dependents-langs {:clj 2}}}
            (:dep-graph (h/db))))
     (h/assert-submap
-      '{:internal? false, :langs #{:clj}, :namespaces #{xxx} :filename "/some.jar:xxx.clj"}
-      (get-in (h/db) [:documents "zipfile:///some.jar::xxx.clj"]))
+      {:internal? false, :langs #{:clj}, :namespaces #{'xxx} :filename (h/file-path "/some.jar:xxx.clj")}
+      (get-in (h/db) [:documents (h/file-uri "zipfile:///some.jar::xxx.clj")]))
     (h/assert-submap
-      '{:internal? false, :langs #{:clj}, :namespaces #{xxx.yyy} :filename "/some.jar:xxx/yyy.clj"}
-      (get-in (h/db) [:documents "zipfile:///some.jar::xxx/yyy.clj"])))
+      {:internal? false, :langs #{:clj}, :namespaces #{'xxx.yyy} :filename (h/file-path "/some.jar:xxx/yyy.clj")}
+      (get-in (h/db) [:documents (h/file-uri "zipfile:///some.jar::xxx/yyy.clj")])))
   (testing "initial internal analysis"
     (h/reset-components!)
-    (load-code "/aaa.clj"
+    (load-code (h/file-path "/aaa.clj")
                "(ns aaa"
                " (:require [bbb :as b]"
                "           [ccc :as c]))")
-    (load-code "/bbb.clj"
+    (load-code (h/file-path "/bbb.clj")
                "(ns bbb"
                " (:require [ccc :as c]))")
-    (load-code "/ccc.clj"
+    (load-code (h/file-path "/ccc.clj")
                "(ns ccc)")
-    (is (= '{aaa {:dependencies {clojure.core 1, bbb 1, ccc 1}
+    (is (= {'aaa {:dependencies '{clojure.core 1, bbb 1, ccc 1}
                   :internal? true
-                  :uris #{"file:///aaa.clj"}}
-             bbb {:aliases {b 1}
-                  :dependencies {clojure.core 1, ccc 1}
-                  :dependents {aaa 1}
+                  :uris #{(h/file-uri "file:///aaa.clj")}}
+            'bbb {:aliases '{b 1}
+                  :dependencies '{clojure.core 1, ccc 1}
+                  :dependents '{aaa 1}
                   :dependents-internal? true
                   :dependents-langs {:clj 1}
                   :internal? true
-                  :uris #{"file:///bbb.clj"}}
-             ccc {:aliases {c 2}
-                  :dependencies {clojure.core 1}
-                  :dependents {aaa 1, bbb 1}
+                  :uris #{(h/file-uri "file:///bbb.clj")}}
+            'ccc {:aliases '{c 2}
+                  :dependencies '{clojure.core 1}
+                  :dependents '{aaa 1, bbb 1}
                   :dependents-internal? true
                   :dependents-langs {:clj 2}
                   :internal? true
-                  :uris #{"file:///ccc.clj"}}
-             clojure.core {:aliases {nil 3},
-                           :dependents {aaa 1, bbb 1, ccc 1},
+                  :uris #{(h/file-uri "file:///ccc.clj")}}
+            'clojure.core {:aliases {nil 3},
+                           :dependents '{aaa 1, bbb 1, ccc 1},
                            :dependents-internal? true,
                            :dependents-langs {:clj 3}}}
            (:dep-graph (h/db))))
     (h/assert-submap
-      '{:internal? true, :langs #{:clj}, :namespaces #{aaa}, :filename "/aaa.clj"}
-      (get-in (h/db) [:documents "file:///aaa.clj"]))
+      {:internal? true, :langs #{:clj}, :namespaces #{'aaa}, :filename (h/file-path "/aaa.clj")}
+      (get-in (h/db) [:documents (h/file-uri "file:///aaa.clj")]))
     (h/assert-submap
-      '{:internal? true, :langs #{:clj}, :namespaces #{bbb}, :filename "/bbb.clj"}
-      (get-in (h/db) [:documents "file:///bbb.clj"]))
+      {:internal? true, :langs #{:clj}, :namespaces #{'bbb}, :filename (h/file-path "/bbb.clj")}
+      (get-in (h/db) [:documents (h/file-uri "file:///bbb.clj")]))
     (h/assert-submap
-      '{:internal? true, :langs #{:clj}, :namespaces #{ccc}, :filename "/ccc.clj"}
-      (get-in (h/db) [:documents "file:///ccc.clj"])))
+      {:internal? true, :langs #{:clj}, :namespaces #{'ccc}, :filename (h/file-path "/ccc.clj")}
+      (get-in (h/db) [:documents (h/file-uri "file:///ccc.clj")])))
   (testing "extending initial external analysis with internal analysis"
     (h/reset-components!)
     (h/load-code-and-locs (h/code "(ns xxx"
@@ -98,7 +99,7 @@
       (is (not (:dependents-internal? xxx)))
       (is (not (:internal? xxx-yyy)))
       (is (not (:dependents-internal? xxx-yyy))))
-    (load-code "/aaa.clj"
+    (load-code (h/file-path "/aaa.clj")
                "(ns aaa"
                " (:require [xxx :as x]))")
     (let [db (h/db)
@@ -159,12 +160,12 @@
       (is (= '{b 1} (get-in db [:dep-graph 'bbb :aliases])))))
   (testing "deleting file"
     (h/reset-components!)
-    (load-code "/bbb.clj"
+    (load-code (h/file-path "/bbb.clj")
                "(ns bbb)")
-    (load-code "/aaa.clj"
+    (load-code (h/file-path "/aaa.clj")
                "(ns aaa"
                " (:require [bbb :as b]))")
-    (load-code "/ccc.clj"
+    (load-code (h/file-path "/ccc.clj")
                "(ns ccc"
                " (:require [aaa :as a]))")
     (let [db (h/db)]
@@ -172,23 +173,23 @@
       (is (= '{ccc 1} (get-in db [:dep-graph 'aaa :dependents])))
       (is (seq (get-in db [:dep-graph 'aaa :uris])))
       (is (seq (get-in db [:dep-graph 'bbb :dependents])))
-      (is (not (nil? (get-in db [:documents "file:///aaa.clj"])))))
+      (is (not (nil? (get-in db [:documents (h/file-uri "file:///aaa.clj")])))))
     #_(alter-var-root #'db/diagnostics-chan (constantly (async/chan 1)))
     (with-redefs [shared/file-exists? (constantly false)]
-      (f.file-management/did-close "file:///aaa.clj" (h/components)))
+      (f.file-management/did-close (h/file-uri "file:///aaa.clj") (h/components)))
     (let [db (h/db)]
       (is (empty? (get-in db [:dep-graph 'aaa :dependencies])))
       (is (= '{ccc 1} (get-in db [:dep-graph 'aaa :dependents]))) ;; <-- no change, because ccc stil depends on aaa, even though aaa is now undefined
       (is (empty? (get-in db [:dep-graph 'aaa :uris])))
       (is (empty? (get-in db [:dep-graph 'bbb :dependents])))
-      (is (nil? (get-in db [:documents "file:///aaa.clj"])))))
+      (is (nil? (get-in db [:documents (h/file-uri "file:///aaa.clj")])))))
   (testing "in implicit user ns"
     (h/reset-components!)
-    (load-code "/scratch.clj"
+    (load-code (h/file-path "/scratch.clj")
                "(def x 1)")
     (let [db (h/db)]
-      (is (= #{"file:///scratch.clj"} (get-in db [:dep-graph 'user :uris])))
-      (is (= '#{user} (get-in db [:documents "file:///scratch.clj" :namespaces])))))
+      (is (= #{(h/file-uri "file:///scratch.clj")} (get-in db [:dep-graph 'user :uris])))
+      (is (= '#{user} (get-in db [:documents (h/file-uri "file:///scratch.clj") :namespaces])))))
   (testing "with implicit dependency on clojure.core"
     (h/reset-components!)
     (load-code "/aaa.clj"
@@ -207,71 +208,71 @@
 (deftest uri-filtering
   (h/reset-components!)
   (testing "internal namespaces"
-    (load-code "/aaa.clj"
+    (load-code (h/file-path "/aaa.clj")
                "(ns aaa"
                " (:require [bbb :as b]"
                "           [ccc :as c]))")
-    (load-code "/bbb.clj"
+    (load-code (h/file-path "/bbb.clj")
                "(ns bbb"
                " (:require [ccc :as c]))")
-    (load-code "/ccc.clj"
+    (load-code (h/file-path "/ccc.clj")
                "(ns ccc)")
     (let [db (h/db)]
       (are [expected namespace]
            (= expected (dep-graph/ns-uris db namespace))
-        #{"file:///aaa.clj"} 'aaa
-        #{"file:///bbb.clj"} 'bbb
-        #{"file:///ccc.clj"} 'ccc)
+        #{(h/file-uri "file:///aaa.clj")} 'aaa
+        #{(h/file-uri "file:///bbb.clj")} 'bbb
+        #{(h/file-uri "file:///ccc.clj")} 'ccc)
       (are [expected namespace]
            (= expected (dep-graph/ns-dependencies-uris db namespace))
-        #{"file:///bbb.clj" "file:///ccc.clj"} 'aaa
-        #{"file:///ccc.clj"}                   'bbb
-        #{}                                    'ccc)
+        #{(h/file-uri "file:///bbb.clj") (h/file-uri "file:///ccc.clj")} 'aaa
+        #{(h/file-uri "file:///ccc.clj")}                                'bbb
+        #{}                                                              'ccc)
       (are [expected namespace]
            (= expected (dep-graph/ns-dependents-uris db namespace))
-        #{}                                    'aaa
-        #{"file:///aaa.clj"}                   'bbb
-        #{"file:///aaa.clj" "file:///bbb.clj"} 'ccc)
+        #{}                                                              'aaa
+        #{(h/file-uri "file:///aaa.clj")}                                'bbb
+        #{(h/file-uri "file:///aaa.clj") (h/file-uri "file:///bbb.clj")} 'ccc)
       (are [expected namespace]
            (= expected (dep-graph/ns-and-dependents-uris db namespace))
-        #{"file:///aaa.clj"}                                     'aaa
-        #{"file:///aaa.clj" "file:///bbb.clj"}                   'bbb
-        #{"file:///aaa.clj" "file:///bbb.clj" "file:///ccc.clj"} 'ccc)
-      (is (= #{"file:///aaa.clj" "file:///bbb.clj"}
+        #{(h/file-uri "file:///aaa.clj")}                                                               'aaa
+        #{(h/file-uri "file:///aaa.clj") (h/file-uri "file:///bbb.clj")}                                'bbb
+        #{(h/file-uri "file:///aaa.clj") (h/file-uri "file:///bbb.clj") (h/file-uri "file:///ccc.clj")} 'ccc)
+      (is (= #{(h/file-uri "file:///aaa.clj") (h/file-uri "file:///bbb.clj")}
              (dep-graph/nses-uris db '#{aaa bbb})))
-      (is (= #{"file:///aaa.clj" "file:///bbb.clj" "file:///ccc.clj"}
+      (is (= #{(h/file-uri "file:///aaa.clj") (h/file-uri "file:///bbb.clj") (h/file-uri "file:///ccc.clj")}
              (dep-graph/nses-and-dependents-uris db '#{bbb ccc})))))
   (testing "external namespaces"
     (h/reset-components!)
-    (load-code "/aaa.clj" "(ns aaa)")
+    (load-code (h/file-path "/aaa.clj") "(ns aaa)")
     (h/load-code-and-locs "(ns bbb)" (h/file-uri "jar:file:///some.jar!/bbb.clj"))
     (let [db (h/db)]
-      (is (= ["file:///aaa.clj"] (dep-graph/internal-uris db)))))
+      (is (= [(h/file-uri "file:///aaa.clj")] (dep-graph/internal-uris db)))))
   (testing "namespaces defined internally and externally"
     (h/reset-components!)
-    (load-code "/aaa.clj" "(ns aaa)")
+    (load-code (h/file-path "/aaa.clj") "(ns aaa)")
     (h/load-code-and-locs "(ns aaa)" (h/file-uri "jar:file:///some.jar!/aaa.clj"))
     (let [db (h/db)]
-      (is (= #{"file:///aaa.clj" "zipfile:///some.jar::aaa.clj"} (dep-graph/ns-uris db 'aaa)))
-      (is (= ["file:///aaa.clj"] (dep-graph/ns-internal-uris db 'aaa)))
-      (is (= ["file:///aaa.clj"] (dep-graph/internal-uris db)))))
+      (is (= #{(h/file-uri "file:///aaa.clj") (h/file-uri "zipfile:///some.jar::aaa.clj")} (dep-graph/ns-uris db 'aaa)))
+      (is (= [(h/file-uri "file:///aaa.clj")] (dep-graph/ns-internal-uris db 'aaa)))
+      (is (= [(h/file-uri "file:///aaa.clj")] (dep-graph/internal-uris db)))))
   (testing "file with multiple namespaces"
     (h/reset-components!)
-    (load-code "/aaa.clj"
+    (load-code (h/file-path "/aaa.clj")
                "(ns aaa)"
                "(ns aaa2)")
     (let [db (h/db)]
-      (is (= #{"file:///aaa.clj"} (dep-graph/ns-uris db 'aaa)))
-      (is (= #{"file:///aaa.clj"} (dep-graph/ns-uris db 'aaa2)))
-      (is (= '#{aaa aaa2} (get-in db [:documents "file:///aaa.clj" :namespaces])))))
+      (is (= #{(h/file-uri "file:///aaa.clj")} (dep-graph/ns-uris db 'aaa)))
+      (is (= #{(h/file-uri "file:///aaa.clj")} (dep-graph/ns-uris db 'aaa2)))
+      (is (= '#{aaa aaa2} (get-in db [:documents (h/file-uri "file:///aaa.clj") :namespaces])))))
   (testing "namespace with multiple files"
     (h/reset-components!)
-    (load-code "/aaa.clj" "(ns aaa)")
-    (load-code "/also/aaa.clj" "(ns aaa)")
+    (load-code (h/file-path "/aaa.clj") "(ns aaa)")
+    (load-code (h/file-path "/also/aaa.clj") "(ns aaa)")
     (let [db (h/db)]
-      (is (= #{"file:///aaa.clj" "file:///also/aaa.clj"} (dep-graph/ns-uris db 'aaa)))
-      (is (= '#{aaa} (get-in db [:documents "file:///aaa.clj" :namespaces])))
-      (is (= '#{aaa} (get-in db [:documents "file:///also/aaa.clj" :namespaces]))))))
+      (is (= #{(h/file-uri "file:///aaa.clj") (h/file-uri "file:///also/aaa.clj")} (dep-graph/ns-uris db 'aaa)))
+      (is (= '#{aaa} (get-in db [:documents (h/file-uri "file:///aaa.clj") :namespaces])))
+      (is (= '#{aaa} (get-in db [:documents (h/file-uri "file:///also/aaa.clj") :namespaces]))))))
 
 (deftest test-ns-aliases
   (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))

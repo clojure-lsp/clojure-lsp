@@ -38,7 +38,7 @@
                     :baz 2}
               :home :bla} (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when XDG_CONFIG_HOME is unset but user has XDG config and a project config we merge with project as priority"
-    (with-redefs [config/get-property (constantly "/home/user")
+    (with-redefs [config/get-property (constantly (h/file-path "/home/user"))
                   shared/file-exists? #(or (= (h/file-path "/home/user/.config/clojure-lsp") (str %))
                                            (= (h/file-path "/home/user/.config/clojure-lsp/config.edn") (str %))
                                            (= (h/file-path "/home/user/some/project/.lsp/config.edn") (str %)))
@@ -52,12 +52,12 @@
               :xdg :bla}
              (config/resolve-for-root (h/file-uri "file:///home/user/some/project/"))))))
   (testing "when XDG_CONFIG_HOME is set and both global and a project config exist we merge with project as priority"
-    (with-redefs [config/get-property (constantly "/home/user")
+    (with-redefs [config/get-property (constantly (h/file-path "/home/user"))
                   shared/file-exists? #(or (= (h/file-path "/tmp/config/clojure-lsp") (str %))
                                            (= (h/file-path "/tmp/config/clojure-lsp/config.edn") (str %))
                                            (= (h/file-path "/home/user/.config/clojure-lsp/config.edn") (str %))
                                            (= (h/file-path "/home/user/some/project/.lsp/config.edn") (str %)))
-                  config/get-env (constantly "/tmp/config")
+                  config/get-env (constantly (h/file-path "/tmp/config"))
                   slurp (fn [f]
                           (cond (= (h/file-path "/tmp/config/clojure-lsp/config.edn") (str f))
                                 "{:foo {:bar 1 :baz 1} :xdg :tmp}"
@@ -99,19 +99,20 @@
     (with-redefs [shared/file-exists? (constantly true)
                   config/jar-file->config (fn [jar cp-config-paths]
                                             (cond
-                                              (and (= "/my/lib.jar" (str jar))
-                                                   (= "my/other-lib" (first cp-config-paths)))
+                                              (and (= (h/file-path "/my/lib.jar") (str jar))
+                                                   (= (h/file-path "my/other-lib") (first cp-config-paths)))
                                               {:a 1 :b {:c 2 :d 3}
-                                               :classpath-config-paths ["my/another-lib"]}
+                                               :classpath-config-paths [(h/file-path "my/another-lib")]}
 
-                                              (and (= "/my/otherlib.jar" (str jar))
-                                                   (= "my/another-lib" (first cp-config-paths)))
+                                              (and (= (h/file-path "/my/otherlib.jar") (str jar))
+                                                   (= (h/file-path "my/another-lib") (first cp-config-paths)))
                                               {:b {:c 4} :e 5}))]
       (is (= {:a 1 :b {:c 4 :d 3}
               :e 5
-              :classpath-config-paths ["my/another-lib"]}
-             (config/resolve-from-classpath-config-paths ["/my/lib.jar" "/my/otherlib.jar"]
-                                                         {:classpath-config-paths ["my/other-lib"]}
+              :classpath-config-paths [(h/file-path "my/another-lib")]}
+             (config/resolve-from-classpath-config-paths (mapv h/file-path ["/my/lib.jar" "/my/otherlib.jar"])
+                                                         {:classpath-config-paths
+                                                          [(h/file-path "my/other-lib")]}
                                                         ))))))
 
 (deftest deep-merge-fixing-cljfmt

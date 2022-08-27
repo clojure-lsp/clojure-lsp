@@ -30,43 +30,43 @@
       (with-redefs [shared/file-exists? (constantly true)]
         (f.file-management/did-close "file:///user/project/src/clj/foo.clj" (assoc (h/components)
                                                                                    :diagnostics-chan mock-diagnostics-chan)))
-      (is (get-in (h/db) [:analysis "/user/project/src/clj/foo.clj"]))
-      (is (get-in (h/db) [:findings "/user/project/src/clj/foo.clj"]))
-      (is (get-in (h/db) [:file-meta "/user/project/src/clj/foo.clj"]))
+      (is (get-in (h/db) [:analysis (h/file-path "/user/project/src/clj/foo.clj")]))
+      (is (get-in (h/db) [:findings (h/file-path "/user/project/src/clj/foo.clj")]))
+      (is (get-in (h/db) [:file-meta (h/file-path "/user/project/src/clj/foo.clj")]))
       (is (seq (get-in (h/db) [:dep-graph 'foo :uris])))
-      (is (get-in (h/db) [:documents "file:///user/project/src/clj/foo.clj"]))
+      (is (get-in (h/db) [:documents (h/file-uri "file:///user/project/src/clj/foo.clj")]))
       (h/assert-no-take mock-diagnostics-chan 500)))
   (testing "when local file not exists on disk"
     (let [mock-diagnostics-chan (async/chan 1)]
       (with-redefs [shared/file-exists? (constantly false)]
-        (f.file-management/did-close "file:///user/project/src/clj/bar.clj" (assoc (h/components)
-                                                                                   :diagnostics-chan mock-diagnostics-chan)))
-      (is (nil? (get-in (h/db) [:analysis "/user/project/src/clj/bar.clj"])))
-      (is (nil? (get-in (h/db) [:findings "/user/project/src/clj/bar.clj"])))
-      (is (nil? (get-in (h/db) [:file-meta "/user/project/src/clj/bar.clj"])))
+        (f.file-management/did-close (h/file-uri "file:///user/project/src/clj/bar.clj") (assoc (h/components)
+                                                                                                :diagnostics-chan mock-diagnostics-chan)))
+      (is (nil? (get-in (h/db) [:analysis (h/file-path "/user/project/src/clj/bar.clj")])))
+      (is (nil? (get-in (h/db) [:findings (h/file-path "/user/project/src/clj/bar.clj")])))
+      (is (nil? (get-in (h/db) [:file-meta (h/file-path "/user/project/src/clj/bar.clj")])))
       (is (not (seq (get-in (h/db) [:dep-graph 'bar :uris]))))
-      (is (nil? (get-in (h/db) [:documents "file:///user/project/src/clj/bar.clj"])))
-      (is (= {:uri "file:///user/project/src/clj/bar.clj"
+      (is (nil? (get-in (h/db) [:documents (h/file-uri "file:///user/project/src/clj/bar.clj")])))
+      (is (= {:uri (h/file-uri "file:///user/project/src/clj/bar.clj")
               :diagnostics []}
              (h/take-or-timeout mock-diagnostics-chan 500)))))
   (testing "when file is external we do not remove analysis"
     (let [mock-diagnostics-chan (async/chan 1)]
       (with-redefs [shared/file-exists? (constantly false)]
-        (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" (assoc (h/components)
-                                                                                          :diagnostics-chan mock-diagnostics-chan)))
-      (is (get-in (h/db) [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
-      (is (get-in (h/db) [:findings "/some/path/to/jar.jar:/some/file.clj"]))
-      (is (get-in (h/db) [:file-meta "/some/path/to/jar.jar:/some/file.clj"]))
+        (f.file-management/did-close (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj") (assoc (h/components)
+                                                                                                       :diagnostics-chan mock-diagnostics-chan)))
+      (is (get-in (h/db) [:analysis (h/file-path "/some/path/to/jar.jar:/some/file.clj")]))
+      (is (get-in (h/db) [:findings (h/file-path "/some/path/to/jar.jar:/some/file.clj")]))
+      (is (get-in (h/db) [:file-meta (h/file-path "/some/path/to/jar.jar:/some/file.clj")]))
       (is (seq (get-in (h/db) [:dep-graph 'some-jar :uris])))
-      (is (get-in (h/db) [:documents "file:///some/path/to/jar.jar:/some/file.clj"]))
+      (is (get-in (h/db) [:documents (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj")]))
       (h/assert-no-take mock-diagnostics-chan 500))))
 
 (deftest did-open
   (testing "on an empty file"
     (let [mock-edits-chan (async/chan 1)
           mock-diagnostics-chan (async/chan 1)
-          filename "/user/project/src/aaa/bbb.clj"
-          uri (h/file-uri (str "file://" filename))]
+          filename (h/file-path "/user/project/src/aaa/bbb.clj")
+          uri (h/file-uri "file:///user/project/src/aaa/bbb.clj")]
       (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                    :source-paths #{(h/file-path "/user/project/src")}}
                                         :project-root-uri (h/file-uri "file:///user/project")})
@@ -153,7 +153,7 @@
            (h/load-code-and-locs new-code (h/file-uri "file:///src/b.clj"))
            (let [db-after (h/db)]
              (is (= expected
-                    (f.file-management/reference-filenames "/src/b.clj" db-before db-after)))))
+                    (f.file-management/reference-filenames (h/file-path (h/file-path "/src/b.clj")) db-before db-after)))))
       ;; increasing
       #{} (h/code "(ns b (:require [a]))"
                   "(def x)"
@@ -165,14 +165,14 @@
                   "(def x)"
                   "a/a")
       ;; removing
-      #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
-                              "(def x)")
+      #{(h/file-path "/src/a.clj")} (h/code "(ns b (:require [a]))"
+                                            "(def x)")
       ;; adding
-      #{"/src/a.clj"} (h/code "(ns b (:require [a]))"
-                              "(def x)"
-                              "a/a"
-                              "a/a"
-                              "a/b")
+      #{(h/file-path "/src/a.clj")} (h/code "(ns b (:require [a]))"
+                                            "(def x)"
+                                            "a/a"
+                                            "a/a"
+                                            "a/b")
       ;; same
       #{} (h/code "(ns b (:require [a]))"
                   "(def x)"
@@ -209,7 +209,7 @@
            (h/load-code-and-locs new-code (h/file-uri "file:///src/bbb.clj"))
            (let [db-after (h/db)]
              (is (= expected
-                    (f.file-management/reference-filenames "/src/bbb.clj" db-before db-after)))))
+                    (f.file-management/reference-filenames (h/file-path "/src/bbb.clj") db-before db-after)))))
       ;; increasing
       #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
                   "(r/reg-event-db :bbb/command identity)"
@@ -221,14 +221,14 @@
                   "(r/reg-event-db :bbb/command identity)"
                   ":aaa/command")
       ;; removing
-      #{"/src/aaa.clj"} (h/code "(ns bbb (:require [re-frame.core :as r]))"
-                                "(r/reg-event-db :bbb/command identity)")
+      #{(h/file-path "/src/aaa.clj")} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                              "(r/reg-event-db :bbb/command identity)")
       ;; adding
-      #{"/src/aaa.clj"} (h/code "(ns bbb (:require [re-frame.core :as r]))"
-                                "(r/reg-event-db :bbb/command identity)"
-                                ":aaa/command"
-                                ":aaa/command"
-                                ":aaa/event")
+      #{(h/file-path "/src/aaa.clj")} (h/code "(ns bbb (:require [re-frame.core :as r]))"
+                                              "(r/reg-event-db :bbb/command identity)"
+                                              ":aaa/command"
+                                              ":aaa/command"
+                                              ":aaa/event")
       ;; same
       #{} (h/code "(ns bbb (:require [re-frame.core :as r]))"
                   "(r/reg-event-db :bbb/command identity)"
@@ -262,15 +262,15 @@
            (h/load-code-and-locs new-code (h/file-uri "file:///src/a.clj"))
            (let [db-after (h/db)]
              (is (= expected
-                    (f.file-management/reference-filenames "/src/a.clj" db-before db-after)))))
+                    (f.file-management/reference-filenames (h/file-path "/src/a.clj") db-before db-after)))))
       ;; remove existing
-      #{"/src/b.clj"} (h/code "(ns a)"
-                              "(def b)")
+      #{(h/file-path "/src/b.clj")} (h/code "(ns a)"
+                                            "(def b)")
       ;; create missing
-      #{"/src/b.clj"} (h/code "(ns a)"
-                              "(def a)"
-                              "(def b)"
-                              "(def c)")
+      #{(h/file-path "/src/b.clj")} (h/code "(ns a)"
+                                            "(def a)"
+                                            "(def b)"
+                                            "(def c)")
       ;; remove unused
       #{} (h/code "(ns a)"
                   "(def a)")
@@ -292,7 +292,7 @@
       (let [db (h/db)]
         (is (= {:document-changes
                 [{:text-document
-                  {:version 0, :uri "file:///user/project/src/my/ns.clj"},
+                  {:version 0, :uri (h/file-uri "file:///user/project/src/my/ns.clj")},
                   :edits
                   [{:range
                     {:start {:line 0, :character 4}, :end {:line 0, :character 9}},

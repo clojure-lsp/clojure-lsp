@@ -77,7 +77,8 @@
                                     ""
                                     "Some cool docs :foo"
                                     line-break
-                                    (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                    (format "*[%s](%s)*"
+                                            (h/file-path "/a.clj") (h/file-uri "file:///a.clj"))])}
                      (:contents (hover foo-row foo-col))))
               (is (= {:kind  "markdown"
                       :value (join [start-code
@@ -87,7 +88,9 @@
                                     ""
                                     "Some cool docs :foo"
                                     line-break
-                                    (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                    (format "*[%s](%s)*"
+                                            (h/file-path "/a.clj")
+                                            (h/file-uri "file:///a.clj"))])}
                      (:contents (hover foo-row foo-col {:additional-text-edits? true}))))
               (with-db
                 settings-edits-warning
@@ -101,7 +104,9 @@
                                       ""
                                       "Some cool docs :foo"
                                       line-break
-                                      (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                      (format "*[%s](%s)*"
+                                              (h/file-path "/a.clj")
+                                              (h/file-uri "file:///a.clj"))])}
                        (:contents (hover foo-row foo-col {:additional-text-edits? true}))))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
@@ -123,7 +128,9 @@
                                       ""
                                       "Some cool docs :foo"
                                       line-break
-                                      (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                      (format "*[%s](%s)*"
+                                              (h/file-path "/a.clj")
+                                              (h/file-uri "file:///a.clj"))])}
                        (:contents (hover foo-row foo-col))))))))
         (testing "hover arity-on-same-line? enabled"
           (with-db
@@ -144,7 +151,9 @@
                                       ""
                                       "Some cool docs :foo"
                                       line-break
-                                      (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                      (format "*[%s](%s)*"
+                                              (h/file-path "/a.clj")
+                                              (h/file-uri "file:///a.clj"))])}
                        (:contents (hover foo-row foo-col))))))))
 
         (testing "hide-filename? enabled"
@@ -193,7 +202,9 @@
                                     "[y]"
                                     end-code
                                     line-break
-                                    (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                    (format "*[%s](%s)*"
+                                            (h/file-path "/a.clj")
+                                            (h/file-uri "file:///a.clj"))])}
                      (:contents (hover bar-row bar-col))))
               (is (= {:kind  "markdown"
                       :value (join [start-code
@@ -201,7 +212,9 @@
                                     "[y]"
                                     end-code
                                     line-break
-                                    (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                    (format "*[%s](%s)*"
+                                            (h/file-path "/a.clj")
+                                            (h/file-uri "file:///a.clj"))])}
                      (:contents (hover bar-row bar-col {:additional-text-edits? true}))))
               (with-db
                 settings-edits-warning
@@ -213,7 +226,9 @@
                                       ""
                                       "* includes additional edits"
                                       line-break
-                                      (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                      (format "*[%s](%s)*"
+                                              (h/file-path "/a.clj")
+                                              (h/file-uri "file:///a.clj"))])}
                        (:contents (hover bar-row bar-col {:additional-text-edits? true}))))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
@@ -232,7 +247,9 @@
                                       "a/bar [y]"
                                       end-code
                                       line-break
-                                      (str "*[" (h/file-path "/a.clj") "](file:///a.clj)*")])}
+                                      (format "*[%s](%s)*"
+                                              (h/file-path "/a.clj")
+                                              (h/file-uri "file:///a.clj"))])}
                        (:contents (hover bar-row bar-col)))))))))
       (testing "On function usage corner cases"
         (with-db
@@ -251,17 +268,17 @@
             (is (= [{:language "clojure"
                      :value "a/foo [x y]"}
                     "Some cool docs :foo"
-                    "/a.clj"]
+                    (h/file-path "/a.clj")]
                    (:contents (hover foo-row foo-col))))
             (is (= [{:language "clojure"
                      :value "a/bar [x y]"}
                     "Other cool docs :bar"
-                    "/a.clj"]
+                    (h/file-path "/a.clj")]
                    (:contents (hover bar-row bar-col))))
             (is (= [{:language "clojure"
                      :value "a/foo [x y]"}
                     "Some cool docs :foo"
-                    "/a.clj"]
+                    (h/file-path "/a.clj")]
                    (:contents (hover anon-row anon-col)))))))
       (testing "On function definition"
         (with-db
@@ -272,7 +289,7 @@
             (is (= [{:language "clojure"
                      :value "a/foo [x y]"}
                     "Some cool docs :foo"
-                    "/a.clj"]
+                    (h/file-path "/a.clj")]
                    (:contents (hover foo-row foo-col)))))))
       (testing "on a require with docs"
         (let [_ (h/load-code-and-locs (h/code "(ns ^{:doc \"Some cool docstring\"} some-a)") (h/file-uri "file:///some_a.clj"))
@@ -281,5 +298,5 @@
           (is (= [{:language "clojure"
                    :value "some-a"}
                   "Some cool docstring"
-                  "/some_a.clj"]
+                  (h/file-path "/some_a.clj")]
                  (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col (h/components))))))))))

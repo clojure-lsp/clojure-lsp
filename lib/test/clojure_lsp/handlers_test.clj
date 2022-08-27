@@ -32,7 +32,7 @@
                                                                  :diagnostics-chan mock-diagnostics-chan))
       (is (some? (get-in (h/db) [:analysis (h/file-path "/a.clj")])))
       (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-        (is (= "file:///a.clj" uri))
+        (is (= (h/file-uri "file:///a.clj") uri))
         (h/assert-submaps
           [{:code "missing-body-in-when"}
            {:code "invalid-arity"}]
@@ -66,32 +66,32 @@
 
 (deftest document-symbol
   (let [code "(ns a) (def bar ::bar) (def ^:m baz 1) (defmulti mult identity) (defmethod mult \"foo\")"
-        result [{:name "a"
-                 :kind :namespace
-                 :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
-                 :selection-range {:start {:line 0 :character 0} :end {:line 0 :character 6}}
-                 :children [{:name "bar"
-                             :kind :variable
-                             :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
-                             :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}
-                             :tags []}
-                            {:name "baz"
-                             :kind :variable
-                             :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
-                             :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}
-                             :tags []}
-                            ;; defmulti
-                            {:name "mult",
-                             :kind :variable,
-                             :range {:start {:line 0, :character 39}, :end {:line 0, :character 63}},
-                             :selection-range {:start {:line 0, :character 49}, :end {:line 0, :character 53}}
-                             :tags []}
-                            ;; defmethod
-                            {:name "mult \"foo\"",
-                             :kind :variable,
-                             :range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},
-                             :selection-range {:start {:line 0, :character 75}, :end {:line 0, :character 79}}
-                             :tags []}]}]]
+        result #{{:name "a"
+                  :kind :namespace
+                  :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
+                  :selection-range {:start {:line 0 :character 0} :end {:line 0 :character 6}}
+                  :children [{:name "bar"
+                              :kind :variable
+                              :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
+                              :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}
+                              :tags []}
+                             {:name "baz"
+                              :kind :variable
+                              :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
+                              :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}
+                              :tags []}
+                               ;; defmulti
+                             {:name "mult",
+                              :kind :variable,
+                              :range {:start {:line 0, :character 39}, :end {:line 0, :character 63}},
+                              :selection-range {:start {:line 0, :character 49}, :end {:line 0, :character 53}}
+                              :tags []}
+                               ;; defmethod
+                             {:name "mult \"foo\"",
+                              :kind :variable,
+                              :range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},
+                              :selection-range {:start {:line 0, :character 75}, :end {:line 0, :character 79}}
+                              :tags []}]}}]
     (testing "clj files"
       (h/load-code-and-locs code)
       (h/assert-submaps result
@@ -130,10 +130,10 @@
     (let [[bar-def-pos] (h/load-code-and-locs "(ns a) (def |bar 1)")
           _ (h/load-code-and-locs "(ns b (:require [a :as foo])) (foo/bar)" (h/file-uri "file:///b.clj"))]
       (h/assert-submaps
-        [{:uri (h/file-uri "file:///a.clj")
-          :range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
-         {:uri (h/file-uri "file:///b.clj")
-          :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}]
+        #{{:uri (h/file-uri "file:///a.clj")
+           :range {:start {:line 0 :character 12} :end {:line 0 :character 15}}}
+          {:uri (h/file-uri "file:///b.clj")
+           :range {:start {:line 0 :character 31} :end {:line 0 :character 38}}}}
         (handlers/references (h/components)
                              {:text-document {:uri (h/file-uri "file:///a.clj")}
                               :position (h/->position bar-def-pos)

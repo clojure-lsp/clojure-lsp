@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.api :as api]
    [clojure-lsp.internal-api :as internal-api]
+   [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.test :as t :refer [deftest is testing]]))
@@ -57,7 +58,7 @@
   (testing "when project-root is a valid file"
     (testing "when a single namespace is specified"
       (clean-api-db!)
-      (with-redefs [spit #(is (= (slurp (replace-last %1 "src" "fixtures")) %2))]
+      (with-redefs [spit #(is (h/string= (slurp (replace-last %1 "src" "fixtures")) %2))]
         (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
                         :namespace '[sample-test.api.clean-ns.a]
                         :raw? true})))
@@ -108,7 +109,7 @@
                                      :namespace '[sample-test.api.diagnostics.a]
                                      :raw? true})]
         (is (= 3 (:result-code result)))
-        (is (= "src/sample_test/api/diagnostics/a.clj:2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var" (:message result)))
+        (is (= (str (h/file-path "src/sample_test/api/diagnostics/a.clj") ":2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var") (:message result)))
         (is (= 1 (count (:diagnostics result))))))
     (testing "unused-public-var custom lint fn returning only info"
       (clean-api-db!)
@@ -116,7 +117,7 @@
                                      :namespace '[sample-test.api.diagnostics.d]
                                      :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "src/sample_test/api/diagnostics/d.clj:2:6: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'" (:message result)))
+        (is (= (str (h/file-path "src/sample_test/api/diagnostics/d.clj") ":2:6: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'") (:message result)))
         (is (= 1 (count (:diagnostics result))))))
     (testing "when namespace does not exists"
       (clean-api-db!)
@@ -163,7 +164,7 @@
   (testing "when project-root is a valid file"
     (testing "when a single namespace is specified"
       (clean-api-db!)
-      (with-redefs [spit #(is (= (slurp (replace-last %1 "src" "fixtures")) %2))]
+      (with-redefs [spit #(is (h/string= (slurp (replace-last %1 "src" "fixtures")) %2))]
         (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
                       :namespace '[sample-test.api.format.a]
                       :raw? true})))

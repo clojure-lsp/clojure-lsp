@@ -1,5 +1,6 @@
 (ns clojure-lsp.shared
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.logger :as logger]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
@@ -13,7 +14,9 @@
     URL
     URLDecoder]
    [java.nio.charset StandardCharsets]
-   [java.nio.file Paths]))
+   [java.nio.file Paths]
+   [java.util.regex Matcher]
+   [org.apache.commons.io FilenameUtils]))
 
 (set! *warn-on-reflection* true)
 
@@ -127,17 +130,25 @@
     :else #{}))
 
 (defn ^:private conform-uri
-  [uri format-settings]
+  "Changes and returns URI given FORMAT-SETTINGS:
+
+  :encode-colons-in-path? If true, changes all `:` to `%3A`.
+
+  :upper-case-drive-letter? If true (the default) and path begins with
+  a windows drive letter, changes it to an upper case, otherwise to a
+  lower case letter."
+  [uri {:keys [encode-colons-in-path? upper-case-drive-letter?] :or {upper-case-drive-letter? true}
+        :as _format-settings}]
   (let [[match scheme+auth path] (re-matches #"([a-z:]+//.*?)(/.*)" uri)]
     (when-not match
       (logger/error "Found invalid URI:" uri))
     (str scheme+auth
          (-> path
              (string/replace-first #"^/[a-zA-Z](?::|%3A)/"
-                                   (if (:upper-case-drive-letter? format-settings)
+                                   (if upper-case-drive-letter?
                                      string/upper-case
                                      string/lower-case))
-             (cond-> (:encode-colons-in-path? format-settings)
+             (cond-> encode-colons-in-path?
                (string/replace ":" "%3A"))))))
 
 (defn uri->path ^java.nio.file.Path [uri]
@@ -163,6 +174,15 @@
     (catch IllegalArgumentException _
       uri)))
 
+(defn ^:private uri->canonical-path
+  "Returns the URI's canonical path as a string using
+  `java.io.file/getCanonicalPath`, of which see."
+  [^java.net.URI uri]
+
+  (let [uri-path (-> (.getPath uri) fs/path)
+        canonical (-> uri-path .toString io/file .getCanonicalPath .toString)]
+    canonical))
+
 (defn uri->filename
   "Converts a URI string into an absolute file path.
 
@@ -173,12 +193,18 @@
           conn ^JarURLConnection (.openConnection (URL. unescaped-uri))
           jar-file (uri-obj->filepath ^URI (.toURI ^URL (.getJarFileURL conn)))]
       (str jar-file ":" (.getEntryName conn)))
-    (let [uri-obj (URI. uri)
-          [_ jar-uri-path nested-file] (when (= "zipfile" (.getScheme uri-obj))
-                                         (re-find #"^(.*\.jar)::(.*)" (.getPath uri-obj)))]
-      (if jar-uri-path
-        (str (-> jar-uri-path io/file .getCanonicalPath) ":" nested-file)
-        (uri-obj->filepath uri-obj)))))
+
+    (if-let [[_ uri-jar-path nested-file] (and (string/starts-with? uri "file:")
+                                               (re-find #"^(.*\.jar):(.*)" uri))]
+      (str (uri->canonical-path (URI. uri-jar-path)) ":" nested-file)
+
+      ;; else
+      (let [uri-obj (URI. uri)
+            [_ jar-uri-path nested-file] (cond (= "zipfile" (.getScheme uri-obj))
+                                               (re-find #"^(.*\.jar)::(.*)" (.getPath uri-obj)))]
+        (if jar-uri-path
+          (str (uri->canonical-path (URI. jar-uri-path)) ":" nested-file)
+          (uri-obj->filepath uri-obj))))))
 
 (defn ensure-jarfile [uri db]
   (let [jar-scheme? (= "jar" (get db [:settings :dependency-scheme]))]
@@ -258,16 +284,17 @@
       db)))
 
 (defn namespace+source-path->filename
+  "Returns the path to the filename implied by NAMESPACE, starting at
+  SOURCE-PATH and ending with FILE-TYPE.
+
+  FILE-TYPE must be a keyword which will simply be converted to a
+  string."
   [namespace source-path file-type]
-  (let [source-path-w-slash (if (string/ends-with? source-path (System/getProperty "file.separator"))
-                              source-path
-                              (str source-path (System/getProperty "file.separator")))]
-    (str source-path-w-slash
-         (-> namespace
-             (string/replace #"\." (System/getProperty "file.separator"))
-             (string/replace #"-" "_"))
-         "."
-         (name file-type))))
+  (let [source-path (FilenameUtils/separatorsToSystem source-path)
+        ns-path (-> (string/replace namespace #"-" "_")
+                    (string/replace #"\." (Matcher/quoteReplacement (System/getProperty "file.separator")))
+                    (str FilenameUtils/EXTENSION_SEPARATOR (name file-type)))]
+    (FilenameUtils/concat source-path ns-path)))
 
 (defn ^:private path->folder-with-slash [^String path]
   (if (directory? (io/file path))

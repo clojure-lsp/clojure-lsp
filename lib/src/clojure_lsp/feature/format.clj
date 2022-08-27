@@ -43,7 +43,7 @@
 (defn formatting [uri {:keys [db*] :as components}]
   (if-let [text (f.file-management/force-get-document-text uri components)]
     (let [cljfmt-settings (cljfmt-config @db*)
-          new-text (cljfmt/reformat-string text cljfmt-settings)]
+          new-text ((cljfmt/wrap-normalize-newlines #(cljfmt/reformat-string % cljfmt-settings)) text)]
       (if (= new-text text)
         []
         [{:range shared/full-file-range

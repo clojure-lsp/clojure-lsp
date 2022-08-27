@@ -142,10 +142,10 @@ jobs:
           cd cli
           bb integration-test ../clojure-lsp.exe
 
-      # - name: Run babashka pod tests
-      #   run: |
-      #     cd cli
-      #     clojure -M:pod-test
+      - name: Run babashka pod tests
+        run: |
+          cd cli
+          clojure -M:pod-test
 
   graalvm-build:
     runs-on: ubuntu-latest

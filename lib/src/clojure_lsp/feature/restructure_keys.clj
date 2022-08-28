@@ -31,7 +31,7 @@
                                      :replace-loc loc
                                      :map-loc (z/right qualifier-loc)
                                      :map-auto-resolved? auto-resolved?
-                                     :map-prefix prefix})
+                                     :map-ns prefix})
           :else nil)))))
 
 (defn can-restructure-keys? [zloc uri db]
@@ -69,20 +69,21 @@
 
 (defn ^:private restructure-data [key-loc val-loc
                                   db filename
-                                  {:keys [map-prefix map-auto-resolved?]}]
+                                  {:keys [map-ns map-auto-resolved?]}]
   (let [key-sexpr (z/sexpr key-loc)]
     (cond
       ;; {:keys [a]} and all its variations
       (and (keyword? key-sexpr)
            (contains? #{"keys" "syms"} (name key-sexpr)))
-      (let [k-prefix (namespace (:k (z/node key-loc)))
+      (let [k-node (z/node key-loc)
+            k-ns (namespace (:k k-node))
             ;; #:prefix{:_/keys [a]} -> (:a element)
-            abort-default-ns? (= k-prefix "_")
-            default-ns (when-not abort-default-ns?
-                         (or k-prefix map-prefix))
-            default-ns-auto-resolved? (when-not abort-default-ns?
-                                        (or (:auto-resolved? (z/node key-loc))
-                                            map-auto-resolved?))
+            ignore-implications? (= k-ns "_")
+            implied-ns (when-not ignore-implications?
+                         (or k-ns map-ns))
+            implied-auto-resolved? (when-not ignore-implications?
+                                     (or (:auto-resolved? k-node)
+                                         map-auto-resolved?))
             replace-with (case (name key-sexpr)
                            "keys"
                            (fn [local-node]
@@ -95,10 +96,13 @@
                                  ;; {:keys [:my-ns/a]}       -> (:my-ns/a element)
                                  (qualified-ident? local-sexpr) (n/keyword-node (keyword local-sexpr))
                                  ;; {:my-ns/keys [a]}        -> (:my-ns/a element)
+                                 ;; #:my-ns{:keys [a]}       -> (:my-ns/a element)
                                  ;; {::my-alias/keys [a]}    -> (::my-alias/a element)
-                                 default-ns                     (n/keyword-node (keyword default-ns (name local-sexpr)) default-ns-auto-resolved?)
+                                 ;; #::my-alias{:keys [a]}   -> (::my-alias/a element)
+                                 implied-ns                     (n/keyword-node (keyword implied-ns (name local-sexpr)) implied-auto-resolved?)
                                  ;; {::keys [a]}             -> (::a element)
-                                 default-ns-auto-resolved?      (n/keyword-node (keyword local-sexpr) true)
+                                 ;; #::{:keys [a]}           -> (::a element)
+                                 implied-auto-resolved?         (n/keyword-node (keyword local-sexpr) true)
                                  ;; {:keys [a]}              -> (:a element)
                                  :else                          (n/keyword-node (keyword local-sexpr)))))
                            "syms"
@@ -110,16 +114,17 @@
                                    ;; {:syms [:my-ns/a]}       -> ('my-ns/a element)
                                    (qualified-ident? local-sexpr) (symbol local-sexpr)
                                    ;; {:my-ns/syms [a]}        -> ('my-ns/a element)
-                                   default-ns                     (symbol default-ns (name local-sexpr))
+                                   ;; #:my-ns{:syms [a]}       -> ('my-ns/a element)
+                                   implied-ns                     (symbol implied-ns (name local-sexpr))
                                    ;; {:syms [a]}              -> ('a element)
                                    :else                          (symbol local-sexpr))))))]
         (->> val-loc
              z-children-seq
-             (map (fn [local-loc]
-                    (let [local-node (z/node local-loc)]
-                      {:restructure? true
-                       :replace-with (replace-with local-node)
-                       :reference-elems (reference-elems local-node db filename)})))))
+             (map z/node)
+             (map (fn [local-node]
+                    {:restructure? true
+                     :replace-with (replace-with local-node)
+                     :reference-elems (reference-elems local-node db filename)}))))
       ;; {a :a}
       (symbol? key-sexpr)
       [{:restructure? true

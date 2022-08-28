@@ -24,7 +24,8 @@
   - Fix rename of defrecords. #1165
   - Fix to send all diagnostics to client at startup, even in very large projects. #1153
   - Fix to preserve kebab-casing in server-info-raw. #1195
-  - Add refactoring `Restructure keys`, the inverse of `Destructure keys`.
+  - Add refactoring `Restructure keys`, the inverse of `Destructure keys`. #1170
+  - Add refactorings to convert between `(:x m)` and `(get m :x)` or `(:y (:x m))` and `(get-in m [:x :y])`. #1172
 
 ## 2022.07.24-18.25.43
 

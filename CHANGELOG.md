@@ -10,6 +10,7 @@
   - General release of dep-graph-queries, improving query performance. See prior release for feature details.
   - Generate nightly builds for macos aarch64 (M1/M2) every push on master.
   - Bump lsp4clj to `1.1.0`.
+  - Bump cljfmt to `0.9.0`.
   
 - Editor
   - Improve completion sorting, showing locals before functions and other completion items. #1158

@@ -53,7 +53,7 @@
     (let [mock-diagnostics-chan (async/chan 1)]
       (with-redefs [shared/file-exists? (constantly false)]
         (f.file-management/did-close "file:///some/path/to/jar.jar:/some/file.clj" (assoc (h/components)
-                                                                                   :diagnostics-chan mock-diagnostics-chan)))
+                                                                                          :diagnostics-chan mock-diagnostics-chan)))
       (is (get-in (h/db) [:analysis "/some/path/to/jar.jar:/some/file.clj"]))
       (is (get-in (h/db) [:findings "/some/path/to/jar.jar:/some/file.clj"]))
       (is (get-in (h/db) [:file-meta "/some/path/to/jar.jar:/some/file.clj"]))
@@ -119,6 +119,14 @@
         (assoc (h/components)
                :created-watched-files-chan mock-created-chan))
       (is (= h/default-uri (h/take-or-timeout mock-created-chan 500)))))
+  (testing "changed file"
+    (let [mock-changed-chan (async/chan 1)]
+      (f.file-management/did-change-watched-files
+        [{:type :changed
+          :uri h/default-uri}]
+        (assoc (h/components)
+               :changed-watched-files-chan mock-changed-chan))
+      (is (= h/default-uri (h/take-or-timeout mock-changed-chan 1000)))))
   (testing "deleted file"
     (let [mock-diagnostics-chan (async/chan 1)]
       (f.file-management/did-change-watched-files
@@ -131,7 +139,7 @@
 
 (deftest var-dependency-reference-filenames
   (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
-                                   :project-root-uri (h/file-uri "file:///")})
+                                    :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"
                                 "(def a)"
                                 "(def b)") (h/file-uri "file:///src/a.clj"))
@@ -185,7 +193,7 @@
 
 (deftest kw-dependency-reference-filenames
   (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
-                                   :project-root-uri (h/file-uri "file:///")})
+                                    :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns aaa (:require [re-frame.core :as r]))"
                                 "(r/reg-event-db :aaa/command identity)"
                                 "(r/reg-event-db ::event identity)")
@@ -241,7 +249,7 @@
 
 (deftest var-dependent-reference-filenames
   (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
-                                   :project-root-uri (h/file-uri "file:///")})
+                                    :project-root-uri (h/file-uri "file:///")})
   (h/load-code-and-locs (h/code "(ns a)"
                                 "(def a)"
                                 "(def b)") (h/file-uri "file:///src/a.clj"))
@@ -275,8 +283,8 @@
 (deftest will-rename-files
   (testing "when namespace matches old file"
     (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src")}}
-                                     :project-root-uri (h/file-uri "file:///user/project")
-                                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+                                      :project-root-uri (h/file-uri "file:///user/project")
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
 
     (let [old-uri (h/file-uri "file:///user/project/src/my/ns.clj")
           new-uri (h/file-uri "file:///user/project/src/my/new/ns.clj")]
@@ -296,8 +304,8 @@
   (testing "when namespace matches new file"
     ;; This happens when namespace was already changed by textDocument/rename
     (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src")}}
-                                     :project-root-uri (h/file-uri "file:///user/project")
-                                     :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+                                      :project-root-uri (h/file-uri "file:///user/project")
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
 
     (let [old-uri (h/file-uri "file:///user/project/src/my/ns.clj")
           new-uri (h/file-uri "file:///user/project/src/my/new/ns.clj")]

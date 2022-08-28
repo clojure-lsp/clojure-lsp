@@ -25,6 +25,7 @@
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
 (def created-watched-files-debounce-ms 500)
+(def changed-watched-files-debounce-ms 1000)
 
 (def known-files-pattern "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}")
 
@@ -457,10 +458,12 @@
        (recur))))
 
 (defn ^:private spawn-async-tasks!
-  [{:keys [producer current-changes-chan diagnostics-chan created-watched-files-chan edits-chan] :as components}]
+  [{:keys [producer current-changes-chan diagnostics-chan
+           created-watched-files-chan changed-watched-files-chan edits-chan] :as components}]
   (let [debounced-diags (shared/debounce-by diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by current-changes-chan change-debounce-ms :uri)
-        debounced-created-watched-files (shared/debounce-all created-watched-files-chan created-watched-files-debounce-ms)]
+        debounced-created-watched-files (shared/debounce-all created-watched-files-chan created-watched-files-debounce-ms)
+        debounced-changed-watched-files (shared/debounce-all changed-watched-files-chan changed-watched-files-debounce-ms)]
     (safe-async-task
       :edits
       (when-let [edit (async/<!! edits-chan)]
@@ -476,11 +479,17 @@
           :analyze-file
           (f.file-management/analyze-changes changes components))))
     (safe-async-task
-      :watched-files
+      :created-watched-files
       (when-let [created-watched-files (async/<!! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
         (shared/logging-task
           :analyze-created-files-in-watched-dir
-          (f.file-management/analyze-watched-created-files! created-watched-files components))))))
+          (f.file-management/analyze-watched-created-files! created-watched-files components))))
+    (safe-async-task
+      :changed-watched-files
+      (when-let [changed-watched-files (async/<!! debounced-changed-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
+        (shared/logging-task
+          :analyze-changed-files-in-watched-dir
+          (f.file-management/analyze-watched-changed-files! changed-watched-files components))))))
 
 (defn ^:private monitor-server-logs [log-ch]
   ;; NOTE: if this were moved to `initialize`, after timbre has been configured,
@@ -520,6 +529,7 @@
                       :current-changes-chan (async/chan 1)
                       :diagnostics-chan (async/chan 1)
                       :created-watched-files-chan (async/chan 1)
+                      :changed-watched-files-chan (async/chan 1)
                       :edits-chan (async/chan 1)}]
       (logger/info "[SERVER]" "Starting server...")
       (monitor-server-logs log-ch)

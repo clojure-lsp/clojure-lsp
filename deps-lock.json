@@ -201,14 +201,14 @@
       "hash": "sha256-knxhrJGUOQV9pZI1VN5z4l7kDevziXylJ+thvCzn+T4="
     },
     {
-      "mvn-path": "cljfmt/cljfmt/0.8.2/cljfmt-0.8.2.jar",
+      "mvn-path": "cljfmt/cljfmt/0.9.0/cljfmt-0.9.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-4e7ca/mhWNODA7qtqnVgQfJOPElBvvJqCO4M0LpWE+U="
+      "hash": "sha256-qkS6wxEqKjSi0VumdupaJvWElApYdOHi6KLNrl11xmY="
     },
     {
-      "mvn-path": "cljfmt/cljfmt/0.8.2/cljfmt-0.8.2.pom",
+      "mvn-path": "cljfmt/cljfmt/0.9.0/cljfmt-0.9.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-Y9e0GK7/qbNkUE1kXsv/DRIQWRbuGSKkWUL7QmvKPPc="
+      "hash": "sha256-ojwKvP1cAOZSEGN4j5BPnTF65Q8i+tB+pa4ZpKLKNVo="
     },
     {
       "mvn-path": "com/amazonaws/aws-java-sdk-bom/1.11.713/aws-java-sdk-bom-1.11.713.pom",
@@ -611,14 +611,14 @@
       "hash": "sha256-4LypffdwI9ZRgGAAeLJGJYwiLhUDJ64urPOynp9cIu4="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.0.1/lsp4clj-1.0.1.jar",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.1.0/lsp4clj-1.1.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-cE22RVk+CaWDp2n/poTHG/oCAFgP0iGyTURm1WxNpBQ="
+      "hash": "sha256-alYH24AZPSWc/ZEBsk81vY3IZGTy5jfYwyNg4gPWU7A="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.0.1/lsp4clj-1.0.1.pom",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.1.0/lsp4clj-1.1.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-5bF1CirMWYrI4OcGnL+B2ZamWbmLPnpZby/TuEKbV9U="
+      "hash": "sha256-FTNWrCFLgLUYmdf06xFMVU83dzdJnjJZ70iMJ2lf8mM="
     },
     {
       "mvn-path": "com/github/ericdallo/deps-bin/0.1.2/deps-bin-0.1.2.jar",

@@ -21,20 +21,26 @@
    :property 10 :unit 11 :value 12 :enum 13 :keyword 14 :snippet 15 :color 16 :file 17 :reference 18
    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
+(def priority-order
+  [:kw-arg
+   :locals
+   :simple-cursor
+   :alias-keyword
+   :keyword
+   :refer
+   :required-alias
+   :unrequired-alias
+   :ns-definition
+   :clojure-core
+   :clojurescript-core
+   :java-usages
+   :java-built-in
+   :snippet])
+
 (def priority-kw->number
-  {:kw-arg 1
-   :locals 2
-   :simple-cursor 3
-   :alias-keyword 4
-   :keyword 5
-   :refer 6
-   :required-alias 7
-   :unrequired-alias 8
-   :ns-definition 9
-   :clojure-core 10
-   :clojurescript-core 11
-   :java 12
-   :snippet 13})
+  (reduce (fn [m priority]
+            (assoc m priority (inc (or (.indexOf ^clojure.lang.PersistentVector priority-order priority)
+                                       0)))) {} priority-order))
 
 (defn ^:private keyword-element->str [{:keys [alias ns] :as element} cursor-alias priority]
   (let [alias (or alias
@@ -86,8 +92,16 @@
     (#{:local-usages} bucket)
     :value
 
+    (#{:java-class-usages} bucket)
+    :class
+
     :else
     :reference))
+
+(defn ^:private java-element->class-name [element]
+  ;; TODO maybe move to a common place or make all kondo elements have a
+  ;; :name field
+  (last (string/split (:class element) #"\.")))
 
 (defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias priority]
   (cond
@@ -96,6 +110,9 @@
 
     (#{:namespace-alias :namespace-usages} bucket)
     (some-> alias name)
+
+    (#{:java-class-usages} bucket)
+    (java-element->class-name element)
 
     cursor-alias
     (str cursor-alias "/" (-> element :name name))
@@ -157,6 +174,9 @@
          (contains? #{:locals} (:bucket element)))
     :locals
 
+    (identical? :java-class-usages (:bucket element))
+    :java-usages
+
     :else
     priority))
 
@@ -168,6 +188,9 @@
                  (cond
                    (identical? :namespace-alias bucket)
                    (some->> element :to name (str "alias to: "))
+
+                   (identical? :java-class-usages bucket)
+                   (:class element)
 
                    :else
                    (string/join
@@ -227,6 +250,12 @@
     (filter #(shared/inside? cursor-element %))
     (name-matches-xf matches-fn)))
 
+(defmethod bucket-elems-xf :java-class-usages
+  [_bucket matches-fn _cursor-element]
+  (comp
+    (filter :import)
+    (filter #(matches-fn (java-element->class-name %)))))
+
 (defn ^:private with-local-items [matches-fn cursor-uri cursor-element local-buckets row col resolve-support]
   (let [cursor-langs (shared/uri->available-langs cursor-uri)
         cursor-element (or cursor-element {:name-row row, :name-col col})]
@@ -239,7 +268,7 @@
                                                (contains? cursor-langs (:lang %)))))
                             (get local-buckets bucket))))
             (map #(element->completion-item % nil :simple-cursor resolve-support)))
-          [:namespace-definitions :var-definitions :keyword-definitions :keyword-usages :locals])))
+          [:namespace-definitions :var-definitions :keyword-definitions :keyword-usages :locals :java-class-usages])))
 
 (defn ^:private with-definition-kws-args-element-items
   [matches-fn {:keys [arglist-kws name-row name-col filename]} resolve-support]
@@ -399,13 +428,13 @@
          (map (fn [sym] {:label (str sym)
                          :kind :class
                          :detail (str "java.lang." sym)
-                         :priority :java})))
+                         :priority :java-built-in})))
     (->> common-sym/java-util-syms
          (filter (comp matches-fn str))
          (map (fn [sym] {:label (str sym)
                          :kind :class
                          :detail (str "java.util." sym)
-                         :priority :java})))))
+                         :priority :java-built-in})))))
 
 (defn ^:private remove-first-and-last-char [s]
   (-> (string/join "" (drop-last s))

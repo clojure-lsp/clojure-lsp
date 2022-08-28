@@ -41,7 +41,7 @@
                         (h/file-uri "file:///h.clj"))
 
   (swap! (h/db*) merge {:client-capabilities {:text-document {:hover {:content-format ["markdown"]}
-                                                             :completion {:completion-item {:resolve-support {:properties ["documentation"]}}}}}})
+                                                              :completion {:completion-item {:resolve-support {:properties ["documentation"]}}}}}})
   (testing "complete-alp"
     (h/assert-submaps
       [{:label "alpha" :kind :variable}
@@ -319,7 +319,7 @@
 
   (testing "completing comment snippet when client does not support snippets"
     (swap! (h/db*) merge {:client-capabilities {:text-document {:completion {:completion-item {:snippet-support false
-                                                                                              :resolve-support {:properties ["documentation"]}}}}}})
+                                                                                               :resolve-support {:properties ["documentation"]}}}}}})
     (h/assert-submaps
       [{:label "comment"
         :kind :function
@@ -356,10 +356,10 @@
 
   (testing "completing replacing $current-form"
     (swap! (h/db*) merge {:settings {:additional-snippets
-                                    [{:name "wrap-in-let-sexpr$"
-                                      :detail "Wrap in let"
-                                      :snippet "(let [$1] $0$current-form)"}]}
-                         :client-capabilities {:text-document {:completion {:completion-item {:snippet-support true}}}}})
+                                     [{:name "wrap-in-let-sexpr$"
+                                       :detail "Wrap in let"
+                                       :snippet "(let [$1] $0$current-form)"}]}
+                          :client-capabilities {:text-document {:completion {:completion-item {:snippet-support true}}}}})
     (h/assert-submaps
       [{:label "wrap-in-let-sexpr$"
         :detail "Wrap in let"
@@ -452,6 +452,20 @@
     [{:label ":bar" :kind :keyword}
      {:label ":baz" :kind :keyword}]
     (f.completion/completion (h/file-uri "file:///some/c.clj") 3 13 (h/db))))
+
+(deftest completing-java-class-usages
+  (h/load-code-and-locs
+    (h/code "(ns foo (:import (java.time LocalDateTime) (foo SomeClass)))"
+            "LocalD"
+            "SomeC"))
+  (testing "known class import"
+    (h/assert-submaps
+      [{:label "LocalDateTime" :kind :class :detail "java.time.LocalDateTime"}]
+      (f.completion/completion (h/file-uri "file:///a.clj") 2 4 (h/db))))
+  (testing "unknown class import"
+    (h/assert-submaps
+      [{:label "SomeClass" :kind :class :detail "foo.SomeClass"}]
+      (f.completion/completion (h/file-uri "file:///a.clj") 3 2 (h/db)))))
 
 (deftest completing-sorting
   (let [[[row col]] (h/load-code-and-locs

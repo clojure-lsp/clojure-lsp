@@ -112,21 +112,21 @@
 
 (deftest did-change-watched-files
   (testing "created file"
-    (let [mock-created-chan (async/chan 1)]
+    (let [mock-watched-files-chan (async/chan 1)]
       (f.file-management/did-change-watched-files
         [{:type :created
           :uri h/default-uri}]
         (assoc (h/components)
-               :created-watched-files-chan mock-created-chan))
-      (is (= h/default-uri (h/take-or-timeout mock-created-chan 500)))))
+               :watched-files-chan mock-watched-files-chan))
+      (is (= h/default-uri (h/take-or-timeout mock-watched-files-chan 1000)))))
   (testing "changed file"
-    (let [mock-changed-chan (async/chan 1)]
+    (let [mock-watched-files-chan (async/chan 1)]
       (f.file-management/did-change-watched-files
         [{:type :changed
           :uri h/default-uri}]
         (assoc (h/components)
-               :changed-watched-files-chan mock-changed-chan))
-      (is (= h/default-uri (h/take-or-timeout mock-changed-chan 1000)))))
+               :watched-files-chan mock-watched-files-chan))
+      (is (= h/default-uri (h/take-or-timeout mock-watched-files-chan 1000)))))
   (testing "deleted file"
     (let [mock-diagnostics-chan (async/chan 1)]
       (f.file-management/did-change-watched-files

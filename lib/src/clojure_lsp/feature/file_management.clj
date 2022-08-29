@@ -243,25 +243,18 @@
                                      :text final-text
                                      :version version})))
 
-(defn ^:private analyze-watched-files! [uris {:keys [db* producer] :as components}]
+(defn analyze-watched-files! [uris {:keys [db* producer] :as components}]
   (let [filenames (map shared/uri->filename uris)
         result (shared/logging-time
                  "Watched files analyzed, took %s"
                  (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil))]
     (swap! db* lsp.kondo/db-with-results result)
     (f.diagnostic/publish-all-diagnostics! filenames components)
-    (producer/refresh-test-tree producer uris)))
-
-(defn analyze-watched-created-files! [uris components]
-  (analyze-watched-files! uris components))
-
-(defn analyze-watched-changed-files! [uris {:keys [db*] :as components}]
-  (analyze-watched-files! uris components)
-  (doseq [uri uris]
-    (when-let [version (get-in @db* [:documents uri :v])]
-      (when-let [text (shared/slurp-uri uri)]
-        (swap! db* assoc-in [:documents uri] {:v (inc version)
-                                              :text text})))))
+    (producer/refresh-test-tree producer uris)
+    (doseq [uri uris]
+      (when (get-in @db* [:documents uri :v])
+        (when-let [text (shared/slurp-uri uri)]
+          (swap! db* assoc-in [:documents uri :text] text))))))
 
 (defn ^:private db-without-file [state-db uri filename]
   (-> state-db
@@ -276,12 +269,12 @@
 
 (defn did-change-watched-files
   [changes
-   {:keys [db* created-watched-files-chan changed-watched-files-chan] :as components}]
+   {:keys [db* watched-files-chan] :as components}]
   (doseq [{:keys [uri type]} changes]
     (case type
-      :created (async/>!! created-watched-files-chan uri)
+      :created (async/>!! watched-files-chan uri)
       :changed (when (settings/get @db* [:compute-external-file-changes] true)
-                 (async/>!! changed-watched-files-chan uri))
+                 (async/>!! watched-files-chan uri))
       :deleted (shared/logging-task
                  :delete-watched-file
                  (file-deleted components uri (shared/uri->filename uri))))))

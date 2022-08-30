@@ -43,11 +43,9 @@
     (assert-sorts "{:a 1 :b 2}" "{|:b 2 :a 1}")
     (assert-sorts "{:a 1 :b 2}" "|{:b 2 :a 1}") ;; outside map
     (assert-sorts "{:g 1}" "{|:g 1}")
-    (assert-sorts "{:g 1}" "{|:g 1}")
     (assert-sorts "{:d 3 :g 1}" "{|:d 3 :g 1}")
     (assert-sorts "{:d 3 :g 1}" "{|:g 1 :d 3}")
     (assert-sorts "{:G 1 :d 3}" "{|:G 1 :d 3}")
-    (assert-sorts "{:d 3 :e 4 :g 1}" "{|:g 1 :d 3 :e 4}")
     (assert-sorts "{:d 3 :e 4 :g 1}" "{|:g 1 :d 3 :e 4}")
     (assert-sorts "{:a 1 :b {:c 2 :d 3}}" "{|:b {:c 2 :d 3} :a 1}")
     (assert-sorts "{:a [9 0] :b {:c 2 :d 3} :c #{2 5}}"

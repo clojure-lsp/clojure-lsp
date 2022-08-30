@@ -65,7 +65,8 @@
 (defn debug-cli [opts]
   (uber-aot (merge opts {:extra-aliases [:debug :test]
                          :extra-dirs ["dev"]}))
-  (bin {:jvm-opts ["-Djdk.attach.allowAttachSelf=true"
+  (bin {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"
+                   "-Djdk.attach.allowAttachSelf=true"
                    "-Dclojure.core.async.go-checking=true"]}))
 
 (defn prod-cli [opts]

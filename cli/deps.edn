@@ -3,8 +3,6 @@
         borkdude/dynaload {:mvn/version "0.3.5"}
         nrepl/bencode {:mvn/version "1.1.0"}
         com.taoensso/timbre {:mvn/version "5.2.1"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.1.0"}
-        ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
         clojure-lsp/lib {:local/root "../lib"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}

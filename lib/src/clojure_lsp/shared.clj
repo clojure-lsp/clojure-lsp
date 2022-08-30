@@ -5,7 +5,7 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as string]
-   [lsp4clj.json-rpc.messages :as lsp.messages])
+   [lsp4clj.lsp.responses :as lsp.responses])
   (:import
    [java.net
     JarURLConnection
@@ -480,4 +480,4 @@
   camelCase conversion that happens in lsp4clj. This is useful when the client
   expects Clojure style JSON, or when a map needs to be round-tripped from
   clojure-lsp to the client and back without case changes."
-  lsp.messages/preserve-kebab-case)
+  lsp.responses/preserve-kebab-case)

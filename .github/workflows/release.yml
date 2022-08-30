@@ -77,40 +77,6 @@ jobs:
           path: clojure-lsp
           name: clojure-lsp
 
-  build-cli-jar-win:
-    if: startsWith(github.ref, 'refs/tags/2')
-    name: Build JVM cli win
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
-      - name: Prepare java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.1013'
-
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
-
-      - name: Generate jar for native
-        run: |
-          cd cli
-          clojure -T:build prod-jar-for-native
-          mv target/clojure-lsp-standalone.jar ../clojure-lsp-standalone-win.jar
-
-      - name: Upload jar
-        uses: actions/upload-artifact@v2
-        with:
-          path: clojure-lsp-standalone-win.jar
-          name: clojure-lsp-standalone-win.jar
-
   linux-amd64:
     name: Build native linux amd64 binary
     needs: [build-lib-jar, build-cli-jar]
@@ -356,13 +322,13 @@ jobs:
 
   windows:
     name: Build native Windows binary
-    needs: [build-lib-jar, build-cli-jar-win]
+    needs: [build-lib-jar, build-cli-jar]
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: clojure-lsp-standalone-win.jar
+          name: clojure-lsp-standalone.jar
 
       - name: configure Pagefile
         uses: al-cheb/configure-pagefile-action@v1.2
@@ -403,7 +369,7 @@ jobs:
 
       - name: Build Windows native image
         env:
-          CLOJURE_LSP_JAR: ..\clojure-lsp-standalone-win.jar
+          CLOJURE_LSP_JAR: ..\clojure-lsp-standalone.jar
           CLOJURE_LSP_XMX: "-J-Xmx7g"
         run: |
           cd cli

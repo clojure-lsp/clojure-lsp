@@ -116,7 +116,7 @@
                           "  |:c 3 ;; something"
                           "  :b 2"
                           "  :default)"))
-    ;; even if rind ends in a comment a comment
+    ;; even if rind ends in a comment
     (assert-sorts (h/code "(case x"
                           "  :a 1"
                           "  :b 2"

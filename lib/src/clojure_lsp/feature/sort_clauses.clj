@@ -20,8 +20,7 @@
 
 (defn sort-clauses [zloc uri db]
   (when-let [clause-spec (clause-spec zloc uri db)]
-    (let [{:keys [rind-before clauses+padding rind-after]}
-          (f.clauses/identify clause-spec)
+    (let [{:keys [rind-before clauses+padding rind-after]} (f.clauses/identify clause-spec)
           rind-nodes-before (:nodes rind-before)
           rind-nodes-after (:nodes rind-after)
           clauses-nodes (->> clauses+padding (filter :idx) (map :nodes))

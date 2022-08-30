@@ -38,9 +38,7 @@
                                 z/leftmost ;; start returning to original node
                                 (z/find f.clauses/z-right #(edit/marked? % ::orig)))
                             zloc)]
-            (let [{:keys [zloc] :as clause-spec} (f.clauses/clause-spec zloc uri db)]
-              (when (f.drag/probable-valid-movement? zloc dir clause-spec)
-                clause-spec))))))))
+            (f.drag/plan zloc dir uri db)))))))
 
 (defn ^:private usage-edit [root-zloc clause-idx uri db dir {:keys [name-row name-col]}]
   (let [var-usage-loc (parser/to-pos root-zloc name-row name-col)]
@@ -97,8 +95,8 @@
 ;; Drag param at zloc forward or backward.
 
 (defn ^:private can-drag? [zloc dir uri db] (boolean (plan zloc dir uri db)))
-(defn can-drag-backward? [zloc uri db] (can-drag? zloc :backward uri db))
 
+(defn can-drag-backward? [zloc uri db] (can-drag? zloc :backward uri db))
 (defn can-drag-forward? [zloc uri db] (can-drag? zloc :forward uri db))
 
 (defn ^:private warn-skipped-usages [producer]

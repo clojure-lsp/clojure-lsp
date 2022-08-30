@@ -25,51 +25,46 @@
 ;; 4. Reposition the cursor so that it appears to maintain its position within
 ;;    the original clause.
 
-(defn node-edits [{:keys [nodes-before earlier-nodes later-nodes nodes-after]}]
-  (let [trailing-node (or (last nodes-after) (last earlier-nodes))
+(defn node-edits
+  [{:keys [nodes-before earlier-clause-nodes later-clause-nodes nodes-after]}]
+  (let [trailing-node (or (last nodes-after) (last earlier-clause-nodes))
         trailing-comment-fix (when (some-> trailing-node n/comment?)
-                               (let [orig-leading-node (or (first nodes-before) (first earlier-nodes))
+                               (let [orig-leading-node (or (first nodes-before) (first earlier-clause-nodes))
                                      col (:col (meta orig-leading-node))]
                                  [(n/newline-node "\n") (n/spaces (dec col))]))]
     ;; The actual swap.
-    [{:range (f.clauses/nodes-range earlier-nodes)
-      :loc (f.clauses/loc-of-nodes later-nodes)}
-     {:range (f.clauses/nodes-range later-nodes)
-      :loc (f.clauses/loc-of-nodes (concat earlier-nodes trailing-comment-fix))}]))
+    [{:range (f.clauses/nodes-range earlier-clause-nodes)
+      :loc (f.clauses/loc-of-nodes later-clause-nodes)}
+     {:range (f.clauses/nodes-range later-clause-nodes)
+      :loc (f.clauses/loc-of-nodes (concat earlier-clause-nodes trailing-comment-fix))}]))
 
-(defn ^:private start-point [node]
-  (let [{:keys [row col]} (meta node)]
+(defn ^:private nodes-start [nodes]
+  (let [{:keys [row col]} (meta (first nodes))]
     [row col]))
 
-(defn ^:private end-point [node]
-  (let [{:keys [end-row end-col]} (meta node)]
+(defn ^:private nodes-end [nodes]
+  (let [{:keys [end-row end-col]} (meta (last nodes))]
     [end-row end-col]))
 
-(defn ^:private offset [[first-row first-col] [second-row second-col]]
+(defn ^:private offset [[start-row start-col] [end-row end-col]]
   ;; See n.protocols/extent
-  (let [rows (- second-row first-row)]
-    [rows
-     (if (zero? rows)
-       (- second-col first-col)
-       second-col)]))
+  (let [rows (- end-row start-row)]
+    [rows (cond-> end-col (zero? rows) (- start-col))]))
 
 (defn ^:private nodes-offset [nodes]
-  (offset (start-point (first nodes)) (end-point (last nodes))))
+  (offset (nodes-start nodes) (nodes-end nodes)))
 
-(defn ^:private final-position [dir cursor-offset {:keys [earlier-nodes interstitial-nodes later-nodes]}]
-  ;; The cursor-offset is how far the cursor was from the beginning of the origin clause.
-  ;; If we are moving backward, we want to relocate the cursor this same offset
-  ;; from the start of the earlier clause.
-  ;; If we are moving forward, it's slightly more complicated. We want to move
-  ;; from that same start point, over the later-clause (which is taking the
-  ;; place of the earlier-clause), over interstitial padding, and finally that
-  ;; same cursor offset.
-  (let [earlier-point (start-point (first earlier-nodes))
+(defn ^:private reposition-cursor
+  "Move the cursor so that it appears to stay at the same position within the
+  origin-clause."
+  [cursor-position dir {:keys [origin-nodes earlier-clause-nodes interstitial-nodes later-clause-nodes]}]
+  (let [cursor-offset (offset (nodes-start origin-nodes)
+                              [(:row cursor-position) (:col cursor-position)])
         [row col] (reduce n.protocols/+extent
-                          earlier-point
+                          (nodes-start earlier-clause-nodes)
                           (case dir
                             :backward [cursor-offset]
-                            :forward [(nodes-offset later-nodes)
+                            :forward [(nodes-offset later-clause-nodes)
                                       (nodes-offset interstitial-nodes)
                                       cursor-offset]))]
     {:row row :col col
@@ -87,8 +82,7 @@
                                      (some #(edit/node-marked? % ::orig) nodes)))
                            first)]
     (when origin-clause ;; otherwise, cursor wasn't in a clause
-      (assoc identify-data
-             :origin-clause origin-clause))))
+      (assoc identify-data :origin-clause origin-clause))))
 
 (defn nodes-to-drag
   "Identifies the nodes that will participate in dragging the `origin-clause` in
@@ -102,18 +96,13 @@
     (when in-pulp? ;; otherwise, drag would extend outside of pulp
       (let [earlier-idx (min origin-idx destination-idx)
             [pulp-before rst] (split-at (* 2 earlier-idx) clauses+padding)
-            [earlier-clause interstitial later-clause & pulp-after] rst
-
-            before (mapcat :nodes (concat rind-before pulp-before))
-            earlier (:nodes earlier-clause)
-            interstitial (:nodes interstitial)
-            later (:nodes later-clause)
-            after (mapcat :nodes (concat pulp-after rind-after))]
-        {:nodes-before before
-         :earlier-nodes earlier
-         :interstitial-nodes interstitial
-         :later-nodes later
-         :nodes-after after}))))
+            [earlier-clause interstitial later-clause & pulp-after] rst]
+        {:nodes-before (mapcat :nodes (concat rind-before pulp-before))
+         :earlier-clause-nodes (:nodes earlier-clause)
+         :interstitial-nodes (:nodes interstitial)
+         :later-clause-nodes (:nodes later-clause)
+         :nodes-after (mapcat :nodes (concat pulp-after rind-after))
+         :origin-nodes (:nodes origin-clause)}))))
 
 (defn drag-clause
   "Drag the `origin-clause` in direction of `dir`, adjusting the
@@ -122,16 +111,12 @@
   Instructs the client to:
   - Apply edits that swap the clauses.
   - Re-position the cursor after the edits."
-  [{:keys [origin-clause] :as clause-data} dir cursor-position uri]
+  [clause-data dir cursor-position uri]
   (when-let [nodes (nodes-to-drag clause-data dir)]
-    (let [cursor-offset (offset
-                          (start-point (first (:nodes origin-clause)))
-                          [(:row cursor-position)
-                           (:col cursor-position)])]
-      {:show-document-after-edit {:uri        uri
-                                  :take-focus true
-                                  :range      (final-position dir cursor-offset nodes)}
-       :changes-by-uri {uri (node-edits nodes)}})))
+    {:show-document-after-edit {:uri        uri
+                                :take-focus true
+                                :range      (reposition-cursor cursor-position dir nodes)}
+     :changes-by-uri {uri (node-edits nodes)}}))
 
 ;;;; Plan
 ;; Form a plan about how to drag
@@ -150,7 +135,7 @@
       (f.clauses/z-take-while f.clauses/z-right identity)
       count))
 
-(defn probable-valid-movement?
+(defn ^:private probable-valid-movement?
   "Checks whether `zloc` can be dragged in direction `dir`, assuming it is part of
   a clause as described by `clause-spec`.
 
@@ -158,7 +143,7 @@
   be dragged. This can happen when the cursor is on padding between clauses, or
   when dragging backwards from comments or padding after the first clause, or
   when dragging forwards from comments or padding before the last clause."
-  [zloc dir {:keys [breadth rind] :as clause-spec}]
+  [{:keys [breadth rind zloc] :as clause-spec} dir]
   (when clause-spec
     (let [[ignore-left ignore-right] rind
           movable-before (-> zloc count-siblings-left (- ignore-left))
@@ -171,9 +156,9 @@
         ;; will eventually be allocated to padding or another element.
         (<= breadth (case dir :backward movable-before, :forward movable-after))))))
 
-(defn ^:private plan [zloc dir uri db]
-  (let [{:keys [zloc] :as clause-spec} (f.clauses/clause-spec zloc uri db)]
-    (when (probable-valid-movement? zloc dir clause-spec)
+(defn plan [zloc dir uri db]
+  (let [clause-spec (f.clauses/clause-spec zloc uri db)]
+    (when (probable-valid-movement? clause-spec dir)
       clause-spec)))
 
 ;;;; Public API

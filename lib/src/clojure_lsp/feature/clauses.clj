@@ -79,6 +79,9 @@
       (recur (z/right* zloc) (conj satisfies zloc))
       [satisfies zloc])))
 
+(defn ^:private z-update-children [parent-zloc f]
+  (z/edit* parent-zloc #(n/replace-children % (f (n/children %)))))
+
 ;;;; Main algorithm
 
 ;;;; Identify clauses
@@ -102,24 +105,23 @@
   an empty sequence. There may or may not be a final item of padding."
   [parent-zloc]
   (loop [zloc (-> parent-zloc
-                  (z/edit* (fn [parent-node]
-                             (n/replace-children
-                               parent-node
-                               (mapcat (fn [node]
-                                         (if (newline-comment? node)
-                                           (let [{:keys [row col end-row end-col]} (meta node)
-                                                 len (count (:s node))]
-                                             (assert (= (inc row) end-row) "unexpected multiline comment")
-                                             [(with-meta
-                                                (update node :s subs 0 (dec len))
-                                                {:row row :col col
-                                                 :end-row row :end-col (+ col len)})
-                                              (with-meta
-                                                (n/newline-node "\n")
-                                                {:row row, :col (+ col len),
-                                                 :end-row end-row, :end-col end-col})])
-                                           [node]))
-                                       (n/children parent-node)))))
+                  (z-update-children
+                    (fn [child-nodes]
+                      (mapcat (fn [node]
+                                (if (newline-comment? node)
+                                  (let [{:keys [row col end-row end-col]} (meta node)
+                                        len (count (:s node))]
+                                    (assert (= (inc row) end-row) "unexpected multiline comment")
+                                    [(with-meta
+                                       (update node :s subs 0 (dec len))
+                                       {:row row :col col
+                                        :end-row row :end-col (+ col len)})
+                                     (with-meta
+                                       (n/newline-node "\n")
+                                       {:row row, :col (+ col len),
+                                        :end-row end-row, :end-col end-col})])
+                                  [node]))
+                              child-nodes)))
                   z/down*)
 
          state  :in-padding
@@ -169,9 +171,7 @@
 (defn identify
   "Identifies the clauses described by the clause-spec."
   [{:keys [zloc breadth rind pulp]}]
-  (let [parent-zloc (z-up zloc)
-
-        elems+padding (divide-parent parent-zloc)
+  (let [elems+padding (divide-parent (z-up zloc))
 
         [ignore-left _] rind
         [rind-before rst] (split-at (inc (* 2 ignore-left)) elems+padding)
@@ -327,7 +327,7 @@
                    {:context :call, :breadth breadth, :rind [ignore-left ignore-right]}))
           are
           #_=> (let [param-count (-> list-zloc z-down z-right count-children)]
-                 (when (< 0 param-count)
+                 (when (pos? param-count)
                    {:context :call, :breadth param-count, :rind [3 0]}))
           {:context :list, :breadth 1, :rind no-rind})]
     (some-> spec (assoc :in-threading? in-threading?))))
@@ -348,9 +348,7 @@
       [parent-zloc (z-up parent-zloc)]
       [zloc parent-zloc])))
 
-(defn clause-spec
-  "Returns a clause spec for the `zloc`."
-  [zloc uri db]
+(defn clause-spec [zloc uri db]
   (when zloc
     (let [[zloc parent-zloc] (target-locs zloc)]
       (when parent-zloc

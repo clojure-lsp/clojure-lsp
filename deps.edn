@@ -7,6 +7,7 @@
                                                              :tag "v0.8.3"
                                                              :sha "0d20256"}}}
            :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.68.1059"}}
+                  :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                   :extra-paths ["lib/src"
                                 "cli/src"
                                 "common-test/src"

@@ -28,6 +28,7 @@
   - Add refactoring `Restructure keys`, the inverse of `Destructure keys`. #1170
   - Add refactorings to convert between `(:x m)` and `(get m :x)` or `(:y (:x m))` and `(get-in m [:x :y])`. #1172
   - Add support to imported java class on completion. #1193
+  - Add new question to skip or retry classpath scan during startup if failed. 
 
 ## 2022.07.24-18.25.43
 

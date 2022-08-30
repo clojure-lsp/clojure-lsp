@@ -126,7 +126,8 @@
                           :actions actions}
                          (conform-or-log ::coercer/show-message-request)
                          (lsp.server/send-request server "window/showMessageRequest"))
-            response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
+            ;; High timeout as we probably want to wait some time for user input
+            response (lsp.server/deref-or-cancel request 10e5 ::timeout)]
         (when-not (= response ::timeout)
           (:title response)))))
 

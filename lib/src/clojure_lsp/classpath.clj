@@ -72,17 +72,34 @@
         {:command command
          :error (.getMessage e)}))))
 
+(defn ^:private lookup-classpath-handling-error! [project-spec root-path producer]
+  (let [{:keys [command error paths]} (lookup-classpath! root-path project-spec)
+        retry-action "Retry"
+        ignore-action "Ignore"]
+    (if error
+      (do
+        (logger/error (format "Error while looking up classpath info in %s. Error: %s" (str root-path) error))
+        (if-let [chosen-action (producer/show-message-request
+                                 producer
+                                 (format (str "LSP classpath lookup failed when running `%s`. Some features may not work properly if ignored.\n\n"
+                                              "Error: %s\n\nChoose an option:") command error)
+                                 :warning
+                                 [{:title retry-action}
+                                  {:title ignore-action}])]
+          (if (= retry-action chosen-action)
+            (recur project-spec root-path producer)
+            (do
+              (logger/warn (format "Classpath lookup retry skipped by user"))
+              paths))
+          (logger/warn (format "Invalid classpath lookup option, skipping lookup"))))
+      paths)))
+
 (defn scan-classpath! [{:keys [db* producer]}]
   (let [db @db*
         root-path (shared/uri->path (:project-root-uri db))]
     (->> (settings/get db [:project-specs])
          (filter (partial valid-project-spec? root-path))
-         (map #(lookup-classpath! root-path %))
-         (map (fn [{:keys [command error paths]}]
-                (when error
-                  (logger/error (format "Error while looking up classpath info in %s. Error: %s" (str root-path) error))
-                  (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly. Error: %s" command error) :error error))
-                paths))
+         (mapv #(lookup-classpath-handling-error! % root-path producer))
          (reduce set/union))))
 
 (defn ^:private classpath-cmd->windows-safe-classpath-cmd

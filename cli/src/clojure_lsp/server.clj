@@ -15,8 +15,8 @@
    [clojure.core.async :as async]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.io-server :as lsp.io-server]
-   [lsp4clj.json-rpc.messages :as lsp.messages]
    [lsp4clj.liveness-probe :as lsp.liveness-probe]
+   [lsp4clj.lsp.requests :as lsp.requests]
    [lsp4clj.server :as lsp.server]
    [taoensso.timbre :as timbre]))
 
@@ -116,7 +116,7 @@
   (publish-progress [_this percentage message progress-token]
     (lsp.server/discarding-stdout
       ;; ::coercer/notify-progress
-      (->> (lsp.messages/work-done-progress percentage message (or progress-token "clojure-lsp"))
+      (->> (lsp.requests/work-done-progress percentage message (or progress-token "clojure-lsp"))
            (lsp.server/send-notification server "$/progress"))))
 
   (show-message-request [_this message type actions]
@@ -126,7 +126,8 @@
                           :actions actions}
                          (conform-or-log ::coercer/show-message-request)
                          (lsp.server/send-request server "window/showMessageRequest"))
-            response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
+            ;; High timeout as we probably want to wait some time for user input
+            response (lsp.server/deref-or-cancel request 10e5 ::timeout)]
         (when-not (= response ::timeout)
           (:title response)))))
 

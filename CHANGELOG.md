@@ -9,7 +9,7 @@
   - Bump clj-kondo to `2022.08.03`.
   - General release of dep-graph-queries, improving query performance. See prior release for feature details.
   - Generate nightly builds for macos aarch64 (M1/M2) every push on master.
-  - Bump lsp4clj to `1.1.0`.
+  - Bump lsp4clj to `1.2.1`.
   - Bump cljfmt to `0.9.0`.
   
 - Editor
@@ -28,6 +28,7 @@
   - Add refactoring `Restructure keys`, the inverse of `Destructure keys`. #1170
   - Add refactorings to convert between `(:x m)` and `(get m :x)` or `(:y (:x m))` and `(get-in m [:x :y])`. #1172
   - Add support to imported java class on completion. #1193
+  - Add new question to skip or retry classpath scan during startup if failed. 
   - Improve performance of processing of changed files outside editor calling clj-kondo in batch. #1205
 
 ## 2022.07.24-18.25.43

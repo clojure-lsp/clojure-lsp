@@ -24,7 +24,7 @@
 
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
-(def created-watched-files-debounce-ms 500)
+(def watched-files-debounce-ms 1000)
 
 (def known-files-pattern "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}")
 
@@ -458,10 +458,11 @@
        (recur))))
 
 (defn ^:private spawn-async-tasks!
-  [{:keys [producer current-changes-chan diagnostics-chan created-watched-files-chan edits-chan] :as components}]
+  [{:keys [producer current-changes-chan diagnostics-chan
+           watched-files-chan edits-chan] :as components}]
   (let [debounced-diags (shared/debounce-by diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by current-changes-chan change-debounce-ms :uri)
-        debounced-created-watched-files (shared/debounce-all created-watched-files-chan created-watched-files-debounce-ms)]
+        debounced-watched-files (shared/debounce-all watched-files-chan watched-files-debounce-ms)]
     (safe-async-task
       :edits
       (when-let [edit (async/<!! edits-chan)]
@@ -478,10 +479,10 @@
           (f.file-management/analyze-changes changes components))))
     (safe-async-task
       :watched-files
-      (when-let [created-watched-files (async/<!! debounced-created-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
+      (when-let [watched-files (async/<!! debounced-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
         (shared/logging-task
-          :analyze-created-files-in-watched-dir
-          (f.file-management/analyze-watched-created-files! created-watched-files components))))))
+          :analyze-files-in-watched-dir
+          (f.file-management/analyze-watched-files! watched-files components))))))
 
 (defn ^:private monitor-server-logs [log-ch]
   ;; NOTE: if this were moved to `initialize`, after timbre has been configured,
@@ -520,7 +521,7 @@
                       :server server
                       :current-changes-chan (async/chan 1)
                       :diagnostics-chan (async/chan 1)
-                      :created-watched-files-chan (async/chan 1)
+                      :watched-files-chan (async/chan 1)
                       :edits-chan (async/chan 1)}]
       (logger/info "[SERVER]" "Starting server...")
       (monitor-server-logs log-ch)

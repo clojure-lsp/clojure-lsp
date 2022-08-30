@@ -64,7 +64,7 @@
    :producer (->TestProducer)
    :current-changes-chan (async/chan 1)
    :diagnostics-chan (async/chan 1)
-   :created-watched-files-chan (async/chan 1)
+   :watched-files-chan (async/chan 1)
    :edits-chan (async/chan 1)})
 
 (def components* (atom (make-components)))

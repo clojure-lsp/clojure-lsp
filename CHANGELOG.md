@@ -29,6 +29,7 @@
   - Add refactorings to convert between `(:x m)` and `(get m :x)` or `(:y (:x m))` and `(get-in m [:x :y])`. #1172
   - Add support to imported java class on completion. #1193
   - Add new question to skip or retry classpath scan during startup if failed. 
+  - Improve performance of processing of changed files outside editor calling clj-kondo in batch. #1205
 
 ## 2022.07.24-18.25.43
 

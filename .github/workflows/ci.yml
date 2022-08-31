@@ -226,3 +226,37 @@ jobs:
 
       - name: Run integration tests
         run: make integration-test
+        
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.1013'
+      
+      - name: Check vulnerable dependencies
+        uses: clj-holmes/clj-watson-action@main
+        with:
+          clj-watson-sha: "b4d877d"
+          clj-watson-tag: "v3.0.1"
+          database-strategy: github-advisory
+          aliases: dev 
+          deps-edn-path: 'deps.edn'
+          output-type: 'stdout-simple'
+          suggest-fix: 'true'
+          fail-on-result: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check vulnerable code
+        uses: clj-holmes/clj-holmes-action@main
+        with:
+          output-type: 'stdout'
+          fail-on-result: 'true'

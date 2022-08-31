@@ -11,7 +11,9 @@
   - Generate nightly builds for macos aarch64 (M1/M2) every push on master.
   - Bump lsp4clj to `1.2.1`.
   - Bump cljfmt to `0.9.0`.
-  
+  - Fix issue with classpath clojure build tools invocation on MS-Windows. #1132
+  - Bump babashka/fs to `0.1.11`.
+
 - Editor
   - Improve completion sorting, showing locals before functions and other completion items. #1158
   - Fix hover to show current var definition docs instead of `def`/`defn`. #1157

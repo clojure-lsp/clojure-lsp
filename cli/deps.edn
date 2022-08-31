@@ -18,6 +18,8 @@
                                                    :sha "6df443fabf0d7313c8956cb6f55e47318402991f"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
+                   :extra-deps {babashka/fs {:mvn/version "0.1.11"}
+                                babashka/process {:mvn/version "0.1.7"}}
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.8.3" :sha "0d20256"}
                                   com.github.ericdallo/deps-bin {:mvn/version "0.1.2"}
                                   slipset/deps-deploy {:mvn/version "0.2.0"}}

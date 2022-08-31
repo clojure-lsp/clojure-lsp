@@ -87,13 +87,13 @@ jobs:
         with:
           name: clojure-lsp-standalone.jar
 
-      - name: Install Clojure
+      - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
 
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
@@ -145,13 +145,13 @@ jobs:
         with:
           name: clojure-lsp-standalone.jar
 
-      - name: Install Clojure
+      - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
 
       - uses: graalvm/setup-graalvm@v1
         with:
@@ -277,13 +277,13 @@ jobs:
         with:
           name: clojure-lsp-standalone.jar
 
-      - name: Install Clojure
+      - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
 
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
@@ -341,14 +341,13 @@ jobs:
         with:
           java-version: 11
 
-      - name: Install Clojure
-        run: |
-          iwr -useb download.clojure.org/install/win-install-1.10.3.1013.ps1 | iex
-
-      - name: Install Babashka
-        uses: turtlequeue/setup-babashka@v1.3.0
+      - name: Install clojure build tools
+        uses: DeLaGuardo/setup-clojure@master
         with:
-          babashka-version: 0.7.8
+          cli: '1.10.3.1013'
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
 
       - name: Install MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -383,10 +382,10 @@ jobs:
         with:
           file: clojure-lsp.exe
 
-      # Windows return the json in the same line but for some reason clients seems to accept that.
-      # - name: Run integration tests
-      #   run: |
-      #     bb integration-test/run-all.clj .\clojure-lsp.exe
+      - name: Run integration tests
+        run: |
+          cd cli
+          bb integration-test ../clojure-lsp.exe
 
       - name: Zip binary
         run: |

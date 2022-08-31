@@ -1,0 +1,2 @@
+{:linters {:clj-kondo {:ns-exclude-regex ""}}
+ :log-path "clojure-lsp.integration-test.out"}

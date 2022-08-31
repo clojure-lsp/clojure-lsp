@@ -2,11 +2,14 @@
   (:require
    [babashka.pods :as pods]
    [clojure.java.io :as io]
+   [clojure.string :as str]
    [clojure.test :refer [deftest is testing]]))
 
 (def pod-spec (if (= "native" (System/getenv "CLOJURE_LSP_TEST_ENV"))
                 ["../clojure-lsp"]
-                ["clojure" "-M:run"]))
+                (if (str/starts-with? (System/getProperty "os.name") "Windows")
+                  ["powershell" "-Command" "clojure" "-M:run"]
+                  ["clojure" "-M:run"])))
 
 (pods/load-pod pod-spec)
 (require '[clojure-lsp.api :as clojure-lsp])

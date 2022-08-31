@@ -83,10 +83,16 @@
                ;; unqualified keywords is currently disallowed
                :else
                replacement)]
-
-    {:range (shared/->range reference)
-     :new-text text
-     :text-document {:version version :uri ref-doc-uri}}))
+    (concat
+      [{:range (shared/->range reference)
+        :new-text text
+        :text-document {:version version :uri ref-doc-uri}}]
+      (when local-element
+        (->> (q/find-references db local-element false)
+             (map (fn [reference]
+                    {:range (shared/->range reference)
+                     :new-text replacement-name
+                     :text-document {:version version :uri ref-doc-uri}})))))))
 
 (defn ^:private rename-ns-definition
   [replacement
@@ -169,7 +175,7 @@
     (mapv (partial rename-ns-definition replacement db) references)
 
     (contains? #{:keyword-definitions :keyword-usages} (:bucket definition))
-    (mapv (partial rename-keyword replacement replacement-raw db) references)
+    (vec (mapcat (partial rename-keyword replacement replacement-raw db) references))
 
     (identical? :locals (:bucket definition))
     (mapv (partial rename-local replacement db) references)

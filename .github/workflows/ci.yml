@@ -127,9 +127,10 @@ jobs:
           bb: '0.9.161'
 
       - name: Install launch4j
-        uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: install launch4j
+        run: |
+          iwr -UserAgent "Wget" -URI "https://sourceforge.net/projects/launch4j/files/launch4j-3/3.14/launch4j-3.14-win32.exe/download" -OutFile "$env:TEMP/l4j-installer.exe"
+          Start-Process -Filepath "$env:TEMP/l4j-installer.exe" -ArgumentList "/S"
+        shell: pwsh
 
       - name: Generate embedded binary
         env:

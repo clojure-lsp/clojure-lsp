@@ -6,6 +6,7 @@
    [clojure-lsp.http :as http]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
@@ -14,6 +15,7 @@
    (java.io File)
    (java.net JarURLConnection URL)
    (java.nio.file Path)
+   (java.util.jar JarFile JarFile$JarFileEntry)
    (java.util.zip ZipInputStream)
    (org.benf.cfr.reader.api CfrDriver CfrDriver$Builder)))
 
@@ -21,32 +23,80 @@
 
 (def ^:private java-logger-tag "[Java]")
 
-(defn ^:private decompile! [^File class-file dest-path db]
-  (let [cache-path (config/local-cache-dir db)
-        decompiled-file (io/file cache-path "java" "decompiled")
-        class-path (.getCanonicalPath class-file)
-        _ (logger/info java-logger-tag (format "Decompiling java class %s" class-path))
-        driver ^CfrDriver (.. (CfrDriver$Builder.)
+(defn ^:private decompile! [^String input-path ^String output-path]
+  (let [driver ^CfrDriver (.. (CfrDriver$Builder.)
                               ;; CFR stout is not reliable, prefer output to file so we can read later
-                              (withOptions {"outputdir" (.getCanonicalPath decompiled-file)})
+                              (withOptions {"outputdir" output-path})
                               (build))
         err-sym (java.io.StringWriter.)]
     (binding [*err* err-sym]
       (with-out-str
-        (.analyse driver [class-path]))
+        (.analyse driver [input-path]))
       (when-not (string/blank? (str err-sym))
-        (logger/warn java-logger-tag "Non-fatal error from CFR:" (str err-sym))))
-    (io/file decompiled-file dest-path)))
+        (logger/warn java-logger-tag "Non-fatal error from CFR:" (str err-sym))))))
 
-(defn ^:private copy-class-file [uri entry stream db]
+(defn ^:private jar->java-project-info [^JarFile jar]
+  (->> (enumeration-seq (.entries jar))
+       (keep
+         (fn [^JarFile$JarFileEntry entry]
+           (let [name (.getName entry)]
+             (when-not (.isDirectory entry)
+               (when (and (string/starts-with? name "META-INF")
+                          (string/ends-with? name "pom.xml"))
+                 (let [pom-stream (.getInputStream jar entry)
+                       pom-content (slurp pom-stream)
+                       [_ group-id] (re-find #"<groupId>(.+)</groupId>" pom-content)
+                       [_ artifact-id] (re-find #"<artifactId>(.+)</artifactId>" pom-content)
+                       [_ version] (re-find #"<version>(.+)</version>" pom-content)
+                       [_ source-path] (or (re-find #"<sourceDirectory>(.+)</sourceDirectory>" pom-content)
+                                           [nil "src"])]
+                   {:jar-path (.getName jar)
+                    :group-id group-id
+                    :artifact-id artifact-id
+                    :version version
+                    :source-path source-path
+                    :pom-content pom-content}))))))
+       first))
+
+(defn ^:private decompile-file [^JarFile jar entry db]
   (let [cache-path (config/local-cache-dir db)
-        dest-file (io/file cache-path "java" "classes" (str entry))]
-    (logger/info java-logger-tag (format "Copying class URI %s to %s" uri dest-file))
-    (io/make-parents dest-file)
-    (io/copy stream dest-file)
-    dest-file))
+        class-file (io/file cache-path "java" "classes" (str entry))
+        decompile-folder-file (io/file cache-path "java" "decompiled")
+        java-file (io/file decompile-folder-file (string/replace (str entry) #".class$" ".java"))]
+    (io/make-parents class-file)
+    (with-open [stream (.getInputStream jar entry)]
+      (io/copy stream class-file))
+    (logger/info java-logger-tag (format "Decompiling java class %s" class-file))
+    (decompile! (.getCanonicalPath class-file) (.getCanonicalPath decompile-folder-file))
+    (shared/filename->uri (.getCanonicalPath java-file) db)))
 
-(defn ^:private uri->translated-file [uri db]
+(defn ^:private decompile-jar-as-java-project
+  [{:keys [group-id artifact-id version jar-path source-path pom-content]}
+   ^JarFile$JarFileEntry entry
+   db
+   producer]
+  (let [prefix-path (io/file group-id artifact-id (str artifact-id "-" version))
+        cache-path (config/global-cache-dir)
+        project-folder (io/file cache-path "java" "decompiled" prefix-path)
+        project-source-folder (io/file project-folder source-path)
+        projectile-file (io/file project-folder ".projectile")
+        pom-file (io/file project-folder "pom.xml")
+        dest-path (io/file project-source-folder (string/replace (.getName entry) #".class$" ".java"))
+        dest-uri (shared/filename->uri (.getCanonicalPath dest-path) db)]
+    (if (shared/file-exists? pom-file)
+      (logger/info java-logger-tag (format "Already decompiled jar %s" jar-path))
+      (do
+        (producer/show-message producer "Decompiling jar for the first time, please wait..." :info nil)
+        (logger/info java-logger-tag (format "Decompiling whole jar %s" jar-path))
+        (io/make-parents pom-file)
+        (spit pom-file pom-content)
+        (spit projectile-file "")
+        (shared/logging-task :decompile-jar
+          (decompile! jar-path (.getCanonicalPath project-source-folder)))
+        (logger/info java-logger-tag (format "Decompiled jar %s" jar-path))))
+    dest-uri))
+
+(defn ^:private uri->translated-file! [uri db producer]
   ;; TODO consider local class files not from jar
   (if (shared/jar-file? uri)
     (let [jar-uri (shared/ensure-jarfile uri db)]
@@ -56,19 +106,18 @@
               connection ^JarURLConnection (.openConnection url)
               jar (.getJarFile connection)
               entry (.getJarEntry connection)]
-          (with-open [stream (.getInputStream jar entry)]
-            (let [file (copy-class-file jar-uri entry stream db)
-                  dest-file (string/replace (str entry) #".class$" ".java")
-                  decompiled-file ^File (decompile! file dest-file db)]
-              (shared/filename->uri (.getCanonicalPath decompiled-file) db))))
+          (if-let [java-project-info (and (settings/get db [:java :decompile-jar-as-project?] true)
+                                          (jar->java-project-info jar))]
+            (decompile-jar-as-java-project java-project-info entry db producer)
+            (decompile-file jar entry db)))
         jar-uri))
     uri))
 
-(defn uri->translated-uri [uri db]
-  (uri->translated-file uri db))
+(defn uri->translated-uri [uri db producer]
+  (uri->translated-file! uri db producer))
 
-(defn read-content! [uri db]
-  (slurp (uri->translated-file uri db)))
+(defn read-content! [uri db producer]
+  (slurp (uri->translated-file! uri db producer)))
 
 (def ^:private jdk-source-zip-filename "src.zip")
 

@@ -149,7 +149,7 @@
           [row col] (shared/position->row-col position)]
       (f.completion/completion (:uri text-document) row col db))))
 
-(defn references [{:keys [db*]} {:keys [text-document position context]}]
+(defn references [{:keys [db* producer]} {:keys [text-document position context]}]
   (shared/logging-task
     :references
     (let [db @db*
@@ -157,7 +157,7 @@
       (mapv (fn [reference]
               {:uri (-> (:filename reference)
                         (shared/filename->uri db)
-                        (f.java-interop/uri->translated-uri db))
+                        (f.java-interop/uri->translated-uri db producer))
                :range (shared/->range reference)})
             (q/find-references-from-cursor db (shared/uri->filename (:uri text-document)) row col (:include-declaration context))))))
 
@@ -178,7 +178,7 @@
     (let [[row col] (shared/position->row-col position)]
       (f.rename/rename-from-position (:uri text-document) new-name row col @db*))))
 
-(defn definition [{:keys [db*]} {:keys [text-document position]}]
+(defn definition [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
     :definition
     (let [db @db*
@@ -186,10 +186,10 @@
       (when-let [definition (q/find-definition-from-cursor db (shared/uri->filename (:uri text-document)) row col)]
         {:uri (-> (:filename definition)
                   (shared/filename->uri db)
-                  (f.java-interop/uri->translated-uri db))
+                  (f.java-interop/uri->translated-uri db producer))
          :range (shared/->range definition)}))))
 
-(defn declaration [{:keys [db*]} {:keys [text-document position]}]
+(defn declaration [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
     :declaration
     (let [db @db*
@@ -197,10 +197,10 @@
       (when-let [declaration (q/find-declaration-from-cursor db (shared/uri->filename (:uri text-document)) row col)]
         {:uri (-> (:filename declaration)
                   (shared/filename->uri db)
-                  (f.java-interop/uri->translated-uri db))
+                  (f.java-interop/uri->translated-uri db producer))
          :range (shared/->range declaration)}))))
 
-(defn implementation [{:keys [db*]} {:keys [text-document position]}]
+(defn implementation [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
     :implementation
     (let [db @db*
@@ -208,7 +208,7 @@
       (mapv (fn [implementation]
               {:uri (-> (:filename implementation)
                         (shared/filename->uri db)
-                        (f.java-interop/uri->translated-uri db))
+                        (f.java-interop/uri->translated-uri db producer))
                :range (shared/->range implementation)})
             (q/find-implementations-from-cursor db (shared/uri->filename (:uri text-document)) row col)))))
 
@@ -368,10 +368,10 @@
                       :end-col end-col}]
       (f.format/range-formatting (:uri text-document) format-pos db))))
 
-(defn dependency-contents [{:keys [db*]} {:keys [uri]}]
+(defn dependency-contents [{:keys [db* producer]} {:keys [uri]}]
   (shared/logging-task
     :dependency-contents
-    (f.java-interop/read-content! uri @db*)))
+    (f.java-interop/read-content! uri @db* producer)))
 
 (defn code-actions
   [{:keys [db*]} {:keys [range context text-document]}]

@@ -92,7 +92,7 @@ components reference to it."
 
   (testing "babashka"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [classpath/locate-executable (locate-executable-mock {"bb" "pathto/bb.xyz"})
 
                     classpath/shell
@@ -104,7 +104,7 @@ components reference to it."
 
   (testing "boot"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [classpath/locate-executable (locate-executable-mock {"boot" "pathto/boot.xyz"})
 
                     classpath/shell
@@ -115,7 +115,7 @@ components reference to it."
 
   (testing "clojure"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? false
 
                     classpath/locate-executable (locate-executable-mock {"clojure" "pathto/clojure.xyz"})
@@ -131,7 +131,7 @@ components reference to it."
 
   (testing "clojure win [powershell clojure]"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? true
 
                     classpath/locate-executable (locate-executable-mock {"powershell" "pathto/powershell.exe"})
@@ -148,7 +148,7 @@ components reference to it."
 
   (testing "clojure win [pwsh clojure]"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? true
 
                     classpath/locate-executable (locate-executable-mock {"pwsh" "pathto/pwsh.exe"})
@@ -165,7 +165,7 @@ components reference to it."
 
   (testing "clojure win [powershell clojure] & [pwsh clojure]"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? true
 
                     classpath/locate-executable (locate-executable-mock {"powershell" "pathto/powershell.exe"
@@ -185,7 +185,7 @@ components reference to it."
 
   (testing "clojure win [powershell clojure] & [pwsh]"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? true
 
                     classpath/locate-executable (locate-executable-mock {"powershell" "pathto/powershell.exe"
@@ -203,7 +203,7 @@ components reference to it."
 
   (testing "clojure win [powershell] & [pwsh clojure]"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? true
 
                     classpath/locate-executable (locate-executable-mock {"powershell" "pathto/powershell.exe"
@@ -223,7 +223,7 @@ components reference to it."
   ;; test with multiple project files present
   (testing "clojure & bb"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? false
 
                     classpath/locate-executable (locate-executable-mock {"bb" "pathto/bb.xyz"
@@ -243,7 +243,7 @@ components reference to it."
 
   (testing "lein"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? false
                     classpath/locate-executable (locate-executable-mock {"lein" "pathto/lein.xyz"})
                     classpath/shell (shell-mock {["pathto/lein.xyz" "classpath" :dir (.toString temp-dir)]
@@ -254,7 +254,7 @@ components reference to it."
   ;; lein can be either a standalone script or invoked via powershell.
   (testing "lein win"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? true
                     classpath/locate-executable (locate-executable-mock {"lein" "pathto/lein.xyz"})
                     classpath/shell (shell-mock {["pathto/lein.xyz" "classpath" :dir (.toString temp-dir)]
@@ -265,7 +265,7 @@ components reference to it."
   ;; just run a sample of powershell invocation tests, exhaustive testing is done via clojure
   (testing "lein win [pwsh clojure]"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [shared/windows-os? true
 
                     classpath/locate-executable (locate-executable-mock {"pwsh" "pathto/pwsh.exe"})
@@ -282,7 +282,7 @@ components reference to it."
 
   (testing "shadow-cljs"
     (fs/with-temp-dir
-      [temp-dir]
+      [temp-dir {}]
       (with-redefs [classpath/locate-executable (locate-executable-mock {"npx" "pathto/npx.xyz"})
 
                     classpath/shell

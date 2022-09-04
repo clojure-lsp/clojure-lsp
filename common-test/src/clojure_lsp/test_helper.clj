@@ -71,6 +71,7 @@
 (defn components [] (deref components*))
 
 (defn db* [] (:db* (components)))
+(defn producer [] (:producer (components)))
 (defn db [] (deref (db*)))
 
 (defn reset-components! [] (reset! components* (make-components)))

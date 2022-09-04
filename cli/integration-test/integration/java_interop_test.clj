@@ -28,8 +28,9 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
                   {:initializationOptions (-> fixture/default-init-options
+                                              (assoc :dependency-scheme "jar")
                                               (dissoc :java)
-                                              (assoc :dependency-scheme "jar"))})) ;; TODO fix when add support for decompile with zipfile
+                                              (assoc-in [:java :decompile-jar-as-project?] false))})) ;; TODO fix when add support for decompile with zipfile
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
 

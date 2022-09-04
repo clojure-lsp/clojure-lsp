@@ -472,7 +472,7 @@
   ;; inside the :quote. As the sole child it isn't draggable. In this and
   ;; similar cases, we move up one node, to the :quote, and drag it within the
   ;; :vector.
-  (let [parent-zloc (z-up zloc)]
+  (let [parent-zloc (z/up zloc)] ;; intentionally not z-up, to avoid NPE when on uneval
     (if (and (n/inner? (z/node parent-zloc))
              (not (contains? #{:map :set :vector :forms :list :fn} (z/tag parent-zloc))))
       [parent-zloc (z-up parent-zloc)]

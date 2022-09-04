@@ -38,6 +38,8 @@
                                               ""
                                               " :b 2"
                                               "|}")))))
+  (testing "on uneval"
+    (is (not (can-drag-code-backward? (h/code "[#_a #_|b]")))))
   (testing "on first entry"
     (is (not (can-drag-code-backward? "[|1]")))
     (is (not (can-drag-code-backward? "#{|1 2 3}")))

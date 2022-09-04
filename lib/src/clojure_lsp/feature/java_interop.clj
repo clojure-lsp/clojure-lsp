@@ -92,7 +92,7 @@
         (spit pom-file pom-content)
         (spit projectile-file "")
         (shared/logging-task :decompile-jar
-          (decompile! jar-path (.getCanonicalPath project-source-folder)))
+                             (decompile! jar-path (.getCanonicalPath project-source-folder)))
         (logger/info java-logger-tag (format "Decompiled jar %s" jar-path))))
     dest-uri))
 

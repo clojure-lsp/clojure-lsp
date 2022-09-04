@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix to avoid error when checking code actions from an #_x uneval node. #1227
+
 ## 2022.09.01-15.27.31
 
 - General

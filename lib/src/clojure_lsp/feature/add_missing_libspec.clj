@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.add-missing-libspec
   (:require
    [clojure-lsp.common-symbols :as common-sym]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -48,7 +49,7 @@
 
 (defn ^:private find-missing-ns-alias-require [zloc uri db]
   (let [require-alias (some-> zloc safe-sym namespace symbol)
-        alias->info (->> (q/ns-aliases-for-langs db (shared/uri->available-langs uri))
+        alias->info (->> (dep-graph/ns-aliases-for-langs db (shared/uri->available-langs uri))
                          (group-by :alias))
         possibilities (or (some->> (get alias->info require-alias)
                                    (medley/distinct-by (juxt :to))
@@ -377,9 +378,9 @@
 
 (defn find-alias-ns-pairs [db uri]
   (let [langs (shared/uri->available-langs uri)]
-    (concat (->> (q/ns-aliases-for-langs db langs)
+    (concat (->> (dep-graph/ns-aliases-for-langs db langs)
                  (map (juxt (comp str :to) (comp str :alias))))
-            (->> (q/ns-names-for-langs db langs)
+            (->> (dep-graph/ns-names-for-langs db langs)
                  (map (juxt str (constantly nil)))))))
 
 (defn find-require-suggestions [zloc uri db]

@@ -35,149 +35,68 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 1 (count (q/external-analysis (h/db)))))))
 
-(defn ^:private dg? []
-  (h/use-dep-graph? (h/db)))
-
 (deftest ns-analysis
   (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
   (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
   (h/load-code-and-locs "(ns foo.baz)" (h/file-uri "file:///c.clj"))
-  (is (= (if (dg?) 2 3) (count (q/ns-analysis (h/db) 'foo.bar)))))
+  (is (= 2 (count (q/ns-analysis (h/db) 'foo.bar)))))
 
 (deftest ns-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 0 3) (count (q/ns-dependents-analysis (h/db) 'aaa))))
-  (is (= (if (dg?) 1 3) (count (q/ns-dependents-analysis (h/db) 'bbb))))
-  (is (= (if (dg?) 2 3) (count (q/ns-dependents-analysis (h/db) 'ccc)))))
+  (is (= 0 (count (q/ns-dependents-analysis (h/db) 'aaa))))
+  (is (= 1 (count (q/ns-dependents-analysis (h/db) 'bbb))))
+  (is (= 2 (count (q/ns-dependents-analysis (h/db) 'ccc)))))
 
 (deftest ns-and-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 1 3) (count (q/ns-and-dependents-analysis (h/db) 'aaa))))
-  (is (= (if (dg?) 2 3) (count (q/ns-and-dependents-analysis (h/db) 'bbb))))
-  (is (= (if (dg?) 3 3) (count (q/ns-and-dependents-analysis (h/db) 'ccc)))))
+  (is (= 1 (count (q/ns-and-dependents-analysis (h/db) 'aaa))))
+  (is (= 2 (count (q/ns-and-dependents-analysis (h/db) 'bbb))))
+  (is (= 3 (count (q/ns-and-dependents-analysis (h/db) 'ccc)))))
 
 (deftest ns-dependencies-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 2 3) (count (q/ns-dependencies-analysis (h/db) 'aaa))))
-  (is (= (if (dg?) 1 3) (count (q/ns-dependencies-analysis (h/db) 'bbb))))
-  (is (= (if (dg?) 0 3) (count (q/ns-dependencies-analysis (h/db) 'ccc)))))
+  (is (= 2 (count (q/ns-dependencies-analysis (h/db) 'aaa))))
+  (is (= 1 (count (q/ns-dependencies-analysis (h/db) 'bbb))))
+  (is (= 0 (count (q/ns-dependencies-analysis (h/db) 'ccc)))))
 
 (deftest nses-analysis
   (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 1 3) (count (q/nses-analysis (h/db) '#{aaa}))))
-  (is (= (if (dg?) 2 3) (count (q/nses-analysis (h/db) '#{aaa bbb}))))
-  (is (= (if (dg?) 3 3) (count (q/nses-analysis (h/db) '#{aaa bbb ccc})))))
+  (is (= 1 (count (q/nses-analysis (h/db) '#{aaa}))))
+  (is (= 2 (count (q/nses-analysis (h/db) '#{aaa bbb}))))
+  (is (= 3 (count (q/nses-analysis (h/db) '#{aaa bbb ccc})))))
 
 (deftest nses-and-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 1 3) (count (q/nses-and-dependents-analysis (h/db) '#{aaa}))))
-  (is (= (if (dg?) 2 3) (count (q/nses-and-dependents-analysis (h/db) '#{bbb}))))
-  (is (= (if (dg?) 3 3) (count (q/nses-and-dependents-analysis (h/db) '#{ccc}))))
-  (is (= (if (dg?) 2 3) (count (q/nses-and-dependents-analysis (h/db) '#{aaa bbb})))))
+  (is (= 1 (count (q/nses-and-dependents-analysis (h/db) '#{aaa}))))
+  (is (= 2 (count (q/nses-and-dependents-analysis (h/db) '#{bbb}))))
+  (is (= 3 (count (q/nses-and-dependents-analysis (h/db) '#{ccc}))))
+  (is (= 2 (count (q/nses-and-dependents-analysis (h/db) '#{aaa bbb})))))
 
 (deftest uri-dependents-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 0 3) (count (q/uri-dependents-analysis (h/db) "file:///aaa.clj"))))
-  (is (= (if (dg?) 1 3) (count (q/uri-dependents-analysis (h/db) "file:///bbb.clj"))))
-  (is (= (if (dg?) 2 3) (count (q/uri-dependents-analysis (h/db) "file:///ccc.clj")))))
+  (is (= 0 (count (q/uri-dependents-analysis (h/db) "file:///aaa.clj"))))
+  (is (= 1 (count (q/uri-dependents-analysis (h/db) "file:///bbb.clj"))))
+  (is (= 2 (count (q/uri-dependents-analysis (h/db) "file:///ccc.clj")))))
 
 (deftest uri-dependencies-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= (if (dg?) 2 3) (count (q/uri-dependencies-analysis (h/db) "file:///aaa.clj"))))
-  (is (= (if (dg?) 1 3) (count (q/uri-dependencies-analysis (h/db) "file:///bbb.clj"))))
-  (is (= (if (dg?) 0 3) (count (q/uri-dependencies-analysis (h/db) "file:///ccc.clj")))))
-
-(deftest test-ns-aliases
-  (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))
-  (h/load-code-and-locs "(ns bbb (:require [ccc :as c]))" (h/file-uri "file:///bbb.clj"))
-  (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= '#{{:alias c :to ccc}
-            {:alias b :to bbb}}
-         (q/ns-aliases (h/db)))))
-
-(deftest ns-aliases-for-langs
-  (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))
-  (h/load-code-and-locs "(ns bbb (:require [ccc :as c]))" (h/file-uri "file:///bbb.clj"))
-  (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (h/load-code-and-locs "(ns jjj (:require [kkk :as k] [lll :as l]))" (h/file-uri "file:///aaa.cljs"))
-  (h/load-code-and-locs "(ns kkk (:require [lll :as l]))" (h/file-uri "file:///bbb.cljs"))
-  (h/load-code-and-locs "(ns lll)" (h/file-uri "file:///ccc.cljs"))
-  (is (= '#{{:alias c :to ccc}
-            {:alias b :to bbb}}
-         (q/ns-aliases-for-langs (h/db) #{:clj})))
-  (is (= '#{{:alias k :to kkk}
-            {:alias l :to lll}}
-         (q/ns-aliases-for-langs (h/db) #{:cljs})))
-  (is (= '#{{:alias c :to ccc}
-            {:alias b :to bbb}
-            {:alias k :to kkk}
-            {:alias l :to lll}}
-         (q/ns-aliases-for-langs (h/db) #{:clj :cljs}))))
-
-(deftest ns-names-for-langs
-  (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
-  (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
-  (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (h/load-code-and-locs "(ns jjj)" (h/file-uri "file:///aaa.cljs"))
-  (h/load-code-and-locs "(ns kkk)" (h/file-uri "file:///bbb.cljs"))
-  (h/load-code-and-locs "(ns lll)" (h/file-uri "file:///ccc.cljs"))
-  (is (= '#{aaa ccc bbb}
-         (q/ns-names-for-langs (h/db) #{:clj})))
-  (is (= '#{jjj kkk lll}
-         (q/ns-names-for-langs (h/db) #{:cljs})))
-  (is (= '#{aaa ccc bbb
-            jjj kkk lll}
-         (q/ns-names-for-langs (h/db) #{:clj :cljs}))))
-
-(deftest ns-names-for-file
-  (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
-  (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
-  (is (= '[aaa ccc]
-         (q/ns-names-for-uri (h/db) (h/file-uri "file:///aaa.clj") "/aaa.clj"))))
-
-(deftest ns-names
-  (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
-  (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
-  (h/load-code-and-locs "(ns jjj)" (h/file-uri "file:///jjj.cljs"))
-  (is (= (if (dg?)
-           '#{aaa bbb ccc jjj clojure.core cljs.core}
-           '#{aaa bbb ccc jjj})
-         (q/ns-names (h/db)))))
-
-(deftest internal-ns-names
-  (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
-  (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
-  (h/load-code-and-locs "(ns some)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-  (is (= '#{aaa bbb} (q/internal-ns-names (h/db)))))
-
-(deftest nses-some-internal-uri
-  (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
-  (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///bbb.clj"))
-  (h/load-code-and-locs "(ns aaa)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
-  ;; rename uses nses-some-internal-uri, but it doesn't do a good job with
-  ;; namespaces that are defined in many files. It performs the rename in only
-  ;; one of the files, and which one is a bit arbitrary. For whatever reason,
-  ;; the dep-graph version returns a different, though equally valid file. We
-  ;; allow that version here. See the comment in q/nses-some-internal-uri
-  ;; for more thoughts.
-  (is (= (if (dg?)
-           '{aaa "file:///aaa.clj"}
-           '{aaa "file:///bbb.clj"})
-         (q/nses-some-internal-uri (h/db) '#{aaa}))))
+  (is (= 2 (count (q/uri-dependencies-analysis (h/db) "file:///aaa.clj"))))
+  (is (= 1 (count (q/uri-dependencies-analysis (h/db) "file:///bbb.clj"))))
+  (is (= 0 (count (q/uri-dependencies-analysis (h/db) "file:///ccc.clj")))))
 
 (deftest find-last-order-by-project-analysis
   (testing "with pred that applies for both project and external analysis"

@@ -1,9 +1,7 @@
 (ns clojure-lsp.queries
-  (:refer-clojure :exclude [ns-aliases])
   (:require
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.logger :as logger]
-   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
@@ -17,32 +15,11 @@
 
 ;;;; Filter analysis, using dep-graph
 
-;; TODO: Remove this when the dep graph experiment is done.
-;; NOTE: Do not make this public. It will make it harder to end the dep-graph
-;; experiment.
-(defn ^:private use-dep-graph? [db]
-  (settings/get db [:experimental :dep-graph-queries]
-                (not= "false" (System/getenv "CLOJURE_LSP_USE_DEP_GRAPH"))))
-
-(defn ^:private deprecated-buckets-external? [buckets]
-  (some-> buckets first val first :external?))
-
-(defn ^:private deprecated-internal-analysis [{:keys [analysis]}]
-  (medley/remove-vals deprecated-buckets-external? analysis))
-
 (defn internal-analysis [{:keys [analysis] :as db}]
-  (if (use-dep-graph? db)
-    (medley/filter-keys
-      #(dep-graph/file-internal? db %)
-      analysis)
-    (deprecated-internal-analysis db)))
+  (medley/filter-keys #(dep-graph/file-internal? db %) analysis))
 
 (defn external-analysis [{:keys [analysis] :as db}]
-  (if (use-dep-graph? db)
-    (medley/remove-keys
-      #(dep-graph/file-internal? db %)
-      analysis)
-    (medley/filter-vals deprecated-buckets-external? analysis)))
+  (medley/remove-keys #(dep-graph/file-internal? db %) analysis))
 
 (defn uris-to-filenames [db uris]
   (map #(dep-graph/uri-to-filename db %) uris))
@@ -50,51 +27,35 @@
 (defn ^:private uris-analysis [{:keys [analysis] :as db} uris]
   (select-keys analysis (uris-to-filenames db uris)))
 
-(defn ns-analysis [{:keys [analysis] :as db} namespace]
-  (if (use-dep-graph? db)
-    (uris-analysis db (dep-graph/ns-uris db namespace))
-    analysis))
+(defn ns-analysis [db namespace]
+  (uris-analysis db (dep-graph/ns-uris db namespace)))
 
-(defn ns-dependents-analysis [{:keys [analysis] :as db} namespace]
-  (if (use-dep-graph? db)
-    (uris-analysis db (dep-graph/ns-dependents-uris db namespace))
-    analysis))
+(defn ns-dependents-analysis [db namespace]
+  (uris-analysis db (dep-graph/ns-dependents-uris db namespace)))
 
-(defn ns-and-dependents-analysis [{:keys [analysis] :as db} namespace]
-  (if (use-dep-graph? db)
-    (uris-analysis db (dep-graph/ns-and-dependents-uris db namespace))
-    analysis))
+(defn ns-and-dependents-analysis [db namespace]
+  (uris-analysis db (dep-graph/ns-and-dependents-uris db namespace)))
 
-(defn ns-dependencies-analysis [{:keys [analysis] :as db} namespace]
-  (if (use-dep-graph? db)
-    (uris-analysis db (dep-graph/ns-dependencies-uris db namespace))
-    analysis))
+(defn ns-dependencies-analysis [db namespace]
+  (uris-analysis db (dep-graph/ns-dependencies-uris db namespace)))
 
-(defn nses-analysis [{:keys [analysis] :as db} namespaces]
-  (if (use-dep-graph? db)
-    (uris-analysis db (dep-graph/nses-uris db namespaces))
-    analysis))
+(defn nses-analysis [db namespaces]
+  (uris-analysis db (dep-graph/nses-uris db namespaces)))
 
-(defn nses-and-dependents-analysis [{:keys [analysis] :as db} namespaces]
-  (if (use-dep-graph? db)
-    (uris-analysis db (dep-graph/nses-and-dependents-uris db namespaces))
-    analysis))
+(defn nses-and-dependents-analysis [db namespaces]
+  (uris-analysis db (dep-graph/nses-and-dependents-uris db namespaces)))
 
-(defn uri-dependents-analysis [{:keys [analysis documents] :as db} uri]
-  (if (use-dep-graph? db)
-    (transduce (map #(ns-dependents-analysis db %))
-               merge
-               {}
-               (get-in documents [uri :namespaces]))
-    analysis))
+(defn uri-dependents-analysis [{:keys [documents] :as db} uri]
+  (transduce (map #(ns-dependents-analysis db %))
+             merge
+             {}
+             (get-in documents [uri :namespaces])))
 
-(defn uri-dependencies-analysis [{:keys [analysis documents] :as db} uri]
-  (if (use-dep-graph? db)
-    (transduce (map #(ns-dependencies-analysis db %))
-               merge
-               {}
-               (get-in documents [uri :namespaces]))
-    analysis))
+(defn uri-dependencies-analysis [{:keys [documents] :as db} uri]
+  (transduce (map #(ns-dependencies-analysis db %))
+             merge
+             {}
+             (get-in documents [uri :namespaces])))
 
 (defn db-with-analysis [db f & args]
   (assoc db :analysis (apply f db args)))
@@ -105,22 +66,7 @@
 (defn db-with-ns-analysis [db namespace]
   (db-with-analysis db ns-analysis namespace))
 
-;;;; Miscelaneous helpers that may belong in clojure-lsp.dep-graph
-
-;; When using the dep-graph, these helpers don't need the analysis, though they
-;; do on the non-dep-graph path. Perhaps they should be moved to
-;; clojure-lsp.dep-graph when use-dep-graph? is removed.
-
-(def ^:private as-alias-elems-xf ;; works for dep-graph only
-  (mapcat (fn [[namespace {:keys [aliases]}]]
-            (keep (fn [alias]
-                    (when alias
-                      {:to namespace
-                       :alias alias}))
-                  (dep-graph/ms-distinct aliases)))))
-
-(def ^:private deprecated-as-alias-elems-xf ; works for :namespace-alias only
-  (map #(select-keys % [:to :alias])))
+;;;; Filter elements in analysis
 
 (def ^:private xf-analysis->by-bucket (map val))
 (defn ^:private xf-by-bucket->bucket-elems [bucket-name]
@@ -139,111 +85,12 @@
 (def xf-analysis->keyword-definitions (xf-analysis->bucket-elems :keyword-definitions))
 (def xf-analysis->keyword-usages (xf-analysis->bucket-elems :keyword-usages))
 (def xf-analysis->keywords (xf-analysis->buckets-elems :keyword-definitions :keyword-usages))
-(def xf-analysis->namespace-alias (xf-analysis->bucket-elems :namespace-alias))
 (def xf-analysis->namespace-definitions (xf-analysis->bucket-elems :namespace-definitions))
 (def xf-analysis->namespace-usages (xf-analysis->bucket-elems :namespace-usages))
 (def xf-analysis->protocol-impls (xf-analysis->bucket-elems :protocol-impls))
 (def xf-analysis->var-definitions (xf-analysis->bucket-elems :var-definitions))
 (def xf-analysis->var-usages (xf-analysis->bucket-elems :var-usages))
 (def xf-analysis->vars (xf-analysis->buckets-elems :var-definitions :var-usages))
-
-(defn ns-aliases [{:keys [dep-graph] :as db}]
-  (if (use-dep-graph? db)
-    (into #{}
-          (comp
-            dep-graph/some-dependents-internal-xf
-            as-alias-elems-xf)
-          dep-graph)
-    (into #{}
-          (comp
-            xf-analysis->namespace-alias
-            deprecated-as-alias-elems-xf)
-          (deprecated-internal-analysis db))))
-
-(defn ns-aliases-for-langs [{:keys [dep-graph] :as db} langs]
-  (if (use-dep-graph? db)
-    (into #{}
-          (comp
-            dep-graph/some-dependents-internal-xf
-            (filter (fn [[_namespace {:keys [dependents-langs]}]]
-                      (dep-graph/ms-overlaps-set? dependents-langs langs)))
-            as-alias-elems-xf)
-          dep-graph)
-    (into #{}
-          (comp
-            xf-analysis->namespace-alias
-            (filter :alias)
-            (filter (fn [element]
-                      (some langs (elem-langs element))))
-            deprecated-as-alias-elems-xf)
-          (deprecated-internal-analysis db))))
-
-(defn ns-names-for-langs [{:keys [analysis documents] :as db} langs]
-  (if (use-dep-graph? db)
-    (into #{}
-          (mapcat (fn [doc]
-                    (when (some langs (:langs doc))
-                      (:namespaces doc))))
-          (vals documents))
-    (into #{}
-          (comp
-            xf-analysis->namespace-definitions
-            (filter (fn [element]
-                      (some langs (elem-langs element))))
-            (map :name))
-          analysis)))
-
-(defn ns-names-for-uri [{:keys [documents] :as db} uri filename]
-  (if (use-dep-graph? db)
-    (vec (get-in documents [uri :namespaces]))
-    (mapv :name (get-in db [:analysis filename :namespace-definitions]))))
-
-(defn ns-names [{:keys [analysis dep-graph] :as db}]
-  (if (use-dep-graph? db)
-    (set (keys dep-graph))
-    (into #{}
-          (comp
-            xf-analysis->namespace-definitions
-            (map :name))
-          analysis)))
-
-(defn internal-ns-names [{:keys [documents] :as db}]
-  (if (use-dep-graph? db)
-    (into #{}
-          (comp
-            dep-graph/internal-xf
-            (mapcat (comp :namespaces val)))
-          documents)
-    (into #{}
-          (comp
-            xf-analysis->namespace-definitions
-            (map :name))
-          (deprecated-internal-analysis db))))
-
-(defn nses-some-internal-uri [db namespaces]
-  (if (use-dep-graph? db)
-    ;; TODO: this is a very specific return value, but has to be this way to
-    ;; match the non-dep-graph version. When use-dep-graph? is removed, it'd be
-    ;; better to refactor internal-api/nses->ns+uri to use
-    ;; dep-graph/ns-internal-uris directly, perhaps changing it to return all
-    ;; uris for a given namespace.
-    (into {}
-          (keep (fn [namespace]
-                  (when-first [uri (dep-graph/ns-internal-uris db namespace)]
-                    [namespace uri])))
-          namespaces)
-    ;; Performance sensitive: Gather uris in one pass, instead of (count
-    ;; namespaces) passes.
-    (medley/map-vals
-      #(shared/filename->uri % db)
-      (into {}
-            (comp
-              xf-analysis->namespace-definitions
-              (filter #(contains? (set namespaces) (:name %)))
-              (map (juxt :name :filename)))
-            (deprecated-internal-analysis db)))))
-
-;;;; Filter elements in analysis
 
 (defn ^:private safe-equal?
   "Fast equals for string and symbols."

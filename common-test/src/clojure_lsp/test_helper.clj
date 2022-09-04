@@ -5,7 +5,6 @@
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
-   [clojure-lsp.queries :as q]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
@@ -251,6 +250,3 @@
 
 (defn changes-by-uri->code [changes-by-uri uri db]
   (changes->code (get changes-by-uri uri) uri db))
-
-(defn use-dep-graph? [db]
-  (#'q/use-dep-graph? db))

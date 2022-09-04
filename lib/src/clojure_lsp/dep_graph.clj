@@ -1,4 +1,5 @@
 (ns clojure-lsp.dep-graph
+  (:refer-clojure :exclude [ns-aliases])
   (:require
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]))
@@ -167,9 +168,9 @@
         (assoc ms x new-v)))
     ms))
 
-(defn ms-distinct [ms] (some-> ms keys))
+(defn ^:private ms-distinct [ms] (some-> ms keys))
 
-(defn ms-overlaps-set? [ms s]
+(defn ^:private ms-overlaps-set? [ms s]
   ;; Conceptually set overlap is symmetric, but with our implementation of
   ;; multiset, in practice we must check whether the items of the set are in the
   ;; multiset, not vice-versa.
@@ -207,7 +208,7 @@
         (update-in [:dep-graph name :aliases] f alias)
         ;; NOTE: We could store :dependents-uris, and look up whether any of
         ;; them are internal. But this way keeps that lookup out of
-        ;; q/ns-aliases, which is on the hotpath in completion.
+        ;; ns-aliases, which is on the hotpath in completion.
         ;; TODO: is it wrong that once dependents-internal?, always
         ;; dependents-internal? We could stop using a namespace. I think the
         ;; only consequence is that it would continue to show up in completions
@@ -293,10 +294,6 @@
     [defs usages]))
 
 (defn refresh-analysis [db old-analysis new-analysis internal?]
-  ;; NOTE: When called during startup this takes a little time (500ms in medium
-  ;; projects 1200ms in v. large). Although while in beta not every user will
-  ;; need it, we calculate it anyway. This way it can be toggled in the settings
-  ;; live, which is useful for beta testing.
   (shared/logging-task
     :maintain-dep-graph
     (let [[old-definitions old-usages] (ns-definitions-and-usages old-analysis)
@@ -361,3 +358,51 @@
   (into []
         (comp internal-xf (map key))
         documents))
+
+;; Namespace/alias filtering
+
+(defn internal-ns-names [{:keys [documents]}]
+  (into #{}
+        (comp
+          internal-xf
+          (mapcat (comp :namespaces val)))
+        documents))
+
+(defn ns-names [{:keys [dep-graph]}]
+  (set (keys dep-graph)))
+
+(defn ns-names-for-uri [{:keys [documents]} uri]
+  (vec (get-in documents [uri :namespaces])))
+
+(defn ns-names-for-langs [{:keys [documents]} langs]
+  (into #{}
+        (mapcat (fn [doc]
+                  (when (some langs (:langs doc))
+                    (:namespaces doc))))
+        (vals documents)))
+
+(def ^:private as-alias-elems-xf ;; works for dep-graph only
+  "Convert aliases into something that looks a little like :namespace-alias
+  analysis elems."
+  (mapcat (fn [[namespace {:keys [aliases]}]]
+            (keep (fn [alias]
+                    (when alias
+                      {:to namespace
+                       :alias alias}))
+                  (ms-distinct aliases)))))
+
+(defn ns-aliases [{:keys [dep-graph]}]
+  (into #{}
+        (comp
+          some-dependents-internal-xf
+          as-alias-elems-xf)
+        dep-graph))
+
+(defn ns-aliases-for-langs [{:keys [dep-graph]} langs]
+  (into #{}
+        (comp
+          some-dependents-internal-xf
+          (filter (fn [[_namespace {:keys [dependents-langs]}]]
+                    (ms-overlaps-set? dependents-langs langs)))
+          as-alias-elems-xf)
+        dep-graph))

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
+
 - Editor
   - Fix to avoid error when checking code actions from an #_x uneval node. #1227
   - Add support to decompile jar as a java project when finding the definition of a java class, allowing to have LSP features on that java project. #1187

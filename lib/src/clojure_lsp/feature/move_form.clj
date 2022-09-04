@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.move-form
   (:require
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.queries :as q]
@@ -95,10 +96,10 @@
 (defn move-form [zloc source-uri {:keys [db*] :as components} dest-filename]
   (let [db @db*
         source-filename (shared/uri->filename source-uri)
-        source-nses (q/ns-names-for-uri db source-uri source-filename)
+        source-nses (dep-graph/ns-names-for-uri db source-uri)
         dest-filename (shared/absolute-path dest-filename db)
         dest-uri (shared/filename->uri dest-filename db)
-        dest-nses (q/ns-names-for-uri db dest-uri dest-filename)]
+        dest-nses (dep-graph/ns-names-for-uri db dest-uri)]
     (when (and (= 1 (count source-nses))
                (= 1 (count dest-nses)))
       (let [source-ns (first source-nses)

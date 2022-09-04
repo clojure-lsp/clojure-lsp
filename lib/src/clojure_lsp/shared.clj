@@ -240,12 +240,21 @@
     (catch Exception _
       false)))
 
+(defn ^:private filename->source-paths [filename source-paths]
+  (filter #(string/starts-with? filename %) source-paths))
+
+(defn uri->source-paths [uri source-paths]
+  (filename->source-paths (uri->filename uri) source-paths))
+
+(defn uri->source-path [uri source-paths]
+  (first (uri->source-paths uri source-paths)))
+
 (defn external-filename? [filename source-paths]
   (boolean
     (and filename
          (or (-> filename name jar-file?)
              (and (seq source-paths)
-                  (not-any? #(string/starts-with? filename %) source-paths))))))
+                  (not (seq (filename->source-paths filename source-paths))))))))
 
 (def ^:private jar-file-with-filename-regex #"^(.*\.jar):(.*)")
 
@@ -279,15 +288,14 @@
   [& components]
   (.getPath ^java.io.File (apply io/file components)))
 
-(defn namespace->uri [namespace source-paths filename db]
-  (let [file-type (uri->file-type filename)]
-    (filename->uri
-      (join-filepaths (first (filter #(string/starts-with? filename %) source-paths))
-                      (-> namespace
-                          (string/replace "." (System/getProperty "file.separator"))
-                          (string/replace "-" "_")
-                          (str "." (name file-type))))
-      db)))
+(defn namespace->uri [namespace source-path file-type db]
+  (filename->uri
+    (join-filepaths source-path
+                    (-> namespace
+                        (string/replace "." (System/getProperty "file.separator"))
+                        (string/replace "-" "_")
+                        (str "." (name file-type))))
+    db))
 
 (defn path-separators-to-system
   "Returns PATH with its file separators converted to match the system's
@@ -320,34 +328,31 @@
     path))
 
 (defn uri->namespace
-  ([uri db]
-   (uri->namespace uri (uri->filename uri) db))
-  ([uri filename db]
-   (let [project-root-uri (:project-root-uri db)
-         source-paths (get-in db [:settings :source-paths])
-         in-project? (when project-root-uri
-                       (string/starts-with? uri project-root-uri))
-         file-type (uri->file-type uri)]
-     (when (and in-project? (not= :unknown file-type))
-       (->> source-paths
-            (keep (fn [source-path]
-                    (when (string/starts-with? filename (path->folder-with-slash source-path))
-                      (some-> (relativize-filepath filename source-path)
-                              (->> (re-find #"^(.+)\.\S+$"))
-                              (nth 1)
-                              (string/replace (System/getProperty "file.separator") ".")
-                              (string/replace #"_" "-")))))
-            (reduce (fn [source-path-a source-path-b]
-                      (cond
-                        (not source-path-b) source-path-a
-                        (not source-path-a) source-path-b
-                        :else (if (> (count source-path-a)
-                                     (count source-path-b))
-                                source-path-b
-                                source-path-a))) nil))))))
-
-(defn filename->namespace [filename db]
-  (uri->namespace (filename->uri filename db) filename db))
+  [uri db]
+  (let [filename (uri->filename uri)
+        project-root-uri (:project-root-uri db)
+        source-paths (get-in db [:settings :source-paths])
+        in-project? (when project-root-uri
+                      (string/starts-with? uri project-root-uri))
+        file-type (uri->file-type uri)]
+    (when (and in-project? (not= :unknown file-type))
+      (->> source-paths
+           (map path->folder-with-slash)
+           (filename->source-paths filename)
+           (keep (fn [source-path]
+                   (some-> (relativize-filepath filename source-path)
+                           (->> (re-find #"^(.+)\.\S+$"))
+                           (nth 1)
+                           (string/replace (System/getProperty "file.separator") ".")
+                           (string/replace #"_" "-"))))
+           (reduce (fn [source-path-a source-path-b]
+                     (cond
+                       (not source-path-b) source-path-a
+                       (not source-path-a) source-path-b
+                       :else (if (> (count source-path-a)
+                                    (count source-path-b))
+                               source-path-b
+                               source-path-a))) nil)))))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."

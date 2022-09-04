@@ -273,7 +273,7 @@
                                               :name-end-row end-row
                                               :name-end-col end-col}]
                                    #(shared/inside? % scope)))
-                  elements (->> (get-in db [:analysis (shared/uri->filename uri)])
+                  elements (->> (get-in db [:analysis uri])
                                 (mapcat val)
                                 (filter (enclosed-by? (z/node vector-zloc))))]
               (->> child-nodes

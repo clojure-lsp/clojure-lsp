@@ -21,19 +21,13 @@
 
 (defn var-usages-within [zloc uri db]
   (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-        defs (q/find-var-usages-under-form
-               db
-               (shared/uri->filename uri)
-               row
-               col
-               end-row
-               end-col)]
+        defs (q/find-var-usages-under-form db uri row col end-row end-col)]
     (filterv
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))
 
 (defn var-definitions-within [zloc uri db]
-  (let [defs (q/find-var-definitions db (shared/uri->filename uri) false)]
+  (let [defs (q/find-var-definitions db uri false)]
     (filterv
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))
@@ -95,11 +89,9 @@
 
 (defn move-form [zloc source-uri {:keys [db*] :as components} dest-filename]
   (let [db @db*
-        source-filename (shared/uri->filename source-uri)
-        source-nses (dep-graph/ns-names-for-uri db source-uri)
-        dest-filename (shared/absolute-path dest-filename db)
-        dest-uri (shared/filename->uri dest-filename db)
-        dest-nses (dep-graph/ns-names-for-uri db dest-uri)]
+        source-nses (vec (dep-graph/ns-names-for-uri db source-uri))
+        dest-uri (-> dest-filename (shared/absolute-path db) (shared/filename->uri db))
+        dest-nses (vec (dep-graph/ns-names-for-uri db dest-uri))]
     (when (and (= 1 (count source-nses))
                (= 1 (count dest-nses)))
       (let [source-ns (first source-nses)
@@ -122,8 +114,8 @@
         (when can-move?
           (let [def-to-move (first defs)
                 refs (q/find-references db def-to-move false)
-                dest-refs (filter (comp #(= % dest-filename) :filename) refs)
-                per-file-usages (group-by (comp #(shared/filename->uri % db) :filename) refs)
+                dest-refs (filter (comp #(= % dest-uri) :uri) refs)
+                per-file-usages (group-by :uri refs)
                 insertion-loc (some-> (f.file-management/force-get-document-text dest-uri components)
                                       z/of-string
                                       z/rightmost)
@@ -145,11 +137,11 @@
                                           (medley/map-kv-vals
                                             (fn [file-uri usages]
                                               (let [usage (first usages)
-                                                    filename (:filename usage)
+                                                    usage-uri (:uri usage)
                                                     file-loc (some-> (f.file-management/force-get-document-text file-uri components)
                                                                      z/of-string)
                                                     db @db*
-                                                    local-buckets (get-in db [:analysis filename])
+                                                    local-buckets (get-in db [:analysis usage-uri])
                                                     source-refer (first (filter #(and (:refer %)
                                                                                       (= (:to %) source-ns)
                                                                                       (= (:name %) (:name def-to-move)))
@@ -185,7 +177,7 @@
                                                     usage-changes (keep (fn [usage]
                                                                           (let [usage-loc (edit/find-at-usage-name file-loc usage)]
                                                                             (when (or
-                                                                                    (= source-filename filename)
+                                                                                    (= source-uri usage-uri)
                                                                                     (namespace (z/sexpr usage-loc)))
                                                                               {:loc (z/replace usage-loc (symbol (str replacement-ns)
                                                                                                                  (str (:name def-to-move))))

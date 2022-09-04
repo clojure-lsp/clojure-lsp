@@ -66,7 +66,7 @@
                              (string/join "\n---\n"))))))
 
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc filename arglist-strs] :as _definition}
+  [{sym-ns :ns sym-name :name :keys [doc uri arglist-strs] :as _definition}
    db*
    {:keys [additional-text-edits?]}]
   (let [db @db*
@@ -88,7 +88,8 @@
                    (if markdown?
                      (docstring->formatted-markdown doc)
                      doc))
-        clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)]
+        clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)
+        filename (shared/uri->filename uri)]
     (if markdown?
       {:kind "markdown"
        :value (cond-> (str opening-code sym-line closing-code)
@@ -103,7 +104,7 @@
                 , (str (format "%s*[%s](%s)*"
                                line-break
                                (string/replace filename #"\\" "\\\\")
-                               (shared/filename->uri filename db))))}
+                               uri)))}
       ;; Default to plaintext
       (cond-> []
         sym
@@ -124,8 +125,7 @@
   ([uri row col components] (hover uri row col components {}))
   ([uri row col {:keys [db*] :as components} docs-config]
    (let [db @db*
-         filename (shared/uri->filename uri)
-         cursor-element (q/find-element-under-cursor db filename row col)
+         cursor-element (q/find-element-under-cursor db uri row col)
          cursor-loc (some-> (f.file-management/force-get-document-text uri components)
                             parser/safe-zloc-of-string
                             (parser/to-pos row col))
@@ -140,11 +140,11 @@
                    cursor-element
 
                    func-position
-                   (q/find-element-under-cursor db filename (:row func-position) (:col func-position))
+                   (q/find-element-under-cursor db uri (:row func-position) (:col func-position))
 
                    :else
                    (loop [try-col col]
-                     (if-let [usage (q/find-element-under-cursor db filename row try-col)]
+                     (if-let [usage (q/find-element-under-cursor db uri row try-col)]
                        usage
                        (when (pos? try-col)
                          (recur (dec try-col))))))

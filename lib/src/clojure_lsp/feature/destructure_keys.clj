@@ -2,7 +2,6 @@
   (:require
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
@@ -20,9 +19,8 @@
 
 (defn local-to-destructure [zloc uri db]
   (when zloc
-    (let [filename (shared/uri->filename uri)
-          {:keys [row col]} (meta (z/node zloc))]
-      (when-let [def-elem (q/find-definition-from-cursor db filename row col)]
+    (let [{:keys [row col]} (meta (z/node zloc))]
+      (when-let [def-elem (q/find-definition-from-cursor db uri row col)]
         (when (= :locals (:bucket def-elem))
           (let [top-zloc (edit/to-top zloc)
                 def-zloc (edit/find-at-pos top-zloc (:row def-elem) (:col def-elem))

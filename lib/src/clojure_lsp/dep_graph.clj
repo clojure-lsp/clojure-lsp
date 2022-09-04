@@ -85,10 +85,8 @@
 
 ;; dep-graph = {(ns dep-graph-item)*}
 ;; documents = {(uri documents-item)*}
-;; file-meta = {(filename {:uri uri})*}
 ;; db = {':dep-graph' dep-graph
-;;       ':documents' documents
-;;       ':file-meta' file-meta}
+;;       ':documents' documents}
 
 (comment
   ;; Example
@@ -134,24 +132,15 @@
       (select-keys ["file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
                     "jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"]))
   '{"file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
-    {:filename   "/path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
+    {:uri        "file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
      :internal?  true
      :langs      #{:clj}
      :namespaces #{clojure-lsp.main}}
     "jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"
-    {:filename   "/path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
+    {:uri        "file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
      :internal?  false
      :langs      #{:clj :cljs}
-     :namespaces #{clojure.tools.cli}}}
-
-  (-> @db/db*
-      :file-meta
-      (select-keys ["/path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
-                    "/path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"]))
-  {"/path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
-   {:uri "file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"}
-   "/path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
-   {:uri "jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"}})
+     :namespaces #{clojure.tools.cli}}})
 
 ;;;; DB Maintenance
 
@@ -181,20 +170,11 @@
 (def ^:private s-conj (fnil conj #{}))
 (def ^:private s-disj (fnil disj #{}))
 
-(defn filename-to-uri [db filename]
-  (get-in db [:file-meta filename :uri]))
-
-(defn uri-to-filename [db uri]
-  (get-in db [:documents uri :filename]))
-
 (defn uri-internal? [db uri]
   (get-in db [:documents uri :internal?]))
 
-(defn file-internal? [db filename]
-  (uri-internal? db (filename-to-uri db filename)))
-
-(defn ^:private update-usage [db f {:keys [from name alias filename lang]}]
-  (let [doc (get-in db [:documents (filename-to-uri db filename)])
+(defn ^:private update-usage [db f {:keys [from name alias uri lang]}]
+  (let [doc (get-in db [:documents uri])
         usage-langs (or (some-> lang list set) (:langs doc))]
     ;; A dep-graph item is a summary of the ways a namespace is used across the
     ;; whole project. We keep multisets of most of its data, so that we know not
@@ -226,23 +206,22 @@
 (defn ^:private add-usages    [db usages] (update-usages db ms-conj usages))
 
 (def ^:private user-ns-def
-  ;; add :filename
+  ;; add :uri
   '{:bucket :namespace-definitions
     :name user})
 
 (def ^:private clojure-core-ns-usage
-  ;; add :filename and :from ns
+  ;; add :uri and :from ns
   '{:bucket :namespace-usages
     :name clojure.core})
 
 (def ^:private cljs-core-ns-usage
-  ;; add :filename and :from ns
+  ;; add :uri and :from ns
   '{:bucket :namespace-usages
     :name cljs.core})
 
-(defn ^:private update-definition [db s-f ms-f {:keys [name filename]}]
-  (let [uri (filename-to-uri db filename)
-        in-doc (get-in db [:documents uri])
+(defn ^:private update-definition [db s-f ms-f {:keys [name uri]}]
+  (let [in-doc (get-in db [:documents uri])
         doc-langs (:langs in-doc)
         db (-> db
                (update-in [:dep-graph name :uris] s-f uri)
@@ -252,11 +231,11 @@
       (contains? doc-langs :clj)
       (update-usage ms-f (assoc clojure-core-ns-usage
                                 :from name
-                                :filename filename))
+                                :uri uri))
       (contains? doc-langs :cljs)
       (update-usage ms-f (assoc cljs-core-ns-usage
                                 :from name
-                                :filename filename)))))
+                                :uri uri)))))
 
 (defn ^:private update-definitions [db s-f ms-f namespace-definitions]
   (reduce #(update-definition %1 s-f ms-f %2) db namespace-definitions))
@@ -264,28 +243,23 @@
 (defn ^:private remove-definitions [db namespace-definitions] (update-definitions db s-disj ms-disj namespace-definitions))
 (defn ^:private add-definitions    [db namespace-definitions] (update-definitions db s-conj ms-conj namespace-definitions))
 
-(defn ^:private ensure-file [db filename internal?]
-  (let [uri (shared/filename->uri filename db)]
-    (-> db
-        ;; Bridge from filename to URI until we use URI consistently
-        (update-in [:file-meta filename] assoc :uri uri)
-        ;; TODO: consider using documents as a cache for other things:
-        ;; file-type, etc.
-        (update-in [:documents uri] assoc
-                   :filename filename
-                   :internal? internal?
-                   :langs (shared/uri->available-langs uri)))))
+(defn ^:private ensure-doc [db uri internal?]
+  ;; TODO: consider using documents as a cache for other things:
+  ;; filename, file-type, etc.
+  (update-in db [:documents uri] assoc
+             :internal? internal?
+             :langs (shared/uri->available-langs uri)))
 
-(defn ^:private ensure-files [db filenames internal?]
-  (reduce #(ensure-file %1 %2 internal?) db filenames))
+(defn ^:private ensure-docs [db uris internal?]
+  (reduce #(ensure-doc %1 %2 internal?) db uris))
 
 (defn ^:private ns-definitions-and-usages [analysis]
   (let [{:keys [defs usages]}
-        (reduce-kv (fn [result filename {:keys [var-definitions namespace-definitions namespace-usages]}]
+        (reduce-kv (fn [result uri {:keys [var-definitions namespace-definitions namespace-usages]}]
                      (let [defs (cond-> namespace-definitions
                                   ;; implicitly in user ns
                                   (some #(= 'user (:ns %)) var-definitions)
-                                  (conj (assoc user-ns-def :filename filename)))]
+                                  (conj (assoc user-ns-def :uri uri)))]
                        (-> result
                            (update :defs into defs)
                            (update :usages into namespace-usages))))
@@ -299,20 +273,19 @@
     (let [[old-definitions old-usages] (ns-definitions-and-usages old-analysis)
           [new-definitions new-usages] (ns-definitions-and-usages new-analysis)]
       (-> db
-          ;; ensure-files needs to be first
-          (ensure-files (keys new-analysis) internal?)
+          ;; ensure-docs needs to be first
+          (ensure-docs (keys new-analysis) internal?)
           ;; The rest doesn't depend on ordering, but nicer to define before using
           (remove-usages old-usages)
           (remove-definitions old-definitions)
           (add-definitions new-definitions)
           (add-usages new-usages)))))
 
-(defn remove-file [db uri filename]
-  (-> db
-      (refresh-analysis (select-keys (:analysis db) [filename])
-                        {}
-                        (uri-internal? db uri))
-      (update :file-meta dissoc filename)))
+(defn remove-doc [db uri]
+  (refresh-analysis db
+                    (select-keys (:analysis db) [uri])
+                    {}
+                    (uri-internal? db uri)))
 
 ;;;; File filtering
 
@@ -372,7 +345,7 @@
   (set (keys dep-graph)))
 
 (defn ns-names-for-uri [{:keys [documents]} uri]
-  (vec (get-in documents [uri :namespaces])))
+  (get-in documents [uri :namespaces]))
 
 (defn ns-names-for-langs [{:keys [documents]} langs]
   (into #{}

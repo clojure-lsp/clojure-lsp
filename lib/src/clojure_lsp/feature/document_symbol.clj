@@ -31,17 +31,17 @@
 (defn ^:private symbol-order [{:keys [selection-range]}]
   [(:line (:start selection-range)) (:character (:start selection-range))])
 
-(defn document-symbols [db filename]
-  (let [namespace-definition (q/find-namespace-definition-by-filename db filename)]
+(defn document-symbols [db uri]
+  (let [namespace-definition (q/find-namespace-definition-by-uri db uri)]
     [{:name (or (some-> namespace-definition :name name)
-                filename)
+                (shared/uri->filename uri))
       :kind (element->symbol-kind namespace-definition)
       :range shared/full-file-range
       :selection-range (if namespace-definition
                          (shared/->scope-range namespace-definition)
                          shared/full-file-range)
-      :children (->> (concat (q/find-var-definitions db filename true)
-                             (q/find-defmethods db filename))
+      :children (->> (concat (q/find-var-definitions db uri true)
+                             (q/find-defmethods db uri))
                      (map element->document-symbol)
                      (sort-by symbol-order)
                      vec)}]))

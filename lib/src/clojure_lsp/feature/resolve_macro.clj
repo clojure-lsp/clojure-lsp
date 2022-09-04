@@ -32,8 +32,7 @@
 
 (defn find-full-macro-symbol-to-resolve [zloc uri db]
   (when-let [{macro-name-row :row macro-name-col :col} (find-function-name-position zloc)]
-    (let [filename (shared/uri->filename uri)
-          element (q/find-element-under-cursor db filename macro-name-row macro-name-col)]
+    (let [element (q/find-element-under-cursor db uri macro-name-row macro-name-col)]
       (when (:macro element)
         (let [excluded-vars (get excluded-macros (:to element))]
           (when (and (not= excluded-vars '*)

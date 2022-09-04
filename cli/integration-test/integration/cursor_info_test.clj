@@ -31,6 +31,6 @@
           element (:element first-element)
           definition (:definition first-element)]
       (is (not (nil? first-element)))
-      (is (= (:filename element) (:filename definition)))
+      (is (= (:uri element) (:uri definition)))
       (is (= (:name-row element) (:name-row definition)))
       (is (= (:name-col element) (:name-col definition))))))

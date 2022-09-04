@@ -93,19 +93,18 @@
           {}
           work-done-token
           components)
-        (let [db @db*]
+        (let [db @db*
+              internal-uris (dep-graph/internal-uris db)]
           (when (settings/get db [:lint-project-files-after-startup?] true)
-            (f.diagnostic/publish-all-diagnostics! (-> db :settings :source-paths) components))
+            (f.diagnostic/publish-all-diagnostics! internal-uris components))
           (async/go
             (f.clojuredocs/refresh-cache! db*))
           (async/go
             (let [settings (:settings db)]
               (when (stubs/check-stubs? settings)
                 (stubs/generate-and-analyze-stubs! settings db*))))
-          ;; producer/refresh-test-tree is inherintly async
-          (let [uris (dep-graph/internal-uris db)]
-            (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
-            (producer/refresh-test-tree producer uris))
+          (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
+          (producer/refresh-test-tree producer internal-uris)
           (when (settings/get db [:java] true)
             (async/go
               (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
@@ -155,11 +154,9 @@
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (mapv (fn [reference]
-              {:uri (-> (:filename reference)
-                        (shared/filename->uri db)
-                        (f.java-interop/uri->translated-uri db producer))
+              {:uri (f.java-interop/uri->translated-uri (:uri reference) db producer)
                :range (shared/->range reference)})
-            (q/find-references-from-cursor db (shared/uri->filename (:uri text-document)) row col (:include-declaration context))))))
+            (q/find-references-from-cursor db (:uri text-document) row col (:include-declaration context))))))
 
 (defn completion-resolve-item [{:keys [db*]} item]
   (shared/logging-task
@@ -184,9 +181,7 @@
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (when-let [definition (q/find-definition-from-cursor db (shared/uri->filename (:uri text-document)) row col)]
-        {:uri (-> (:filename definition)
-                  (shared/filename->uri db)
-                  (f.java-interop/uri->translated-uri db producer))
+        {:uri (f.java-interop/uri->translated-uri (:uri definition) db producer)
          :range (shared/->range definition)}))))
 
 (defn declaration [{:keys [db* producer]} {:keys [text-document position]}]
@@ -195,9 +190,7 @@
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (when-let [declaration (q/find-declaration-from-cursor db (shared/uri->filename (:uri text-document)) row col)]
-        {:uri (-> (:filename declaration)
-                  (shared/filename->uri db)
-                  (f.java-interop/uri->translated-uri db producer))
+        {:uri (f.java-interop/uri->translated-uri (:uri declaration) db producer)
          :range (shared/->range declaration)}))))
 
 (defn implementation [{:keys [db* producer]} {:keys [text-document position]}]
@@ -206,27 +199,24 @@
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (mapv (fn [implementation]
-              {:uri (-> (:filename implementation)
-                        (shared/filename->uri db)
-                        (f.java-interop/uri->translated-uri db producer))
+              {:uri (f.java-interop/uri->translated-uri (:uri implementation) db producer)
                :range (shared/->range implementation)})
-            (q/find-implementations-from-cursor db (shared/uri->filename (:uri text-document)) row col)))))
+            (q/find-implementations-from-cursor db (:uri text-document) row col)))))
 
 (defn document-symbol [{:keys [db*]} {:keys [text-document]}]
   (process-after-changes
     :document-symbol (:uri text-document) db*
-    (let [db @db*
-          filename (shared/uri->filename (:uri text-document))]
-      (f.document-symbol/document-symbols db filename))))
+    (let [db @db*]
+      (f.document-symbol/document-symbols db (:uri text-document)))))
 
 (defn document-highlight [{:keys [db*]} {:keys [text-document position]}]
   (process-after-changes
     :document-highlight (:uri text-document) db*
     (let [db @db*
           [row col] (shared/position->row-col position)
-          filename (shared/uri->filename (:uri text-document))
-          local-db (update db :analysis select-keys [filename])
-          references (q/find-references-from-cursor local-db filename row col true)]
+          uri (:uri text-document)
+          local-db (update db :analysis select-keys [uri])
+          references (q/find-references-from-cursor local-db uri row col true)]
       (mapv (fn [reference]
               {:range (shared/->range reference)})
             references))))
@@ -266,7 +256,7 @@
 
 (defn ^:private cursor-info [{:keys [db*]} [uri line character]]
   (let [db @db*
-        elements (q/find-all-elements-under-cursor db (shared/uri->filename uri) (inc line) (inc character))]
+        elements (q/find-all-elements-under-cursor db uri (inc line) (inc character))]
     (shared/assoc-some {}
                        :elements (mapv (fn [e]
                                          (shared/assoc-some

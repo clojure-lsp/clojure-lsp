@@ -3,7 +3,6 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
@@ -210,13 +209,13 @@
           z/up))))
 
 (defn ^:private remove-unused-duplicate-requires
-  [node {:keys [filename db]}]
+  [node {:keys [uri db]}]
   (if-let [alias (some-> node
                          z/down
                          (z/find-next-value ':as)
                          z/right
                          z/sexpr)]
-    (let [local-var-usages (get-in db [:analysis filename :var-usages])
+    (let [local-var-usages (get-in db [:analysis uri :var-usages])
           used-alias? (some #(= alias (:alias %))
                             local-var-usages)]
       (if used-alias?
@@ -431,14 +430,13 @@
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
-            filename (shared/uri->filename uri)
-            unused-aliases* (future (q/find-unused-aliases db filename))
-            unused-refers* (future (q/find-unused-refers db filename))
-            unused-imports* (future (q/find-unused-imports db filename))
-            duplicate-requires* (future (q/find-duplicate-requires db filename))
+            unused-aliases* (future (q/find-unused-aliases db uri))
+            unused-refers* (future (q/find-unused-refers db uri))
+            unused-imports* (future (q/find-unused-imports db uri))
+            duplicate-requires* (future (q/find-duplicate-requires db uri))
             clean-ctx {:db db
                        :old-ns-loc ns-loc
-                       :filename filename
+                       :uri uri
                        :unused-aliases @unused-aliases*
                        :unused-refers @unused-refers*
                        :unused-imports @unused-imports*

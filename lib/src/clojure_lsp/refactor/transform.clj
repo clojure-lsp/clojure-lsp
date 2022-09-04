@@ -230,9 +230,7 @@
 
 (defn ^:private widest-scoped-local [zloc uri db]
   (let [z-meta (meta (z/node zloc))
-        local-defs (->> (q/find-local-usages-under-form db
-                                                        (shared/uri->filename uri)
-                                                        z-meta)
+        local-defs (->> (q/find-local-usages-under-form db uri z-meta)
                         (map #(q/find-definition db %)))]
     (reduce
       (fn [accum d]
@@ -438,9 +436,7 @@
               used-syms (into []
                               (comp (map :name)
                                     (distinct))
-                              (q/find-local-usages-under-form db
-                                                              (shared/uri->filename uri)
-                                                              expr-meta))
+                              (q/find-local-usages-under-form db uri expr-meta))
 
               expr-edit (z/of-node (list* fn-sym used-syms))
               private? true
@@ -649,9 +645,7 @@
                            (z/right)))
         ;; Prepend locals to param lists.
         ;; We prepend because it works whether replacing with `partial` or `#()`.
-        used-locals (->> (q/find-local-usages-under-form db
-                                                         (shared/uri->filename uri)
-                                                         fn-form-meta)
+        used-locals (->> (q/find-local-usages-under-form db uri fn-form-meta)
                          (map :name))
         add-locals (fn [zloc]
                      ;; Navigate to the params node and prepend all the locals.
@@ -735,49 +729,47 @@
       [{:loc (z/replace source switch)
         :range (meta (z/node source))}])))
 
-(defn inline-symbol?
-  [{:keys [filename name-row name-col bucket]} db]
-  (when (or (identical? :locals bucket)
-            (identical? :var-definitions bucket))
-    (some-> (parser/safe-zloc-of-file db (shared/filename->uri filename db))
-            (parser/to-pos name-row name-col)
-            edit/find-op
-            z/sexpr
-            #{'let 'def})))
+(defn ^:private inline-data [uri row col db]
+  (let [{:keys [uri bucket name-row name-col] :as definition} (q/find-definition-from-cursor db uri row col)]
+    (when (or (identical? :locals bucket)
+              (identical? :var-definitions bucket))
+      (when-let [zloc (some-> (parser/safe-zloc-of-file db uri)
+                              (parser/to-pos name-row name-col))]
+        (when-let [op (some-> zloc edit/find-op z/sexpr #{'let 'def})]
+          {:def-elem definition
+           :def-zloc zloc
+           :def-uri uri
+           :def-op op})))))
+
+(defn inline-symbol? [uri row col db]
+  (boolean (inline-data uri row col db)))
 
 (defn inline-symbol
   [uri row col db]
-  (let [definition (q/find-definition-from-cursor db (shared/uri->filename uri) row col)]
-    (when-let [op (inline-symbol? definition db)]
-      (let [references (q/find-references-from-cursor db (shared/uri->filename uri) row col false)
-            def-uri    (shared/filename->uri (:filename definition) db)
-            ;; TODO: use safe-zloc-of-file and handle nils
-            def-loc    (some-> (parser/zloc-of-file db def-uri)
-                               (parser/to-pos (:name-row definition) (:name-col definition)))
-            val-loc    (z/right def-loc)
-            end-pos    (if (= op 'def)
-                         (meta (z/node (z/up def-loc)))
-                         (meta (z/node val-loc)))
-            prev-loc   (if (= op 'def)
-                         (z/left (z/up def-loc))
-                         (z/left def-loc))
-            start-pos  (if prev-loc
-                         (set/rename-keys (meta (z/node prev-loc))
-                                          {:end-row :row :end-col :col})
-                         (meta (z/node def-loc)))
-            def-range  {:row     (:row start-pos)
-                        :col     (:col start-pos)
-                        :end-row (:end-row end-pos)
-                        :end-col (:end-col end-pos)}]
-        {:changes-by-uri
-         (reduce
-           (fn [accum {:keys [filename] :as element}]
-             (update accum
-                     (shared/filename->uri filename db)
-                     (fnil conj [])
-                     {:loc val-loc :range element}))
-           {def-uri [{:loc nil :range def-range}]}
-           references)}))))
+  (when-let [{:keys [def-zloc def-uri def-op def-elem]} (inline-data uri row col db)]
+    (let [references (q/find-references db def-elem false)
+          val-loc    (z/right def-zloc)
+          end-pos    (if (= def-op 'def)
+                       (meta (z/node (z/up def-zloc)))
+                       (meta (z/node val-loc)))
+          prev-loc   (if (= def-op 'def)
+                       (z/left (z/up def-zloc))
+                       (z/left def-zloc))
+          start-pos  (if prev-loc
+                       (set/rename-keys (meta (z/node prev-loc))
+                                        {:end-row :row :end-col :col})
+                       (meta (z/node def-zloc)))
+          def-range  {:row     (:row start-pos)
+                      :col     (:col start-pos)
+                      :end-row (:end-row end-pos)
+                      :end-col (:end-col end-pos)}]
+      {:changes-by-uri
+       (reduce
+         (fn [accum {:keys [uri] :as element}]
+           (update accum uri (fnil conj [])
+                   {:loc val-loc :range element}))
+         {def-uri [{:loc nil :range def-range}]}
+         references)})))
 
 (defn can-create-function? [zloc]
   (and zloc
@@ -792,7 +784,7 @@
           z-ns (namespace z-sexpr)
           ;; TODO: shouldn't this also look for unaliased ns-usages?
           ;; See https://github.com/clojure-lsp/clojure-lsp/issues/1023
-          ns-usage (q/find-namespace-usage-by-alias db (shared/uri->filename uri) (symbol z-ns))
+          ns-usage (q/find-namespace-usage-by-alias db uri (symbol z-ns))
           ns-def (when ns-usage
                    (q/find-definition db ns-usage))]
       (cond
@@ -821,20 +813,20 @@
 
 (defn ^:private create-function-for-alias
   [local-zloc ns-or-alias fn-name defn-edit uri db]
-  (let [filename (shared/uri->filename uri)
-        ;; TODO: shouldn't this also look for unaliased ns-usages?
+  (let [;; TODO: shouldn't this also look for unaliased ns-usages?
         ;; See https://github.com/clojure-lsp/clojure-lsp/issues/1023
-        ns-usage (q/find-namespace-usage-by-alias db filename (symbol ns-or-alias))
+        ns-usage (q/find-namespace-usage-by-alias db uri (symbol ns-or-alias))
         ns-definition (when ns-usage
                         (q/find-definition db ns-usage))
-        source-paths (settings/get db [:source-paths])
+        source-path (shared/uri->source-path uri (settings/get db [:source-paths]))
+        file-type (shared/uri->file-type uri)
         def-uri (cond
                   ns-definition
-                  (shared/filename->uri (:filename ns-definition) db)
+                  (:uri ns-definition)
                   ns-usage
-                  (shared/namespace->uri (:name ns-usage) source-paths filename db)
+                  (shared/namespace->uri (:name ns-usage) source-path file-type db)
                   :else
-                  (shared/namespace->uri ns-or-alias source-paths filename db))
+                  (shared/namespace->uri ns-or-alias source-path file-type db))
         min-range {:row 1 :end-row 1 :col 1 :end-col 1}
         max-range {:row 999999 :end-row 999999 :col 1 :end-col 1}
         defn-edits [{:loc defn-edit
@@ -945,9 +937,8 @@
 (defn can-create-test? [zloc uri db]
   (when-let [function-name-loc (edit/find-var-definition-name-loc zloc)]
     (let [source-paths (settings/get db [:source-paths])]
-      (when-let [current-source-path (->> source-paths
-                                          (filter #(and (string/starts-with? (shared/uri->filename uri) %)
-                                                        (not (string/includes? % "test"))))
+      (when-let [current-source-path (->> (shared/uri->source-paths uri source-paths)
+                                          (remove #(string/includes? % "test"))
                                           first)]
         {:source-paths source-paths
          :current-source-path current-source-path

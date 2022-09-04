@@ -11,21 +11,18 @@
 
 (defn elem-langs [element]
   (or (some-> element :lang list set)
-      (shared/uri->available-langs (:filename element))))
+      (shared/uri->available-langs (:uri element))))
 
 ;;;; Filter analysis, using dep-graph
 
 (defn internal-analysis [{:keys [analysis] :as db}]
-  (medley/filter-keys #(dep-graph/file-internal? db %) analysis))
+  (medley/filter-keys #(dep-graph/uri-internal? db %) analysis))
 
 (defn external-analysis [{:keys [analysis] :as db}]
-  (medley/remove-keys #(dep-graph/file-internal? db %) analysis))
+  (medley/remove-keys #(dep-graph/uri-internal? db %) analysis))
 
-(defn uris-to-filenames [db uris]
-  (map #(dep-graph/uri-to-filename db %) uris))
-
-(defn ^:private uris-analysis [{:keys [analysis] :as db} uris]
-  (select-keys analysis (uris-to-filenames db uris)))
+(defn ^:private uris-analysis [{:keys [analysis]} uris]
+  (select-keys analysis uris))
 
 (defn ns-analysis [db namespace]
   (uris-analysis db (dep-graph/ns-uris db namespace)))
@@ -182,8 +179,8 @@
        (= (:from usage) (:to usage))))
 
 (defn find-local-usages-under-form
-  [db filename {:keys [row col end-row end-col]}]
-  (let [{:keys [locals local-usages]} (get-in db [:analysis filename])
+  [db uri {:keys [row col end-row end-col]}]
+  (let [{:keys [locals local-usages]} (get-in db [:analysis uri])
         form-scope {:name-row row
                     :name-col col
                     :name-end-row end-row
@@ -203,7 +200,7 @@
          (medley/distinct-by :id))))
 
 (defn find-locals-under-form
-  [db filename {:keys [row col end-row end-col]}]
+  [db uri {:keys [row col end-row end-col]}]
   (let [form-scope {:name-row row
                     :name-col col
                     :name-end-row end-row
@@ -211,11 +208,11 @@
     (into []
           (filter (fn [local-def]
                     (shared/inside? local-def form-scope)))
-          (get-in db [:analysis filename :locals]))))
+          (get-in db [:analysis uri :locals]))))
 
 (defn find-var-usages-under-form
-  [db filename row col end-row end-col]
-  (let [var-usages (get-in db [:analysis filename :var-usages])]
+  [db uri row col end-row end-col]
+  (let [var-usages (get-in db [:analysis uri :var-usages])]
     (filter (fn [element]
               (shared/inside? element
                               {:name-row row
@@ -257,9 +254,9 @@
           definition)))))
 
 (defmethod find-definition :local-usages
-  [db {:keys [id filename] :as _local-usage}]
+  [db {:keys [id uri] :as _local-usage}]
   (find-first (filter #(= (:id %) id))
-              (get-in db [:analysis filename :locals])))
+              (get-in db [:analysis uri :locals])))
 
 (defmethod find-definition :keyword-usages
   [db keyword-usage]
@@ -293,18 +290,16 @@
                    (comp
                      xf-analysis->java-class-definitions
                      (filter #(safe-equal? full-class-name (:class %)))))
-             (sort-by (complement #(string/ends-with? (:filename %) ".java")))
+             (sort-by (complement #(string/ends-with? (:uri %) ".java")))
              first)
         (let [split (string/split full-class-name #"\.")
-              ns (string/replace (string/join "." (drop-last split)) "_" "-")
-              name (last split)]
-          (->> (:analysis db)
-               (into []
-                     (comp
-                       xf-analysis->var-definitions
-                       (filter #(and (safe-equal? ns (str (:ns %)))
-                                     (safe-equal? name (str (:name %)))))))
-               first)))))
+              ns (symbol (string/replace (string/join "." (drop-last split)) "_" "-"))
+              name (symbol (last split))]
+          (find-first
+            (comp
+              xf-analysis->var-definitions
+              (xf-same-fqn ns name))
+            (:analysis db))))))
 
 (defmethod find-definition :default
   [_db element]
@@ -315,9 +310,9 @@
     (:bucket element)))
 
 (defmethod find-declaration :var-usages
-  [db {:keys [alias name to filename] :as var-usage}]
+  [db {:keys [alias name to uri] :as var-usage}]
   (when-not (identical? :clj-kondo/unknown-namespace to)
-    (let [buckets (get-in db [:analysis filename])
+    (let [buckets (get-in db [:analysis uri])
           find-last (fn [xf elems]
                       (find-last
                         (comp xf
@@ -368,7 +363,7 @@
           (comp
             xf
             (xf-same-lang var-definition)
-            (medley/distinct-by (juxt :filename :name :row :col)))
+            (medley/distinct-by (juxt :uri :name :row :col)))
           (ns-and-dependents-analysis db (:ns var-definition)))
     []))
 
@@ -393,7 +388,7 @@
             (comp
               xf
               (xf-same-lang var-usage)
-              (medley/distinct-by (juxt :filename :name :row :col)))
+              (medley/distinct-by (juxt :uri :name :row :col)))
             (ns-and-dependents-analysis db (:to var-usage))))))
 
 (defmethod find-implementations :default [_ _] [])
@@ -434,15 +429,15 @@
     (find-references db namespace-definition include-declaration?)))
 
 (defmethod find-references :namespace-alias
-  [db {:keys [alias filename] :as namespace-alias} include-declaration?]
+  [db {:keys [alias uri] :as namespace-alias} include-declaration?]
   (concat
     (when include-declaration?
       [namespace-alias])
-    (let [{:keys [var-usages keyword-usages keyword-definitions]} (get-in db [:analysis filename])]
+    (let [{:keys [var-usages keyword-usages keyword-definitions]} (get-in db [:analysis uri])]
       (into []
             (comp
               (filter #(= (:alias %) alias))
-              (medley/distinct-by (juxt :filename :name :name-row :name-col)))
+              (medley/distinct-by (juxt :uri :name :name-row :name-col)))
             (concat keyword-definitions keyword-usages var-usages)))))
 
 (defmethod find-references :var-usages
@@ -464,7 +459,7 @@
             (filter #(safe-equal? (:ns var-definition) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
                          (not (var-usage-from-own-definition? %))))
-            (medley/distinct-by (juxt :filename :name :row :col)))
+            (medley/distinct-by (juxt :uri :name :row :col)))
           (ns-and-dependents-analysis db (:ns var-definition)))))
 
 (defmethod find-references :keywords
@@ -473,13 +468,13 @@
         (comp
           (if include-declaration? xf-analysis->keywords xf-analysis->keyword-usages)
           (xf-same-fqn ns name)
-          (medley/distinct-by (juxt :filename :name :row :col)))
+          (medley/distinct-by (juxt :uri :name :row :col)))
         (internal-analysis db)))
 
 (defmethod find-references :local
-  [db {:keys [id name filename] :as element} include-declaration?]
+  [db {:keys [id name uri] :as element} include-declaration?]
   (if (or id name)
-    (let [{:keys [locals local-usages]} (get-in db [:analysis filename])]
+    (let [{:keys [locals local-usages]} (get-in db [:analysis uri])]
       (filter #(= (:id %) id)
               (concat (when include-declaration? locals)
                       local-usages)))
@@ -494,7 +489,7 @@
           (comp
             xf-analysis->var-usages
             (xf-same-fqn protocol-ns method-name :to)
-            (medley/distinct-by (juxt :filename :name :row :col)))
+            (medley/distinct-by (juxt :uri :name :row :col)))
           (ns-and-dependents-analysis db protocol-ns))))
 
 (defmethod find-references :default
@@ -507,47 +502,47 @@
                  (<= name-col col name-end-col)))))
 
 (defn find-element-under-cursor
-  [db filename row col]
+  [db uri row col]
   (find-first (comp (mapcat val)
                     (xf-under-cursor row col))
-              (get-in db [:analysis filename])))
+              (get-in db [:analysis uri])))
 
 (defn find-all-elements-under-cursor
-  [db filename row col]
+  [db uri row col]
   (into []
         (comp (mapcat val)
               (xf-under-cursor row col))
-        (get-in db [:analysis filename])))
+        (get-in db [:analysis uri])))
 
 (defn find-local-under-cursor
-  [db filename line column]
+  [db uri line column]
   (find-first (xf-under-cursor line column)
-              (get-in db [:analysis filename :locals])))
+              (get-in db [:analysis uri :locals])))
 
-(defn find-definition-from-cursor [db filename row col]
+(defn find-definition-from-cursor [db uri row col]
   (try
-    (when-let [element (find-element-under-cursor db filename row col)]
+    (when-let [element (find-element-under-cursor db uri row col)]
       (find-definition db element))
     (catch Throwable e
       (logger/error e "can't find definition"))))
 
-(defn find-declaration-from-cursor [db filename row col]
+(defn find-declaration-from-cursor [db uri row col]
   (try
-    (when-let [element (find-element-under-cursor db filename row col)]
+    (when-let [element (find-element-under-cursor db uri row col)]
       (find-declaration db element))
     (catch Throwable e
       (logger/error e "can't find declaration"))))
 
-(defn find-implementations-from-cursor [db filename row col]
+(defn find-implementations-from-cursor [db uri row col]
   (try
-    (when-let [element (find-element-under-cursor db filename row col)]
+    (when-let [element (find-element-under-cursor db uri row col)]
       (find-implementations db element))
     (catch Throwable e
       (logger/error e "can't find implementation"))))
 
-(defn find-references-from-cursor [db filename row col include-declaration?]
+(defn find-references-from-cursor [db uri row col include-declaration?]
   (try
-    (when-let [element (find-element-under-cursor db filename row col)]
+    (when-let [element (find-element-under-cursor db uri row col)]
       (find-references db element include-declaration?))
     (catch Throwable e
       (logger/error e "can't find references"))))
@@ -565,10 +560,10 @@
                          'cljs.core/deftype} (:defined-by %))
                       (string/starts-with? (str (:name %)) "->"))))))
 
-(defn find-var-definitions [db filename include-private?]
+(defn find-var-definitions [db uri include-private?]
   (into []
         (xf-var-defs include-private?)
-        (get-in db [:analysis filename :var-definitions])))
+        (get-in db [:analysis uri :var-definitions])))
 
 (defn find-all-var-definitions [db]
   (into []
@@ -581,10 +576,10 @@
   (comp (filter :defmethod)
         (medley/distinct-by (juxt :to :name :name-row :name-col))))
 
-(defn find-defmethods [db filename]
+(defn find-defmethods [db uri]
   (into []
         xf-defmethods
-        (get-in db [:analysis filename :var-usages])))
+        (get-in db [:analysis uri :var-usages])))
 
 (defn find-internal-definitions
   "All ns definitions, var definitions and defmethods."
@@ -598,10 +593,10 @@
                         xf-defmethods)
                   analysis))))
 
-(defn find-keyword-definitions [db filename]
+(defn find-keyword-definitions [db uri]
   (into []
         (medley/distinct-by (juxt :ns :name :row :col))
-        (get-in db [:analysis filename :keyword-definitions])))
+        (get-in db [:analysis uri :keyword-definitions])))
 
 (defn find-all-keyword-definitions [db]
   (into []
@@ -610,15 +605,15 @@
           (medley/distinct-by (juxt :ns :name :row :col)))
         (:analysis db)))
 
-(defn find-local-by-destructured-keyword [db filename keyword-element]
+(defn find-local-by-destructured-keyword [db uri keyword-element]
   (find-first (filter #(and (= (:name-row %) (:name-row keyword-element))
                             (= (:name-col %) (:name-col keyword-element))
                             (= (:name-end-row %) (:name-end-row keyword-element))
                             (= (:name-end-col %) (:name-end-col keyword-element))))
-              (get-in db [:analysis filename :locals])))
+              (get-in db [:analysis uri :locals])))
 
-(defn find-unused-aliases [db filename]
-  (let [local-var-usages (get-in db [:analysis filename :var-usages])]
+(defn find-unused-aliases [db uri]
+  (let [local-var-usages (get-in db [:analysis uri :var-usages])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-namespace %) :type))
@@ -627,10 +622,10 @@
                                   (safe-equal? (:ns finding) (:to %)))
                             local-var-usages)))
             (map :ns))
-          (get-in db [:findings filename]))))
+          (get-in db [:findings uri]))))
 
-(defn find-unused-refers [db filename]
-  (let [local-var-usages (get-in db [:analysis filename :var-usages])]
+(defn find-unused-refers [db uri]
+  (let [local-var-usages (get-in db [:analysis uri :var-usages])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-referred-var %) :type))
@@ -642,10 +637,10 @@
                               count)
                          1)))
             (map #(symbol (-> % :ns str) (-> % :refer str))))
-          (get-in db [:findings filename]))))
+          (get-in db [:findings uri]))))
 
-(defn find-unused-imports [db filename]
-  (let [{:keys [var-usages java-class-usages]} (get-in db [:analysis filename])]
+(defn find-unused-imports [db uri]
+  (let [{:keys [var-usages java-class-usages]} (get-in db [:analysis uri])]
     (into #{}
           (comp
             (filter (comp #(identical? :unused-import %) :type))
@@ -659,24 +654,24 @@
                                     (not (:import %)))
                               java-class-usages))))
             (map :class))
-          (get-in db [:findings filename]))))
+          (get-in db [:findings uri]))))
 
-(defn find-duplicate-requires [db filename]
+(defn find-duplicate-requires [db uri]
   (into #{}
         (comp
           (filter (comp #(identical? :duplicate-require %) :type))
           (map :duplicate-ns))
-        (get-in db [:findings filename])))
+        (get-in db [:findings uri])))
 
-(defn find-namespace-definitions [db filename]
-  (vec (get-in db [:analysis filename :namespace-definitions])))
+(defn find-namespace-definitions [db uri]
+  (vec (get-in db [:analysis uri :namespace-definitions])))
 
-(defn find-namespace-definition-by-filename [db filename]
-  (first (find-namespace-definitions db filename)))
+(defn find-namespace-definition-by-uri [db uri]
+  (first (find-namespace-definitions db uri)))
 
-(defn find-namespace-usage-by-alias [db filename alias]
+(defn find-namespace-usage-by-alias [db uri alias]
   (find-last (filter #(= alias (:alias %)))
-             (get-in db [:analysis filename :namespace-usages])))
+             (get-in db [:analysis uri :namespace-usages])))
 
 (defn find-element-for-rename [db from-ns from-name]
   (let [xf

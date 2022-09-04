@@ -614,7 +614,7 @@
                           {:workspace {:workspace-edit true}}
                           (h/db)))))
 
-(deftest sort-map-actions
+(deftest sort-clauses-actions
   (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
   (h/load-code-and-locs (h/code "(ns some-ns)"
                                 ""
@@ -623,7 +623,7 @@
   (testing "on map bracket"
     (h/assert-contains-submaps
       [{:title "Sort map"
-        :command {:command "sort-map"}}]
+        :command {:command "sort-clauses"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///project/src/some_ns.clj")
                           4
@@ -634,7 +634,7 @@
   (testing "On map's key"
     (h/assert-contains-submaps
       [{:title "Sort map"
-        :command {:command "sort-map"}}]
+        :command {:command "sort-clauses"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///project/src/some_ns.clj")
                           4
@@ -654,8 +654,8 @@
 
 (deftest create-test-code-actions
   (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
-                                  :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
-                                  :project-root-uri (h/file-uri "file:///project")})
+                                    :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                    :project-root-uri (h/file-uri "file:///project")})
   (h/load-code-and-locs (h/code "(ns some-ns)"
                                 ""
                                 "(defn foo [] 1)")

@@ -7,7 +7,7 @@
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
-   [clojure-lsp.feature.sort-map :as f.sort-map]
+   [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
    [clojure-lsp.feature.thread-get :as f.thread-get]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.refactor.transform :as r.transform]
@@ -112,8 +112,12 @@
 (defmethod refactor :resolve-macro-as [{:keys [loc uri db components]}]
   (f.resolve-macro/resolve-macro-as! loc uri db components))
 
-(defmethod refactor :sort-map [{:keys [loc]}]
-  (f.sort-map/sort-map loc))
+(defmethod refactor :sort-clauses [{:keys [loc uri db]}]
+  (f.sort-clauses/sort-clauses loc uri db))
+
+;; Deprecated. Use sort-clauses
+(defmethod refactor :sort-map [args]
+  (refactor (assoc args :refactoring :sort-clauses)))
 
 ;; Deprecated. Use drag-backward
 (defmethod refactor :move-coll-entry-up [args]

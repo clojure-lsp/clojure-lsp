@@ -8,9 +8,9 @@
   in an immutable collection."
   (:require
    [clojure-lsp.feature.clauses :as f.clauses]
+   [clojure-lsp.refactor.edit :as edit]
    [rewrite-clj.node :as n]
-   [rewrite-clj.node.protocols :as n.protocols]
-   [clojure-lsp.refactor.edit :as edit]))
+   [rewrite-clj.node.protocols :as n.protocols]))
 
 (set! *warn-on-reflection* true)
 

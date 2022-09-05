@@ -20,13 +20,11 @@
     (z/sexpr zloc)))
 
 (defn ^:private plan [zloc dir uri db]
-  ;; TODO: handle quote, etc here
   (let [vec-zloc (z/up zloc)]
     ;; exclude maps, sets, lists, calls, etc
     (when (z/vector? vec-zloc)
       ;; exclude non-param vectors and multi-arity functions
       (when (some-> vec-zloc z/leftmost z-safe-sexpr param-establishing-symbols)
-        ;; TODO: re-use marker to find origin-clause
         (let [zloc (edit/mark-position zloc ::orig)]
           ;; exclude vararg, both from dragging and from pulp clauses
           (when-let [zloc (if-let [vararg-marker-loc (some-> zloc
@@ -36,7 +34,7 @@
                                 paredit/kill ;; remove to right of &
                                 z/remove ;; remove &
                                 z/leftmost ;; start returning to original node
-                                (z/find f.clauses/z-right #(edit/marked? % ::orig)))
+                                (z/find z/right* #(edit/marked? % ::orig)))
                             zloc)]
             (f.drag/plan zloc dir uri db)))))))
 

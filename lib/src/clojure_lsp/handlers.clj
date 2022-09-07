@@ -247,7 +247,7 @@
      :cljfmt-raw (binding [*print-meta* true]
                    (pr-str (f.format/resolve-user-cljfmt-config db-value)))
      :port (or (:port db-value)
-               "NREPL only available on :debug profile (`make debug-cli`)")
+               "NREPL only available on :debug profile (`bb debug-cli`)")
      :server-version (shared/clojure-lsp-version)
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
      :log-path (:log-path db-value)}))

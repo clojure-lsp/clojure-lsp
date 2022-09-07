@@ -64,13 +64,14 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
+          bb: '0.9.161'
 
       - name: Update nightly version
         run: |
           echo ${{ needs.release-dev-build.outputs.tag}} > lib/resources/CLOJURE_LSP_VERSION
 
       - name: Generate jar for native
-        run: make cli-jar-for-native
+        run: bb cli-jar-for-native
 
       # Remove after all places are using clojure-lsp-dev-builds
       - name: Upload jar
@@ -110,11 +111,7 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        uses: turtlequeue/setup-babashka@v1.3.0
-        with:
-          babashka-version: 0.7.8
+          bb: '0.9.161'
 
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
@@ -131,7 +128,7 @@ jobs:
           CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          make native-cli
+          bb native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -174,11 +171,7 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        uses: turtlequeue/setup-babashka@v1.3.0
-        with:
-          babashka-version: 0.7.8
+          bb: '0.9.161'
 
       - uses: graalvm/setup-graalvm@v1
         with:
@@ -195,7 +188,7 @@ jobs:
           CLOJURE_LSP_STATIC: true
           CLOJURE_LSP_MUSL: true
         run: |
-          make native-cli
+          bb native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -238,11 +231,7 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        uses: turtlequeue/setup-babashka@v1.3.0
-        with:
-          babashka-version: 0.7.8
+          bb: '0.9.161'
 
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
@@ -259,7 +248,7 @@ jobs:
           CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          make native-cli
+          bb native-cli
 
       # Remove after all places are using clojure-lsp-dev-builds
       - name: Upload
@@ -305,13 +294,10 @@ jobs:
           java-version: 11
 
       - name: Install Clojure
-        run: |
-          iwr -useb download.clojure.org/install/win-install-1.10.3.1013.ps1 | iex
-
-      - name: Install Babashka
-        uses: turtlequeue/setup-babashka@v1.3.0
+        uses: DeLaGuardo/setup-clojure@master
         with:
-          babashka-version: 0.7.8
+          cli: '1.10.3.1013'
+          bb: '0.9.161'
 
       - name: Install MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -326,20 +312,12 @@ jobs:
         run: |
           gu.cmd install native-image
 
-      - name: Install make
-        uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: install make
-
       - name: Build Windows native image
         env:
           CLOJURE_LSP_JAR: ..\clojure-lsp-standalone.jar
           CLOJURE_LSP_XMX: "-J-Xmx7g"
         run: |
-          cd cli
-          .\graalvm\native-windows-compile.bat
-          mv clojure-lsp.exe ..\
-          cd ..\
+          bb native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2

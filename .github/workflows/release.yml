@@ -23,13 +23,14 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
+          bb: '0.9.161'
 
       - name: Get latest tag
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
       - name: Build jar
-        run: make lib-jar
+        run: bb lib-jar
 
       - name: Upload jar
         uses: actions/upload-artifact@v2
@@ -54,13 +55,14 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
+          bb: '0.9.161'
 
       - name: Get latest tag
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
       - name: Generate jar for native
-        run: make cli-jar-for-native
+        run: bb cli-jar-for-native
 
       - name: Upload jar
         uses: actions/upload-artifact@v2
@@ -69,7 +71,7 @@ jobs:
           name: clojure-lsp-standalone.jar
 
       - name: Generate cli bin
-        run: make prod-cli
+        run: bb prod-cli
 
       - name: Upload bin
         uses: actions/upload-artifact@v2
@@ -110,7 +112,7 @@ jobs:
           CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          make native-cli
+          bb native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -120,11 +122,11 @@ jobs:
       - name: Run babashka pod tests
         env:
           CLOJURE_LSP_TEST_ENV: native
-        run: make pod-test
+        run: bb pod-test
 
       - name: Run integration tests
         run: |
-          make integration-test
+          bb integration-test
 
       - name: Zip binary
         run: zip clojure-lsp-native-linux-amd64.zip clojure-lsp
@@ -168,11 +170,11 @@ jobs:
           CLOJURE_LSP_STATIC: true
           CLOJURE_LSP_MUSL: true
         run: |
-          make native-cli
+          bb native-cli
 
       - name: Run integration tests
         run: |
-          make integration-test
+          bb integration-test
 
       - name: Zip binary
         run: zip clojure-lsp-native-static-linux-amd64.zip clojure-lsp
@@ -218,6 +220,7 @@ jobs:
             curl -O https://download.clojure.org/install/linux-install-1.10.3.1069.sh
             chmod +x linux-install-1.10.3.1069.sh
             ./linux-install-1.10.3.1069.sh
+            curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | bash
           run: |
             mv /artifacts/clojure-lsp-standalone.jar .
             export PATH=/graalvm-ce-java11/bin:$PATH
@@ -225,7 +228,7 @@ jobs:
             export GRAALVM_HOME=/graalvm-ce-java11
             export CLOJURE_LSP_XMX="-J-Xmx8g"
             gu install native-image
-            make native-cli
+            bb native-cli
             cp clojure-lsp "/artifacts/clojure-lsp"
             echo "Produced artifact at /artifacts/clojure-lsp"
       - run: mv "${PWD}/artifacts/clojure-lsp" clojure-lsp
@@ -254,8 +257,8 @@ jobs:
             export CLOJURE_LSP_TEST_ENV=native
             mv /artifacts/clojure-lsp .
             # Tests failing for some reason
-            # make integration-test
-            # make pod-test
+            # bb integration-test
+            # bb pod-test
             echo "Done!"
 
       - name: Zip binary
@@ -300,16 +303,16 @@ jobs:
           CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
           CLOJURE_LSP_XMX: "-J-Xmx6g"
         run: |
-          make native-cli
+          bb native-cli
 
       - name: Run babashka pod tests
         env:
           CLOJURE_LSP_TEST_ENV: native
-        run: make pod-test
+        run: bb pod-test
 
       - name: Run integration tests
         run: |
-          make integration-test
+          bb integration-test
 
       - name: Zip binary
         run: zip clojure-lsp-native-macos-amd64.zip clojure-lsp
@@ -362,20 +365,12 @@ jobs:
         run: |
           gu.cmd install native-image
 
-      - name: Install make
-        uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: install make
-
       - name: Build Windows native image
         env:
           CLOJURE_LSP_JAR: ..\clojure-lsp-standalone.jar
           CLOJURE_LSP_XMX: "-J-Xmx7g"
         run: |
-          cd cli
-          .\graalvm\native-windows-compile.bat
-          mv clojure-lsp.exe ..\
-          cd ..\
+          bb native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2

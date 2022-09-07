@@ -22,13 +22,14 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
+          bb: '0.9.161'
 
       - name: Deploy clojars
         env:
           CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
           CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
         run: |
-          make deploy-clojars
+          bb deploy-clojars
 
   release-clojars-standalone:
     name: Release standalone artifact to Clojars
@@ -51,7 +52,7 @@ jobs:
           CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
           CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
         run: |
-          make deploy-clojars-standalone
+          bb deploy-clojars-standalone
 
 
   bump-homebrew-formula:

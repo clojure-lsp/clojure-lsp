@@ -3,7 +3,7 @@
 
   It provides a few examples of how to conduct performance analysis.
 
-  It's on the classpath when building with `make` (or `make debug-cli`) so don't
+  It's on the classpath when building with `bb debug-cli` so don't
   leave any clutter that would break the build."
   (:require
    [clj-async-profiler.core :as profiler]

@@ -180,7 +180,7 @@
     :definition
     (let [db @db*
           [row col] (shared/position->row-col position)]
-      (when-let [definition (q/find-definition-from-cursor db (shared/uri->filename (:uri text-document)) row col)]
+      (when-let [definition (q/find-definition-from-cursor db (:uri text-document) row col)]
         {:uri (f.java-interop/uri->translated-uri (:uri definition) db producer)
          :range (shared/->range definition)}))))
 
@@ -189,7 +189,7 @@
     :declaration
     (let [db @db*
           [row col] (shared/position->row-col position)]
-      (when-let [declaration (q/find-declaration-from-cursor db (shared/uri->filename (:uri text-document)) row col)]
+      (when-let [declaration (q/find-declaration-from-cursor db (:uri text-document) row col)]
         {:uri (f.java-interop/uri->translated-uri (:uri declaration) db producer)
          :range (shared/->range declaration)}))))
 

@@ -30,7 +30,7 @@
         [{:label "definterface"
           :kind 3
           :detail "clojure.core/definterface"
-          :data {:unresolved [["documentation" {:filename "/clojure.core.clj"
+          :data {:unresolved [["documentation" {:uri "file:///clojure.core.clj"
                                                 :name "definterface"
                                                 :ns "clojure.core"}]]}}]
         (lsp/request! (fixture/completion-request "completion/a.clj" 2 3))))
@@ -41,7 +41,7 @@
           :detail "Insert public defn"
           :insertText "defn ${1:name} [$2]\n  $0"
           :insertTextFormat 2
-          :data {:unresolved [["documentation" {:filename "/clojure.core.clj"
+          :data {:unresolved [["documentation" {:uri "file:///clojure.core.clj"
                                                 :name "defn"
                                                 :ns "clojure.core"}]]
                  :snippet-kind 3}}]

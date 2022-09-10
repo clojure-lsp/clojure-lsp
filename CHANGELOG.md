@@ -4,6 +4,7 @@
 
 - General
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
+  - Bump clj-kondo to `2022.09.08`. 
 
 - Editor
   - Fix to avoid error when checking code actions from an #_x uneval node. #1227

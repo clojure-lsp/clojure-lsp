@@ -32,18 +32,16 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+          bb: '0.9.161'
 
       - name: Check if namespaces are clean
-        run: make lint-clean
+        run: bb lint-clean
 
       - name: Check if namespaces are formatted
-        run: make lint-format
+        run: bb lint-format
 
       - name: Check if namespaces have no diagnostics
-        run: make lint-diagnostics
+        run: bb lint-diagnostics
 
   unit-test:
     runs-on: ubuntu-latest
@@ -65,9 +63,10 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
+          bb: '0.9.161'
 
       - name: Run tests
-        run: make test
+        run: bb test
 
   jvm-integration-test:
     runs-on: ubuntu-latest
@@ -94,13 +93,13 @@ jobs:
           bb: '0.9.161'
 
       - name: Generate embedded binary
-        run: make prod-cli
+        run: bb prod-cli
 
       - name: Run integration tests
-        run: make integration-test
+        run: bb integration-test
 
       - name: Run babashka pod tests
-        run: make pod-test
+        run: bb pod-test
 
   jvm-integration-test-windows:
     runs-on: windows-2022
@@ -135,18 +134,13 @@ jobs:
       - name: Generate embedded binary
         env:
           LAUNCH4J_HOME: "C:\\Program Files (x86)\\Launch4j"
-        run: |
-          cd cli
-          clojure -T:build prod-cli
+        run: bb prod-cli
+
       - name: Run integration tests
-        run: |
-          cd cli
-          bb integration-test ../clojure-lsp.exe
+        run: bb integration-test
 
       - name: Run babashka pod tests
-        run: |
-          cd cli
-          clojure -M:pod-test
+        run: bb pod-test
 
   graalvm-build:
     runs-on: ubuntu-latest
@@ -163,9 +157,7 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
-
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+          bb: '0.9.161'
 
       - uses: graalvm/setup-graalvm@v1
         with:
@@ -181,7 +173,7 @@ jobs:
           CLOJURE_LSP_STATIC: true
           CLOJURE_LSP_MUSL: true
         run: |
-          make native-cli
+          bb native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
@@ -223,7 +215,7 @@ jobs:
       - name: Run babashka pod tests
         env:
           CLOJURE_LSP_TEST_ENV: native
-        run: make pod-test
+        run: bb pod-test
 
       - name: Run integration tests
-        run: make integration-test
+        run: bb integration-test

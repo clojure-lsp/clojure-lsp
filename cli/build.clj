@@ -97,17 +97,13 @@
                                (#(when (fs/executable? %) %)))
                        (fs/which "launch4jc.exe"))]
         (let [jar (-> (fs/real-path uber-file) .toString)
-              outfile (-> "../clojure-lsp.exe"  fs/absolutize fs/path .toString)
+              outfile (-> "clojure-lsp.exe"  fs/absolutize fs/path .toString)
               java-home (System/getenv "JAVA_HOME")]
           (fs/with-temp-dir
             [temp-dir]
             (let [l4jxml (-> (fs/path temp-dir "l4j.xml") .toString)]
               (spit l4jxml (l4j-xml jar outfile java-home jvm-opts))
-              (let [{:keys [exit] :as _proc} @(p/process [(.toString l4j) l4jxml]
-                                                         {:dir "."
-                                                          :out :inherit
-                                                          :err :inherit})]
-                (System/exit exit)))))
+              (p/shell (str l4j " " l4jxml)))))
 
         (throw (Exception. "Cannot locate launch4j.exe either in LAUNCH4J_HOME environment variable or in PATH.")))
 
@@ -143,7 +139,8 @@
     (let [jar (or (System/getenv "CLOJURE_LSP_JAR")
                   (do (prod-jar-for-native opts)
                       uber-file))
-          command (->> [(str (io/file graal-home "bin" "native-image"))
+          native-image (if (fs/windows?) "native-image.cmd" "native-image")
+          command (->> [(str (io/file graal-home "bin" native-image))
                         "-jar" jar
                         "clojure-lsp"
                         "-H:+ReportExceptionStackTraces"

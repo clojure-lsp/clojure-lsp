@@ -8,8 +8,8 @@ git fetch origin
 git pull origin HEAD
 echo "$VERSION" > lib/resources/CLOJURE_LSP_VERSION
 sed -i "s/## Unreleased/## Unreleased\n\n## $VERSION/g" CHANGELOG.md
-make lib-pom
-make cli-pom
+bb lib-pom
+bb cli-pom
 git add lib/resources/CLOJURE_LSP_VERSION CHANGELOG.md lib/pom.* cli/pom.*
 git commit -m "Release: $VERSION"
 git tag "$VERSION"

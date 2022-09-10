@@ -5,4 +5,34 @@
          :sha "cf082df46a648178d1904e9cbcb787d8136a35c6"}}
  :min-bb-version "0.8.156"
  :tasks {get-last-changelog-entry ci/get-last-changelog-entry
-         release-artifact clojure-lsp.release-artifact/release}}
+         release-artifact clojure-lsp.release-artifact/release
+
+         clean make/clean
+
+         lib-pom make/lib-pom
+         cli-pom make/cli-pom
+
+         lib-jar make/lib-jar
+         cli-jar make/cli-jar
+         cli-debug-jar make/cli-debug-jar
+         cli-jar-for-native make/cli-jar-for-native
+
+         debug-cli make/debug-cli
+         prod-cli make/prod-cli
+         native-cli make/native-cli
+
+         test make/test
+         pod-test make/pod-test
+         integration-test make/integration-test
+
+         lint-clean make/lint-clean
+         lint-format make/lint-format
+         lint-diagnostics make/lint-diagnostics
+         lint-fix make/lint-fix
+
+         release make/release
+
+         deploy-clojars make/deploy-clojars
+         deploy-clojars-standalone make/deploy-clojars-standalone
+
+         local-webpage make/local-webpage}}

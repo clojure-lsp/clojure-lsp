@@ -12,6 +12,7 @@ task:
     GITHUB_TOKEN: ENCRYPTED[26786ca53221eb81db22b2ed4ebfde12d3765204867931bfad580dd31a0d677fce9df4da487c5b6969ac3397af638c7e]
   script: |
     sudo scripts/install-clojure /usr/local
+    sudo bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
 
     pushd ~
     if ! [ -d graalvm-ce-java11-22.2.0 ]; then
@@ -24,13 +25,11 @@ task:
 
     gu install native-image || true
 
-    make native-cli
+    bb native-cli
 
     arch=${CLOJURE_LSP_ARCH:-amd64}
     archive="clojure-lsp-native-macos-$arch.zip"
     zip "$archive" clojure-lsp
-
-    sudo bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
 
     bb release-artifact "$archive" || true
   binaries_artifacts:

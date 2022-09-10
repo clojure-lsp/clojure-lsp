@@ -633,17 +633,19 @@
 <ul>
 <li>Install the GraalVM 22.2.0 for Java 11 and set the <code>GRAALVM_HOME</code> to the installation dir. </li>
 <li>Install <code>native-image</code> with <code>$GRAALVM_HOME/bin/gu install native-image</code>. </li>
-<li>Unix: Run from <code>clojure-lsp</code> project root <code>make native-cli</code></li>
-<li>Windows: <code>cd cli &amp;&amp; ./graalvm/native-windows-compile.bat</code>. </li>
+<li>Run from <code>clojure-lsp</code> project root <code>bb native-cli</code>.</li>
 </ul>
 <p>The build may take some minutes and the result will be a <code>./clojure-lsp</code> native binary.</p>
 <h2 id="debug-development">Debug / development<a class="headerlink" href="#debug-development" title="Permanent link">#</a></h2>
-<p>Run <code>make</code> or <code>make debug-cli</code>.</p>
+<ul>
+<li>Run <code>bb debug-cli</code>.</li>
+</ul>
+<p>On Windows, you first need to install <a href="http://launch4j.sourceforge.net/">launch4j</a> and set the <code>LAUNCH4J_HOME</code> to the installation dir.</p>
 <h2 id="jar">Jar<a class="headerlink" href="#jar" title="Permanent link">#</a></h2>
 <h3 id="editorcli">Editor/CLI<a class="headerlink" href="#editorcli" title="Permanent link">#</a></h3>
-<p>Run <code>make cli-jar</code> for building the jar to be used with LSP protocol in a editor or CLI.</p>
+<p>Run <code>bb cli-jar</code> for building the jar to be used with LSP protocol in a editor or CLI.</p>
 <h3 id="jvm-api">JVM API<a class="headerlink" href="#jvm-api" title="Permanent link">#</a></h3>
-<p>Run <code>make lib-jar</code> for building the jar to be used on JVM via API.</p>
+<p>Run <code>bb lib-jar</code> for building the jar to be used on JVM via API.</p>
                 
                   
                     
@@ -652,7 +654,7 @@
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 5, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 10, 2022</span>
     
   </small>
 </div>

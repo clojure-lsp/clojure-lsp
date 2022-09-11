@@ -19,7 +19,6 @@
         babashka/fs {:mvn/version "0.1.11"}
         com.github.clojure-lsp/lsp4clj {:mvn/version "1.2.1"}
         ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
-        commons-io/commons-io {:mvn/version "2.11.0"}
         }
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}

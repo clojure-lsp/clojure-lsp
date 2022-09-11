@@ -15,8 +15,7 @@
     URLDecoder]
    [java.nio.charset StandardCharsets]
    [java.nio.file Paths]
-   [java.util.regex Matcher]
-   [org.apache.commons.io FilenameUtils]))
+   [java.util.regex Matcher]))
 
 (set! *warn-on-reflection* true)
 
@@ -283,6 +282,14 @@
                           (str "." (name file-type))))
       db)))
 
+(defn path-separators-to-system
+  "Returns PATH with its file separators converted to match the system's
+  file separators."
+  [path]
+  (let [system-sep fs/file-separator
+        other-sep (if (= system-sep "/") "\\" "/")]
+    (string/replace path (re-pattern other-sep) (Matcher/quoteReplacement system-sep))))
+
 (defn namespace+source-path->filename
   "Returns the path to the filename implied by NAMESPACE, starting at
   SOURCE-PATH and ending with FILE-TYPE.
@@ -290,11 +297,11 @@
   FILE-TYPE must be a keyword which will simply be converted to a
   string."
   [namespace source-path file-type]
-  (let [source-path (FilenameUtils/separatorsToSystem source-path)
+  (let [source-path (path-separators-to-system source-path)
         ns-path (-> (string/replace namespace #"-" "_")
                     (string/replace #"\." (Matcher/quoteReplacement (System/getProperty "file.separator")))
-                    (str FilenameUtils/EXTENSION_SEPARATOR (name file-type)))]
-    (FilenameUtils/concat source-path ns-path)))
+                    (str "." (name file-type)))]
+    (str (fs/path source-path ns-path))))
 
 (defn ^:private path->folder-with-slash [^String path]
   (if (directory? (io/file path))

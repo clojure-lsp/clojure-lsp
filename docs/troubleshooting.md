@@ -82,7 +82,7 @@ e.g.,
     }
   }
 </code>
-<pre/>
+</pre>
 
 Then, once vim has loaded (and clojure-lsp has initialised), you can
 issue this command:

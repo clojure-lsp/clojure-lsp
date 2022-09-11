@@ -56,6 +56,16 @@
       "hash": "sha256-JugjMBV9a4RLZ6gGSUXiBlgedyl3GD4+Mf7GBYqppZs="
     },
     {
+      "mvn-path": "babashka/fs/0.1.11/fs-0.1.11.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-wuXcuPQ3RTT/3nlFtQRjuplVAjMfGXjZN8BsQ7rI6SM="
+    },
+    {
+      "mvn-path": "babashka/fs/0.1.11/fs-0.1.11.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-yjkltMa12ebuDvfM/mQJ1WYMvnm82gyzgrWuVKwC+oo="
+    },
+    {
       "mvn-path": "babashka/fs/0.1.6/fs-0.1.6.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-10dINOFvu1Kk2bexqmBSyk0BucZx0f9BWYIxwaF1Vr4="
@@ -64,6 +74,16 @@
       "mvn-path": "babashka/fs/0.1.6/fs-0.1.6.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-DGkccdKdMtYY8CpQnoxw3608xKVWiOwsZl7Yao5/Jp8="
+    },
+    {
+      "mvn-path": "babashka/process/0.1.7/process-0.1.7.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-xmWkLOahJbkx4rbzJhGWMzQ/QHg5db8XTVfmapGOO+M="
+    },
+    {
+      "mvn-path": "babashka/process/0.1.7/process-0.1.7.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-YB608Rxc9AwXekSsUV92bxpajaj5ntYkzU4NOk+Z1eQ="
     },
     {
       "mvn-path": "borkdude/dynaload/0.3.5/dynaload-0.3.5.jar",
@@ -181,14 +201,14 @@
       "hash": "sha256-4MoY394FmlFXLiwtetWjDmEbh1NGFv1wRPZx33qbtlg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2022.08.03/clj-kondo-2022.08.03.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2022.09.08/clj-kondo-2022.09.08.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-5CRxu+pBYUWFMllAvegXJw8B8kCNU3yK/7lld+oMseE="
+      "hash": "sha256-KIJL6/LTJhEgRofn3VhLR/DnTbsqMZtD4w+bKCgb+w0="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2022.08.03/clj-kondo-2022.08.03.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2022.09.08/clj-kondo-2022.09.08.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-O7hNV8IT6LTpDt4KXdBMKMrTc+n5IYTOBClKZQocBo8="
+      "hash": "sha256-kTIUt+cn1lVIXESq0kyiM2t7P4uzBu8oQMbXLJ4AYBA="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",

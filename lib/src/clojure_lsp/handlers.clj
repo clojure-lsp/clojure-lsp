@@ -75,6 +75,10 @@
 (defmacro process-after-changes [task-id uri db* & body]
   `(process-after-all-changes ~task-id [~uri] ~db* ~@body))
 
+(defn ^:private element->location [db producer element]
+  {:uri (f.java-interop/uri->translated-uri (:uri element) db producer)
+   :range (shared/->range element)})
+
 (defn initialize
   [{:keys [db* producer] :as components}
    project-root-uri
@@ -153,9 +157,7 @@
     :references
     (let [db @db*
           [row col] (shared/position->row-col position)]
-      (mapv (fn [reference]
-              {:uri (f.java-interop/uri->translated-uri (:uri reference) db producer)
-               :range (shared/->range reference)})
+      (mapv #(element->location db producer %1)
             (q/find-references-from-cursor db (:uri text-document) row col (:include-declaration context))))))
 
 (defn completion-resolve-item [{:keys [db*]} item]
@@ -181,8 +183,7 @@
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (when-let [definition (q/find-definition-from-cursor db (:uri text-document) row col)]
-        {:uri (f.java-interop/uri->translated-uri (:uri definition) db producer)
-         :range (shared/->range definition)}))))
+        (element->location db producer definition)))))
 
 (defn declaration [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
@@ -190,17 +191,14 @@
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (when-let [declaration (q/find-declaration-from-cursor db (:uri text-document) row col)]
-        {:uri (f.java-interop/uri->translated-uri (:uri declaration) db producer)
-         :range (shared/->range declaration)}))))
+        (element->location db producer declaration)))))
 
 (defn implementation [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
     :implementation
     (let [db @db*
           [row col] (shared/position->row-col position)]
-      (mapv (fn [implementation]
-              {:uri (f.java-interop/uri->translated-uri (:uri implementation) db producer)
-               :range (shared/->range implementation)})
+      (mapv #(element->location db producer %)
             (q/find-implementations-from-cursor db (:uri text-document) row col)))))
 
 (defn document-symbol [{:keys [db*]} {:keys [text-document]}]

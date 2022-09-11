@@ -26,8 +26,8 @@
 (def deprecated-diagnostic-types
   #{:deprecated-var})
 
-(defn ^:private kondo-config-for-ns [kondo-config ns-name]
-  (let [ns-group (kondo.config/ns-group kondo-config ns-name)
+(defn ^:private kondo-config-for-ns [kondo-config ns-name filename]
+  (let [ns-group (kondo.config/ns-group kondo-config ns-name filename)
         config-in-ns (get (:config-in-ns kondo-config) ns-group)
         kondo-config (if config-in-ns
                        (kondo.config/merge-config! kondo-config config-in-ns)
@@ -37,7 +37,7 @@
 (defn ^:private unused-public-var->finding [element kondo-config]
   (let [keyword-def? (identical? :keyword-definitions (:bucket element))
         kondo-config (if (:ns element)
-                       (kondo-config-for-ns kondo-config (:ns element))
+                       (kondo-config-for-ns kondo-config (:ns element) (:filename element))
                        kondo-config)]
     {:filename (:filename element)
      :row (:name-row element)
@@ -53,7 +53,7 @@
      :type :clojure-lsp/unused-public-var}))
 
 (defn ^:private exclude-public-diagnostic-definition? [kondo-config definition]
-  (let [kondo-config (kondo-config-for-ns kondo-config (:ns definition))
+  (let [kondo-config (kondo-config-for-ns kondo-config (:ns definition) (:filename definition))
         excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
         excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
         fqsn (symbol (-> definition :ns str) (-> definition :name str))]

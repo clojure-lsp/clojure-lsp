@@ -288,7 +288,9 @@
   [path]
   (let [system-sep fs/file-separator
         other-sep (if (= system-sep "/") "\\" "/")]
-    (string/replace path (re-pattern other-sep) (Matcher/quoteReplacement system-sep))))
+    (string/replace path
+                    (re-pattern (Matcher/quoteReplacement other-sep))
+                    (Matcher/quoteReplacement system-sep))))
 
 (defn namespace+source-path->filename
   "Returns the path to the filename implied by NAMESPACE, starting at

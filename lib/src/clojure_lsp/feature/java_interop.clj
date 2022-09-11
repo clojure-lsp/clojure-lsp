@@ -97,20 +97,19 @@
     dest-uri))
 
 (defn ^:private uri->translated-file! [uri db producer]
-  ;; TODO consider local class files not from jar
-  (if (shared/jar-file? uri)
-    (let [jar-uri (shared/ensure-jarfile uri db)]
-      (if (shared/class-file? jar-uri)
-        ;; TODO zipfile doesn't work with URL
-        (let [url (URL. jar-uri)
-              connection ^JarURLConnection (.openConnection url)
-              jar (.getJarFile connection)
-              entry (.getJarEntry connection)]
-          (if-let [java-project-info (and (settings/get db [:java :decompile-jar-as-project?] true)
-                                          (jar->java-project-info jar))]
-            (decompile-jar-as-java-project java-project-info entry db producer)
-            (decompile-file jar entry db)))
-        jar-uri))
+  ;; TODO consider decompiling local class files not necessarly
+  ;; from inside a jar
+  (if (and (shared/jar-file? uri)
+           (shared/class-file? uri))
+    (let [jar-uri (shared/ensure-jarfile uri db)
+          url (URL. jar-uri)
+          connection ^JarURLConnection (.openConnection url)
+          jar (.getJarFile connection)
+          entry (.getJarEntry connection)]
+      (if-let [java-project-info (and (settings/get db [:java :decompile-jar-as-project?] true)
+                                      (jar->java-project-info jar))]
+        (decompile-jar-as-java-project java-project-info entry db producer)
+        (decompile-file jar entry db)))
     uri))
 
 (defn uri->translated-uri [uri db producer]

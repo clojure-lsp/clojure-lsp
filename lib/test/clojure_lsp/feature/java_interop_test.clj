@@ -2,20 +2,30 @@
   (:require
    [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.test-helper :as h]
+   [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))
 
 (h/reset-components-before-test)
 
 (deftest uri->translated-uri-test
-  (is (= "" (f.java-interop/uri->translated-uri "" (h/db) (h/producer))))
-  (is (= "/foo/bar.clj" (f.java-interop/uri->translated-uri "/foo/bar.clj" (h/db) (h/producer))))
-  (is (= "file:///foo/bar.clj" (f.java-interop/uri->translated-uri "file:///foo/bar.clj" (h/db) (h/producer))))
-  (is (= "jar:file:///foo/bar.clj" (f.java-interop/uri->translated-uri "jar:file:///foo/bar.clj" (h/db) (h/producer))))
-  (is (= "jar:file:///foo.jar!/bar.clj" (f.java-interop/uri->translated-uri "jar:file:///foo.jar!/bar.clj" (h/db) (h/producer))))
-  (is (= "jar:file:///foo.jar!/Bar.java" (f.java-interop/uri->translated-uri "jar:file:///foo.jar!/Bar.java" (h/db) (h/producer))))
-  (is (= "zipfile:///foo.jar::/bar.clj" (f.java-interop/uri->translated-uri "zipfile:///foo.jar::/bar.clj" (h/db) (h/producer))))
-  (is (= "zipfile:///foo.jar::/bar.java" (f.java-interop/uri->translated-uri "zipfile:///foo.jar::/bar.java" (h/db) (h/producer)))))
+  (testing "common files"
+    (is (= "" (f.java-interop/uri->translated-uri "" (h/db) (h/producer))))
+    (is (= "/foo/bar.clj" (f.java-interop/uri->translated-uri "/foo/bar.clj" (h/db) (h/producer))))
+    (is (= "file:///foo/bar.clj" (f.java-interop/uri->translated-uri "file:///foo/bar.clj" (h/db) (h/producer))))
+    (is (= "jar:file:///foo/bar.clj" (f.java-interop/uri->translated-uri "jar:file:///foo/bar.clj" (h/db) (h/producer))))
+    (is (= "jar:file:///foo.jar!/bar.clj" (f.java-interop/uri->translated-uri "jar:file:///foo.jar!/bar.clj" (h/db) (h/producer))))
+    (is (= "jar:file:///foo.jar!/Bar.java" (f.java-interop/uri->translated-uri "jar:file:///foo.jar!/Bar.java" (h/db) (h/producer))))
+    (is (= "zipfile:///foo.jar::/bar.clj" (f.java-interop/uri->translated-uri "zipfile:///foo.jar::/bar.clj" (h/db) (h/producer))))
+    (is (= "zipfile:///foo.jar::/bar.java" (f.java-interop/uri->translated-uri "zipfile:///foo.jar::/bar.java" (h/db) (h/producer)))))
+  (testing "class files"
+    (with-redefs [f.java-interop/decompile-file (fn [_jar entry _db]
+                                                  (.getName entry))]
+      (let [test-jar-path (.getCanonicalPath (io/file (h/file-path "test/fixtures/java_interop/single-class.jar")))]
+        (testing "jar scheme"
+          (is (= "Bar.class" (f.java-interop/uri->translated-uri (str "jar:file://" test-jar-path "!/Bar.class") (h/db) (h/producer)))))
+        (testing "zipfile scheme"
+          (is (= "Bar.class" (f.java-interop/uri->translated-uri (str "zipfile://" test-jar-path "::Bar.class") (h/db) (h/producer)))))))))
 
 (defn ->decision [& args]
   (-> (apply #'f.java-interop/jdk-analysis-decision args)

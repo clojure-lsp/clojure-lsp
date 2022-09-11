@@ -182,7 +182,7 @@
 
 (defn ensure-jarfile [uri db]
   (let [jar-scheme? (= "jar" (get db [:settings :dependency-scheme]))]
-    (if (or (not jar-scheme?)
+    (if (or jar-scheme?
             (string/starts-with? uri "jar:"))
       uri
       (-> uri

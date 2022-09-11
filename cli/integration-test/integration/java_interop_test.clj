@@ -23,14 +23,43 @@
                :end {:line 0 :character 0}}}
       (lsp/request! (fixture/definition-request "java_interop/a.clj" 7 5)))))
 
-(deftest find-definition-of-java-class-when-source-does-not-exists
+(deftest find-definition-of-java-class-when-source-does-not-exists-for-jar-scheme
   (h/delete-project-file "../../.lsp/.cache/java")
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
                   {:initializationOptions (-> fixture/default-init-options
                                               (assoc :dependency-scheme "jar")
                                               (dissoc :java)
-                                              (assoc-in [:java :decompile-jar-as-project?] false))})) ;; TODO fix when add support for decompile with zipfile
+                                              (assoc-in [:java :decompile-jar-as-project?] false))}))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
+
+  (let [result (lsp/request! (fixture/definition-request "java_interop/a.clj" 8 5))]
+    (testing "We find java compiled class first"
+      (h/assert-submap
+        {:uri (-> "integration-test/sample-test/.lsp/.cache/java/decompiled/clojure/lang/PersistentVector.java"
+                  io/as-relative-path
+                  io/file
+                  h/file->uri)
+         :range {:start {:line 0 :character 0}
+                 :end {:line 0 :character 0}}}
+        result))
+
+    (testing "we decompile the class file and get its contents"
+      (let [class-content (lsp/request! (fixture/clojure-dependency-contents-request (:uri result)))]
+        (is (string/includes? class-content "Decompiled with CFR"))
+        (is (string/includes? class-content "class PersistentVector")))))
+
+  (h/delete-project-file "../../.lsp/.cache/java"))
+
+(deftest find-definition-of-java-class-when-source-does-not-exists-for-zipfile-scheme
+  (h/delete-project-file "../../.lsp/.cache/java")
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request
+                  {:initializationOptions (-> fixture/default-init-options
+                                              (assoc :dependency-scheme "zipfile")
+                                              (dissoc :java)
+                                              (assoc-in [:java :decompile-jar-as-project?] false))}))
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
 

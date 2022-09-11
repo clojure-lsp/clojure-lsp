@@ -1,15 +1,13 @@
 (ns entrypoint
   (:require
    [babashka.fs :as fs]
+   [clojure.java.shell :as sh]
    [clojure.test :as t]
-   [medley.core :as medley]
-   [clojure.java.shell :as sh]))
-
+   [medley.core :as medley]))
 
 (def namespaces
   (if (fs/windows?)
     '[integration.classpath-test]
-
     '[
       integration.initialize-test
       integration.definition-test

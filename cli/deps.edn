@@ -15,7 +15,7 @@
                            cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
                                                   :sha "a85b3b02765fb68684ab9ee4a8598eacf7e471d2"}
                            babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"
-                                                   :sha "6df443fabf0d7313c8956cb6f55e47318402991f"}}
+                                                   :sha "53f79da09d5da542204f3cb0161724221276dfcb"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
                    :extra-deps {babashka/fs {:mvn/version "0.1.11"}

@@ -71,9 +71,6 @@
 (defn directory? [^java.io.File f]
   (.isDirectory f))
 
-(defn get-canonical-path [^java.io.File f]
-  (.getCanonicalPath f))
-
 (defn absolute-path? [^String path]
   (.isAbsolute (io/file path)))
 

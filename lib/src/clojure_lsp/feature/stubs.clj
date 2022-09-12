@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.stubs
   (:require
+   [babashka.fs :as fs]
    [clj-easy.stub.core :as stub]
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -25,7 +26,7 @@
 
 (defn ^:private generate-stubs! [namespaces settings db]
   (try
-    (if-let [classpath (string/join ":" (:classpath db))]
+    (if-let [classpath (string/join fs/path-separator (:classpath db))]
       (let [java-command (or (-> settings :stubs :generation :java-command)
                              "java")
             output-dir ^File (io/file (stubs-output-dir settings))]

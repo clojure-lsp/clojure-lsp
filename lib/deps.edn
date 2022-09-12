@@ -1,3 +1,4 @@
+;; -*- cider-clojure-cli-aliases: ":test"; -*-
 {:deps {org.clojure/clojure {:mvn/version "1.11.1"}
         rewrite-clj/rewrite-clj {:mvn/version "1.1.45"}
         borkdude/rewrite-edn {:mvn/version "0.2.0" :exclusions [rewrite-clj/rewrite-clj]}

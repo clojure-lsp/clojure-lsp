@@ -6,33 +6,31 @@
    [medley.core :as medley]))
 
 (def namespaces
-  (if (fs/windows?)
-    '[integration.classpath-test]
-    '[
-      integration.initialize-test
-      integration.definition-test
-      integration.declaration-test
-      integration.implementation-test
-      integration.text-change-test
-      integration.code-action-test
-      integration.completion-test
-      integration.diagnostics-test
-      integration.settings-change-test
-      integration.formatting-test
-      integration.rename-test
-      integration.document-highlight-test
-      integration.document-symbol-test
-      integration.linked-editing-range-test
-      integration.cursor-info-test
-      integration.java-interop-test
-      integration.stubs-test
-      integration.classpath-test
-      integration.api.version-test
-      integration.api.clean-ns-test
-      integration.api.diagnostics-test
-      integration.api.format-test
-      integration.api.rename-test
-      ]))
+  '[
+    integration.initialize-test
+    integration.definition-test
+    integration.declaration-test
+    integration.implementation-test
+    integration.text-change-test
+    integration.code-action-test
+    integration.completion-test
+    integration.diagnostics-test
+    integration.settings-change-test
+    integration.formatting-test
+    integration.rename-test
+    integration.document-highlight-test
+    integration.document-symbol-test
+    integration.linked-editing-range-test
+    integration.cursor-info-test
+    integration.java-interop-test
+    integration.stubs-test
+    integration.classpath-test
+    integration.api.version-test
+    integration.api.clean-ns-test
+    integration.api.diagnostics-test
+    integration.api.format-test
+    integration.api.rename-test
+    ])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))
@@ -75,7 +73,7 @@
 
   (apply require namespaces)
 
-  (let [timeout-minutes 10
+  (let [timeout-minutes 16
         test-results (timeout (* timeout-minutes 60 1000)
                               #(with-log-tail-report
                                  (apply t/run-tests namespaces)))]
@@ -83,7 +81,7 @@
     (when (= test-results :timed-out)
       (print-log-tail!)
       (println)
-      (println "Timeout running integration tests!")
+      (println (format "Timeout after %d minutes running integration tests!" timeout-minutes))
       (System/exit 1))
 
     (let [{:keys [fail error]} test-results]

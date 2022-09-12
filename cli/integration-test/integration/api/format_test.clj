@@ -7,9 +7,9 @@
 
 (lsp/clean-after-test)
 
-(def a-subject-path (h/project-path->abs-path "src/sample_test/api/format/a.clj"))
+(def a-subject-path (h/project-path->canon-path "src/sample_test/api/format/a.clj"))
 (def a-subject-text (slurp a-subject-path))
-(def a-expected-path (h/project-path->abs-path "fixtures/sample_test/api/format/a.clj"))
+(def a-expected-path (h/project-path->canon-path "fixtures/sample_test/api/format/a.clj"))
 (def a-expected-text (slurp a-expected-path))
 
 (deftest format-test
@@ -54,5 +54,5 @@
                               "--project-root" h/root-project-path
                               "--namespace" "sample-test.api.format.a"
                               "--dry")]
-      (is (string/includes? (slurp rdr) "src/sample_test/api/format/a.clj"))
+      (is (string/includes? (slurp rdr) (h/file-path "src/sample_test/api/format/a.clj")))
       (is (= a-subject-text (slurp a-subject-path))))))

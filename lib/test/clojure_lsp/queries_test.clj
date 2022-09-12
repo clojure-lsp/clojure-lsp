@@ -86,17 +86,17 @@
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= 0 (count (q/uri-dependents-analysis (h/db) "file:///aaa.clj"))))
-  (is (= 1 (count (q/uri-dependents-analysis (h/db) "file:///bbb.clj"))))
-  (is (= 2 (count (q/uri-dependents-analysis (h/db) "file:///ccc.clj")))))
+  (is (= 0 (count (q/uri-dependents-analysis (h/db) (h/file-uri "file:///aaa.clj")))))
+  (is (= 1 (count (q/uri-dependents-analysis (h/db) (h/file-uri "file:///bbb.clj")))))
+  (is (= 2 (count (q/uri-dependents-analysis (h/db) (h/file-uri "file:///ccc.clj"))))))
 
 (deftest uri-dependencies-analysis
   (h/load-code-and-locs "(ns aaa (:require [bbb] [ccc]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= 2 (count (q/uri-dependencies-analysis (h/db) "file:///aaa.clj"))))
-  (is (= 1 (count (q/uri-dependencies-analysis (h/db) "file:///bbb.clj"))))
-  (is (= 0 (count (q/uri-dependencies-analysis (h/db) "file:///ccc.clj")))))
+  (is (= 2 (count (q/uri-dependencies-analysis (h/db) (h/file-uri "file:///aaa.clj")))))
+  (is (= 1 (count (q/uri-dependencies-analysis (h/db) (h/file-uri "file:///bbb.clj")))))
+  (is (= 0 (count (q/uri-dependencies-analysis (h/db) (h/file-uri "file:///ccc.clj"))))))
 
 (deftest find-last-order-by-project-analysis
   (testing "with pred that applies for both project and external analysis"
@@ -301,45 +301,46 @@
         db (h/db)]
     (testing "from definition"
       (h/assert-submaps
-        '[{:name-row 6
-           :name bar
-           :filename "/a.clj"
+        #{{:name-row 6
+           :name 'bar
+           :filename (h/file-path "/a.clj")
            :name-col 2
            :bucket :var-usages}
           {:name-row 4
-           :name bar
-           :filename "/b.clj"
-           :from b
+           :name 'bar
+           :filename (h/file-path "/b.clj")
+           :from 'b
            :name-col 4
-           :from-var bar}]
+           :from-var 'bar}}
+
         (q/find-references-from-cursor db (h/file-path "/a.clj") bar-def-r bar-def-c false)))
     (testing "from usage"
-      (h/assert-submaps
-        '[{:name-row 6
-           :name bar
-           :filename "/a.clj"
+      (h/assert-contains-submaps
+        #{{:name-row 6
+           :name 'bar
+           :filename (h/file-path "/a.clj")
            :name-col 2
            :bucket :var-usages}
           {:name-row 4
-           :name bar
-           :filename "/b.clj"
-           :from b
+           :name 'bar
+           :filename (h/file-path "/b.clj")
+           :from 'b
            :name-col 4
-           :from-var bar}]
+           :from-var 'bar}}
         (q/find-references-from-cursor db (h/file-path "/a.clj") bar-usa-r bar-usa-c false)))
     (testing "from other ns"
-      (h/assert-submaps
-        '[{:name-row 6
-           :name bar
-           :filename "/a.clj"
+      (h/assert-contains-submaps
+        #{{:name-row 6
+           :name 'bar
+           :filename (h/file-path "/a.clj")
            :name-col 2
            :bucket :var-usages}
           {:name-row 4
-           :name bar
-           :filename "/b.clj"
-           :from b
+           :name 'bar
+           :filename (h/file-path "/b.clj")
+           :from 'b
            :name-col 4
-           :from-var bar}]
+           :from-var 'bar}}
         (q/find-references-from-cursor db (h/file-path "/b.clj") bar-usa-b-r bar-usa-b-c false)))))
 
 (deftest find-references-from-protocol-impl
@@ -357,22 +358,22 @@
                                 "(f/something (->FooImpl2))") (h/file-uri "file:///b.clj"))
   (testing "from defrecord method name"
     (h/assert-submaps
-      '[{:row 8 :col 1 :end-row 8 :end-col 27
-         :name-row 8 :name-end-col 13 :name-col 2 :name-end-row 8
-         :name something
-         :filename "/b.clj"
-         :alias f
-         :from b
-         :bucket :var-usages
-         :to a}
-        {:name-col 2 :name-row 9 :name-end-row 9 :name-end-col 13
-         :name something
-         :filename "/b.clj"
-         :alias f
-         :from b
-         :row 9 :col 1 :end-row 9 :end-col 27
-         :bucket :var-usages
-         :to a}]
+      [{:row 8 :col 1 :end-row 8 :end-col 27
+        :name-row 8 :name-end-col 13 :name-col 2 :name-end-row 8
+        :name 'something
+        :filename (h/file-path "/b.clj")
+        :alias 'f
+        :from 'b
+        :bucket :var-usages
+        :to 'a}
+       {:name-col 2 :name-row 9 :name-end-row 9 :name-end-col 13
+        :name 'something
+        :filename (h/file-path "/b.clj")
+        :alias 'f
+        :from 'b
+        :row 9 :col 1 :end-row 9 :end-col 27
+        :bucket :var-usages
+        :to 'a}]
       (q/find-references-from-cursor (h/db) (h/file-path "/b.clj") 7 9 false))))
 
 (deftest find-references-for-defmulti
@@ -386,26 +387,26 @@
                                       " [_]"
                                       " :foo)"
                                       "(|f/my-multi {:some-value 123})") (h/file-uri "file:///b.clj"))
-        references '[;; defmethod
-                     {:name-row 2 :name-col 12 :name-end-row 2 :name-end-col 22
-                      :row 2 :col 12 :end-row 2 :end-col 22
-                      :name my-multi
-                      :filename "/b.clj"
-                      :alias f
-                      :from b
-                      :bucket :var-usages
-                      :defmethod true
-                      :to a}
+        references [;; defmethod
+                    {:name-row 2 :name-col 12 :name-end-row 2 :name-end-col 22
+                     :row 2 :col 12 :end-row 2 :end-col 22
+                     :name 'my-multi
+                     :filename (h/file-path "/b.clj")
+                     :alias 'f
+                     :from 'b
+                     :bucket :var-usages
+                     :defmethod true
+                     :to 'a}
                      ;; usage
-                     {:name-row 5 :name-col 2 :name-end-row 5 :name-end-col 12
-                      :row 5 :col 1 :end-row 5 :end-col 31
-                      :name my-multi
-                      :filename "/b.clj"
-                      :alias f
-                      :from b
-                      :arity 1
-                      :bucket :var-usages
-                      :to a}]]
+                    {:name-row 5 :name-col 2 :name-end-row 5 :name-end-col 12
+                     :row 5 :col 1 :end-row 5 :end-col 31
+                     :name 'my-multi
+                     :filename (h/file-path "/b.clj")
+                     :alias 'f
+                     :from 'b
+                     :arity 1
+                     :bucket :var-usages
+                     :to 'a}]]
     (testing "from defmulti method name"
       (h/assert-submaps
         references
@@ -428,16 +429,16 @@
                                       "(defmethod |f/my-multi :some-value"
                                       " [_]"
                                       " :foo)") (h/file-uri "file:///b.clj"))
-        references '[;; defmethod
-                     {:name-row 2 :name-col 12 :name-end-row 2 :name-end-col 22
-                      :row 2 :col 12 :end-row 2 :end-col 22
-                      :name my-multi
-                      :filename "/b.clj"
-                      :alias f
-                      :from b
-                      :bucket :var-usages
-                      :defmethod true
-                      :to a}]]
+        references [;; defmethod
+                    {:name-row 2 :name-col 12 :name-end-row 2 :name-end-col 22
+                     :row 2 :col 12 :end-row 2 :end-col 22
+                     :name 'my-multi
+                     :filename (h/file-path "/b.clj")
+                     :alias 'f
+                     :from 'b
+                     :bucket :var-usages
+                     :defmethod true
+                     :to 'a}]]
     (testing "from defmulti method name"
       (h/assert-submaps
         references
@@ -455,13 +456,13 @@
                                       "(declare |my-declared)"
                                       "(def |my-declared 1)"
                                       "(inc |my-declared)"))
-        usage-element '{:name-row 4 :name-col 6 :name-end-row 4 :name-end-col 17
-                        :row 4 :col 6 :end-row 4 :end-col 17
-                        :name my-declared
-                        :filename "/a.clj"
-                        :from a
-                        :bucket :var-usages
-                        :to a}]
+        usage-element {:name-row 4 :name-col 6 :name-end-row 4 :name-end-col 17
+                       :row 4 :col 6 :end-row 4 :end-col 17
+                       :name 'my-declared
+                       :filename (h/file-path "/a.clj")
+                       :from 'a
+                       :bucket :var-usages
+                       :to 'a}]
     (testing "from declare"
       (h/assert-submaps
         [usage-element]
@@ -610,7 +611,7 @@
   (let [[[foob-r foob-c]] (h/load-code-and-locs (h/code "(ns foo.baz (:require [foo.bar :as |foob]))") (h/file-uri "file:///b.clj"))
         db (h/db)]
     (h/assert-submap
-      {:name-end-col 12 :name-end-row 1 :name-row 1 :name 'foo.bar :filename "/a.clj" :col 1 :name-col 5 :bucket :namespace-definitions :row 1}
+      {:name-end-col 12 :name-end-row 1 :name-row 1 :name 'foo.bar :filename (h/file-path "/a.clj") :col 1 :name-col 5 :bucket :namespace-definitions :row 1}
       (q/find-definition-from-cursor db (h/file-path "/b.clj") foob-r foob-c))))
 
 (deftest find-definition-from-cursor-when-on-potemkin
@@ -640,13 +641,13 @@
                               (h/file-uri "file:///aaa.clj"))
         db (h/db)]
     (h/assert-submap
-      '{:ns namespaced, :name "kw", :filename "/bbb.clj", :bucket :keyword-definitions}
+      {:ns 'namespaced, :name "kw", :filename (h/file-path "/bbb.clj"), :bucket :keyword-definitions}
       (q/find-definition-from-cursor db (h/file-path "/aaa.clj") ns-kw-r ns-kw-c))
     (h/assert-submap
-      '{:ns nil, :name "simple-kw", :filename "/bbb.clj", :bucket :keyword-definitions}
+      {:ns nil, :name "simple-kw", :filename (h/file-path "/bbb.clj"), :bucket :keyword-definitions}
       (q/find-definition-from-cursor db (h/file-path "/aaa.clj") simple-kw-r simple-kw-c))
     (h/assert-submap
-      '{:ns nil, :name "unregistered-kw", :filename "/aaa.clj", :bucket :keyword-usages}
+      {:ns nil, :name "unregistered-kw", :filename (h/file-path "/aaa.clj"), :bucket :keyword-usages}
       (q/find-definition-from-cursor db (h/file-path "/aaa.clj") unreg-kw-r unreg-kw-c))))
 
 ;; Uncoment after clj-kondo solves https://github.com/clj-kondo/clj-kondo/issues/1632
@@ -674,7 +675,7 @@
                                       "foob/som|ething"
                                       "|orange"
                                       "|other")
-                              "file:///b.clj")
+                              (h/file-uri "file:///b.clj"))
         db (h/db)]
     (testing "from usage with alias"
       (h/assert-submap
@@ -710,7 +711,7 @@
                                                 "               :cljs |foo)))"
                                                 "#?(:clj foo/som|ething"
                                                 "   :cljs foo/som|ething)")
-                                        "file:///b.cljc")
+                                        (h/file-uri "file:///b.cljc"))
         db (h/db)]
     (testing "from clj usage"
       (h/assert-submap
@@ -794,7 +795,7 @@
         :method-name 'something
         :defined-by 'clojure.core/reify
         :protocol-name 'Foo
-        :filename "/b.clj"
+        :filename (h/file-path "/b.clj")
         :bucket :protocol-impls}]
       (q/find-implementations-from-cursor (h/db) (h/file-path "/a.clj") 3 4)))
   (testing "from implementation usage"
@@ -822,7 +823,7 @@
         :method-name 'something
         :defined-by 'clojure.core/reify
         :protocol-name 'Foo
-        :filename "/b.clj"
+        :filename (h/file-path "/b.clj")
         :bucket :protocol-impls}]
       (q/find-implementations-from-cursor (h/db) (h/file-path "/b.clj") 9 2))))
 

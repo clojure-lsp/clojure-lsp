@@ -13,7 +13,7 @@
           b-uri (h/file-uri "file:///b.clj")
           zloc (h/load-code-and-zloc (h/code "(ns apple)" "|(def bar inc)" "(bar 1)"))
           _ (h/load-code-and-locs "(ns bread)" b-uri)
-          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) "/b.clj"))
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))
           a-results (h/changes-by-uri->code results a-uri (h/db))
           b-results (h/changes-by-uri->code results b-uri (h/db))]
       (is (= (h/code "(ns apple "
@@ -55,7 +55,7 @@
           _ (h/load-code-and-locs (h/code "(ns fruit (:require [apple :as a] [bread :as b]))"
                                           "(a/bar 2)"
                                           "(b/foo 3)") f-uri)
-          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) "/b.clj"))
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))
           a-results (h/changes-by-uri->code results a-uri (h/db))
           b-results (h/changes-by-uri->code results b-uri (h/db))
           c-results (h/changes-by-uri->code results c-uri (h/db))

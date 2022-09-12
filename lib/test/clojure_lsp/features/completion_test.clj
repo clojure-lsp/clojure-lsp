@@ -129,7 +129,7 @@
          {:label "bb/bar",
           :kind :variable
           :data {"unresolved" [["documentation" {"name" "bar"
-                                                 "filename" "/bbb.clj"
+                                                 "filename" (h/file-path "/bbb.clj")
                                                  "name-row" 2
                                                  "name-col" 6}]]},
           :additional-text-edits
@@ -147,17 +147,17 @@
           :detail "alias to: bbb",
           :data {"unresolved" [["alias" {"ns-to-add" "bbb"
                                          "alias-to-add" "bb"
-                                         "uri" "file:///aaa.clj"}]]}}
+                                         "uri" (h/file-uri "file:///aaa.clj")}]]}}
          ;; to var in ns
          {:label "bb/bar",
           :kind :variable
           :data {"unresolved" [["documentation" {"name" "bar"
-                                                 "filename" "/bbb.clj"
+                                                 "filename" (h/file-path "/bbb.clj")
                                                  "name-row" 2
                                                  "name-col" 6}]
                                ["alias" {"ns-to-add" "bbb"
                                          "alias-to-add" "bb"
-                                         "uri" "file:///aaa.clj"}]]}}]
+                                         "uri" (h/file-uri "file:///aaa.clj")}]]}}]
         (f.completion/completion (h/file-uri "file:///aaa.clj") bb-row bb-col (h/db))))))
 
 (deftest completing-full-ns
@@ -410,15 +410,15 @@
             "(s/def ::bar 1)"
             "::fooba"
             ":some.alpaca/foobar"
-            "(defn fooba [bass] 1)") "file:///some/alpaca.clj")
+            "(defn fooba [bass] 1)") (h/file-uri "file:///some/alpaca.clj"))
   (h/load-code-and-locs
     (h/code "(ns other.ns (:require [some.alpaca :as alp]))"
             "::alp/f"
-            "") "file:///other/ns.clj")
+            "") (h/file-uri "file:///other/ns.clj"))
   (h/load-code-and-locs
     (h/code "(ns other.ns (:require [some.alpaca :as alp]))"
             "::alp/"
-            "") "file:///someother/ns.clj")
+            "") (h/file-uri "file:///someother/ns.clj"))
   (testing "return all matching reg keywords for that aliased keyword"
     (h/assert-submaps
       [{:label "::alp/foo" :kind :keyword}
@@ -433,14 +433,14 @@
 
 (deftest completing-arg-keywords-from-function-definition
   (h/load-code-and-locs (h/code "(ns some.a) (defn my-api [{:keys [foo bar baz] :as bla}] 1)")
-                        "file:///some/a.clj")
+                        (h/file-uri "file:///some/a.clj"))
   (h/load-code-and-locs (h/code "(ns some.b (:require [some.a :as a]))"
                                 "(a/my-api {:})")
-                        "file:///some/b.clj")
+                        (h/file-uri "file:///some/b.clj"))
   (h/load-code-and-locs (h/code "(ns some.c (:require [some.a :as a]))"
                                 "(a/my-api {:foo 1"
                                 "           :b})")
-                        "file:///some/c.clj")
+                        (h/file-uri "file:///some/c.clj"))
   (h/assert-submaps
     [{:label ":bar" :kind :keyword}
      {:label ":baz" :kind :keyword}

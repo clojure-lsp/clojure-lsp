@@ -23,7 +23,13 @@
 
 (defn file-uri [uri]
   (cond-> uri windows?
-          (string/replace #"^(file|zipfile|jar:file):///(?!\w:/)" "$1:///c:/")))
+          (string/replace #"^(file|zipfile|jar:file):///(?!\w:/)" "$1:///C:/")))
+
+(defn string=
+  "Like `clojure.core/=` applied on STRING1 and STRING2, but treats
+  all line endings as equal."
+  [string1 string2]
+  (= (string/split-lines string1) (string/split-lines string2)))
 
 (defn code [& strings] (string/join "\n" strings))
 
@@ -104,10 +110,11 @@
 
 (defmacro assert-submaps
   "Asserts that maps are submaps of result in corresponding order and
-  that the number of maps corresponds to the number of
-  results. Returns true if all assertions passed (useful for REPL).
+  that the number of maps corresponds to the number of results. If
+  MAPS is a `set`, don't check for order. Returns true if all
+  assertions passed (useful for REPL).
 
-   taken from kondo"
+   taken from kondo and also adapted for `set`s."
   [maps result]
   `(let [maps# ~maps
          res# ~result]
@@ -115,8 +122,13 @@
        (is (= (count maps#) (count res#))
            (format "Expected %s results, but got: %s \n--\n%s--"
                    (count maps#) (count res#) (with-out-str (pprint/pprint res#))))
-       (doseq [[r# m#] (map vector res# maps#)]
-         (assert-submap m# r#)))))
+       (if (set? maps#)
+         (doseq [map# maps#]
+           (is (some #(submap? map# %) res#)
+               (str "Actual:\n\n" (pr-str map#) "\nExpected to be found in:\n\n" (pr-str res#))))
+
+         (doseq [[r# m#] (map vector res# maps#)]
+           (assert-submap m# r#))))))
 
 (defmacro assert-contains-submaps
   "Asserts that maps are contained submaps of result in results. "

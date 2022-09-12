@@ -659,7 +659,7 @@
   (h/load-code-and-locs (h/code "(ns some-ns)"
                                 ""
                                 "(defn foo [] 1)")
-                        "file:///project/src/some_ns.clj")
+                        (h/file-uri "file:///project/src/some_ns.clj"))
   (testing "inside function"
     (h/assert-contains-submaps
       [{:title "Create test for 'foo'"

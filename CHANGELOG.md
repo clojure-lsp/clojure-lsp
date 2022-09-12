@@ -3,6 +3,7 @@
 ## Unreleased
 
 - General
+  - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
   - Bump clj-kondo to `2022.09.08`. 
 

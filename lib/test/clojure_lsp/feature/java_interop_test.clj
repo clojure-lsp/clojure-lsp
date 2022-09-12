@@ -35,13 +35,13 @@
   (testing "when jdk is already installed"
     (testing "No custom source URI"
       (is (= {:result :jdk-already-installed}
-             (->decision "file:///path/to/jdk.zip" nil (ref nil) false))))
+             (->decision (h/file-uri "file:///path/to/jdk.zip") nil (ref nil) false))))
     (testing "custom source URI is the same as installed one"
       (is (= {:result :jdk-already-installed}
-             (->decision "file:///path/to/jdk.zip" "file:///path/to/jdk.zip" (ref nil) false))))
+             (->decision (h/file-uri "file:///path/to/jdk.zip") (h/file-uri "file:///path/to/jdk.zip") (ref nil) false))))
     (testing "custom source URI is not the same as installed one"
       (is (= {:result :no-source-found}
-             (->decision "file:///path/to/jdk.zip" "https:///other/jdk.zip" (ref nil) false)))))
+             (->decision (h/file-uri "file:///path/to/jdk.zip") "https:///other/jdk.zip" (ref nil) false)))))
   (testing "When jdk is not installed yet"
     (testing "when we find a local JDK automatically"
       (is (= {:result :automatic-local-jdk
@@ -49,20 +49,20 @@
              (->decision nil nil (ref "jdk-file") false))))
     (testing "when we find a local JDK automatically but a custom uri is provided"
       (is (= {:result :manual-local-jdk
-              :jdk-zip-file "/path/to/jdk.zip"}
-             (->decision nil "file:///path/to/jdk.zip" (ref :jdk-file) false))))
+              :jdk-zip-file (h/file-path "/path/to/jdk.zip")}
+             (->decision nil (h/file-uri "file:///path/to/jdk.zip") (ref :jdk-file) false))))
     (testing "A custom uri is provided as local URI"
       (is (= {:result :manual-local-jdk
-              :jdk-zip-file "/path/to/jdk.zip"}
-             (->decision nil "file:///path/to/jdk.zip" (ref nil) false))))
+              :jdk-zip-file (h/file-path "/path/to/jdk.zip")}
+             (->decision nil (h/file-uri "file:///path/to/jdk.zip") (ref nil) false))))
     (testing "A custom uri is provided as local path"
       (is (= {:result :manual-local-jdk
-              :jdk-zip-file "/path/to/jdk.zip"}
-             (->decision nil "/path/to/jdk.zip" (ref nil) false))))
+              :jdk-zip-file (h/file-path "/path/to/jdk.zip")}
+             (->decision nil (h/file-path "/path/to/jdk.zip") (ref nil) false))))
     (testing "A custom uri is provided as unknown uri"
       (is (= {:result :manual-local-jdk
-              :jdk-zip-file "foo:/asd"}
-             (->decision nil "foo:///asd" (ref nil) false))))
+              :jdk-zip-file (h/file-path "foo:/asd")}
+             (->decision nil (h/file-uri "foo:///asd") (ref nil) false))))
     (testing "A custom uri is provided as external URI but download setting is false"
       (is (= {:result :no-source-found}
              (->decision nil "https://path/to/my/jdk.zip" (ref nil) false))))

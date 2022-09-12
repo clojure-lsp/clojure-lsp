@@ -147,7 +147,7 @@
              :kind :variable
              :tags []
              :detail "clojure.core"
-             :uri "zipfile:///.m2/clojure.jar::clojure/core.clj"
+             :uri (h/file-uri "zipfile:///.m2/clojure.jar::clojure/core.clj")
              :range {:start {:line 1 :character 6} :end {:line 1 :character 13}}
              :selection-range {:start {:line 2 :character 3} :end {:line 2 :character 10}}}}]
       (f.call-hierarchy/outgoing (h/file-uri "file:///some/d.clj") 2 7 (h/components)))))

@@ -18,7 +18,7 @@
                                   "      (+ 2 3)))"
                                   ")"))
     (h/assert-submap
-      {:uri "file:///a.clj"
+      {:uri (h/file-uri "file:///a.clj")
        :tree
        {:name "foo.bar"
         :range {:start {:line 0 :character 0}
@@ -59,4 +59,4 @@
               :name-range {:start {:line 6 :character 5}
                            :end {:line 6 :character 12}}
               :kind :testing}]}]}]}}
-      (f.test-tree/tree "file:///a.clj" (h/db)))))
+      (f.test-tree/tree (h/file-uri "file:///a.clj") (h/db)))))

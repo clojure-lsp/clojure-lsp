@@ -1,5 +1,6 @@
 (ns clojure-lsp.source-paths
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.config :as config]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.shared :as shared]
@@ -41,14 +42,20 @@
          (remove nil?))))
 
 (defn ^:private classpath->source-paths [^java.nio.file.Path root-path classpath]
-  (let [source-paths (->> classpath
+  ;; Path comparisons and resolutions should always be made on
+  ;; canonicalized paths, so as to be compatible across operating
+  ;; systems.
+  (let [root-path (fs/canonicalize root-path)
+        source-paths (->> classpath
                           (remove shared/jar-file?)
                           (map (fn [path]
-                                 (if (shared/absolute-path? path)
-                                   path
-                                   (shared/get-canonical-path (io/file (str root-path) path)))))
-                          (filter (fn [^String abs-path]
-                                    (.startsWith abs-path (str root-path)))))]
+                                 (let [path (if (shared/absolute-path? path)
+                                              (fs/path path)
+                                              (fs/path root-path path))]
+                                   (fs/canonicalize path))))
+                          (filter (fn [^java.nio.file.Path path]
+                                    (.startsWith path root-path)))
+                          (mapv str))]
     (when (seq source-paths)
       {:origins #{:classpath}
        :source-paths source-paths

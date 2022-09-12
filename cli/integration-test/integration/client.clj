@@ -103,11 +103,13 @@
     (async/put! log-ch (format-log this color msg params)))
   (send-request [this method body]
     (let [req (lsp.requests/request (swap! request-id inc) method body)
-          p (promise)]
+          p (promise)
+          start-ns (System/nanoTime)]
       (protocols.endpoint/log this :cyan "sending request:" req)
       ;; Important: record request before sending it, so it is sure to be
       ;; available during receive-response.
-      (swap! sent-requests assoc (:id req) p)
+      (swap! sent-requests assoc (:id req) {:request p
+                                            :start-ns start-ns})
       (async/>!! output req)
       p))
   (send-notification [this method body]
@@ -115,12 +117,13 @@
       (protocols.endpoint/log this :blue "sending notification:" notif)
       (async/>!! output notif)))
   (receive-response [this {:keys [id] :as resp}]
-    (if-let [request (get @sent-requests id)]
-      (do (protocols.endpoint/log this :green "received reponse:" resp)
-          (swap! sent-requests dissoc id)
-          (deliver request (if (:error resp)
-                             resp
-                             (:result resp))))
+    (if-let [{:keys [request start-ns]} (get @sent-requests id)]
+      (let [sec (/ (double (- (. System (nanoTime)) start-ns)) 1000000000.0)]
+        (do (protocols.endpoint/log this :green (format "received response (%.3f sec):" sec) resp)
+            (swap! sent-requests dissoc id)
+            (deliver request (if (:error resp)
+                               resp
+                               (:result resp)))))
       (protocols.endpoint/log this :red "received response for unmatched request:" resp)))
   (receive-request [this _ {:keys [id method] :as req}]
     (protocols.endpoint/log this :magenta "received request:" req)
@@ -197,11 +200,13 @@
     (:params msg)))
 
 (defn request-and-await-server-response! [client method body]
-  (let [resp (deref (protocols.endpoint/send-request client method body)
-                    90000
+  (let [timeout-ms 90000
+        resp (deref (protocols.endpoint/send-request client method body)
+                    timeout-ms
                     ::timeout)]
     (if (= ::timeout resp)
       (do
-        (protocols.endpoint/log client :red "timeout waiting for server response to client request:" method)
+        (protocols.endpoint/log client :red "timeout waiting for server response to client request:"
+                                {:method method :timeout-ms timeout-ms})
         (throw (ex-info "timeout waiting for server response to client request" {:method method :body body})))
       resp)))

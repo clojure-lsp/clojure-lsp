@@ -21,7 +21,7 @@
   (testing "class files"
     (with-redefs [f.java-interop/decompile-file (fn [_jar entry _db]
                                                   (.getName entry))]
-      (let [test-jar-path (.getCanonicalPath (io/file (h/file-path "test/fixtures/java_interop/single-class.jar")))]
+      (let [test-jar-path (.getCanonicalPath (io/file "test/fixtures/java_interop/single-class.jar"))]
         (testing "jar scheme"
           (is (= "Bar.class" (f.java-interop/uri->translated-uri (str "jar:file://" test-jar-path "!/Bar.class") (h/db) (h/producer)))))
         (testing "zipfile scheme"

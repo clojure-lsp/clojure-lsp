@@ -63,7 +63,6 @@
                                  {:tag :headerType :attrs nil  :content ["console"]}
                                  {:tag :jar :attrs nil :content [jar]}
                                  {:tag :outfile :attrs nil :content [outfile]}
-                                 {:tag :chdir :attrs nil :content ["."]}
                                  {:tag :priority :attrs nil :content ["normal"]}
                                  {:tag :stayAlive :attrs nil :content ["false"]}
                                  {:tag :restartOnCrash :attrs nil :content ["false"]}

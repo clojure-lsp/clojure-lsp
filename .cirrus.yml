@@ -2,6 +2,7 @@ macos_instance:
   image: ghcr.io/cirruslabs/macos-monterey-base:latest
 
 task:
+  only_if: $CIRRUS_BRANCH == 'master'
   name: Dev release (macos-aarch64)
   env:
     GRAALVM_VERSION: "22.2.0"

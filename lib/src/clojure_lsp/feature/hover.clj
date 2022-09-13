@@ -89,6 +89,8 @@
                      (docstring->formatted-markdown doc)
                      doc))
         clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)
+        ;; TODO Consider using URI for display purposes, especially if we
+        ;; support remote LSP connections
         filename (shared/uri->filename uri)]
     (if markdown?
       {:kind "markdown"

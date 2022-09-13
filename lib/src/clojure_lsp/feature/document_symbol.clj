@@ -34,6 +34,8 @@
 (defn document-symbols [db uri]
   (let [namespace-definition (q/find-namespace-definition-by-uri db uri)]
     [{:name (or (some-> namespace-definition :name name)
+                ;; TODO Consider using URI for display purposes, especially if
+                ;; we support remote LSP connections
                 (shared/uri->filename uri))
       :kind (element->symbol-kind namespace-definition)
       :range shared/full-file-range

@@ -23,6 +23,8 @@
              (name el-name))
      :kind (f.document-symbol/element->symbol-kind parent-element)
      :tags (cond-> [] deprecated (conj 1))
+     ;; TODO Consider using URI for display purposes, especially if we support
+     ;; remote LSP connections
      :detail (or (some-> ns str) (shared/uri->filename el-uri))
      :uri uri
      :range (shared/->range parent-element)

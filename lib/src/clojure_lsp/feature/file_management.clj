@@ -14,7 +14,8 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
 
@@ -289,17 +290,32 @@
   (swap! db* #(reduce db-without-uri % uris))
   (f.diagnostic/publish-empty-diagnostics! uris components))
 
+(defn ^:private dir-or-file-uri->analyzable-uris [uri db]
+  ;; If the URI is for an entire directory that has been created/deleted, we
+  ;; expand it.
+  (let [files (-> uri shared/uri->filename io/file file-seq)]
+    (->> files
+         (map #(.getAbsolutePath ^java.io.File %))
+         (map #(shared/filename->uri % db))
+         (remove #(= :unknown (shared/uri->file-type %))))))
+
 (defn did-change-watched-files
   [changes
    {:keys [db* watched-files-chan] :as components}]
-  (let [{:keys [created changed deleted]} (group-by :type changes)
-        observe-changed? (settings/get @db* [:compute-external-file-changes] true)]
+  (let [db @db*
+        observe-changed? (settings/get db [:compute-external-file-changes] true)
+        {:keys [created changed deleted]}
+        (->> changes
+             (group-by :type)
+             (medley/map-vals
+               (fn [changes]
+                 (mapcat #(dir-or-file-uri->analyzable-uris (:uri %) db) changes))))]
     (doseq [created-or-changed (concat created (when observe-changed? changed))]
-      (async/>!! watched-files-chan (:uri created-or-changed)))
+      (async/>!! watched-files-chan created-or-changed))
     (when (seq deleted)
       (shared/logging-task
         :delete-watched-files
-        (files-deleted components (map :uri deleted))))))
+        (files-deleted components deleted)))))
 
 (defn did-close [uri {:keys [db*] :as components}]
   (let [filename (shared/uri->filename uri)

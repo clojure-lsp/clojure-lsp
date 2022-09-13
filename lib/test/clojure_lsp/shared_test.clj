@@ -2,7 +2,6 @@
   (:require
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
-   [clojure.string :as str]
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))
 

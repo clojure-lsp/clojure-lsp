@@ -99,7 +99,7 @@
               outfile (-> "clojure-lsp.exe"  fs/absolutize fs/path .toString)
               java-home (System/getenv "JAVA_HOME")]
           (fs/with-temp-dir
-            [temp-dir]
+            [temp-dir {}]
             (let [l4jxml (-> (fs/path temp-dir "l4j.xml") .toString)]
               (spit l4jxml (l4j-xml jar outfile java-home jvm-opts))
               (p/shell (str l4j " " l4jxml)))))

@@ -1,8 +1,9 @@
 (ns make
   (:refer-clojure :exclude [test])
-  (:require [babashka.fs :as fs]
-            [babashka.deps :as deps]
-            [babashka.process :as p]))
+  (:require
+   [babashka.deps :as deps]
+   [babashka.fs :as fs]
+   [babashka.process :as p]))
 
 (def lsp-bin (if (fs/windows?)
                "clojure-lsp.exe"

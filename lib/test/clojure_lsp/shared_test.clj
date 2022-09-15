@@ -67,32 +67,32 @@
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db)))))
   (testing "when it has a project root and not a source-path"
     (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                                :source-paths #{(h/file-uri "file:///user/project/bla")}}
-                                     :project-root-uri (h/file-uri "file:///user/project")})
+                                                 :source-paths #{(h/file-uri "file:///user/project/bla")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")})
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db)))))
   (testing "when it has a project root and a source-path"
     (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                                :source-paths #{(h/file-path "/user/project/src")}}
-                                     :project-root-uri (h/file-uri "file:///user/project")})
+                                                 :source-paths #{(h/file-path "/user/project/src")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db)))))
   (testing "when it has a project root a source-path on mono repos"
     (swap! (h/db*) medley/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                                :source-paths #{(h/file-path "/user/project/src/clj")
-                                                                (h/file-path "/user/project/src/cljs")}}
-                                     :project-root-uri (h/file-uri "file:///user/project")})
+                                                 :source-paths #{(h/file-path "/user/project/src/clj")
+                                                                 (h/file-path "/user/project/src/cljs")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/clj/foo/bar.clj") (h/db)))))
   (testing "when it has a project root and nested source-paths"
     (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                                :source-paths #{(h/file-path "/user/project/src")
-                                                                (h/file-path "/user/project/src/some")}}
-                                     :project-root-uri (h/file-uri "file:///user/project")})
+                                                 :source-paths #{(h/file-path "/user/project/src")
+                                                                 (h/file-path "/user/project/src/some")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/some/foo/bar.clj") (h/db)))))
   (testing "when an invalid source-path with a valid source-path prefixing it"
     (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}
-                                     :project-root-uri (h/file-uri "file:///user/project")})
+                                      :project-root-uri (h/file-uri "file:///user/project")})
     (with-redefs [shared/directory? (constantly true)]
       (is (= nil
              (shared/uri->namespace (h/file-uri "file:///user/project/src/cljs/foo/bar.clj") (h/db)))))))

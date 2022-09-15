@@ -31,7 +31,7 @@
 (defn range-formatting [code]
   (let [[[row col] [end-row end-col] :as positions] (h/load-code-and-locs code)]
     (let [position-count (count positions)]
-       (assert (= 2 position-count) (format "Expected two cursors, got %s" position-count)))
+      (assert (= 2 position-count) (format "Expected two cursors, got %s" position-count)))
     (f.format/range-formatting (h/file-uri "file:///a.clj") {:row row :col col :end-row end-row :end-col end-col} (h/db))))
 
 (deftest test-range-formatting

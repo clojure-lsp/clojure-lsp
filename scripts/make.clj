@@ -5,7 +5,7 @@
    [babashka.fs :as fs]
    [babashka.process :as p]))
 
-(def lsp-bin (if (fs/windows?)
+(def lsp-bin (if (#'fs/windows?)
                "clojure-lsp.exe"
                "clojure-lsp"))
 

@@ -27,7 +27,7 @@
      (is (can-destructure-zloc? zloc#) original#)
      (is (= expected#
             (as-string (destructure-zloc zloc#)))
-          original#)))
+         original#)))
 
 (deftest should-not-destructure
   (assert-cannot-destructure "{|:a 1}")

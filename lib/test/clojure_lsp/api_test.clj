@@ -16,7 +16,7 @@
   "Replaces the last occurrence of `old-value` in `s` with `new-value`."
   [s old-value new-value]
   (string/reverse
-   (string/replace-first (string/reverse s) (string/reverse old-value) (string/reverse new-value))))
+    (string/replace-first (string/reverse s) (string/reverse old-value) (string/reverse new-value))))
 
 (deftest analyze-project-and-deps!
   (testing "when project-root is not a file"

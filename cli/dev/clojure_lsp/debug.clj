@@ -117,5 +117,4 @@
        }
       (f.completion/completion (uri-in-project "lib/src/clojure_lsp/queries.clj") 24 8 @db/db*)))
 
-
   #_())

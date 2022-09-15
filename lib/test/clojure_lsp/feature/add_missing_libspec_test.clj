@@ -266,7 +266,7 @@
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
         (swap! (h/db*) shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor true
-                                                           :ns-inner-blocks-indentation :same-line}}})
+                                                             :ns-inner-blocks-indentation :same-line}}})
         (is (= (h/code "(ns foo "
                        "  (:require [clojure.set :as set]))")
                (-> "(ns foo) |set/subset?"
@@ -326,8 +326,8 @@
 (defn add-import-to-namespace [code import-name & [settings]]
   (h/reset-components!)
   (swap! (h/db*) shared/deep-merge {:settings (merge
-                                              {:clean {:automatically-after-ns-refactor false}}
-                                              settings)})
+                                                {:clean {:automatically-after-ns-refactor false}}
+                                                settings)})
   (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db)))
 
 (deftest add-import-to-namespace-test

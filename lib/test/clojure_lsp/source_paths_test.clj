@@ -61,8 +61,8 @@
                                                                    "/foo/bar"]))))))
 
 (deftest absolutize-source-paths-test
-  (is (= ["/project/root/src"
-          "/project/root/test"]
+  (is (= [(h/file-path "/project/root/src")
+          (h/file-path "/project/root/test")]
          (#'source-paths/absolutize-source-paths ["src" "test"]
                                                  (.toPath (io/file (h/file-path "/project/root")))
                                                  ["resources.*" "target.*"]))))

@@ -1,10 +1,10 @@
 (ns clojure-lsp.classpath-test
   (:require
    [babashka.fs :as fs]
-   [clojure.string :as str]
    [clojure-lsp.classpath :as classpath]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
+   [clojure.string :as str]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)
@@ -219,8 +219,7 @@ components reference to it."
         (let [components (make-components temp-dir "deps.edn")]
           (is (= #{"a" "c"} (classpath/scan-classpath! components)))))))
 
-
-  ;; test with multiple project files present
+;; test with multiple project files present
   (testing "clojure & bb"
     (fs/with-temp-dir
       [temp-dir {}]

@@ -279,10 +279,13 @@
                  :delete-watched-file
                  (file-deleted components uri (shared/uri->filename uri))))))
 
-(defn did-close [uri {:keys [db*], :as components}]
+(defn did-close [uri {:keys [db*] :as components}]
   (let [filename (shared/uri->filename uri)
-        source-paths (settings/get @db* [:source-paths])]
-    (when (and (not (shared/external-filename? filename source-paths))
+        source-paths (settings/get @db* [:source-paths])
+        external-filename? (shared/external-filename? filename source-paths)]
+    (when external-filename?
+      (f.diagnostic/publish-empty-diagnostics! uri components))
+    (when (and (not external-filename?)
                (not (shared/file-exists? (io/file filename))))
       (file-deleted components uri filename))))
 

@@ -49,7 +49,7 @@
       (is (= {:uri (h/file-uri "file:///user/project/src/clj/bar.clj")
               :diagnostics []}
              (h/take-or-timeout mock-diagnostics-chan 500)))))
-  (testing "when file is external we do not remove analysis"
+  (testing "when file is external we do not remove analysis but publish empty diagnostics"
     (let [mock-diagnostics-chan (async/chan 1)]
       (with-redefs [shared/file-exists? (constantly false)]
         (f.file-management/did-close (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj") (assoc (h/components)
@@ -59,7 +59,9 @@
       (is (get-in (h/db) [:file-meta (h/file-path "/some/path/to/jar.jar:/some/file.clj")]))
       (is (seq (get-in (h/db) [:dep-graph 'some-jar :uris])))
       (is (get-in (h/db) [:documents (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj")]))
-      (h/assert-no-take mock-diagnostics-chan 500))))
+      (is (= {:uri (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj")
+              :diagnostics []}
+             (h/take-or-timeout mock-diagnostics-chan 500))))))
 
 (deftest did-open
   (testing "on an empty file"

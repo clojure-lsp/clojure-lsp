@@ -12,6 +12,7 @@
   - Add support to decompile jar as a java project when finding the definition of a java class, allowing to have LSP features on that java project. #1187
   - Add refactorings similar to `Sort map`: `Sort vector`, `Sort list`, `Sort set`, and `Sort clauses` for functions like `assoc`. #1155
   - Support java class decompilation for zipfile scheme (vim users).
+  - Avoid keeping diagnostics of external closed files for Calva. https://github.com/BetterThanTomorrow/calva/issues/1864
 
 - API/CLI
   - Fix missing diagnostics when `--project-root` is different than current directory. #1245

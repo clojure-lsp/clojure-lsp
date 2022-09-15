@@ -71,6 +71,12 @@
 (defn directory? [^java.io.File f]
   (.isDirectory f))
 
+(defn get-canonical-path [^java.io.File f]
+  (.getCanonicalPath f))
+
+(defn absolute-path? [^String path]
+  (.isAbsolute (io/file path)))
+
 (defn slurp-uri
   "Slurp uri, returning nil if anything goes wrong, and in particular when the
   URI does not exist on disk. Also useful in with-redefs."

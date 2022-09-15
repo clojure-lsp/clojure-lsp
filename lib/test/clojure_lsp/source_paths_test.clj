@@ -1,5 +1,6 @@
 (ns clojure-lsp.source-paths-test
   (:require
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.source-paths :as source-paths]
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
@@ -42,4 +43,26 @@
                                               (mapv h/file-path ["/project/root/src"
                                                                  "/project/root/other-src"
                                                                  "/project/root/some/file.jar"
-                                                                 "/path/to/some/external/file"])))))
+                                                                 "/path/to/some/external/file"]))))
+
+  (testing "when root-path is in a different current directory"
+    (h/assert-submap
+      {:origins #{:classpath}
+       :source-paths (mapv h/file-path ["/project/root/src" "/project/root/other-src"])
+       :classpath-paths (mapv h/file-path ["/project/root/src" "/project/root/other-src"])}
+      (with-redefs [shared/get-canonical-path (fn [f]
+                                                (case (.getName f)
+                                                  "src" "/project/root/src"
+                                                  "other-src" "/project/root/other-src"
+                                                  "bar" "/foo/bar"))]
+        (#'source-paths/classpath->source-paths (.toPath (io/file (h/file-path "/project/root")))
+                                                (mapv h/file-path ["src"
+                                                                   "other-src"
+                                                                   "/foo/bar"]))))))
+
+(deftest absolutize-source-paths-test
+  (is (= ["/project/root/src"
+          "/project/root/test"]
+         (#'source-paths/absolutize-source-paths ["src" "test"]
+                                                 (.toPath (io/file (h/file-path "/project/root")))
+                                                 ["resources.*" "target.*"]))))

@@ -13,6 +13,9 @@
   - Add refactorings similar to `Sort map`: `Sort vector`, `Sort list`, `Sort set`, and `Sort clauses` for functions like `assoc`. #1155
   - Support java class decompilation for zipfile scheme (vim users).
 
+- API/CLI
+  - Fix missing diagnostics when `--project-root` is different than current directory. #1245
+
 ## 2022.09.01-15.27.31
 
 - General

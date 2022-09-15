@@ -52,9 +52,9 @@
        :classpath-paths (mapv h/file-path ["/project/root/src" "/project/root/other-src"])}
       (with-redefs [shared/get-canonical-path (fn [f]
                                                 (case (.getName f)
-                                                  "src" "/project/root/src"
-                                                  "other-src" "/project/root/other-src"
-                                                  "bar" "/foo/bar"))]
+                                                  "src" (h/file-path "/project/root/src")
+                                                  "other-src" (h/file-path "/project/root/other-src")
+                                                  "bar" (h/file-path "/foo/bar")))]
         (#'source-paths/classpath->source-paths (.toPath (io/file (h/file-path "/project/root")))
                                                 (mapv h/file-path ["src"
                                                                    "other-src"

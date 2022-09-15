@@ -28,8 +28,8 @@
   (testing "when file exists on disk"
     (let [mock-diagnostics-chan (async/chan 1)]
       (with-redefs [shared/file-exists? (constantly true)]
-        (f.file-management/did-close "file:///user/project/src/clj/foo.clj" (assoc (h/components)
-                                                                                   :diagnostics-chan mock-diagnostics-chan)))
+        (f.file-management/did-close (h/file-uri "file:///user/project/src/clj/foo.clj") (assoc (h/components)
+                                                                                                :diagnostics-chan mock-diagnostics-chan)))
       (is (get-in (h/db) [:analysis (h/file-path "/user/project/src/clj/foo.clj")]))
       (is (get-in (h/db) [:findings (h/file-path "/user/project/src/clj/foo.clj")]))
       (is (get-in (h/db) [:file-meta (h/file-path "/user/project/src/clj/foo.clj")]))

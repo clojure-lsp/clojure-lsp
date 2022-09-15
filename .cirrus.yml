@@ -26,6 +26,9 @@ task:
 
     gu install native-image || true
 
+    VERSION=$(date -u +"%Y.%m.%d-%H.%M.%S")
+    echo "$VERSION-nightly" > lib/resources/CLOJURE_LSP_VERSION
+
     bb native-cli
 
     arch=${CLOJURE_LSP_ARCH:-amd64}

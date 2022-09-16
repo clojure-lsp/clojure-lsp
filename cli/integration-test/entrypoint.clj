@@ -1,6 +1,5 @@
 (ns entrypoint
   (:require
-   [babashka.fs :as fs]
    [clojure.java.shell :as sh]
    [clojure.test :as t]
    [medley.core :as medley]))

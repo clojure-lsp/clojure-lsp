@@ -6,13 +6,14 @@
    [rewrite-clj.zip :as z]))
 
 (defn ^:private clause-spec [zloc uri db]
-  (let [zloc (or (and (n/inner? (z/node zloc)) ;; sort from map/vector/list bracket
-                      (z/down zloc))
-                 zloc)
-        clause-spec (f.clauses/clause-spec zloc uri db)]
-    ;; don't sort in places that establish bindings, which are order dependent
-    (when-not (contains? #{:forms :binding} (:context clause-spec))
-      clause-spec)))
+  (when zloc
+    (let [zloc (or (and (n/inner? (z/node zloc)) ;; sort from map/vector/list bracket
+                        (z/down zloc))
+                   zloc)
+          clause-spec (f.clauses/clause-spec zloc uri db)]
+      ;; don't sort in places that establish bindings, which are order dependent
+      (when-not (contains? #{:forms :binding} (:context clause-spec))
+        clause-spec))))
 
 (defn can-sort? [zloc uri db]
   (clause-spec zloc uri db))

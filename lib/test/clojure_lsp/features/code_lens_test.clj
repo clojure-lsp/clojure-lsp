@@ -1,9 +1,9 @@
 (ns clojure-lsp.features.code-lens-test
   (:require
    [clojure-lsp.feature.code-lens :as f.code-lens]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
-   [clojure-lsp.shared :as shared]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)
 

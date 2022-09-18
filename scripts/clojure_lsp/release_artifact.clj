@@ -37,14 +37,21 @@
       (println (format "Skipping: not on release branch (%s)" branch))
 
       prod-release-tag
-      (ghr/overwrite-asset {:org "clojure-lsp"
-                            :repo "clojure-lsp"
-                            :file file
-                            :tag (str/trim (slurp "lib/resources/CLOJURE_LSP_VERSION"))})
+      (let [tag (str/trim (slurp "lib/resources/CLOJURE_LSP_VERSION"))]
+        (println "Uploading prod binary for tag:" tag)
+        (ghr/overwrite-asset {:org "clojure-lsp"
+                              :repo "clojure-lsp"
+                              :file file
+                              :tag tag}))
 
       latest-dev-tag
-      (ghr/overwrite-asset {:org "clojure-lsp"
-                            :repo "clojure-lsp-dev-builds"
-                            :file file
-                            :tag latest-dev-tag}))
+      (do
+        (println "Uploading dev-release binary for tag:" latest-dev-tag)
+        (ghr/overwrite-asset {:org "clojure-lsp"
+                              :repo "clojure-lsp-dev-builds"
+                              :file file
+                              :tag latest-dev-tag}))
+
+      :else
+      (println "No prod or dev tags found!"))
     nil))

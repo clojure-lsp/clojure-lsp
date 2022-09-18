@@ -287,13 +287,24 @@
 
 (defmethod find-definition :java-class-usages
   [db java-class-usage]
-  (->> (:analysis db)
-       (into []
-             (comp
-               xf-analysis->java-class-definitions
-               (filter #(safe-equal? (:class %) (:class java-class-usage)))))
-       (sort-by (complement #(string/ends-with? (:filename %) ".java")))
-       first))
+  (let [full-class-name (:class java-class-usage)]
+    (or (->> (:analysis db)
+             (into []
+                   (comp
+                     xf-analysis->java-class-definitions
+                     (filter #(safe-equal? full-class-name (:class %)))))
+             (sort-by (complement #(string/ends-with? (:filename %) ".java")))
+             first)
+        (let [split (string/split full-class-name #"\.")
+              ns (string/replace (string/join "." (drop-last split)) "_" "-")
+              name (last split)]
+          (->> (:analysis db)
+               (into []
+                     (comp
+                       xf-analysis->var-definitions
+                       (filter #(and (safe-equal? ns (str (:ns %)))
+                                     (safe-equal? name (str (:name %)))))))
+               first)))))
 
 (defmethod find-definition :default
   [_db element]

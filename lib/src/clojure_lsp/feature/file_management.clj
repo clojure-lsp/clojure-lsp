@@ -16,6 +16,9 @@
    [clojure.set :as set]
    [clojure.string :as string]))
 
+{#_#_:foo :bar}
+
+
 (set! *warn-on-reflection* true)
 
 (defn create-ns-changes [uri text db]
@@ -306,6 +309,7 @@
                        (io/file project-root-filename ".lsp" "config.edn")}
         config-file-saved? (some (comp #(= uri %)
                                        #(shared/filename->uri % db)
+                                       str
                                        fs/canonicalize)
                                  config-files)]
 

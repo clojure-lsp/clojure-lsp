@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.file-management
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
@@ -305,7 +306,7 @@
                        (io/file project-root-filename ".lsp" "config.edn")}
         config-file-saved? (some (comp #(= uri %)
                                        #(shared/filename->uri % db)
-                                       shared/get-canonical-path)
+                                       fs/canonicalize)
                                  config-files)]
 
     (when config-file-saved?

@@ -75,44 +75,17 @@ jobs:
         run: bb test
 
   jvm-integration-test:
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         jdk: [8, 11, 15, 17]
-    steps:
-      - uses: actions/checkout@v2.2.0
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.jdk }}
-
-      - name: Install clojure build tools
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.1013'
-          lein: '2.9.1'
-          boot: '2.8.3'
-          bb: '0.9.161'
-
-      - name: Generate embedded binary
-        run: bb prod-cli
-
-      - name: Run integration tests
-        run: bb integration-test
-
-      - name: Run babashka pod tests
-        run: bb pod-test
-
-  jvm-integration-test-windows:
-    runs-on: windows-2022
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [8]
+        include:
+          - os: windows-latest
+            jdk: 8
+          - os: macos-latest
+            jdk: 8
     steps:
       - uses: actions/checkout@v2.2.0
         with:
@@ -132,13 +105,14 @@ jobs:
           bb: '0.9.161'
 
       - name: Install launch4j
+        if: startsWith (matrix.os, 'windows')
         run: |
           iwr -UserAgent "Wget" -URI "https://sourceforge.net/projects/launch4j/files/launch4j-3/3.14/launch4j-3.14-win32.exe/download" -OutFile "$env:TEMP/l4j-installer.exe"
           Start-Process -Filepath "$env:TEMP/l4j-installer.exe" -ArgumentList "/S"
         shell: pwsh
 
       - name: Generate embedded binary
-        env:
+        env: # only relevant to the MS-Windows job.
           LAUNCH4J_HOME: "C:\\Program Files (x86)\\Launch4j"
         run: bb prod-cli
 

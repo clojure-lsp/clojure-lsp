@@ -20,6 +20,7 @@
 
 (deftest should-not-sort
   (testing "top-level forms"
+    (assert-cannot-sort "|")
     (assert-cannot-sort "|[]")
     (assert-cannot-sort "|1")
     (assert-cannot-sort "|{}"))

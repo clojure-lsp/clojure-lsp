@@ -12,6 +12,27 @@
 (defn zloc-of [uri]
   (parser/safe-zloc-of-file (h/db) uri))
 
+(deftest no-zloc-test
+  ;; We don't always have a zloc. This happens, for example, when Calva opens a
+  ;; file that begins with a comment.
+  (testing "doesn't throw when file hasn't been opened"
+    (is (seq (f.code-actions/all (zloc-of h/default-uri)
+                                 h/default-uri
+                                 0
+                                 0
+                                 []
+                                 {:workspace {:workspace-edit true}}
+                                 (h/db)))))
+  (testing "doesn't throw when file begins with a comment"
+    (h/load-code ";; a file")
+    (is (seq (f.code-actions/all (zloc-of h/default-uri)
+                                 h/default-uri
+                                 0
+                                 0
+                                 []
+                                 {:workspace {:workspace-edit true}}
+                                 (h/db))))))
+
 (deftest add-alias-suggestion-code-actions
   (h/load-code-and-locs "(ns clojure.set)" (h/file-uri "file:///clojure.core.clj"))
   (h/load-code-and-locs "(ns medley.core)" (h/file-uri "file:///medley.core.clj"))

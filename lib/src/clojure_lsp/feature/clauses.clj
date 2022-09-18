@@ -355,18 +355,19 @@
   "Returns a clause spec for the `zloc`."
   [zloc uri db]
   (when zloc
-    (let [[zloc parent-zloc] (target-locs zloc)
-          child-count        (count-children parent-zloc)]
-      (when-let [{:keys [breadth rind], :as spec}
-                 (case (z/tag parent-zloc)
-                   :map        {:context :map, :breadth 2, :rind no-rind}
-                   :set        {:context :set, :breadth 1, :rind no-rind}
-                   :forms      {:context :forms, :breadth 1, :rind no-rind}
-                   :vector     (vector-clause-spec parent-zloc uri db)
-                   (:list :fn) (list-clause-spec parent-zloc child-count)
-                   nil)]
-        (let [pulp (pulp rind child-count)]
-          (when (zero? (mod pulp breadth)) ;; Can the expression be split into clauses?
-            (assoc spec
-                   :pulp pulp
-                   :zloc zloc)))))))
+    (let [[zloc parent-zloc] (target-locs zloc)]
+      (when parent-zloc
+        (let [child-count (count-children parent-zloc)]
+          (when-let [{:keys [breadth rind], :as spec}
+                     (case (z/tag parent-zloc)
+                       :map        {:context :map, :breadth 2, :rind no-rind}
+                       :set        {:context :set, :breadth 1, :rind no-rind}
+                       :forms      {:context :forms, :breadth 1, :rind no-rind}
+                       :vector     (vector-clause-spec parent-zloc uri db)
+                       (:list :fn) (list-clause-spec parent-zloc child-count)
+                       nil)]
+            (let [pulp (pulp rind child-count)]
+              (when (zero? (mod pulp breadth)) ;; Can the expression be split into clauses?
+                (assoc spec
+                       :pulp pulp
+                       :zloc zloc)))))))))

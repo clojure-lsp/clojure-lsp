@@ -5,6 +5,10 @@
    [clojure.string :as string]
    [clojure.test :refer [is]]))
 
+(def windows?
+  "Whether is running on MS-Windows."
+  (string/starts-with? (System/getProperty "os.name") "Windows"))
+
 (def root-project-path
   (-> (io/file *file*)
       .getParentFile
@@ -13,8 +17,10 @@
       (.resolve "sample-test")
       str))
 
-(defn project-path->abs-path [path]
-  (.getAbsolutePath (io/file root-project-path path)))
+(defn project-path->canon-path
+  "Returns the canonical name of the root project's SUB-PATH."
+  [sub-path]
+  (.getCanonicalPath (io/file root-project-path sub-path)))
 
 (defn source-path->file [source-path]
   (->> source-path
@@ -22,8 +28,50 @@
        io/as-relative-path
        io/file))
 
+(defn file-path
+  "Converts the IMAGINARY-UNIX-TEST-PATH to something equivalent for the
+  underlying system, and returns it.
+
+  - On MS-Windows, it converts `/` to `\\` whewre appropriate while
+  using a capital C: drive letter.
+
+  - On all other systems, it return the input as is."
+  [imaginery-unix-test-path]
+  (cond-> imaginery-unix-test-path windows?
+          (-> (string/replace-first #"^/" "C:\\\\")
+              (->> (re-matches #"(.+?)(\.jar:.*)?"))
+              (update 1 string/replace "/" "\\")
+              rest
+              (->> (apply str)))))
+
 (defn file->uri [file]
   (-> file .toPath .toUri .toString))
+
+(defn string=
+  "Like `clojure.core/=` applied on STRING1 and STRING2, but treats
+  any line endings as equal."
+  [string1 string2]
+  (= (string/split-lines string1) (string/split-lines string2)))
+
+(defn ->system-newlines
+  "Converts TEXT new lines to those of the underlying system, and
+  returns it."
+  [text]
+  (-> (string/split-lines text) (string/join "\n")))
+
+(defn str-includes?
+  "Like `clojure.string/includes?` applied to S and SUBSTR, but treats
+  any line endings as equal."
+  [s substr]
+  (let [s (-> (string/split-lines s) (string/join "\n"))
+        substr (-> (string/split-lines substr) (string/join "\n"))]
+    (string/includes? s substr)))
+
+(defn newlines->system
+  "Converts TEXT new lines to those of the underlying system, and
+  returns it."
+  [text]
+  (-> (string/split-lines text) (string/join (System/lineSeparator))))
 
 (defn source-path->uri [source-path]
   (->> source-path

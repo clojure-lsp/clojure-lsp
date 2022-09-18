@@ -3,6 +3,7 @@
 ## Unreleased
 
 - General
+  - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211
   - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
   - Bump clj-kondo to `2022.09.08`. 
@@ -13,6 +14,7 @@
   - Add refactorings similar to `Sort map`: `Sort vector`, `Sort list`, `Sort set`, and `Sort clauses` for functions like `assoc`. #1155
   - Support java class decompilation for zipfile scheme (vim users).
   - Avoid keeping diagnostics of external closed files for Calva. https://github.com/BetterThanTomorrow/calva/issues/1864
+  - Lint opened files after a clojure-lsp or clj-kondo config file is saved on disk, avoiding users to re-edit files. #1247
 
 - API/CLI
   - Fix missing diagnostics when `--project-root` is different than current directory. #1245

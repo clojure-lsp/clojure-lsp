@@ -120,10 +120,10 @@
       (producer/refresh-test-tree producer [uri])))
   nil)
 
-(defn did-save [{:keys [db*]} {:keys [text-document]}]
+(defn did-save [components {:keys [text-document]}]
   (shared/logging-task
     :did-save
-    (f.file-management/did-save (:uri text-document) db*)))
+    (f.file-management/did-save (:uri text-document) components)))
 
 ;; TODO implement it, do we need to do anything?
 #_(defn did-delete-files [{:keys [db*]} {:keys [text-document]}]

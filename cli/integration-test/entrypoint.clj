@@ -72,7 +72,9 @@
 
   (apply require namespaces)
 
-  (let [timeout-minutes 16
+  (let [timeout-minutes (if (re-find #"(?i)win|mac" (System/getProperty "os.name"))
+                          16 ;; win and mac ci runs take longer
+                          10)
         test-results (timeout (* timeout-minutes 60 1000)
                               #(with-log-tail-report
                                  (apply t/run-tests namespaces)))]

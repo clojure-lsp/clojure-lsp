@@ -297,8 +297,30 @@
         (did-open uri text components false)
         (get-in @db* [:documents uri :text]))))
 
-(defn did-save [uri db*]
-  (swap! db* #(assoc-in % [:documents uri :saved-on-disk] true)))
+(defn ^:private lint-opened-files-when-any-config-changed!
+  [uri {:keys [db* producer] :as components}]
+  (let [db @db*
+        project-root-filename (shared/uri->filename (:project-root-uri db))
+        config-files #{(io/file project-root-filename ".clj-kondo" "config.edn")
+                       (io/file project-root-filename ".lsp" "config.edn")}
+        config-file-saved? (some (comp #(= uri %)
+                                       #(shared/filename->uri % db)
+                                       shared/get-canonical-path)
+                                 config-files)]
+
+    (when config-file-saved?
+      (let [all-opened-filenames (->> (:documents db)
+                                      (keep (fn [[uri document]]
+                                              (when (:v document)
+                                                (shared/uri->filename uri))))
+                                      set)]
+        (analyze-reference-filenames! all-opened-filenames db*)
+        (f.diagnostic/publish-all-diagnostics! all-opened-filenames components)
+        (producer/refresh-code-lens producer)))))
+
+(defn did-save [uri {:keys [db*] :as components}]
+  (swap! db* #(assoc-in % [:documents uri :saved-on-disk] true))
+  (lint-opened-files-when-any-config-changed! uri components))
 
 (defn will-rename-files [files db]
   (->> files

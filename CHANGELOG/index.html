@@ -1986,8 +1986,9 @@
 <li>Add support to decompile jar as a java project when finding the definition of a java class, allowing to have LSP features on that java project. #1187</li>
 <li>Add refactorings similar to <code>Sort map</code>: <code>Sort vector</code>, <code>Sort list</code>, <code>Sort set</code>, and <code>Sort clauses</code> for functions like <code>assoc</code>. #1155</li>
 <li>Support java class decompilation for zipfile scheme (vim users).</li>
+<li>Avoid keeping diagnostics of external closed files for Calva. https://github.com/BetterThanTomorrow/calva/issues/1864</li>
 <li>
-<p>Avoid keeping diagnostics of external closed files for Calva. https://github.com/BetterThanTomorrow/calva/issues/1864</p>
+<p>Lint opened files after a clojure-lsp or clj-kondo config file is saved on disk, avoiding users to re-edit files. #1247</p>
 </li>
 <li>
 <p>API/CLI</p>
@@ -3135,7 +3136,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 17, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 18, 2022</span>
     
   </small>
 </div>

@@ -6,7 +6,7 @@
   - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211
   - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
-  - Bump clj-kondo to `2022.09.08`. 
+  - Bump clj-kondo to `2022.09.09-20220918.164105-17`. #1226 
 
 - Editor
   - Fix to avoid error when checking code actions from an #_x uneval node. #1227

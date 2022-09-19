@@ -10,14 +10,27 @@
 (h/reset-components-before-test)
 
 (deftest update-text
-  (is (= "(comment\n   )" (#'f.file-management/replace-text "(comment)" "\n   " 0 8 0 8)))
+  ;; line endings the same as those of the underlying system's.
+  (is (= (h/lf->sys "(comment\n   )") (#'f.file-management/replace-text "(comment)" "\n   " 0 8 0 8)))
+  (is (= (h/lf->sys "(comment\n   )") (#'f.file-management/replace-text "(comment)" "\r\n   " 0 8 0 8)))
+
+  ;; line endings should be those of the original text's.
   (is (= "some \nboring\n text" (#'f.file-management/replace-text "some \ncool\n text" "boring" 1 0 1 4)))
+  (is (= "some \r\nboring\r\n text" (#'f.file-management/replace-text "some \r\ncool\r\n text" "boring" 1 0 1 4)))
+
   (is (= "(+ 1 2)" (#'f.file-management/replace-text "(+ 1 1)" "2" 0 5 0 6)))
   (is (= "(+ 1)" (#'f.file-management/replace-text "(+ 1 1)" "" 0 4 0 6)))
+
   (is (= "\n\n (+ 1 2)\n" (#'f.file-management/replace-text "\n\n (let [a 1\n   b 2]\n   (+ 1 2))\n" "(+ 1 2)" 2 1 4 11)))
   (is (= "\r\n\r\n (+ 1 2)\r\n" (#'f.file-management/replace-text "\r\n\r\n (let [a 1\r\n   b 2]\r\n   (+ 1 2))\r\n" "(+ 1 2)" 2 1 4 11)))
+
   (is (= "\n\n (let [a 1\n   b 2]\n   (+ 1 2))\n" (#'f.file-management/replace-text "\n\n (+ 1 2)\n" "(let [a 1\n   b 2]\n   (+ 1 2))" 2 1 2 8)))
-  (is (= "(+ 1 1)\n\n" (#'f.file-management/replace-text "(+ 1 1)\n" "\n" 1 0 1 0))))
+  (is (= "\r\n\r\n (let [a 1\r\n   b 2]\r\n   (+ 1 2))\r\n" (#'f.file-management/replace-text "\r\n\r\n (+ 1 2)\r\n" "(let [a 1\r\n   b 2]\r\n   (+ 1 2))" 2 1 2 8)))
+
+  (is (= "(+ 1 1)\n\n" (#'f.file-management/replace-text "(+ 1 1)\n" "\n" 1 0 1 0)))
+  (is (= "(+ 1 1)\n\n" (#'f.file-management/replace-text "(+ 1 1)\n" "\r\n" 1 0 1 0)))
+  (is (= "(+ 1 1)\r\n\r\n" (#'f.file-management/replace-text "(+ 1 1)\r\n" "\n" 1 0 1 0)))
+  (is (= "(+ 1 1)\r\n\r\n" (#'f.file-management/replace-text "(+ 1 1)\r\n" "\r\n" 1 0 1 0))))
 
 (deftest did-close
   (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src/clj")}}

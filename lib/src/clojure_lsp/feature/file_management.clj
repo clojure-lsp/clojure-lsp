@@ -185,12 +185,35 @@
              (+ offset (count (first lines)))
              (inc idx)))))
 
-(defn replace-text [original replacement line character end-line end-character]
-  (let [lines (string/split original #"\n") ;; don't use OS specific line delimiter!
+(defn replace-text
+  "Returns ORIGINAL text but replacing its substring from LINE number at
+  CHARACTER position to END-LINE number at END-CHARACTER position with
+  REPLACEMENT text.
+
+  All line endings of the returned string are replaced with that of
+  the ORIGINAL's line ending type.
+
+  The ORIGINAL's line ending type is set to be its first line ending
+  type (either `\r\n` or `\n`), or, if no newline is found, the
+  system's line separator."
+  [original replacement line character end-line end-character]
+
+  (let [original-nl (or (re-find #"\r\n|\n" original)
+                        shared/line-separator)
+        replacement-nl (re-find #"\r\n|\n" replacement)
+        ;; normalize `\r\n`'s to `\n` so that `\r`'s do not creap in
+        ;; as normal chars
+        original (cond-> original
+                   (= original-nl "\r\n") (string/replace #"\r\n" "\n"))
+        replacement (cond-> replacement
+                      (= replacement-nl "\r\n") (string/replace #"\r\n" "\n"))
+        lines (string/split-lines original) ;; don't use OS specific line delimiter!
         [start-offset end-offset] (offsets lines line character end-line end-character)
         [prefix suffix] [(subs original 0 start-offset)
                          (subs original (min end-offset (count original)) (count original))]]
-    (string/join [prefix replacement suffix])))
+    ;; restore normalized string to ORIGINAL's line ending type.
+    (cond-> (string/join [prefix replacement suffix])
+      (= original-nl "\r\n") (string/replace #"\n" "\r\n"))))
 
 (defn ^:private handle-change
   "Handle a TextDocumentContentChangeEvent"

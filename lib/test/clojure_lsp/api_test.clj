@@ -62,22 +62,26 @@
         (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
                         :namespace '[sample-test.api.clean-ns.a]
                         :raw? true})))
-    (testing "when a single namespace is specified with dry option"
-      (clean-api-db!)
-      (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
-                                   :namespace '[sample-test.api.clean-ns.a]
-                                   :dry? true
-                                   :raw? true})]
-        (is (= 1 (:result-code result)))
-        (is (:message result))))
-    (testing "when ns does not matches uri"
-      (clean-api-db!)
-      (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
-                                   :namespace '[sample-test.api.clean-ns.a.other]
-                                   :dry? true
-                                   :raw? true})]
-        (is (= 1 (:result-code result)))
-        (is (:message result))))
+    (let [expected-msg
+          (h/lf->sys (format "--- a/%s\n+++ b/%s\n@@ -1,7 +1,6 @@\n (ns sample-test.api.clean-ns.a\n   (:require\n-   [clojure.string :as string]\n-   [sample-test.api.clean-ns.b :refer [b c a]]))\n+   [sample-test.api.clean-ns.b :refer [a b c]]))\n \n a\n b"
+                             (h/file-path "src/sample_test/api/clean_ns/a.clj")
+                             (h/file-path "src/sample_test/api/clean_ns/a.clj")))]
+      (testing "when a single namespace is specified with dry option"
+        (clean-api-db!)
+        (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :namespace '[sample-test.api.clean-ns.a]
+                                     :dry? true
+                                     :raw? true})]
+          (is (= 1 (:result-code result)))
+          (is (= expected-msg  (:message result)))))
+      (testing "when ns does not matches uri"
+        (clean-api-db!)
+        (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :namespace '[sample-test.api.clean-ns.a.other]
+                                     :dry? true
+                                     :raw? true})]
+          (is (= 1 (:result-code result)))
+          (is (= expected-msg (:message result))))))
     (testing "when ns is already clear"
       (clean-api-db!)
       (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -90,6 +94,15 @@
       (clean-api-db!)
       (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
                                    :ns-exclude-regex #".*"
+                                   :dry? true
+                                   :raw? true})]
+        (is (= 0 (:result-code result)))
+        (is (= "Nothing to clear!" (:message result)))))
+    (testing "different line endings types"
+      (clean-api-db!)
+      (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
+                                   :namespace '[sample-test.api.clean-ns.dos
+                                                sample-test.api.clean-ns.unix]
                                    :dry? true
                                    :raw? true})]
         (is (= 0 (:result-code result)))

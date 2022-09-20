@@ -115,7 +115,7 @@
       {:action "listen" :options options}
 
       (and (= 1 (count arguments))
-           (#{"clean-ns" "diagnostics" "format" "rename" "listen"} (first arguments)))
+           (#{"clean-ns" "diagnostics" "format" "rename" "dump" "listen"} (first arguments)))
       {:action (first arguments) :options options}
 
       :else
@@ -147,7 +147,8 @@
         "rename" (with-required-options
                    options
                    [:from :to]
-                   internal-api/rename!))
+                   internal-api/rename!)
+        "dump" (internal-api/dump options))
       (catch clojure.lang.ExceptionInfo e
         (ex-data e)))))
 

@@ -245,3 +245,37 @@
   (safe-process-message
     options
     (internal-api/rename! options)))
+
+(defn dump
+  "Dump all project known data including classpath, source-paths, dep-graph
+  and clj-kondo analysis data.
+
+  **Options**
+
+  `:project-root` a java.io.File representing the project root.
+
+  `:output` a map with options on how the result should be printed, available values are:
+    `:format` a keyword specifying in which format the data should be returned, defaults to `:edn`.
+    `:filter-keys` a list of keywords in case you want only specific fields from result.
+
+  `settings` map of settings following https://clojure-lsp.io/settings/
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/dump! {:output {:format :edn
+                                   :filter-keys [:source-paths :analysis]}})
+  => {:source-paths [...]
+      :analysis {...}}
+  ```"
+  [{:keys [project-root output settings] :as options}]
+  {:pre [(or (nil? project-root)
+             (and (instance? File project-root)
+                  (.exists ^File project-root)))
+         (or (nil? (:format output))
+             (keyword? (:format output)))
+         (or (nil? settings)
+             (map? settings))]}
+  (safe-process-message
+    options
+    (internal-api/dump options)))

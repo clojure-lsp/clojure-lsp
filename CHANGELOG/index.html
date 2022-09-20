@@ -1978,8 +1978,9 @@
 <li>Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211</li>
 <li>End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible</li>
 <li>Bump clj-kondo to <code>2022.09.09-20220918.164105-17</code>. #1226 </li>
+<li>Fix issue with changes being reporting with spurious and incorrect line endings on MS-Windows text files. #1211</li>
 <li>
-<p>Fix issue with changes being reporting with spurious and incorrect line endings on MS-Windows text files. #1211</p>
+<p>Index internal data by URI instead of filename, to minimize conversion between these formats when running queries. #1207</p>
 </li>
 <li>
 <p>Editor</p>

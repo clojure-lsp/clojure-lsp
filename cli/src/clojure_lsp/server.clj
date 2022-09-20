@@ -158,10 +158,13 @@
 (defmethod lsp.server/receive-request "clojure/dependencyContents" [_ components params]
   (->> params
        (handler/dependency-contents components)
-       (conform-or-log ::coercer/uri)))
+       (conform-or-log ::coercer/uri)
+       delay))
 
 (defmethod lsp.server/receive-request "clojure/serverInfo/raw" [_ components _params]
-  (handler/server-info-raw components))
+  (->> components
+       handler/server-info-raw
+       delay))
 
 (defmethod lsp.server/receive-notification "clojure/serverInfo/log" [_ components _params]
   (future
@@ -172,7 +175,9 @@
         (throw e)))))
 
 (defmethod lsp.server/receive-request "clojure/cursorInfo/raw" [_ components params]
-  (handler/cursor-info-raw components params))
+  (->> params
+       (handler/cursor-info-raw components)
+       delay))
 
 (defmethod lsp.server/receive-notification "clojure/cursorInfo/log" [_ components params]
   (future
@@ -183,7 +188,9 @@
         (throw e)))))
 
 (defmethod lsp.server/receive-request "clojure/clojuredocs/raw" [_ components params]
-  (handler/clojuredocs-raw components params))
+  (->> params
+       (handler/clojuredocs-raw components)
+       delay))
 
 ;;;; Document sync features
 
@@ -209,43 +216,51 @@
 (defmethod lsp.server/receive-request "textDocument/references" [_ components params]
   (->> params
        (handler/references components)
-       (conform-or-log ::coercer/locations)))
+       (conform-or-log ::coercer/locations)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/completion" [_ components params]
   (->> params
        (handler/completion components)
-       (conform-or-log ::coercer/completion-items)))
+       (conform-or-log ::coercer/completion-items)
+       delay))
 
 (defmethod lsp.server/receive-request "completionItem/resolve" [_ components item]
   (->> item
        (conform-or-log ::coercer/input.completion-item)
        (handler/completion-resolve-item components)
-       (conform-or-log ::coercer/completion-item)))
+       (conform-or-log ::coercer/completion-item)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/prepareRename" [_ components params]
   (->> params
        (handler/prepare-rename components)
-       (conform-or-log ::coercer/prepare-rename-or-error)))
+       (conform-or-log ::coercer/prepare-rename-or-error)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
        (handler/rename components)
-       (conform-or-log ::coercer/workspace-edit-or-error)))
+       (conform-or-log ::coercer/workspace-edit-or-error)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/hover" [_ components params]
   (->> params
        (handler/hover components)
-       (conform-or-log ::coercer/hover)))
+       (conform-or-log ::coercer/hover)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/signatureHelp" [_ components params]
   (->> params
        (handler/signature-help components)
-       (conform-or-log ::coercer/signature-help)))
+       (conform-or-log ::coercer/signature-help)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/formatting" [_ components params]
   (->> params
        (handler/formatting components)
-       (conform-or-log ::coercer/edits)))
+       (conform-or-log ::coercer/edits)
+       delay))
 
 (def ^:private formatting (atom false))
 
@@ -263,72 +278,86 @@
 (defmethod lsp.server/receive-request "textDocument/codeAction" [_ components params]
   (->> params
        (handler/code-actions components)
-       (conform-or-log ::coercer/code-actions)))
+       (conform-or-log ::coercer/code-actions)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/codeLens" [_ components params]
   (->> params
        (handler/code-lens components)
-       (conform-or-log ::coercer/code-lenses)))
+       (conform-or-log ::coercer/code-lenses)
+       delay))
 
 (defmethod lsp.server/receive-request "codeLens/resolve" [_ components params]
   (->> params
        (handler/code-lens-resolve components)
-       (conform-or-log ::coercer/code-lens)))
+       (conform-or-log ::coercer/code-lens)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/definition" [_ components params]
   (->> params
        (handler/definition components)
-       (conform-or-log ::coercer/location)))
+       (conform-or-log ::coercer/location)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/declaration" [_ components params]
   (->> params
        (handler/declaration components)
-       (conform-or-log ::coercer/location)))
+       (conform-or-log ::coercer/location)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/implementation" [_ components params]
   (->> params
        (handler/implementation components)
-       (conform-or-log ::coercer/locations)))
+       (conform-or-log ::coercer/locations)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/documentSymbol" [_ components params]
   (->> params
        (handler/document-symbol components)
-       (conform-or-log ::coercer/document-symbols)))
+       (conform-or-log ::coercer/document-symbols)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/documentHighlight" [_ components params]
   (->> params
        (handler/document-highlight components)
-       (conform-or-log ::coercer/document-highlights)))
+       (conform-or-log ::coercer/document-highlights)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/full" [_ components params]
   (->> params
        (handler/semantic-tokens-full components)
-       (conform-or-log ::coercer/semantic-tokens)))
+       (conform-or-log ::coercer/semantic-tokens)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/range" [_ components params]
   (->> params
        (handler/semantic-tokens-range components)
-       (conform-or-log ::coercer/semantic-tokens)))
+       (conform-or-log ::coercer/semantic-tokens)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/prepareCallHierarchy" [_ components params]
   (->> params
        (handler/prepare-call-hierarchy components)
-       (conform-or-log ::coercer/call-hierarchy-items)))
+       (conform-or-log ::coercer/call-hierarchy-items)
+       delay))
 
 (defmethod lsp.server/receive-request "callHierarchy/incomingCalls" [_ components params]
   (->> params
        (handler/call-hierarchy-incoming components)
-       (conform-or-log ::coercer/call-hierarchy-incoming-calls)))
+       (conform-or-log ::coercer/call-hierarchy-incoming-calls)
+       delay))
 
 (defmethod lsp.server/receive-request "callHierarchy/outgoingCalls" [_ components params]
   (->> params
        (handler/call-hierarchy-outgoing components)
-       (conform-or-log ::coercer/call-hierarchy-outgoing-calls)))
+       (conform-or-log ::coercer/call-hierarchy-outgoing-calls)
+       delay))
 
 (defmethod lsp.server/receive-request "textDocument/linkedEditingRange" [_ components params]
   (->> params
        (handler/linked-editing-ranges components)
-       (conform-or-log ::coercer/linked-editing-ranges-or-error)))
+       (conform-or-log ::coercer/linked-editing-ranges-or-error)
+       delay))
 
 ;;;; Workspace features
 
@@ -354,12 +383,14 @@
 (defmethod lsp.server/receive-request "workspace/symbol" [_ components params]
   (->> params
        (handler/workspace-symbols components)
-       (conform-or-log ::coercer/workspace-symbols)))
+       (conform-or-log ::coercer/workspace-symbols)
+       delay))
 
 (defmethod lsp.server/receive-request "workspace/willRenameFiles" [_ components params]
   (->> params
        (handler/will-rename-files components)
-       (conform-or-log ::coercer/workspace-edit)))
+       (conform-or-log ::coercer/workspace-edit)
+       delay))
 
 (defn capabilities [settings]
   (conform-or-log

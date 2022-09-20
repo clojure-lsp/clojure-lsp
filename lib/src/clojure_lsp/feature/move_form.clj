@@ -21,8 +21,8 @@
       loc)))
 
 (defn var-usages-within [zloc uri db]
-  (let [{:keys [col row end-row end-col]} (meta (z/node zloc))
-        defs (q/find-var-usages-under-form db uri row col end-row end-col)]
+  (let [scope (meta (z/node zloc))
+        defs (q/find-var-usages-under-form db uri scope)]
     (filterv
       #(edit/loc-encapsulates-usage? zloc %)
       defs)))

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Avoid shadowing existing locals when restructuring keys. #1229
+
 ## 2022.10.05-16.39.51
 
 - General

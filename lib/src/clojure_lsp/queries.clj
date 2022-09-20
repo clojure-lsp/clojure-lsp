@@ -178,48 +178,45 @@
        (= (:from-var usage) (:name usage))
        (= (:from usage) (:to usage))))
 
-(defn find-local-usages-under-form
-  [db uri {:keys [row col end-row end-col]}]
-  (let [{:keys [locals local-usages]} (get-in db [:analysis uri])
-        form-scope {:name-row row
+(defn ^:private xf-under-form [{:keys [row col end-row end-col]}]
+  (let [form-scope {:name-row row
                     :name-col col
                     :name-end-row end-row
-                    :name-end-col end-col}
-        ;; find locals definitions whose scope includes the form
-        local-def-ids (into #{}
-                            (comp
-                              (filter (fn [local-def]
-                                        (shared/inside? form-scope local-def)))
-                              (map :id))
-                            locals)]
-    ;; find locals usages inside the form, whose def is outside the form
-    (->> local-usages
-         (filter (fn [local-usage]
-                   (and (contains? local-def-ids (:id local-usage))
-                        (shared/inside? local-usage form-scope))))
-         (medley/distinct-by :id))))
+                    :name-end-col end-col}]
+    (filter (fn [local-usage]
+              (shared/inside? local-usage form-scope)))))
+
+(defn find-local-usages-under-form
+  [db uri form-scope]
+  (into [] (xf-under-form form-scope) (get-in db [:analysis uri :local-usages])))
 
 (defn find-locals-under-form
+  [db uri form-scope]
+  (into [] (xf-under-form form-scope) (get-in db [:analysis uri :locals])))
+
+(defn find-var-usages-under-form
+  [db uri form-scope]
+  (into [] (xf-under-form form-scope) (get-in db [:analysis uri :var-usages])))
+
+(defn find-locals-defined-outside-form
   [db uri {:keys [row col end-row end-col]}]
   (let [form-scope {:name-row row
                     :name-col col
                     :name-end-row end-row
                     :name-end-col end-col}]
-    (into []
-          (filter (fn [local-def]
-                    (shared/inside? local-def form-scope)))
-          (get-in db [:analysis uri :locals]))))
+    (filter (fn [local-def]
+              (shared/inside? form-scope local-def))
+            (get-in db [:analysis uri :locals]))))
 
-(defn find-var-usages-under-form
-  [db uri row col end-row end-col]
-  (let [var-usages (get-in db [:analysis uri :var-usages])]
-    (filter (fn [element]
-              (shared/inside? element
-                              {:name-row row
-                               :name-col col
-                               :name-end-row end-row
-                               :name-end-col end-col}))
-            var-usages)))
+(defn find-local-usages-defined-outside-form
+  [db uri form-scope]
+  (let [local-def-ids (into #{}
+                            (map :id)
+                            (find-locals-defined-outside-form db uri form-scope))]
+    (->> (find-local-usages-under-form db uri form-scope)
+         (filter (fn [local-usage]
+                   (contains? local-def-ids (:id local-usage))))
+         (medley/distinct-by :id))))
 
 (defmulti find-definition
   (fn [_db element]

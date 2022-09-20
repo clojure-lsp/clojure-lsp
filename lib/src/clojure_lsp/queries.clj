@@ -292,14 +292,14 @@
                      (filter #(safe-equal? full-class-name (:class %)))))
              (sort-by (complement #(string/ends-with? (:uri %) ".java")))
              first)
+        ;; maybe class was defined by defrecord
         (let [split (string/split full-class-name #"\.")
               ns (symbol (string/replace (string/join "." (drop-last split)) "_" "-"))
               name (symbol (last split))]
-          (find-first
-            (comp
-              xf-analysis->var-definitions
-              (xf-same-fqn ns name))
-            (:analysis db))))))
+          (find-definition db (assoc java-class-usage
+                                     :bucket :var-usages
+                                     :to ns
+                                     :name name))))))
 
 (defmethod find-definition :default
   [_db element]

@@ -14,7 +14,8 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
 
@@ -36,7 +37,7 @@
 (defn did-open [uri text {:keys [db* edits-chan] :as components} allow-create-ns]
   (load-document! uri text db*)
   (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
-        depend-result* (future (lsp.depend/analyze-filename! (shared/uri->filename uri) @db*))
+        depend-result* (future (lsp.depend/analyze-uri! uri @db*))
         kondo-result @kondo-result*
         depend-result @depend-result*]
     (swap! db* (fn [state-db]
@@ -69,77 +70,76 @@
   defs to usages, but it includes the attributes we care about."
   (juxt :ns :name :private :fixed-arities :defined-by))
 
-(defn reference-filenames [filename db-before db-after]
-  (let [uri (shared/filename->uri filename db-before)
-        old-local-buckets (get-in db-before [:analysis filename])
-        new-local-buckets (get-in db-after [:analysis filename])
+(defn reference-uris [uri db-before db-after]
+  (let [old-local-buckets (get-in db-before [:analysis uri])
+        new-local-buckets (get-in db-after [:analysis uri])
         changed-var-definitions (find-changed-elems old-local-buckets new-local-buckets :var-definitions definition-signature)
         changed-var-usages (find-changed-elems old-local-buckets new-local-buckets :var-usages q/var-usage-signature)
         changed-kw-usages (find-changed-elems old-local-buckets new-local-buckets :keyword-usages q/kw-signature)
         project-db (-> db-after
                        q/db-with-internal-analysis
                        ;; don't notify self
-                       (update :analysis dissoc filename))
-        var-dependent-filenames (when (seq changed-var-definitions)
-                                  (let [def-signs (into #{}
-                                                        (mapcat q/var-definition-signatures)
-                                                        changed-var-definitions)
-                                        usage-of-changed-def? (fn [var-usage]
-                                                                (contains? def-signs (q/var-usage-signature var-usage)))]
-                                    (into #{}
-                                          (keep (fn [[filename {:keys [var-usages]}]]
-                                                  (when (some usage-of-changed-def? var-usages)
-                                                    filename)))
-                                          (q/uri-dependents-analysis project-db uri))))
-        var-dependency-filenames (when (seq changed-var-usages)
-                                   ;; If definition is in both a clj and cljs file, and this is a clj
-                                   ;; usage, we are careful to notify only the clj file. But, it wouldn't
-                                   ;; really hurt to notify both files. So, if it helps readability,
-                                   ;; maintenance, or symmetry with `dependent-filenames`, we could look
-                                   ;; at just signature, not signature and lang.
-                                   (let [usage-signs->langs (->> changed-var-usages
-                                                                 (reduce (fn [result usage]
-                                                                           (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
-                                                                         {}))
-                                         def-of-changed-usage? (fn [var-def]
-                                                                 (when-let [usage-langs (some usage-signs->langs
-                                                                                              (q/var-definition-signatures var-def))]
-                                                                   (some usage-langs (q/elem-langs var-def))))]
-                                     (into #{}
-                                           (keep (fn [[filename {:keys [var-definitions]}]]
-                                                   (when (some def-of-changed-usage? var-definitions)
-                                                     filename)))
-                                           (q/uri-dependencies-analysis project-db uri))))
-        kw-dependency-filenames (when (seq changed-kw-usages)
-                                  (let [usage-signs (into #{}
-                                                          (map q/kw-signature)
-                                                          changed-kw-usages)
-                                        def-of-changed-usage? (fn [kw-def]
-                                                                (contains? usage-signs (q/kw-signature kw-def)))]
-                                    (into #{}
-                                          (keep (fn [[filename {:keys [keyword-definitions]}]]
-                                                  (when (some def-of-changed-usage? keyword-definitions)
-                                                    filename)))
-                                          (:analysis project-db))))]
+                       (update :analysis dissoc uri))
+        var-dependent-uri (when (seq changed-var-definitions)
+                            (let [def-signs (into #{}
+                                                  (mapcat q/var-definition-signatures)
+                                                  changed-var-definitions)
+                                  usage-of-changed-def? (fn [var-usage]
+                                                          (contains? def-signs (q/var-usage-signature var-usage)))]
+                              (into #{}
+                                    (keep (fn [[uri {:keys [var-usages]}]]
+                                            (when (some usage-of-changed-def? var-usages)
+                                              uri)))
+                                    (q/uri-dependents-analysis project-db uri))))
+        var-dependency-uris (when (seq changed-var-usages)
+                              ;; If definition is in both a clj and cljs file, and this is a clj
+                              ;; usage, we are careful to notify only the clj file. But, it wouldn't
+                              ;; really hurt to notify both files. So, if it helps readability,
+                              ;; maintenance, or symmetry with `var-dependent-uris`, we could look
+                              ;; at just signature, not signature and lang.
+                              (let [usage-signs->langs (->> changed-var-usages
+                                                            (reduce (fn [result usage]
+                                                                      (assoc result (q/var-usage-signature usage) (q/elem-langs usage)))
+                                                                    {}))
+                                    def-of-changed-usage? (fn [var-def]
+                                                            (when-let [usage-langs (some usage-signs->langs
+                                                                                         (q/var-definition-signatures var-def))]
+                                                              (some usage-langs (q/elem-langs var-def))))]
+                                (into #{}
+                                      (keep (fn [[uri {:keys [var-definitions]}]]
+                                              (when (some def-of-changed-usage? var-definitions)
+                                                uri)))
+                                      (q/uri-dependencies-analysis project-db uri))))
+        kw-dependency-uris (when (seq changed-kw-usages)
+                             (let [usage-signs (into #{}
+                                                     (map q/kw-signature)
+                                                     changed-kw-usages)
+                                   def-of-changed-usage? (fn [kw-def]
+                                                           (contains? usage-signs (q/kw-signature kw-def)))]
+                               (into #{}
+                                     (keep (fn [[uri {:keys [keyword-definitions]}]]
+                                             (when (some def-of-changed-usage? keyword-definitions)
+                                               uri)))
+                                     (:analysis project-db))))]
     ;; TODO: see note on `notify-references` We may want to handle these
     ;; sets of files differently.
-    (set/union (or var-dependent-filenames #{})
-               (or var-dependency-filenames #{})
-               (or kw-dependency-filenames #{}))))
+    (set/union (or var-dependent-uri #{})
+               (or var-dependency-uris #{})
+               (or kw-dependency-uris #{}))))
 
-(defn analyze-reference-filenames! [filenames db*]
-  (let [result (lsp.kondo/run-kondo-on-reference-filenames! filenames db*)]
+(defn analyze-reference-uris! [uris db*]
+  (let [result (lsp.kondo/run-kondo-on-reference-uris! uris db*)]
     (swap! db* lsp.kondo/db-with-results result)))
 
-(defn ^:private notify-references [filename db-before db-after {:keys [db* producer] :as components}]
+(defn ^:private notify-references [uri db-before db-after {:keys [db* producer] :as components}]
   (async/thread
     (shared/logging-task
       :notify-references
-      (let [filenames (shared/logging-task
-                        :reference-files/find
-                        (reference-filenames filename db-before db-after))]
-        (when (seq filenames)
-          (logger/debug "Analyzing references for files:" filenames)
+      (let [uris (shared/logging-task
+                   :reference-files/find
+                   (reference-uris uri db-before db-after))]
+        (when (seq uris)
+          (logger/debug "Analyzing references for files:" uris)
           (shared/logging-task
             :reference-files/analyze
             ;; TODO: We process the dependent and dependency files together, but
@@ -161,8 +161,8 @@
             ;; kondo. See
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
-            (analyze-reference-filenames! filenames db*))
-          (f.diagnostic/publish-all-diagnostics! filenames components)
+            (analyze-reference-uris! uris db*))
+          (f.diagnostic/publish-all-diagnostics! uris components)
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line character end-line end-character]
@@ -230,31 +230,30 @@
       new-text)))
 
 (defn analyze-changes [{:keys [uri text version]} {:keys [producer db*] :as components}]
-  (let [filename (shared/uri->filename uri)]
-    (loop [state-db @db*]
-      (when (>= version (get-in state-db [:documents uri :v] -1))
-        (let [kondo-result* (future
-                              (shared/logging-time
-                                (str "changes analyzed by clj-kondo took %s")
-                                (lsp.kondo/run-kondo-on-text! text uri db*)))
-              depend-result* (future
-                               (shared/logging-time
-                                 (str "changes analyzed by clj-depend took %s")
-                                 (lsp.depend/analyze-filename! filename state-db)))
-              kondo-result @kondo-result*
-              depend-result @depend-result*
-              old-db @db*]
-          (if (compare-and-set! db* state-db
-                                (-> state-db
-                                    (lsp.kondo/db-with-results kondo-result)
-                                    (lsp.depend/db-with-results depend-result)
-                                    (update :processing-changes disj uri)))
-            (let [db @db*]
-              (f.diagnostic/publish-diagnostics! uri components)
-              (when (settings/get db [:notify-references-on-file-change] true)
-                (notify-references filename old-db db components))
-              (producer/refresh-test-tree producer [uri]))
-            (recur @db*)))))))
+  (loop [state-db @db*]
+    (when (>= version (get-in state-db [:documents uri :v] -1))
+      (let [kondo-result* (future
+                            (shared/logging-time
+                              (str "changes analyzed by clj-kondo took %s")
+                              (lsp.kondo/run-kondo-on-text! text uri db*)))
+            depend-result* (future
+                             (shared/logging-time
+                               (str "changes analyzed by clj-depend took %s")
+                               (lsp.depend/analyze-uri! uri state-db)))
+            kondo-result @kondo-result*
+            depend-result @depend-result*
+            old-db @db*]
+        (if (compare-and-set! db* state-db
+                              (-> state-db
+                                  (lsp.kondo/db-with-results kondo-result)
+                                  (lsp.depend/db-with-results depend-result)
+                                  (update :processing-changes disj uri)))
+          (let [db @db*]
+            (f.diagnostic/publish-diagnostics! uri components)
+            (when (settings/get db [:notify-references-on-file-change] true)
+              (notify-references uri old-db db components))
+            (producer/refresh-test-tree producer [uri]))
+          (recur @db*))))))
 
 (defn did-change [uri changes version {:keys [db* current-changes-chan]}]
   (let [old-text (get-in @db* [:documents uri :text])
@@ -273,45 +272,59 @@
                  "Watched files analyzed, took %s"
                  (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil))]
     (swap! db* lsp.kondo/db-with-results result)
-    (f.diagnostic/publish-all-diagnostics! filenames components)
+    (f.diagnostic/publish-all-diagnostics! uris components)
     (producer/refresh-test-tree producer uris)
     (doseq [uri uris]
       (when (get-in @db* [:documents uri :v])
         (when-let [text (shared/slurp-uri uri)]
           (swap! db* assoc-in [:documents uri :text] text))))))
 
-(defn ^:private db-without-file [state-db uri filename]
+(defn ^:private db-without-uri [state-db uri]
   (-> state-db
-      (dep-graph/remove-file uri filename)
+      (dep-graph/remove-doc uri)
       (shared/dissoc-in [:documents uri])
-      (shared/dissoc-in [:analysis filename])
-      (shared/dissoc-in [:findings filename])))
+      (shared/dissoc-in [:analysis uri])
+      (shared/dissoc-in [:findings uri])))
 
-(defn ^:private file-deleted [{:keys [db*], :as components} uri filename]
-  (swap! db* db-without-file uri filename)
-  (f.diagnostic/publish-empty-diagnostics! uri components))
+(defn ^:private files-deleted [{:keys [db*], :as components} uris]
+  (swap! db* #(reduce db-without-uri % uris))
+  (f.diagnostic/publish-empty-diagnostics! uris components))
+
+(defn ^:private dir-or-file-uri->analyzable-uris [uri db]
+  ;; If the URI is for an entire directory that has been created/deleted, we
+  ;; expand it.
+  (let [files (-> uri shared/uri->filename io/file file-seq)]
+    (->> files
+         (map #(.getAbsolutePath ^java.io.File %))
+         (map #(shared/filename->uri % db))
+         (remove #(= :unknown (shared/uri->file-type %))))))
 
 (defn did-change-watched-files
   [changes
    {:keys [db* watched-files-chan] :as components}]
-  (doseq [{:keys [uri type]} changes]
-    (case type
-      :created (async/>!! watched-files-chan uri)
-      :changed (when (settings/get @db* [:compute-external-file-changes] true)
-                 (async/>!! watched-files-chan uri))
-      :deleted (shared/logging-task
-                 :delete-watched-file
-                 (file-deleted components uri (shared/uri->filename uri))))))
+  (let [db @db*
+        observe-changed? (settings/get db [:compute-external-file-changes] true)
+        {:keys [created changed deleted]}
+        (->> changes
+             (group-by :type)
+             (medley/map-vals
+               (fn [changes]
+                 (mapcat #(dir-or-file-uri->analyzable-uris (:uri %) db) changes))))]
+    (doseq [created-or-changed (concat created (when observe-changed? changed))]
+      (async/>!! watched-files-chan created-or-changed))
+    (when (seq deleted)
+      (shared/logging-task
+        :delete-watched-files
+        (files-deleted components deleted)))))
 
 (defn did-close [uri {:keys [db*] :as components}]
   (let [filename (shared/uri->filename uri)
         source-paths (settings/get @db* [:source-paths])
         external-filename? (shared/external-filename? filename source-paths)]
-    (when external-filename?
-      (f.diagnostic/publish-empty-diagnostics! uri components))
-    (when (and (not external-filename?)
-               (not (shared/file-exists? (io/file filename))))
-      (file-deleted components uri filename))))
+    (if external-filename?
+      (f.diagnostic/publish-empty-diagnostics! [uri] components)
+      (when (not (shared/file-exists? (io/file filename)))
+        (files-deleted components [uri])))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
@@ -334,13 +347,11 @@
                                  config-files)]
 
     (when config-file-saved?
-      (let [all-opened-filenames (->> (:documents db)
-                                      (keep (fn [[uri document]]
-                                              (when (:v document)
-                                                (shared/uri->filename uri))))
-                                      set)]
-        (analyze-reference-filenames! all-opened-filenames db*)
-        (f.diagnostic/publish-all-diagnostics! all-opened-filenames components)
+      (let [all-opened-uris (->> (:documents db)
+                                 (keep (fn [[uri document]] (when (:v document) uri)))
+                                 set)]
+        (analyze-reference-uris! all-opened-uris db*)
+        (f.diagnostic/publish-all-diagnostics! all-opened-uris components)
         (producer/refresh-code-lens producer)))))
 
 (defn did-save [uri {:keys [db*] :as components}]
@@ -350,9 +361,8 @@
 (defn will-rename-files [files db]
   (->> files
        (keep (fn [{:keys [old-uri new-uri]}]
-               (let [old-filename (shared/uri->filename old-uri)
-                     new-ns (shared/uri->namespace new-uri db)
-                     old-ns-definition (q/find-namespace-definition-by-filename db old-filename)]
+               (let [new-ns (shared/uri->namespace new-uri db)
+                     old-ns-definition (q/find-namespace-definition-by-uri db old-uri)]
                  (when (and new-ns
                             old-ns-definition
                             (not= new-ns (name (:name old-ns-definition))))

@@ -19,12 +19,11 @@
   [replacement
    replacement-raw
    db
-   {:keys [ns alias name filename
+   {:keys [ns alias name uri
            name-col name-end-col
            namespace-from-prefix
            keys-destructuring] :as reference}]
-  (let [ref-doc-uri (shared/filename->uri filename db)
-        version (get-in db [:documents ref-doc-uri :v] 0)
+  (let [version (get-in db [:documents uri :v] 0)
         ;; Infers if the qualified keyword is of the ::kw-name kind
         ;; So the same-ns style or the full qualified name can be preserved
         ;; The 2 accounts for the 2 colons in same-namespace qualified keyword
@@ -43,7 +42,7 @@
         ;; we find the locals analysis since when destructuring we have both
         ;; keyword and a locals analysis for the same position
         local-element (when keys-destructuring
-                        (q/find-local-by-destructured-keyword db filename reference))
+                        (q/find-local-by-destructured-keyword db uri reference))
         text (cond
                (and local-element
                     (string/includes? (:str local-element) "/")
@@ -86,31 +85,31 @@
     (concat
       [{:range (shared/->range reference)
         :new-text text
-        :text-document {:version version :uri ref-doc-uri}}]
+        :text-document {:version version :uri uri}}]
       (when local-element
         (->> (q/find-references db local-element false)
              (map (fn [reference]
                     {:range (shared/->range reference)
                      :new-text replacement-name
-                     :text-document {:version version :uri ref-doc-uri}})))))))
+                     :text-document {:version version :uri uri}})))))))
 
 (defn ^:private rename-ns-definition
   [replacement
    db
    reference]
-  (let [ref-doc-id (shared/filename->uri (:filename reference) db)
-        version (get-in db [:documents ref-doc-id :v] 0)
+  (let [ref-doc-uri (:uri reference)
+        version (get-in db [:documents ref-doc-uri :v] 0)
         text (if (contains? #{:keyword-definitions :keyword-usages} (:bucket reference))
                (str ":" replacement "/" (:name reference))
                replacement)]
     {:range (shared/->range reference)
      :new-text text
-     :text-document {:version version :uri ref-doc-id}}))
+     :text-document {:version version :uri ref-doc-uri}}))
 
 (defn ^:private rename-alias [replacement db reference]
   (let [alias? (= :namespace-alias (:bucket reference))
         keyword? (contains? #{:keyword-definitions :keyword-usages} (:bucket reference))
-        ref-doc-uri (shared/filename->uri (:filename reference) db)
+        ref-doc-uri (:uri reference)
         [u-prefix _ u-name] (when-not alias?
                               (ident-split (:name reference)))
         version (get-in db [:documents ref-doc-uri :v] 0)]
@@ -125,25 +124,25 @@
 (defn ^:private rename-local
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
-        ref-doc-id (shared/filename->uri (:filename reference) db)
-        version (get-in db [:documents ref-doc-id :v] 0)]
+        ref-doc-uri (:uri reference)
+        version (get-in db [:documents ref-doc-uri :v] 0)]
     (if (string/starts-with? replacement ":")
       {:range (shared/->range (assoc reference
                                      :name-col name-start))
        :new-text (subs replacement 1)
-       :text-document {:version version :uri ref-doc-id}}
+       :text-document {:version version :uri ref-doc-uri}}
       {:range (shared/->range (assoc reference :name-col name-start))
        :new-text replacement
-       :text-document {:version version :uri ref-doc-id}})))
+       :text-document {:version version :uri ref-doc-uri}})))
 
 (defn ^:private rename-other
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
-        ref-doc-id (shared/filename->uri (:filename reference) db)
-        version (get-in db [:documents ref-doc-id :v] 0)]
+        ref-doc-uri (:uri reference)
+        version (get-in db [:documents ref-doc-uri :v] 0)]
     {:range (shared/->range (assoc reference :name-col name-start))
      :new-text replacement
-     :text-document {:version version :uri ref-doc-id}}))
+     :text-document {:version version :uri ref-doc-uri}}))
 
 (defn ^:private rename-defrecord
   [replacement db reference]
@@ -151,8 +150,8 @@
         map->? (string/starts-with? current-name "map->")
         ->? (string/starts-with? current-name "->")
         name-end (+ (:name-col reference) (count (name current-name)))
-        ref-doc-id (shared/filename->uri (:filename reference) db)
-        version (get-in db [:documents ref-doc-id :v] 0)]
+        ref-doc-uri (:uri reference)
+        version (get-in db [:documents ref-doc-uri :v] 0)]
     {:new-text (cond
                  map->?
                  (str "map->" replacement)
@@ -162,7 +161,7 @@
 
                  :else
                  replacement)
-     :text-document {:version version :uri ref-doc-id}
+     :text-document {:version version :uri ref-doc-uri}
      :range (shared/->range (assoc reference :name-end-col name-end))}))
 
 (defn ^:private rename-changes
@@ -192,33 +191,39 @@
     :else
     (mapv (partial rename-other replacement db) references)))
 
-(defn ^:private rename-status
-  [element definition references source-paths client-capabilities]
-  (cond
-    (empty? references)
-    {:error {:message "Can't rename, no other references found."
-             :code :invalid-params}}
+(defn ^:private rename-status [db element]
+  (let [references (q/find-references db element true)
+        definition (q/find-definition db element)
+        client-capabilities (:client-capabilities db)
+        source-paths (settings/get db [:source-paths])
+        source-path (shared/uri->source-path (:uri definition) source-paths)]
+    (cond
+      (empty? references)
+      {:error {:message "Can't rename, no other references found."
+               :code :invalid-params}}
 
-    (and (= :namespace-definitions (:bucket definition))
-         (not= :namespace-alias (:bucket element))
-         (seq source-paths)
-         (not-any? #(string/starts-with? (:filename definition) %) source-paths))
-    {:error {:code :invalid-params
-             :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
+      (and (= :namespace-definitions (:bucket definition))
+           (not= :namespace-alias (:bucket element))
+           (not source-path))
+      {:error {:code :invalid-params
+               :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
 
-    (and (= :namespace-definitions (:bucket definition))
-         (not= :namespace-alias (:bucket element))
-         (not (get-in client-capabilities [:workspace :workspace-edit :document-changes])))
-    {:error {:code :invalid-params
-             :message "Can't rename namespace, client does not support file renames."}}
+      (and (= :namespace-definitions (:bucket definition))
+           (not= :namespace-alias (:bucket element))
+           (not (get-in client-capabilities [:workspace :workspace-edit :document-changes])))
+      {:error {:code :invalid-params
+               :message "Can't rename namespace, client does not support file renames."}}
 
-    (and (contains? #{:keyword-definitions :keyword-usages} (:bucket definition))
-         (not (:ns definition)))
-    {:error {:code :invalid-params
-             :message "Can't rename, only namespaced keywords can be renamed."}}
+      (and (contains? #{:keyword-definitions :keyword-usages} (:bucket definition))
+           (not (:ns definition)))
+      {:error {:code :invalid-params
+               :message "Can't rename, only namespaced keywords can be renamed."}}
 
-    :else
-    {:result :success}))
+      :else
+      {:result :success
+       :references references
+       :definition definition
+       :source-path source-path})))
 
 (def ^:private error-no-element
   {:error {:code :invalid-params
@@ -226,28 +231,20 @@
 
 (defn prepare-rename
   [uri row col db]
-  (let [filename (shared/uri->filename uri)
-        element (q/find-element-under-cursor db filename row col)]
+  (let [element (q/find-element-under-cursor db uri row col)]
     (if-not element
       error-no-element
-      (let [references (q/find-references db element true)
-            definition (q/find-definition db element)
-            source-paths (settings/get db [:source-paths])
-            client-capabilities (:client-capabilities db)
-            {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
+      (let [{:keys [error] :as result} (rename-status db element)]
         (if error
           result
           (shared/->range element))))))
 
 (defn rename-element [uri new-name db element source]
-  (let [references (q/find-references db element true)
-        definition (q/find-definition db element)
-        source-paths (settings/get db [:source-paths])
-        client-capabilities (:client-capabilities db)
-        {:keys [error] :as result} (rename-status element definition references source-paths client-capabilities)]
+  (let [{:keys [error] :as result} (rename-status db element)]
     (if error
       result
-      (let [replacement (string/replace new-name #".*/([^/]*)$" "$1")
+      (let [{:keys [references definition source-path]} result
+            replacement (string/replace new-name #".*/([^/]*)$" "$1")
             changes (rename-changes element definition references replacement new-name db)
             doc-changes (->> changes
                              (group-by :text-document)
@@ -258,7 +255,9 @@
         (if (and (identical? :namespace-definitions (:bucket definition))
                  (not (identical? :namespace-alias (:bucket element)))
                  (not= :rename-file source))
-          (let [new-uri (shared/namespace->uri replacement source-paths (:filename definition) db)]
+          (let [def-uri (:uri definition)
+                file-type (shared/uri->file-type def-uri)
+                new-uri (shared/namespace->uri replacement source-path file-type db)]
             (shared/client-changes (concat doc-changes
                                            [{:kind "rename"
                                              :old-uri uri
@@ -268,8 +267,6 @@
 
 (defn rename-from-position
   [uri new-name row col db]
-  (let [filename (shared/uri->filename uri)
-        element (q/find-element-under-cursor db filename row col)]
-    (if-not element
-      error-no-element
-      (rename-element uri new-name db element :rename))))
+  (if-let [element (q/find-element-under-cursor db uri row col)]
+    (rename-element uri new-name db element :rename)
+    error-no-element))

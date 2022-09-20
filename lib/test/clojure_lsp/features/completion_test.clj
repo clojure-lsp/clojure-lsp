@@ -129,7 +129,7 @@
          {:label "bb/bar",
           :kind :variable
           :data {"unresolved" [["documentation" {"name" "bar"
-                                                 "filename" (h/file-path "/bbb.clj")
+                                                 "uri" (h/file-uri "file:///bbb.clj")
                                                  "name-row" 2
                                                  "name-col" 6}]]},
           :additional-text-edits
@@ -152,7 +152,7 @@
          {:label "bb/bar",
           :kind :variable
           :data {"unresolved" [["documentation" {"name" "bar"
-                                                 "filename" (h/file-path "/bbb.clj")
+                                                 "uri" (h/file-uri "file:///bbb.clj")
                                                  "name-row" 2
                                                  "name-col" 6}]
                                ["alias" {"ns-to-add" "bbb"
@@ -228,7 +228,7 @@
                                                  :kind :variable
                                                  :data {:unresolved [["documentation"
                                                                       {:name "foo"
-                                                                       :filename (h/file-path "/a.clj")
+                                                                       :uri (h/file-uri "file:///a.clj")
                                                                        :name-row 1
                                                                        :name-col 13}]]}}
                                                 (h/db*))))
@@ -241,8 +241,8 @@
                      (f.completion/resolve-item {:label "foo"
                                                  :kind :function
                                                  :data {:unresolved [["documentation"
-                                                                      {:name "foo"
-                                                                       :filename (h/file-path "/a.clj")
+                                                                      {:uri "file:///clojure.core.clj"
+                                                                       :name "foo"
                                                                        :ns "a"}]]}}
                                                 (h/db*))))
   (testing "When element needs an alias"
@@ -276,7 +276,7 @@
                                                  :kind :function
                                                  :data {:unresolved [["documentation"
                                                                       {:name "foo"
-                                                                       :filename (h/file-path "/a.clj")
+                                                                       :uri (h/file-uri "file:///a.clj")
                                                                        :name-row 1
                                                                        :name-col 13}]
                                                                      ["alias"
@@ -323,8 +323,8 @@
     (h/assert-submaps
       [{:label "comment"
         :kind :function
-        :data {"unresolved" [["documentation" {"filename" "/clojure.core.clj"
-                                               "name" "comment"
+        :data {"unresolved" [["documentation" {"name" "comment"
+                                               "uri" "file:///clojure.core.clj"
                                                "ns" "clojure.core"}]]}
         :detail "clojure.core/comment"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 2 8 (h/db))))

@@ -12,11 +12,10 @@
 
 (def initial-db {:documents {}
                  :processing-changes #{}
-                 :dep-graph {}
-                 :file-meta {}})
+                 :dep-graph {}})
 (defonce db* (atom initial-db))
 
-(def version 5)
+(def version 6)
 
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))

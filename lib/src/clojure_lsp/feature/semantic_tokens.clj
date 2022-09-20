@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
-   [clojure-lsp.shared :as shared]
    [clojure.string :as string])
   (:import
    [clojure.lang PersistentVector]))
@@ -216,7 +215,7 @@
        doall))
 
 (defn full-tokens [uri db]
-  (let [buckets (get-in db [:analysis (shared/uri->filename uri)])]
+  (let [buckets (get-in db [:analysis uri])]
     (->> buckets
          (mapcat val)
          elements->absolute-tokens
@@ -224,7 +223,7 @@
 
 (defn range-tokens
   [uri range db]
-  (let [buckets (get-in db [:analysis (shared/uri->filename uri)])]
+  (let [buckets (get-in db [:analysis uri])]
     (->> buckets
          (mapcat val)
          (filter #(element-inside-range? % range))

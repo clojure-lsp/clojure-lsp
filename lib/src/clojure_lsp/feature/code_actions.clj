@@ -8,7 +8,6 @@
    [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
    [clojure-lsp.feature.thread-get :as f.thread-get]
    [clojure-lsp.parser :as parser]
-   [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
@@ -339,8 +338,7 @@
         can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
         can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
-        definition (q/find-definition-from-cursor db (shared/uri->filename uri) row col)
-        inline-symbol?* (future (r.transform/inline-symbol? definition db))
+        inline-symbol?* (future (r.transform/inline-symbol? uri row col db))
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
     (cond-> []

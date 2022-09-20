@@ -10,7 +10,8 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
 
@@ -85,8 +86,8 @@
 
 ;; The analysis we get back from clj-kondo is indexed by bucket
 ;; {(bucket [element+])*}
-;; We re-index by filename then bucket
-;; {(filename {(bucket [element+])+})*}
+;; We re-index by uri then bucket
+;; {(uri {(bucket [element+])+})*}
 ;; We also normalize elements somewhat, changing their keys, and even spliting
 ;; some into two elements. As such, the buckets we get from clj-kondo aren't
 ;; exactly the same as the buckets we have in our db.
@@ -113,7 +114,7 @@
                                   :alias-end-row :name-end-row
                                   :alias-end-col :name-end-col}))))
 
-    (:locals :local-usages)
+    (:locals :local-usages :java-class-usages)
     [(element-with-fallback-name-position element)]
 
     :keywords
@@ -123,16 +124,10 @@
 
     :java-class-definitions
     [(-> element
-         (dissoc :uri)
          (assoc :name-row 0
                 :name-col 0
                 :name-end-row 0
                 :name-end-col 0))]
-
-    :java-class-usages
-    [(-> element
-         (dissoc :uri)
-         (element-with-fallback-name-position))]
 
     [element]))
 
@@ -150,10 +145,10 @@
           (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?)))
           (filter valid-element?))
         (completing
-          (fn [result {:keys [filename bucket] :as element}]
+          (fn [result {:keys [uri bucket] :as element}]
             ;; intentionally use element bucket, since it may have been
             ;; normalized to something besides kondo-bucket
-            (update-in result [filename bucket] (fnil conj []) element)))
+            (update-in result [uri bucket] (fnil conj []) element)))
         result
         kondo-elements))
     ;; TODO: Can result be a transient?
@@ -162,30 +157,38 @@
 
 (defn ^:private normalize
   "Put kondo result in a standard format, with `analysis` normalized and
-  `analysis` and `findings` indexed by filename."
+  `analysis` and `findings` indexed by uri."
   [{:keys [analysis findings] :as kondo-results}
-   {:keys [external? ensure-filenames filter-analysis] :or {filter-analysis identity}}]
-  (let [analysis (->> analysis
+   {:keys [external? ensure-uris filter-analysis] :or {filter-analysis identity}}
+   db]
+  (let [filename->uri (memoize #(shared/filename->uri % db))
+        trade-filename-for-uri (fn [obj]
+                                 (-> obj
+                                     (assoc :uri (filename->uri (:filename obj)))
+                                     (dissoc :filename)))
+        with-uris (fn [uris default coll]
+                    (merge (zipmap uris (repeat default)) coll))
+        analysis (->> analysis
                       filter-analysis
-                      (normalize-analysis external?))
-        analysis (reduce (fn [analysis filename]
-                           (update analysis filename #(or % {})))
-                         analysis
-                         ensure-filenames)
-        filenames (keys analysis)
-        empty-findings (zipmap filenames (repeat []))
-        findings (merge empty-findings (group-by :filename findings))]
+                      (medley/map-vals #(map trade-filename-for-uri %))
+                      (normalize-analysis external?)
+                      (with-uris ensure-uris {}))
+        findings (->> findings
+                      (map trade-filename-for-uri)
+                      (group-by :uri)
+                      (with-uris (keys analysis) []))]
     (assoc kondo-results
            :external? external?
            :analysis analysis
            :findings findings)))
 
-(defn ^:private normalize-for-filename
+(defn ^:private normalize-for-file
   "Normalize kondo result for a single file."
-  [kondo-results db filename]
-  (let [external? (shared/external-filename? filename (settings/get db [:source-paths]))]
-    (normalize kondo-results {:external? external?
-                              :ensure-filenames [filename]})))
+  [kondo-results db filename uri]
+  (let [external? (shared/external-filename? filename (settings/get db [:source-paths]))
+        normalization-config {:external? external?
+                              :ensure-uris [uri]}]
+    (normalize kondo-results normalization-config db)))
 
 (defn ^:private with-additional-config
   [config settings]
@@ -204,22 +207,22 @@
   (when (run-custom-lint? config)
     (shared/logging-time
       "Linting whole project for unused-public-var took %s"
-      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config))]
+      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config db))]
         (f.diagnostic/custom-lint-project! db kondo-ctx)))))
 
 (defn ^:private custom-lint-files!
-  [files db {:keys [config] :as kondo-ctx} normalization-config]
+  [uris db {:keys [config] :as kondo-ctx} normalization-config]
   (when (run-custom-lint? config)
     (shared/logging-task
       :reference-files/lint
-      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config))]
-        (f.diagnostic/custom-lint-files! files db kondo-ctx)))))
+      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config db))]
+        (f.diagnostic/custom-lint-uris! uris db kondo-ctx)))))
 
 (defn ^:private custom-lint-file!
-  [filename db {:keys [config] :as kondo-ctx}]
+  [filename uri db {:keys [config] :as kondo-ctx}]
   (when (run-custom-lint? config)
-    (let [db (db-with-analysis db (normalize-for-filename kondo-ctx db filename))]
-      (f.diagnostic/custom-lint-file! filename db kondo-ctx))))
+    (let [db (db-with-analysis db (normalize-for-file kondo-ctx db filename uri))]
+      (f.diagnostic/custom-lint-uris! [uri] db kondo-ctx))))
 
 (def ^:private config-for-shallow-analysis
   {:arglists true
@@ -275,7 +278,7 @@
 (defn ^:private config-for-single-file [uri db*]
   (let [db @db*
         filename (shared/uri->filename uri)
-        custom-lint-fn #(custom-lint-file! filename @db* %)]
+        custom-lint-fn #(custom-lint-file! filename uri @db* %)]
     (-> {:cache true
          :lint ["-"]
          :copy-configs (settings/get db [:copy-kondo-configs?] true)
@@ -309,7 +312,7 @@
                                             file-analyzed-fn))]
     (-> config
         (run-kondo! (str "paths " (string/join ", " paths)) db)
-        (normalize normalization-config))))
+        (normalize normalization-config db))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
@@ -336,14 +339,15 @@
                   (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn index batch-count))))
            (reduce shared/deep-merge)))))
 
-(defn run-kondo-on-reference-filenames! [filenames db*]
+(defn run-kondo-on-reference-uris! [uris db*]
   (let [db @db*
+        filenames (map shared/uri->filename uris)
         normalization-config {:external? false
-                              :ensure-filenames filenames}
-        custom-lint-fn #(custom-lint-files! filenames @db* % normalization-config)]
+                              :ensure-uris uris}
+        custom-lint-fn #(custom-lint-files! uris @db* % normalization-config)]
     (-> (config-for-internal-paths filenames db custom-lint-fn nil)
-        (run-kondo! (str "files " (string/join ", " filenames)) db)
-        (normalize normalization-config))))
+        (run-kondo! (str "files " (string/join ", " uris)) db)
+        (normalize normalization-config db))))
 
 (defn run-kondo-on-text! [text uri db*]
   (let [filename (shared/uri->filename uri)
@@ -351,14 +355,15 @@
     (with-in-str text
                  (-> (config-for-single-file uri db*)
                      (run-kondo! filename db)
-                     (normalize-for-filename db filename)))))
+                     (normalize-for-file db filename uri)))))
 
 (defn run-kondo-copy-configs! [paths db]
   (-> (config-for-copy-configs paths db)
       (run-kondo! (str "paths " (string/join ", " paths)) db)))
 
 (defn run-kondo-on-jdk-source! [paths db]
-  (-> (config-for-jdk-source paths)
-      (run-kondo! (str "paths " paths) db)
-      (normalize {:external? true
-                  :filter-analysis #(select-keys % [:java-class-definitions])})))
+  (let [normalization-config {:external? true
+                              :filter-analysis #(select-keys % [:java-class-definitions])}]
+    (-> (config-for-jdk-source paths)
+        (run-kondo! (str "paths " paths) db)
+        (normalize normalization-config db))))

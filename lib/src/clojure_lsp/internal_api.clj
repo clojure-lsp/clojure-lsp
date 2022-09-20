@@ -153,8 +153,7 @@
   [change components]
   (if (= :rename (:kind change))
     (apply-workspace-rename-edit-summary! change components)
-    (apply-workspace-change-edit-summary! change components))
-  change)
+    (apply-workspace-change-edit-summary! change components)))
 
 (defn ^:private project-root->uri [project-root db]
   (-> (or ^File project-root (io/file ""))
@@ -200,33 +199,9 @@
     (swap! db* assoc :project-analysis-type :project-only)
     (analyze! options components)))
 
-(defn ^:private nses->ns+uri [namespaces db]
-  (mapcat (fn [namespace]
-            (or
-              (->> (dep-graph/ns-internal-uris db namespace)
-                   seq
-                   (map (fn [uri]
-                          {:namespace namespace
-                           :uri       uri})))
-              [{:namespace namespace}]))
-          namespaces))
-
-(defn ^:private uri->ns
-  [uri ns+uris]
-  (->> ns+uris
-       (filter #(= uri (:uri %)))
-       first
-       :namespace))
-
-(defn ^:private assert-ns-exists-or-drop! [options ns+uris]
-  (->> ns+uris
-       (filter (complement :uri))
-       (mapv #(cli-println options "Namespace" (:namespace %) "not found")))
-  (filter :uri ns+uris))
-
-(defn ^:private open-file! [{:keys [uri] :as ns+uri} components]
+(defn ^:private open-file! [uri components]
   (f.file-management/load-document! uri (slurp uri) (:db* components))
-  ns+uri)
+  uri)
 
 (defn ^:private find-new-uri-checking-rename
   [uri edits]
@@ -251,27 +226,35 @@
   (and ns-exclude-regex
        (re-matches ns-exclude-regex (str namespace))))
 
-(defn ^:private options->namespaces [{:keys [namespace filenames project-root] :as options} db]
-  (or (seq namespace)
-      (->> filenames
-           (map (fn [^File filename-or-dir]
-                  (if (.isAbsolute filename-or-dir)
-                    (io/file filename-or-dir)
-                    (io/file project-root filename-or-dir))))
-           (map (fn [^File filename-or-dir]
-                  (if (shared/directory? filename-or-dir)
-                    (->> filename-or-dir
-                         file-seq
-                         (remove shared/directory?)
-                         (map #(shared/filename->namespace (.getCanonicalPath ^File %) db)))
-                    (shared/filename->namespace (.getCanonicalPath filename-or-dir) db))))
-           flatten
-           (remove nil?)
-           (map symbol)
-           seq)
-      (into #{}
-            (remove (partial exclude-ns? options))
-            (dep-graph/internal-ns-names db))))
+(defn ^:private options->uris [{:keys [namespace filenames project-root] :as options} db]
+  (cond
+    (seq namespace)
+    (->> namespace
+         (mapcat (fn [namespace]
+                   (let [uris (dep-graph/ns-internal-uris db namespace)]
+                     (when-not (seq uris)
+                       (cli-println options "Namespace" namespace "not found"))
+                     uris))))
+    (seq filenames)
+    (->> filenames
+         (map (fn [^File filename-or-dir]
+                (if (.isAbsolute filename-or-dir)
+                  (io/file filename-or-dir)
+                  (io/file project-root filename-or-dir))))
+         (mapcat (fn [^File filename-or-dir]
+                   (if (shared/directory? filename-or-dir)
+                     (->> filename-or-dir
+                          file-seq
+                          (remove shared/directory?)
+                          (map #(.getCanonicalPath ^File %)))
+                     [(.getCanonicalPath filename-or-dir)])))
+         (map #(shared/filename->uri % db))
+         seq)
+    :else
+    (into #{}
+          (comp (remove #(exclude-ns? options %))
+                (mapcat #(dep-graph/ns-internal-uris db %)))
+          (dep-graph/internal-ns-names db))))
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)
@@ -286,15 +269,12 @@
   (setup-project-only-analysis! options components)
   (cli-println options "Checking namespaces...")
   (let [db @db*
-        namespaces (options->namespaces options db)
-        ns+uris (nses->ns+uri namespaces db)
-        edits (->> ns+uris
-                   (assert-ns-exists-or-drop! options)
+        edits (->> (options->uris options db)
                    (map #(open-file! % components))
                    (pmap (comp :document-changes
                                #(handlers/execute-command components
                                                           {:command "clean-ns"
-                                                           :arguments [(:uri %) 0 0]})))
+                                                           :arguments [% 0 0]})))
                    (apply concat)
                    (pmap #(document-change->edit-summary % db))
                    (remove nil?))]
@@ -304,8 +284,10 @@
          :message (edits->diff-string edits options db)
          :edits edits}
         (do
-          (mapv (comp #(cli-println options "Cleaned" (uri->ns (:uri %) ns+uris))
-                      #(apply-workspace-edit-summary! % components)) edits)
+          (run! #(apply-workspace-edit-summary! % components) edits)
+          (->> edits
+               (mapcat #(dep-graph/ns-names-for-uri db (:uri %)))
+               (run! #(cli-println options "Cleaned" %)))
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
@@ -334,11 +316,8 @@
   (setup-project-and-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
   (let [db @db*
-        namespaces (options->namespaces options db)
-        ns+uris (nses->ns+uri namespaces db)
-        diags-by-uri (->> ns+uris
-                          (assert-ns-exists-or-drop! options)
-                          (pmap (fn [{:keys [uri]}]
+        diags-by-uri (->> (options->uris options db)
+                          (pmap (fn [uri]
                                   {:uri uri
                                    :diagnostics (f.diagnostic/find-diagnostics uri db)}))
                           (remove (comp empty? :diagnostics))
@@ -359,14 +338,11 @@
   (setup-project-only-analysis! options components)
   (cli-println options "Formatting namespaces...")
   (let [db @db*
-        namespaces (options->namespaces options db)
-        ns+uris (nses->ns+uri namespaces db)
-        edits (->> ns+uris
-                   (assert-ns-exists-or-drop! options)
+        edits (->> (options->uris options db)
                    (map #(open-file! % components))
-                   (pmap (comp (fn [{:keys [uri]}]
-                                 (some->> (handlers/formatting components {:text-document {:uri uri}})
-                                          (map #(edit->summary @db* uri %))))))
+                   (pmap (fn [uri]
+                           (some->> (handlers/formatting components {:text-document {:uri uri}})
+                                    (map #(edit->summary @db* uri %)))))
                    (apply concat)
                    (remove nil?))]
     (if (seq edits)
@@ -375,8 +351,10 @@
          :message (edits->diff-string edits options @db*)
          :edits edits}
         (do
-          (mapv (comp #(cli-println options "Formatted" (uri->ns (:uri %) ns+uris))
-                      #(apply-workspace-edit-summary! % components)) edits)
+          (run! #(apply-workspace-edit-summary! % components) edits)
+          (->> edits
+               (mapcat #(dep-graph/ns-names-for-uri db (:uri %)))
+               (run! #(cli-println options "Formatted" %)))
           {:result-code 0
            :edits edits}))
       {:result-code 0 :message "Nothing to format!"})))
@@ -390,26 +368,26 @@
         from-ns (if ns-only?
                   from
                   (symbol (namespace from)))]
-    (if-let [from-element (q/find-element-for-rename db from-ns from-name)]
-      (let [uri (shared/filename->uri (:filename from-element) db)]
-        (open-file! {:uri uri :namespace from-ns} components)
-        (let [{:keys [error document-changes]} (f.rename/rename-from-position uri (str to) (:name-row from-element) (:name-col from-element) db)]
-          (if document-changes
-            (if-let [edits (->> document-changes
-                                (pmap #(document-change->edit-summary % db))
-                                (remove nil?)
-                                seq)]
-              (if dry?
+    (if-let [{:keys [uri name-row name-col]} (q/find-element-for-rename db from-ns from-name)]
+      (let [{:keys [error document-changes]} (-> uri
+                                                 (open-file! components)
+                                                 (f.rename/rename-from-position (str to) name-row name-col db))]
+        (if document-changes
+          (if-let [edits (->> document-changes
+                              (pmap #(document-change->edit-summary % db))
+                              (remove nil?)
+                              seq)]
+            (if dry?
+              {:result-code 0
+               :message (edits->diff-string edits options db)
+               :edits edits}
+              (do
+                (run! #(apply-workspace-edit-summary! % components) edits)
                 {:result-code 0
-                 :message (edits->diff-string edits options db)
-                 :edits edits}
-                (do
-                  (mapv #(apply-workspace-edit-summary! % components) edits)
-                  {:result-code 0
-                   :message (format "Renamed %s to %s" from to)
-                   :edits edits}))
-              {:result-code 1 :message "Nothing to rename"})
-            {:result-code 1 :message (format "Could not rename %s to %s. %s" from to (-> error :message))})))
+                 :message (format "Renamed %s to %s" from to)
+                 :edits edits}))
+            {:result-code 1 :message "Nothing to rename"})
+          {:result-code 1 :message (format "Could not rename %s to %s. %s" from to (-> error :message))}))
       {:result-code 1 :message (format "Symbol %s not found in project" from)})))
 
 (defn analyze-project-and-deps! [options]

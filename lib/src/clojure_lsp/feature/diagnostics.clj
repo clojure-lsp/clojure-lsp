@@ -1,12 +1,12 @@
 (ns clojure-lsp.feature.diagnostics
   (:require
    [clj-kondo.impl.config :as kondo.config]
+   [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]
-   [clojure.java.io :as io]))
+   [clojure.core.async :as async]))
 
 (set! *warn-on-reflection* true)
 
@@ -39,7 +39,7 @@
         kondo-config (if (:ns element)
                        (kondo-config-for-ns kondo-config (:ns element) (:filename element))
                        kondo-config)]
-    {:filename (:filename element)
+    {:uri (:uri element)
      :row (:name-row element)
      :col (:name-col element)
      :end-row (:name-end-row element)
@@ -88,15 +88,16 @@
     (or (and row col)
         (logger/warn "Invalid clj-kondo finding. Cannot find position data for" finding))))
 
-(defn ^:private exclude-ns? [filename linter db]
-  (when-let [namespace (shared/filename->namespace filename db)]
+(defn ^:private exclude-ns? [uri linter db]
+  ;; TODO: it's possible, though unusual, to have several namespaces in a file.
+  ;; What should we do in that case?
+  (when-let [namespace (first (dep-graph/ns-names-for-uri db uri))]
     (when-let [ns-exclude-regex-str (settings/get db [:linters linter :ns-exclude-regex])]
       (re-matches (re-pattern ns-exclude-regex-str) (str namespace)))))
 
-(defn ^:private kondo-findings->diagnostics [filename linter db]
-  (when-not (exclude-ns? filename linter db)
-    (->> (get (:findings db) filename)
-         (filter #(= filename (:filename %)))
+(defn ^:private kondo-findings->diagnostics [uri linter db]
+  (when-not (exclude-ns? uri linter db)
+    (->> (get-in db [:findings uri])
          (filter valid-finding?)
          (mapv kondo-finding->diagnostic))))
 
@@ -112,10 +113,12 @@
     2 :yellow
     3 :cyan))
 
-(defn ^:private clj-depend-violations->diagnostics [filename level db]
-  (when-let [namespace (shared/filename->namespace filename db)]
+(defn ^:private clj-depend-violations->diagnostics [uri level db]
+  ;; TODO: it's possible, though unusual, to have several namespaces in a file.
+  ;; What should we do in that case?
+  (when-let [namespace (first (dep-graph/ns-names-for-uri db uri))]
     (mapv (fn [{:keys [message]}]
-            (let [ns-definition (q/find-namespace-definition-by-filename db filename)]
+            (let [ns-definition (q/find-namespace-definition-by-uri db uri)]
               {:range (shared/->range ns-definition)
                :tags []
                :message message
@@ -128,17 +131,16 @@
           (get-in db [:clj-depend-violations (symbol namespace)]))))
 
 (defn find-diagnostics [^String uri db]
-  (let [filename (shared/uri->filename uri)
-        kondo-level (settings/get db [:linters :clj-kondo :level])
+  (let [kondo-level (settings/get db [:linters :clj-kondo :level])
         depend-level (settings/get db [:linters :clj-depend :level] :info)]
-    (if (shared/jar-file? filename)
+    (if (shared/jar-file? uri)
       []
       (cond-> []
         (not= :off kondo-level)
-        (concat (kondo-findings->diagnostics filename :clj-kondo db))
+        (concat (kondo-findings->diagnostics uri :clj-kondo db))
 
         (not= :off depend-level)
-        (concat (clj-depend-violations->diagnostics filename depend-level db))))))
+        (concat (clj-depend-violations->diagnostics uri depend-level db))))))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
   (async/put! diagnostics-chan diagnostic))
@@ -146,30 +148,32 @@
 (defn ^:private publish-all-diagnostics!* [{:keys [diagnostics-chan]} diagnostics]
   (async/onto-chan! diagnostics-chan diagnostics false))
 
-(defn publish-diagnostics! [uri {:keys [db*], :as components}]
-  (publish-diagnostic!* components {:uri uri
-                                    :diagnostics (find-diagnostics uri @db*)}))
+(defn ^:private diagnostics-of-uri [uri db]
+  {:uri uri
+   :diagnostics (find-diagnostics uri db)})
 
-(defn publish-all-diagnostics! [paths {:keys [db*], :as components}]
+(defn ^:private empty-diagnostics-of-uri [uri]
+  {:uri uri
+   :diagnostics []})
+
+(defn publish-diagnostics! [uri {:keys [db*], :as components}]
+  (publish-diagnostic!* components (diagnostics-of-uri uri @db*)))
+
+(defn publish-all-diagnostics! [uris {:keys [db*], :as components}]
   (let [db @db*]
     (publish-all-diagnostics!*
       components
-      (eduction (map io/file)
-                (mapcat file-seq)
-                (map #(.getAbsolutePath ^java.io.File %))
-                (map #(shared/filename->uri % db))
-                (remove #(= :unknown (shared/uri->file-type %)))
-                (map (fn [uri]
-                       {:uri uri
-                        :diagnostics (find-diagnostics uri db)}))
-                paths))))
+      (->> uris
+           (remove #(= :unknown (shared/uri->file-type %)))
+           (map #(diagnostics-of-uri % db))))))
 
-(defn publish-empty-diagnostics! [uri components]
-  (publish-diagnostic!* components {:uri uri
-                                    :diagnostics []}))
+(defn publish-empty-diagnostics! [uris components]
+  (publish-all-diagnostics!* components (map empty-diagnostics-of-uri uris)))
 
-(defn ^:private unused-public-vars [var-defs kw-defs project-db kondo-config]
-  (let [var-definitions (remove (partial exclude-public-diagnostic-definition? kondo-config) var-defs)
+(defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
+  (let [exclude-def? (partial exclude-public-diagnostic-definition? kondo-config)
+        var-definitions (->> (q/find-all-var-definitions narrowed-db)
+                             (remove exclude-def?))
         var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
         var-usages (into #{}
                          (comp
@@ -178,7 +182,8 @@
                          (q/nses-and-dependents-analysis project-db var-nses))
         var-used? (fn [var-def]
                     (some var-usages (q/var-definition-signatures var-def)))
-        kw-definitions (remove (partial exclude-public-diagnostic-definition? kondo-config) kw-defs)
+        kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
+                            (remove exclude-def?))
         kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords
                     (into #{}
                           (comp
@@ -193,49 +198,28 @@
          (map (fn [unused-var]
                 (unused-public-var->finding unused-var kondo-config))))))
 
-(defn ^:private file-var-definitions [project-db filename]
-  (q/find-var-definitions project-db filename false))
-(def ^:private file-kw-definitions q/find-keyword-definitions)
-(def ^:private all-var-definitions q/find-all-var-definitions)
-(def ^:private all-kw-definitions q/find-all-keyword-definitions)
-
-(defn project-findings
+(defn ^:private findings-of-project
   [db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)]
-    (unused-public-vars (all-var-definitions project-db)
-                        (all-kw-definitions project-db)
-                        project-db kondo-config)))
+    (unused-public-vars project-db project-db kondo-config)))
 
-(defn files-findings
-  [filenames db kondo-config]
+(defn ^:private findings-of-uris
+  [uris db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)
-        files-db (update project-db :analysis select-keys filenames)]
-    (unused-public-vars (all-var-definitions files-db)
-                        (all-kw-definitions files-db)
-                        project-db kondo-config)))
-
-(defn file-findings
-  [filename db kondo-config]
-  (let [project-db (q/db-with-internal-analysis db)]
-    (unused-public-vars (file-var-definitions project-db filename)
-                        (file-kw-definitions project-db filename)
-                        project-db kondo-config)))
+        db-of-uris (update project-db :analysis select-keys uris)]
+    (unused-public-vars db-of-uris project-db kondo-config)))
 
 (defn ^:private finalize-findings! [findings reg-finding!]
-  (run! reg-finding! findings)
-  (group-by :filename findings))
+  (let [uri->filename (memoize shared/uri->filename)]
+    (run! #(reg-finding! (assoc % :filename (uri->filename (:uri %)))) findings))
+  nil)
 
 (defn custom-lint-project!
   [db {:keys [reg-finding! config]}]
-  (-> (project-findings db config)
+  (-> (findings-of-project db config)
       (finalize-findings! reg-finding!)))
 
-(defn custom-lint-files!
-  [filenames db {:keys [reg-finding! config]}]
-  (-> (files-findings filenames db config)
-      (finalize-findings! reg-finding!)))
-
-(defn custom-lint-file!
-  [filename db {:keys [reg-finding! config]}]
-  (-> (file-findings filename db config)
+(defn custom-lint-uris!
+  [uris db {:keys [reg-finding! config]}]
+  (-> (findings-of-uris uris db config)
       (finalize-findings! reg-finding!)))

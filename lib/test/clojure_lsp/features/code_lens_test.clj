@@ -1,6 +1,7 @@
 (ns clojure-lsp.features.code-lens-test
   (:require
    [clojure-lsp.feature.code-lens :as f.code-lens]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.test :refer [deftest is testing]]))
 
@@ -114,4 +115,44 @@
                (h/file-uri "file:///a.clj") 1 13
                {:start {:line 1 :character 5}
                 :end {:line 1 :character 12}}
-               (h/db)))))))
+               (h/db))))))
+  (testing "test references"
+    (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                 (h/file-path "/project/test")}}})
+    (testing "in src file"
+      (let [src-uri (h/file-uri "file:///project/src/a.clj")
+            [[start-r start-c :as start] end]
+            (h/load-code-and-locs (h/code "(ns a)"
+                                          "(def |aa| 1)"
+                                          "aa")
+                                  src-uri)
+            def-range (h/->range start end)]
+        (h/load-code (h/code "(ns a-test"
+                             "  (:require [a]))"
+                             "a/aa")
+                     (h/file-uri "file:///project/test/a_test.clj"))
+        (is (= {:range def-range,
+                :command {:title "1 reference | 1 test",
+                          :command "code-lens-references",
+                          :arguments [src-uri 2 6]}}
+               (f.code-lens/resolve-code-lens
+                 src-uri start-r start-c
+                 def-range
+                 (h/db))))))
+    (testing "in test file"
+      (let [test-uri (h/file-uri "file:///project/test/a_test.clj")
+            [[start-r start-c :as start] end]
+            (h/load-code-and-locs
+              (h/code "(ns a-test)"
+                      "(def |test-helper| 1)"
+                      "test-helper")
+              test-uri)
+            def-range (h/->range start end)]
+        (is (= {:range def-range,
+                :command {:title "1 reference",
+                          :command "code-lens-references",
+                          :arguments [test-uri 2 6]}}
+               (f.code-lens/resolve-code-lens
+                 test-uri start-r start-c
+                 def-range
+                 (h/db))))))))

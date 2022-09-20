@@ -16,11 +16,14 @@
       (when (shared/file-exists? clj-depend-config-file)
         (edn/read-string {} (slurp clj-depend-config-file))))))
 
-(defn analyze-filename! [filename db]
+(defn analyze-uri! [uri db]
   (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]
     (let [config (resolve-user-clj-depend-config project-root db)]
       (when (seq config)
-        (when-let [namespace (some-> filename (shared/filename->namespace db) symbol)]
+        ;; NOTE probably can't use dep-graph to find nses of uri, because
+        ;; dep-graph won't exist until after kondo analysis is done, which is
+        ;; run in parallel to clj-depend.
+        (when-let [namespace (some-> uri (shared/uri->namespace db) symbol)]
           (-> {:violations {namespace []}}
               (medley/deep-merge
                 (-> (clj-depend/analyze {:project-root (io/file project-root)

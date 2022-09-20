@@ -30,7 +30,7 @@
     (let [mock-diagnostics-chan (async/chan 1)]
       (h/load-code-and-locs "(ns a) (when)" h/default-uri (assoc (h/components)
                                                                  :diagnostics-chan mock-diagnostics-chan))
-      (is (some? (get-in (h/db) [:analysis (h/file-path "/a.clj")])))
+      (is (some? (get-in (h/db) [:analysis (h/file-uri "file:///a.clj")])))
       (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
         (is (= (h/file-uri "file:///a.clj") uri))
         (h/assert-submaps
@@ -51,7 +51,7 @@
                            :end {:line 999998, :character 999998}}
                    :new-text "(ns foo.bar)"}]}]
         (:document-changes (h/take-or-timeout mock-edits-chan 500)))
-      (is (some? (get-in (h/db) [:analysis (h/file-path "/project/src/foo/bar.clj")])))))
+      (is (some? (get-in (h/db) [:analysis (h/file-uri "file:///project/src/foo/bar.clj")])))))
   (testing "opening a new edn file not adding the ns"
     (h/reset-components!)
     (swap! (h/db*) merge {:settings {:auto-add-ns-to-new-files? true
@@ -62,7 +62,7 @@
       (h/load-code-and-locs "" (h/file-uri "file:///project/src/foo/baz.edn") (assoc (h/components)
                                                                                      :edits-chan mock-edits-chan))
       (h/assert-no-take mock-edits-chan 500)
-      (is (some? (get-in (h/db) [:analysis (h/file-path "/project/src/foo/baz.edn")]))))))
+      (is (some? (get-in (h/db) [:analysis (h/file-uri "file:///project/src/foo/baz.edn")]))))))
 
 (deftest document-symbol
   (let [code "(ns a) (def bar ::bar) (def ^:m baz 1) (defmulti mult identity) (defmethod mult \"foo\")"

@@ -20,13 +20,13 @@
   (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///d.cljs"))
   (testing "when linter level is :info"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/a.clj")
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
-      [{:filename (h/file-path "/a.clj")
+      [{:uri h/default-uri
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -37,13 +37,13 @@
       @findings))
   (testing "when linter level is :warning"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/a.clj")
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
-      [{:filename (h/file-path "/a.clj")
+      [{:uri h/default-uri
         :level :warning
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -54,13 +54,13 @@
       @findings))
   (testing "when linter level is :error"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/a.clj")
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
-      [{:filename (h/file-path "/a.clj")
+      [{:uri h/default-uri
         :level :error
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -71,13 +71,13 @@
       @findings))
   (testing "when linter level is :off"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/a.clj")
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
     (h/assert-submaps
-      [{:filename (h/file-path "/a.clj")
+      [{:uri h/default-uri
         :level :off
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -88,13 +88,13 @@
       @findings))
   (testing "linter level by default is :info"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/a.clj")
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
-      [{:filename (h/file-path "/a.clj")
+      [{:uri h/default-uri
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -105,8 +105,8 @@
       @findings))
   (testing "excluding the whole ns"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/a.clj")
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
@@ -115,8 +115,8 @@
       @findings))
   (testing "excluding the simple var from ns"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/a.clj")
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
@@ -125,8 +125,8 @@
       @findings))
   (testing "excluding the specific var"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/a.clj")
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
@@ -135,8 +135,8 @@
       @findings))
   (testing "excluding specific syms"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/b.clj")
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///b.clj")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
@@ -145,13 +145,13 @@
       @findings))
   (testing "unused keyword definitions"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/c.cljs")
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///c.cljs")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
-      [{:filename (h/file-path "/c.cljs")
+      [{:uri (h/file-uri "file:///c.cljs")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public keyword ':some/thing'"
@@ -159,7 +159,7 @@
         :col 17
         :end-row 2
         :end-col 28}
-       {:filename (h/file-path "/c.cljs")
+       {:uri (h/file-uri "file:///c.cljs")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public keyword ':otherthing'"
@@ -170,8 +170,8 @@
       @findings))
   (testing "var marked ^:export is excluded"
     (reset! findings [])
-    (f.diagnostic/custom-lint-file!
-      (h/file-path "/d.cljs")
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///d.cljs")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
@@ -349,7 +349,7 @@
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-          (is (= (h/file-uri "file:///a.clj") uri))
+          (is (= h/default-uri uri))
           (is (= ["user/foo is called with 2 args but expects 1"]
                  (map :message diagnostics))))))
     (testing "for schema defs"
@@ -365,7 +365,7 @@
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
-          (is (= (h/file-uri "file:///a.clj") uri))
+          (is (= h/default-uri uri))
           (is (= ["user/foo is called with 0 args but expects 2"
                   "user/foo is called with 1 arg but expects 2"]
                  (map :message diagnostics)))))))

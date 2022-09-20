@@ -206,7 +206,7 @@
       detail (assoc :detail detail)
       :always (completion-item-with-unresolved-documentation
                 {:name (-> element :name str)
-                 :filename (:filename element)
+                 :uri (:uri element)
                  :name-row (:name-row element)
                  :name-col (:name-col element)}
                 resolve-support))))
@@ -272,13 +272,13 @@
           [:namespace-definitions :var-definitions :keyword-definitions :keyword-usages :locals :java-class-usages])))
 
 (defn ^:private with-definition-kws-args-element-items
-  [matches-fn {:keys [arglist-kws name-row name-col filename]} resolve-support]
+  [matches-fn {:keys [arglist-kws name-row name-col uri]} resolve-support]
   (->> (flatten arglist-kws)
        (map (fn [kw]
               {:name (str kw)
                :name-row name-row
                :name-col name-col
-               :filename filename
+               :uri uri
                :bucket :keyword-usages}))
        (filter #(matches-fn (keyword-element->str % nil nil)))
        (mapv #(element->completion-item % nil :kw-arg resolve-support))))
@@ -391,7 +391,7 @@
             (map #(element->completion-item % alias :alias-keyword resolve-support)))
           (:analysis non-local-db))))
 
-(defn ^:private with-core-items [matches-fn {:keys [filename ns-name symbols priority]} resolve-support]
+(defn ^:private with-core-items [matches-fn {:keys [uri ns-name symbols priority]} resolve-support]
   (keep (fn [{:keys [name kind]}]
           (let [sym-name (str name)]
             (when (matches-fn sym-name)
@@ -400,15 +400,15 @@
                    :detail   (str ns-name "/" sym-name)
                    :priority priority}
                   (completion-item-with-unresolved-documentation
-                    {:filename filename
-                     :name     sym-name
-                     :ns       ns-name}
+                    {:uri  uri
+                     :name sym-name
+                     :ns   ns-name}
                     resolve-support)))))
         symbols))
 
 (defn ^:private with-clojure-core-items [matches-fn resolve-support]
   (with-core-items matches-fn
-                   {:filename "/clojure.core.clj"
+                   {:uri "file:///clojure.core.clj"
                     :ns-name "clojure.core"
                     :symbols common-sym/clj-syms
                     :priority :clojure-core}
@@ -416,7 +416,7 @@
 
 (defn ^:private with-clojurescript-items [matches-fn resolve-support]
   (with-core-items matches-fn
-                   {:filename "/cljs.core.cljs"
+                   {:uri "file:///cljs.core.cljs"
                     :ns-name "cljs.core"
                     :symbols common-sym/cljs-syms
                     :priority :clojurescript-core}
@@ -493,15 +493,14 @@
     ;; computation. To avoid this expense, we abort on comments.
     (if (= :comment (some-> cursor-loc z/tag))
       []
-      (let [filename (shared/uri->filename uri)
-            settings (settings/all db)
+      (let [settings (settings/all db)
             client-completion-item-caps (get-in db [:client-capabilities :text-document :completion :completion-item])
             resolve-support (-> (get client-completion-item-caps :resolve-support {})
                                 (update :properties set))
             support-snippets? (get client-completion-item-caps :snippet-support false)
-            non-local-db (update db :analysis dissoc filename)
-            local-buckets (get-in db [:analysis filename])
-            cursor-element (q/find-element-under-cursor db filename row col)
+            non-local-db (update db :analysis dissoc uri)
+            local-buckets (get-in db [:analysis uri])
+            cursor-element (q/find-element-under-cursor db uri row col)
             cursor-value (if (= :vector (z/tag cursor-loc))
                            ""
                            (if (z/sexpr-able? cursor-loc)
@@ -518,7 +517,7 @@
             matches-fn (partial matches-cursor? cursor-value)
             {caller-usage-row :row caller-usage-col :col} (some-> cursor-op z/node meta)
             caller-var-definition (when (and caller-usage-row caller-usage-col)
-                                    (q/find-definition-from-cursor db filename caller-usage-row caller-usage-col))
+                                    (q/find-definition-from-cursor db uri caller-usage-row caller-usage-col))
             inside-require? (edit/inside-require? cursor-loc)
             inside-refer? (edit/inside-refer? cursor-loc)
             simple-cursor? (or (simple-ident? cursor-value)
@@ -576,14 +575,14 @@
 
 ;;;; Resolve Completion Item (completionItem/resolve)
 
-(defn ^:private find-element-by-ns [{:keys [name ns filename]} db]
-  (q/find-definition db {:filename filename
+(defn ^:private find-element-by-ns [{:keys [name ns uri]} db]
+  (q/find-definition db {:uri uri
                          :name (symbol name)
                          :to (symbol ns)
                          :bucket :var-usages}))
 
-(defn ^:private find-element-by-position [{:keys [filename name-row name-col]} db]
-  (q/find-element-under-cursor db filename name-row name-col))
+(defn ^:private find-element-by-position [{:keys [uri name-row name-col]} db]
+  (q/find-element-under-cursor db uri name-row name-col))
 
 (defmulti ^:private resolve-unresolved (fn [unresolved-type _item _other-unresolved _args]
                                          unresolved-type))

@@ -7,11 +7,15 @@
 
 (set! *warn-on-reflection* true)
 
-(defn- lines [s]
-  (string/split s #"\n"))
+(defn- lines
+  "Splits S on `\n` or `\r\n`."
+  [s]
+  (string/split-lines s))
 
-(defn- unlines [ss]
-  (string/join "\n" ss))
+(defn- unlines
+  "Joins SS strings coll using the system's line separator."
+  [ss]
+  (string/join shared/line-separator ss))
 
 (defn unified-diff
   ([old-uri new-uri original revised project-root-uri]

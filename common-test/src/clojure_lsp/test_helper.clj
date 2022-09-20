@@ -5,6 +5,7 @@
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
@@ -24,6 +25,14 @@
 (defn file-uri [uri]
   (cond-> uri windows?
           (string/replace #"^(file|zipfile|jar:file):///(?!\w:/)" "$1:///C:/")))
+
+(defn lf->sys
+  "Returns TEXT, converting `\n` line endings to those of the underlying
+  system's, if different."
+  [text]
+  (if-not (= shared/line-separator "\n")
+    (string/replace text #"\n" shared/line-separator)
+    text))
 
 (defn string=
   "Like `clojure.core/=` applied on STRING1 and STRING2, but treats

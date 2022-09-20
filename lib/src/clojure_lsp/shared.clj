@@ -19,6 +19,10 @@
 
 (set! *warn-on-reflection* true)
 
+(def line-separator
+  "The system's line separator."
+  (System/lineSeparator))
+
 (def ^:private ansi-colors
   {:reset "[0m"
    :red   "[31m"

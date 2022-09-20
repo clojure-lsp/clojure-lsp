@@ -29,6 +29,10 @@
          lint-format make/lint-format
          lint-diagnostics make/lint-diagnostics
          lint-fix make/lint-fix
+         lint {:doc "Run all linters in dry mode."
+               :task (doseq [linter '[lint-clean lint-format lint-diagnostics]]
+                       (println :running-task linter)
+                       (run linter))}
 
          release make/release
 

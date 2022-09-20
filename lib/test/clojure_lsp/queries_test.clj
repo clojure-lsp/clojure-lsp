@@ -671,7 +671,7 @@
           expected {:ns 'my.fabulous-namespace
                     :name 'SomeRecord
                     :defined-by 'clojure.core/defrecord
-                    :filename "/project/my/fabulous_namespace.clj"
+                    :filename (h/file-path "/project/my/fabulous_namespace.clj")
                     :bucket :var-definitions}]
       (h/assert-submap
         expected

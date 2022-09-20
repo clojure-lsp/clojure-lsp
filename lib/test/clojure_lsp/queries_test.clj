@@ -651,10 +651,6 @@
       {:ns nil, :name "unregistered-kw", :uri (h/file-uri "file:///aaa.clj"), :bucket :keyword-usages}
       (q/find-definition-from-cursor db (h/file-uri "file:///aaa.clj") unreg-kw-r unreg-kw-c))))
 
-;; TODO: We need tests of finding java-class-definitions. The below issue has
-;; been fixed, but the tests still don't work because the analysis of the .java
-;; file doesn't include a java-class-definition. Why not?
-
 (deftest find-clojure-definition-of-imported-java-class-usage
   (h/load-code-and-locs (h/code "(ns my.fabulous-namespace)"
                                 "(defrecord SomeRecord [foo bar])"

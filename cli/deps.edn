@@ -6,7 +6,7 @@
         clojure-lsp/lib {:local/root "../lib"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.68.1059"}}
+                               lambdaisland/kaocha {:mvn/version "1.70.1086"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test

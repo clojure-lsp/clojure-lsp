@@ -3,6 +3,7 @@
 ## Unreleased
 
 - General
+  - Improve clj-depend merge config to overwrite `source-paths` only if it is nil or empty.  #1264
   - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211
   - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible

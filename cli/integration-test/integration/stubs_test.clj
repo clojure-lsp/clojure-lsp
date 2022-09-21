@@ -15,7 +15,7 @@
                   {:initializationOptions (assoc fixture/default-init-options
                                                  :stubs {:generation {:namespaces #{"datomic.api"}}})}))
   (lsp/notify! (fixture/initialized-notification))
-  (Thread/sleep 5000) ;; Wait for async stubs generation
+  (Thread/sleep 10000) ;; Wait for async stubs generation
   (lsp/notify! (fixture/did-open-notification "stubs/a.clj"))
 
   (testing "After stub generation we find datomic.api analysis and diagnostics."

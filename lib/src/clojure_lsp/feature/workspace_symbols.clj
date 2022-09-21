@@ -27,33 +27,25 @@
 (defn ^:private element->workspace-symbol [element]
   {:name (f.document-symbol/element->name element)
    :kind (f.document-symbol/element->symbol-kind element)
-   :location {:filename (:filename element) ;; will be replaced with uri
+   :location {:uri (:uri element)
               :range (shared/->scope-range element)}})
-
-(defn ^:private symbol-with-uri [symb uri]
-  (-> symb
-      (update :location dissoc :filename)
-      (update :location assoc :uri uri)))
 
 (defn workspace-symbols [query db]
   ;; TODO refactor to be a complete transducer
   (->> (q/find-internal-definitions db)
        (fuzzy-filter query)
        (map element->workspace-symbol)
-       ;; Group elements by file, but otherwise preserve ordering by search score.
-       ;; Also replace filename with uri.
-       (reduce (fn [{:keys [next-idx filenames] :as result} symb]
-                 (let [filename (:filename (:location symb))]
-                   (if-let [{:keys [idx uri]} (get filenames filename)]
-                     (update-in result [:members idx] conj (symbol-with-uri symb uri))
-                     (let [uri (shared/filename->uri filename db)]
-                       (-> result
-                           (update :members conj [(symbol-with-uri symb uri)])
-                           (assoc-in [:filenames filename] {:idx next-idx
-                                                            :uri uri})
-                           (update :next-idx inc))))))
+       ;; Group elements by uri, but otherwise preserve ordering by search score.
+       (reduce (fn [{:keys [next-idx index-by-uri] :as result} symb]
+                 (let [uri (:uri (:location symb))]
+                   (if-let [idx (get index-by-uri uri)]
+                     (update-in result [:members idx] conj symb)
+                     (-> result
+                         (update :members conj [symb])
+                         (assoc-in [:index-by-uri uri] next-idx)
+                         (update :next-idx inc)))))
                {:next-idx 0
-                :filenames {}
+                :index-by-uri {}
                 :members []})
        :members
        (reduce into [])))

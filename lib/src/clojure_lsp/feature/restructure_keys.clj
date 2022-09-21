@@ -2,15 +2,13 @@
   (:require
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
 (defn ^:private map-to-restructure [zloc uri db]
   (when zloc
-    (let [filename (shared/uri->filename uri)
-          {:keys [row col]} (meta (z/node zloc))
-          def-elem (q/find-definition-from-cursor db filename row col)
+    (let [{:keys [row col]} (meta (z/node zloc))
+          def-elem (q/find-definition-from-cursor db uri row col)
           loc (or (when (and def-elem
                              (= :locals (:bucket def-elem)))
                     (when-let [up-loc (-> zloc
@@ -20,15 +18,13 @@
                       (cond-> up-loc
                         (= :vector (z/tag up-loc)) z/up)))
                   zloc)]
-      (when (seq (q/find-locals-under-form db filename (meta (z/node loc))))
+      (when (seq (q/find-locals-under-form db uri (meta (z/node loc))))
         (cond
-          (z/map? loc) {:filename filename
-                        :replace-loc loc
+          (z/map? loc) {:replace-loc loc
                         :map-loc loc}
           (z/namespaced-map? loc) (let [qualifier-loc (z/down loc)
                                         {:keys [auto-resolved? prefix]} (z/node qualifier-loc)]
-                                    {:filename filename
-                                     :replace-loc loc
+                                    {:replace-loc loc
                                      :map-loc (z/right qualifier-loc)
                                      :map-auto-resolved? auto-resolved?
                                      :map-ns prefix})
@@ -62,13 +58,13 @@
     (when (keyword? key-sexpr)
       (name key-sexpr))))
 
-(defn ^:private reference-elems [local-node db filename]
+(defn ^:private reference-elems [local-node db uri]
   (let [local-meta (meta local-node)
-        elem (q/find-local-under-cursor db filename (:row local-meta) (:col local-meta))]
+        elem (q/find-local-under-cursor db uri (:row local-meta) (:col local-meta))]
     (q/find-references db elem false)))
 
 (defn ^:private restructure-data [key-loc val-loc
-                                  db filename
+                                  db uri
                                   {:keys [map-ns map-auto-resolved?]}]
   (let [key-sexpr (z/sexpr key-loc)]
     (cond
@@ -124,12 +120,12 @@
              (map (fn [local-node]
                     {:restructure? true
                      :replace-with (replace-with local-node)
-                     :reference-elems (reference-elems local-node db filename)}))))
+                     :reference-elems (reference-elems local-node db uri)}))))
       ;; {a :a}
       (symbol? key-sexpr)
       [{:restructure? true
         :replace-with (z/node val-loc)
-        :reference-elems (reference-elems (z/node key-loc) db filename)}]
+        :reference-elems (reference-elems (z/node key-loc) db uri)}]
       ;; {{:keys [a1]} :a}
       :else
       [{:restructure? false
@@ -147,7 +143,7 @@
          reference-elems)))
 
 (defn restructure-keys [zloc uri db]
-  (when-let [{:keys [filename map-loc replace-loc], :as restructure-config}
+  (when-let [{:keys [map-loc replace-loc], :as restructure-config}
              (map-to-restructure zloc uri db)]
     (let [map-entry-locs (->> map-loc
                               z-children-seq
@@ -168,7 +164,7 @@
                                           (contains? #{"as" "or"} (loc-kw-name key-loc))))
                                 (mapcat (fn [[key-loc val-loc]]
                                           (restructure-data key-loc val-loc
-                                                            db filename
+                                                            db uri
                                                             restructure-config))))
           restructurable-data (filter :restructure? restructure-data)
           unrestructurable-data (remove :restructure? restructure-data)]

@@ -6,7 +6,7 @@
         clojure-lsp/lib {:local/root "../lib"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.68.1059"}}
+                               lambdaisland/kaocha {:mvn/version "1.70.1086"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test
@@ -27,7 +27,7 @@
            :run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-paths ["dev"]
-                   :extra-deps {cider/cider-nrepl {:mvn/version "0.28.4"}
+                   :extra-deps {cider/cider-nrepl {:mvn/version "0.28.6"}
                                 com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.0"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.1.3"}
                                 criterium/criterium {:mvn/version "0.4.6"}

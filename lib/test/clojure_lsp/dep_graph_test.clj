@@ -38,10 +38,10 @@
                            :dependents-langs {:clj 2}}}
            (:dep-graph (h/db))))
     (h/assert-submap
-      {:internal? false, :langs #{:clj}, :namespaces #{'xxx} :filename (h/file-path "/some.jar:xxx.clj")}
+      '{:internal? false, :langs #{:clj}, :namespaces #{xxx}}
       (get-in (h/db) [:documents (h/file-uri "zipfile:///some.jar::xxx.clj")]))
     (h/assert-submap
-      {:internal? false, :langs #{:clj}, :namespaces #{'xxx.yyy} :filename (h/file-path "/some.jar:xxx/yyy.clj")}
+      '{:internal? false, :langs #{:clj}, :namespaces #{xxx.yyy}}
       (get-in (h/db) [:documents (h/file-uri "zipfile:///some.jar::xxx/yyy.clj")])))
   (testing "initial internal analysis"
     (h/reset-components!)
@@ -77,13 +77,13 @@
                            :dependents-langs {:clj 3}}}
            (:dep-graph (h/db))))
     (h/assert-submap
-      {:internal? true, :langs #{:clj}, :namespaces #{'aaa}, :filename (h/file-path "/aaa.clj")}
+      '{:internal? true, :langs #{:clj}, :namespaces #{aaa}}
       (get-in (h/db) [:documents (h/file-uri "file:///aaa.clj")]))
     (h/assert-submap
-      {:internal? true, :langs #{:clj}, :namespaces #{'bbb}, :filename (h/file-path "/bbb.clj")}
+      '{:internal? true, :langs #{:clj}, :namespaces #{bbb}}
       (get-in (h/db) [:documents (h/file-uri "file:///bbb.clj")]))
     (h/assert-submap
-      {:internal? true, :langs #{:clj}, :namespaces #{'ccc}, :filename (h/file-path "/ccc.clj")}
+      '{:internal? true, :langs #{:clj}, :namespaces #{ccc}}
       (get-in (h/db) [:documents (h/file-uri "file:///ccc.clj")])))
   (testing "extending initial external analysis with internal analysis"
     (h/reset-components!)
@@ -316,10 +316,10 @@
             jjj kkk lll}
          (dep-graph/ns-names-for-langs (h/db) #{:clj :cljs}))))
 
-(deftest ns-names-for-file
+(deftest ns-names-for-uri
   (h/load-code-and-locs "(ns aaa) (ns ccc)" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb)" (h/file-uri "file:///bbb.clj"))
-  (is (= '[aaa ccc]
+  (is (= '#{aaa ccc}
          (dep-graph/ns-names-for-uri (h/db) (h/file-uri "file:///aaa.clj")))))
 
 (deftest ns-names

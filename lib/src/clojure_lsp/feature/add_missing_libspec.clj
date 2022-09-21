@@ -18,7 +18,12 @@
 
 (defn safe-sexpr [zloc]
   (when (z/sexpr-able? zloc)
-    (z/sexpr zloc)))
+    ;; TODO There are cases where a invalid code {:foo b|} -> {:foo |}
+    ;; causes a invalid sexpr but sexpr-able? returns true,
+    ;; try to fix on the root cause
+    (try
+      (z/sexpr zloc)
+      (catch Exception _))))
 
 (defn safe-sym [zloc]
   (when-let [s (safe-sexpr zloc)]

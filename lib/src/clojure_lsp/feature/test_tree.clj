@@ -34,9 +34,8 @@
      :children (->testings-children local-testings)}))
 
 (defn tree [uri db]
-  (let [filename (shared/uri->filename uri)
-        ns-element (q/find-namespace-definition-by-filename db filename)
-        local-buckets (get-in db [:analysis filename])
+  (let [ns-element (q/find-namespace-definition-by-uri db uri)
+        local-buckets (get-in db [:analysis uri])
         deftests (into []
                        (filter #(contains? '#{clojure.test/deftest cljs.test/deftest}
                                            (:defined-by %)))

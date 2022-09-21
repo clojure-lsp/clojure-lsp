@@ -16,8 +16,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
-   [clojure.string :as string]
-   [clojure.test :as ct])
+   [clojure.string :as string])
   (:import
    [java.io File]))
 
@@ -414,7 +413,7 @@
     (case format
       :edn {:result-code 0 :message (with-out-str (pr dump-data))}
       :json {:result-code 0 :message (json/generate-string dump-data)}
-      {:result-code 1 :message (format "Output format %s not supported" format)})))
+      {:result-code 1 :message (clojure.core/format "Output format %s not supported" format)})))
 
 (defn analyze-project-and-deps! [options]
   (analyze-project-and-deps!* options (build-components options)))

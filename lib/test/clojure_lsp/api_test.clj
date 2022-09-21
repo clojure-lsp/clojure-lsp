@@ -5,7 +5,16 @@
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.test :as t :refer [deftest is testing]]))
+   [clojure.test :as t :refer [deftest is testing]]
+   [clojure.edn :as edn]
+   [cheshire.core :as json]
+   [babashka.fs :as fs]))
+
+(defmacro ignoring-prints
+  [& body]
+  `(let [s# (new java.io.StringWriter)]
+     (binding [*out* s# *err* s#]
+       ~@body)))
 
 (defn clean-api-db! []
   (internal-api/clean-db! :api-test))
@@ -271,3 +280,50 @@
                                          :to           'sample-test.rename.b
                                          :dry?         true
                                          :raw?         true}))))))
+
+(deftest dump
+  (testing "when project-root is not a file"
+    (is (thrown? AssertionError
+                 (api/dump {:project-root "../cli/integration-test/sample-test"}))))
+  (testing "when project-root is not a existent file"
+    (is (thrown? AssertionError
+                 (api/dump {:project-root (io/file "../cli/integration-test/sample-test/bla")}))))
+  (testing "when project-root is valid"
+    (testing "dumping all fields as edn"
+      (let [result (ignoring-prints
+                     (api/dump {:project-root (io/file "../cli/integration-test/sample-test")}))]
+        (is (= 0 (:result-code result)))
+        (is (= [:classpath
+                :analysis
+                :dep-graph
+                :findings
+                :settings
+                :project-root
+                :source-paths]
+               (keys (edn/read-string (:message result)))))))
+    (testing "dumping all fields as json"
+      (let [result (ignoring-prints
+                     (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
+                                :output {:format :json}}))]
+        (is (= 0 (:result-code result)))
+        (is (= ["classpath"
+                "analysis"
+                "dep-graph"
+                "findings"
+                "settings"
+                "project-root"
+                "source-paths"]
+               (keys (json/parse-string (:message result)))))))
+    (testing "dumping specific fields"
+      (let [result (ignoring-prints
+                     (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
+                                :output {:filter-keys [:project-root :source-paths]}}))]
+        (is (= 0 (:result-code result)))
+        (is (= [:project-root
+                :source-paths]
+               (keys (edn/read-string (:message result)))))
+        (h/assert-submap
+          {:project-root (str (fs/canonicalize (io/file "../cli/integration-test/sample-test")))
+           :source-paths [(str (fs/canonicalize (io/file "../cli/integration-test/sample-test/test")))
+                          (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/src")))]}
+          (edn/read-string (:message result)))))))

@@ -1,6 +1,7 @@
 (ns clojure-lsp.clj-depend-test
-  (:require [clojure-lsp.clj-depend :as clj-depend]
-            [clojure.test :refer [deftest testing is]]))
+  (:require
+   [clojure-lsp.clj-depend :as clj-depend]
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest config-with-source-paths-filled-test
   (testing "Should add source-paths to config when it is nil"

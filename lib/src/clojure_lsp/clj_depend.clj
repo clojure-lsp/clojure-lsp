@@ -16,6 +16,17 @@
       (when (shared/file-exists? clj-depend-config-file)
         (edn/read-string {} (slurp clj-depend-config-file))))))
 
+(defn relative-project-source-paths
+  [project-root db]
+  (map #(shared/relativize-filepath % project-root)
+       (settings/get db [:source-paths])))
+
+(defn config-with-source-paths
+  [config source-paths]
+  (if (not-empty (:source-paths config))
+    config
+    (assoc config :source-paths source-paths)))
+
 (defn analyze-uri! [uri db]
   (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]
     (let [config (resolve-user-clj-depend-config project-root db)]
@@ -27,8 +38,7 @@
           (-> {:violations {namespace []}}
               (medley/deep-merge
                 (-> (clj-depend/analyze {:project-root (io/file project-root)
-                                         :config (assoc config :source-paths (map #(shared/relativize-filepath % project-root)
-                                                                                  (settings/get db [:source-paths])))
+                                         :config (config-with-source-paths config (relative-project-source-paths project-root db))
                                          :namespaces #{namespace}})
                     (update :violations #(group-by :namespace %))))))))))
 
@@ -37,8 +47,7 @@
     (let [config (resolve-user-clj-depend-config project-root db)]
       (when (seq config)
         (-> (clj-depend/analyze {:project-root (io/file project-root)
-                                 :config (assoc config :source-paths (map #(shared/relativize-filepath % project-root)
-                                                                          (settings/get db [:source-paths])))
+                                 :config (config-with-source-paths config (relative-project-source-paths project-root db))
                                  :files (set (map io/file paths))})
             (update :violations #(group-by :namespace %)))))))
 

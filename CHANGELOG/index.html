@@ -1992,8 +1992,9 @@
 <li>Support java class decompilation for zipfile scheme (vim users).</li>
 <li>Avoid keeping diagnostics of external closed files for Calva. https://github.com/BetterThanTomorrow/calva/issues/1864</li>
 <li>Lint opened files after a clojure-lsp or clj-kondo config file is saved on disk, avoiding users to re-edit files. #1247</li>
+<li>Allow find definition of java class usages where definition comes from clojure, like defrecords.</li>
 <li>
-<p>Allow find definition of java class usages where definition comes from clojure, like defrecords.</p>
+<p>Fix: wait for rename to apply before allowing another rename, to ensure suggested name is correct. #1270</p>
 </li>
 <li>
 <p>API/CLI</p>
@@ -3141,7 +3142,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 21, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 23, 2022</span>
     
   </small>
 </div>

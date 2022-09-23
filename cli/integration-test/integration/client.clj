@@ -118,12 +118,12 @@
       (async/>!! output notif)))
   (receive-response [this {:keys [id] :as resp}]
     (if-let [{:keys [request start-ns]} (get @sent-requests id)]
-      (let [sec (/ (double (- (. System (nanoTime)) start-ns)) 1000000000.0)]
-        (do (protocols.endpoint/log this :green (format "received response (%.3f sec):" sec) resp)
-            (swap! sent-requests dissoc id)
-            (deliver request (if (:error resp)
-                               resp
-                               (:result resp)))))
+      (let [ms (float (/ (- (System/nanoTime) start-ns) 1000000))]
+        (protocols.endpoint/log this :green (format "received response (%.0fms):" ms) resp)
+        (swap! sent-requests dissoc id)
+        (deliver request (if (:error resp)
+                           resp
+                           (:result resp))))
       (protocols.endpoint/log this :red "received response for unmatched request:" resp)))
   (receive-request [this _ {:keys [id method] :as req}]
     (protocols.endpoint/log this :magenta "received request:" req)

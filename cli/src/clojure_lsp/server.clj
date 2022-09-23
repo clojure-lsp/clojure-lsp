@@ -18,6 +18,7 @@
    [lsp4clj.liveness-probe :as lsp.liveness-probe]
    [lsp4clj.lsp.requests :as lsp.requests]
    [lsp4clj.server :as lsp.server]
+   [promesa.core :as p]
    [taoensso.timbre :as timbre]))
 
 (set! *warn-on-reflection* true)
@@ -159,12 +160,12 @@
   (->> params
        (handler/dependency-contents components)
        (conform-or-log ::coercer/uri)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "clojure/serverInfo/raw" [_ components _params]
   (->> components
        handler/server-info-raw
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-notification "clojure/serverInfo/log" [_ components _params]
   (future
@@ -177,10 +178,10 @@
 (defmethod lsp.server/receive-request "clojure/cursorInfo/raw" [_ components params]
   (->> params
        (handler/cursor-info-raw components)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-notification "clojure/cursorInfo/log" [_ components params]
-  (future
+  (p/future
     (try
       (handler/cursor-info-log components params)
       (catch Throwable e
@@ -190,7 +191,7 @@
 (defmethod lsp.server/receive-request "clojure/clojuredocs/raw" [_ components params]
   (->> params
        (handler/clojuredocs-raw components)
-       future))
+       p/future))
 
 ;;;; Document sync features
 
@@ -217,50 +218,50 @@
   (->> params
        (handler/references components)
        (conform-or-log ::coercer/locations)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/completion" [_ components params]
   (->> params
        (handler/completion components)
        (conform-or-log ::coercer/completion-items)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "completionItem/resolve" [_ components item]
   (->> item
        (conform-or-log ::coercer/input.completion-item)
        (handler/completion-resolve-item components)
        (conform-or-log ::coercer/completion-item)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/prepareRename" [_ components params]
   (->> params
        (handler/prepare-rename components)
        (conform-or-log ::coercer/prepare-rename-or-error)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
        (handler/rename components)
        (conform-or-log ::coercer/workspace-edit-or-error)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/hover" [_ components params]
   (->> params
        (handler/hover components)
        (conform-or-log ::coercer/hover)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/signatureHelp" [_ components params]
   (->> params
        (handler/signature-help components)
        (conform-or-log ::coercer/signature-help)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/formatting" [_ components params]
   (->> params
        (handler/formatting components)
        (conform-or-log ::coercer/edits)
-       future))
+       p/future))
 
 (def ^:private formatting (atom false))
 
@@ -279,85 +280,85 @@
   (->> params
        (handler/code-actions components)
        (conform-or-log ::coercer/code-actions)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/codeLens" [_ components params]
   (->> params
        (handler/code-lens components)
        (conform-or-log ::coercer/code-lenses)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "codeLens/resolve" [_ components params]
   (->> params
        (handler/code-lens-resolve components)
        (conform-or-log ::coercer/code-lens)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/definition" [_ components params]
   (->> params
        (handler/definition components)
        (conform-or-log ::coercer/location)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/declaration" [_ components params]
   (->> params
        (handler/declaration components)
        (conform-or-log ::coercer/location)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/implementation" [_ components params]
   (->> params
        (handler/implementation components)
        (conform-or-log ::coercer/locations)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/documentSymbol" [_ components params]
   (->> params
        (handler/document-symbol components)
        (conform-or-log ::coercer/document-symbols)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/documentHighlight" [_ components params]
   (->> params
        (handler/document-highlight components)
        (conform-or-log ::coercer/document-highlights)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/full" [_ components params]
   (->> params
        (handler/semantic-tokens-full components)
        (conform-or-log ::coercer/semantic-tokens)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/range" [_ components params]
   (->> params
        (handler/semantic-tokens-range components)
        (conform-or-log ::coercer/semantic-tokens)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/prepareCallHierarchy" [_ components params]
   (->> params
        (handler/prepare-call-hierarchy components)
        (conform-or-log ::coercer/call-hierarchy-items)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "callHierarchy/incomingCalls" [_ components params]
   (->> params
        (handler/call-hierarchy-incoming components)
        (conform-or-log ::coercer/call-hierarchy-incoming-calls)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "callHierarchy/outgoingCalls" [_ components params]
   (->> params
        (handler/call-hierarchy-outgoing components)
        (conform-or-log ::coercer/call-hierarchy-outgoing-calls)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "textDocument/linkedEditingRange" [_ components params]
   (->> params
        (handler/linked-editing-ranges components)
        (conform-or-log ::coercer/linked-editing-ranges-or-error)
-       future))
+       p/future))
 
 ;;;; Workspace features
 
@@ -384,13 +385,13 @@
   (->> params
        (handler/workspace-symbols components)
        (conform-or-log ::coercer/workspace-symbols)
-       future))
+       p/future))
 
 (defmethod lsp.server/receive-request "workspace/willRenameFiles" [_ components params]
   (->> params
        (handler/will-rename-files components)
        (conform-or-log ::coercer/workspace-edit)
-       future))
+       p/future))
 
 (defn capabilities [settings]
   (conform-or-log

@@ -19,6 +19,7 @@
   - Avoid keeping diagnostics of external closed files for Calva. https://github.com/BetterThanTomorrow/calva/issues/1864
   - Lint opened files after a clojure-lsp or clj-kondo config file is saved on disk, avoiding users to re-edit files. #1247
   - Allow find definition of java class usages where definition comes from clojure, like defrecords.
+  - Fix: wait for rename to apply before allowing another rename, to ensure suggested name is correct. #1270
 
 - API/CLI
   - Fix missing diagnostics when `--project-root` is different than current directory. #1245

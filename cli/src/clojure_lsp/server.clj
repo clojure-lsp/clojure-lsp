@@ -545,7 +545,7 @@
           log-ch (async/chan (async/sliding-buffer 20))
           server (lsp.io-server/stdio-server {:log-ch log-ch
                                               ;; uncomment for server-side traces
-                                              :trace-ch log-ch})
+                                              #_#_:trace-ch log-ch})
           producer (ClojureLspProducer. server db*)
           components {:db* db*
                       :logger timbre-logger

@@ -166,8 +166,8 @@
     (f.completion/resolve-item item db*)))
 
 (defn prepare-rename [{:keys [db*]} {:keys [text-document position]}]
-  (shared/logging-task
-    :prepare-rename
+  (process-after-changes
+    :prepare-rename (:uri text-document) db*
     (let [[row col] (shared/position->row-col position)]
       (f.rename/prepare-rename (:uri text-document) row col @db*))))
 

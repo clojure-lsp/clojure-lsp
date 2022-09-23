@@ -65,22 +65,21 @@
 
 (defn ^:private usage-edits [zloc dir clause-idx uri {:keys [db db*] :as components}]
   (let [{:keys [row col]} (meta (z/node (edit/find-var-definition-name-loc zloc)))
-        elem (q/find-element-under-cursor db (shared/uri->filename uri) row col)]
+        elem (q/find-element-under-cursor db uri row col)]
     (when (= :var-definitions (:bucket elem))
       (let [var-usages (q/find-references db elem false)
             edits-by-uri (->> var-usages
-                              (group-by :filename)
-                              (medley/map-kv (fn [filename var-usages]
-                                               (let [uri (shared/filename->uri filename db)]
-                                                 (when-let [usage-text (f.file-management/force-get-document-text uri components)]
-                                                   (let [db @db*
-                                                         root-zloc (parser/safe-zloc-of-string usage-text)
-                                                         usage-edits (map #(usage-edit root-zloc clause-idx uri db dir %1)
-                                                                          var-usages)
-                                                         skipped-any? (some :skipped? usage-edits)
-                                                         edits (mapcat :edits usage-edits)]
-                                                     [uri {:skipped? skipped-any?
-                                                           :edits edits}]))))))]
+                              (group-by :uri)
+                              (medley/map-kv (fn [uri var-usages]
+                                               (when-let [usage-text (f.file-management/force-get-document-text uri components)]
+                                                 (let [db @db*
+                                                       root-zloc (parser/safe-zloc-of-string usage-text)
+                                                       usage-edits (map #(usage-edit root-zloc clause-idx uri db dir %1)
+                                                                        var-usages)
+                                                       skipped-any? (some :skipped? usage-edits)
+                                                       edits (mapcat :edits usage-edits)]
+                                                   [uri {:skipped? skipped-any?
+                                                         :edits edits}])))))]
         [(->> edits-by-uri
               (keep (fn [[uri {:keys [edits]}]]
                       (when (seq edits)

@@ -291,6 +291,7 @@
                (mapcat #(dep-graph/ns-names-for-uri db (:uri %)))
                (run! #(cli-println options "Cleaned" %)))
           {:result-code 0
+           :message (format "Cleared %s namespaces" (count edits))
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
 
@@ -358,6 +359,7 @@
                (mapcat #(dep-graph/ns-names-for-uri db (:uri %)))
                (run! #(cli-println options "Formatted" %)))
           {:result-code 0
+           :message (format "Formatted %s namespaces" (count edits))
            :edits edits}))
       {:result-code 0 :message "Nothing to format!"})))
 

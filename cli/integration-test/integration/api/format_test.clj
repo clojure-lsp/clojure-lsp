@@ -17,7 +17,7 @@
     (with-open [rdr (lsp/cli! "format"
                               "--project-root" h/root-project-path
                               "--namespace" "sample-test.api.format.a")]
-      (is (string/includes? (slurp rdr) "Formatted sample-test.api.format.a\n"))
+      (is (string/includes? (slurp rdr) "Formatted 1 namespaces\n"))
       (is (= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text))
   (testing "passing multiple namespaces but only one is formatable"
@@ -25,28 +25,28 @@
                               "--project-root" h/root-project-path
                               "--namespace" "sample-test.api.format.b"
                               "--namespace" "sample-test.api.format.a")]
-      (is (string/includes? (slurp rdr) "Formatted sample-test.api.format.a\n"))
+      (is (string/includes? (slurp rdr) "Formatted 1 namespaces\n"))
       (is (= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text))
   (testing "passing multiple filenames separated by double colon but only one is formatable"
     (with-open [rdr (lsp/cli! "format"
                               "--project-root" h/root-project-path
                               "--filenames" "src/sample_test/api/format/b.clj:src/sample_test/api/format/a.clj")]
-      (is (string/includes? (slurp rdr) "Formatted sample-test.api.format.a\n"))
+      (is (string/includes? (slurp rdr) "Formatted 1 namespaces\n"))
       (is (= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text))
   (testing "passing multiple filenames separated by comma but only one is formatable"
     (with-open [rdr (lsp/cli! "format"
                               "--project-root" h/root-project-path
                               "--filenames" "src/sample_test/api/format/b.clj,src/sample_test/api/format/a.clj")]
-      (is (string/includes? (slurp rdr) "Formatted sample-test.api.format.a\n"))
+      (is (string/includes? (slurp rdr) "Formatted 1 namespaces\n"))
       (is (= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text))
   (testing "passing filename folder"
     (with-open [rdr (lsp/cli! "format"
                               "--project-root" h/root-project-path
                               "--filenames" "src/sample_test/api/format")]
-      (is (string/includes? (slurp rdr) "Formatted sample-test.api.format.a\n"))
+      (is (string/includes? (slurp rdr) "Formatted 1 namespaces\n"))
       (is (= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text))
   (testing "when running with dry"

@@ -290,13 +290,11 @@
                   :analysis config-for-full-analysis}}
         (with-additional-config (settings/all db)))))
 
-(defn ^:private run-kondo! [config err-hint db]
+(defn ^:private run-kondo! [config err-hint]
   (let [err-writer (java.io.StringWriter.)]
     (try
-      (let [result (if (:api? db)
-                     (kondo/run! config)
-                     (binding [*err* err-writer]
-                       (kondo/run! config)))]
+      (let [result (binding [*err* err-writer]
+                     (kondo/run! config))]
         (when-not (string/blank? (str err-writer))
           (logger/warn "Non-fatal error from clj-kondo:" (str err-writer)))
         result)
@@ -311,7 +309,7 @@
                                             #(custom-lint-project! @db* % normalization-config)
                                             file-analyzed-fn))]
     (-> config
-        (run-kondo! (str "paths " (string/join ", " paths)) db)
+        (run-kondo! (str "paths " (string/join ", " paths)))
         (normalize normalization-config db))))
 
 (defn run-kondo-on-paths-batch!
@@ -346,7 +344,7 @@
                               :ensure-uris uris}
         custom-lint-fn #(custom-lint-files! uris @db* % normalization-config)]
     (-> (config-for-internal-paths filenames db custom-lint-fn nil)
-        (run-kondo! (str "files " (string/join ", " uris)) db)
+        (run-kondo! (str "files " (string/join ", " uris)))
         (normalize normalization-config db))))
 
 (defn run-kondo-on-text! [text uri db*]
@@ -354,16 +352,16 @@
         db @db*]
     (with-in-str text
                  (-> (config-for-single-file uri db*)
-                     (run-kondo! filename db)
+                     (run-kondo! filename)
                      (normalize-for-file db filename uri)))))
 
 (defn run-kondo-copy-configs! [paths db]
   (-> (config-for-copy-configs paths db)
-      (run-kondo! (str "paths " (string/join ", " paths)) db)))
+      (run-kondo! (str "paths " (string/join ", " paths)))))
 
 (defn run-kondo-on-jdk-source! [paths db]
   (let [normalization-config {:external? true
                               :filter-analysis #(select-keys % [:java-class-definitions])}]
     (-> (config-for-jdk-source paths)
-        (run-kondo! (str "paths " paths) db)
+        (run-kondo! (str "paths " paths))
         (normalize normalization-config db))))

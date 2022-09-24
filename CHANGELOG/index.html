@@ -1995,8 +1995,9 @@
 <li>Lint opened files after a clojure-lsp or clj-kondo config file is saved on disk, avoiding users to re-edit files. #1247</li>
 <li>Allow find definition of java class usages where definition comes from clojure, like defrecords.</li>
 <li>Fix: wait for rename to apply before allowing another rename, to ensure suggested name is correct. #1270</li>
+<li>Process requests in parallel, to prevent typing lag and other performance problems introduced during migration away from lsp4j. #1240</li>
 <li>
-<p>Process requests in parallel, to prevent typing lag and other performance problems introduced during migration away from lsp4j. #1240</p>
+<p>Fix: Avoid wrong ns require after <code>Create ns and require</code> code-action/command.</p>
 </li>
 <li>
 <p>API/CLI</p>

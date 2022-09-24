@@ -643,14 +643,14 @@
       "hash": "sha256-WFKKN7fM5fwJikeb38Cu2ZHdTmhIqOqCTFQMmNRfMn0="
     },
     {
-      "mvn-path": "com/github/ericdallo/deps-bin/0.1.2/deps-bin-0.1.2.jar",
+      "mvn-path": "com/github/ericdallo/deps-bin/0.2.0/deps-bin-0.2.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-pLMqQh5s8+SjF3AcsjL7/m+BtiW3EC/Tt9j+bXah1zo="
+      "hash": "sha256-Jhx5WCQ4KVyJqMDOYJj7us65JFSymhUUlZWD6A+3xZY="
     },
     {
-      "mvn-path": "com/github/ericdallo/deps-bin/0.1.2/deps-bin-0.1.2.pom",
+      "mvn-path": "com/github/ericdallo/deps-bin/0.2.0/deps-bin-0.2.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-4fF7gz5a9eO8hZPO7fet0JC/t7BRYEkcoea4w9uP1zI="
+      "hash": "sha256-u05bmwYHWDWZ1wL67McT+OO7tLnaXv6Rn2/GoE1vc+g="
     },
     {
       "mvn-path": "com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar",

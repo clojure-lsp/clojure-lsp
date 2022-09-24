@@ -5,8 +5,7 @@
    [medley.core :as medley]))
 
 (def namespaces
-  '[
-    integration.initialize-test
+  '[integration.initialize-test
     integration.definition-test
     integration.declaration-test
     integration.implementation-test
@@ -29,8 +28,7 @@
     integration.api.diagnostics-test
     integration.api.format-test
     integration.api.rename-test
-    integration.api.dump-test
-    ])
+    integration.api.dump-test])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

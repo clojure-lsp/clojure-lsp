@@ -1,6 +1,6 @@
 (ns integration.text-change-test
   (:require
-   [clojure.test :refer [deftest testing is]]
+   [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
    [integration.lsp :as lsp]))
 

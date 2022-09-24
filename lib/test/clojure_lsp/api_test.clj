@@ -1,14 +1,14 @@
 (ns clojure-lsp.api-test
   (:require
+   [babashka.fs :as fs]
+   [cheshire.core :as json]
    [clojure-lsp.api :as api]
    [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.test-helper :as h]
+   [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.test :as t :refer [deftest is testing]]
-   [clojure.edn :as edn]
-   [cheshire.core :as json]
-   [babashka.fs :as fs]))
+   [clojure.test :as t :refer [deftest is testing]]))
 
 (defmacro ignoring-prints
   [& body]

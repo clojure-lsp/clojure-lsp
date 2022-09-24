@@ -1993,8 +1993,9 @@
 <li>Avoid keeping diagnostics of external closed files for Calva. https://github.com/BetterThanTomorrow/calva/issues/1864</li>
 <li>Lint opened files after a clojure-lsp or clj-kondo config file is saved on disk, avoiding users to re-edit files. #1247</li>
 <li>Allow find definition of java class usages where definition comes from clojure, like defrecords.</li>
+<li>Fix: wait for rename to apply before allowing another rename, to ensure suggested name is correct. #1270</li>
 <li>
-<p>Fix: wait for rename to apply before allowing another rename, to ensure suggested name is correct. #1270</p>
+<p>Process requests in parallel, to prevent typing lag and other performance problems introduced during migration away from lsp4j. #1240</p>
 </li>
 <li>
 <p>API/CLI</p>

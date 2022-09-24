@@ -1,6 +1,5 @@
 (ns integration.formatting-test
   (:require
-   [clojure.string :as str]
    [clojure.test :refer [deftest testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]

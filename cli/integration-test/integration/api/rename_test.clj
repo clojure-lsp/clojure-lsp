@@ -1,7 +1,6 @@
 (ns integration.api.rename-test
   (:require
    [clojure.java.io :as io]
-   [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
    [integration.helper :as h]
    [integration.lsp :as lsp]))

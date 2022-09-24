@@ -53,12 +53,6 @@
   [string1 string2]
   (= (string/split-lines string1) (string/split-lines string2)))
 
-(defn ->system-newlines
-  "Converts TEXT new lines to those of the underlying system, and
-  returns it."
-  [text]
-  (-> (string/split-lines text) (string/join "\n")))
-
 (defn str-includes?
   "Like `clojure.string/includes?` applied to S and SUBSTR, but treats
   any line endings as equal."

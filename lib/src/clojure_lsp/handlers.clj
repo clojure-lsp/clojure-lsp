@@ -73,7 +73,9 @@
                result#)))))))
 
 (defmacro process-after-changes [task-id uri db* & body]
-  `(process-after-all-changes ~task-id [~uri] ~db* ~@body))
+  (with-meta
+    `(process-after-all-changes ~task-id [~uri] ~db* ~@body)
+    (meta &form)))
 
 (defn ^:private element->location [db producer element]
   {:uri (f.java-interop/uri->translated-uri (:uri element) db producer)

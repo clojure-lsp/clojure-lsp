@@ -10,6 +10,7 @@
   - Bump clj-kondo to `2022.09.09-20220918.164105-17`. #1226 
   - Fix issue with changes being reporting with spurious and incorrect line endings on MS-Windows text files. #1211
   - Index internal data by URI instead of filename, to minimize conversion between these formats when running queries. #1207
+  - Add support to enable trace logs on server via `--trace` flag. (For latest Emacs's lsp-mode this can be enabled easyly via `lsp-clojure-trace-enable` variable)
 
 - Editor
   - Fix to avoid error when checking code actions from an #_x uneval node. #1227

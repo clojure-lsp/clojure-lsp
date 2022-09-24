@@ -812,7 +812,7 @@
     (symbol (str "arg" (inc index)))))
 
 (defn ^:private create-function-for-alias
-  [local-zloc ns-or-alias fn-name defn-edit uri db]
+  [local-zloc ns-or-alias defn-edit uri db]
   (let [;; TODO: shouldn't this also look for unaliased ns-usages?
         ;; See https://github.com/clojure-lsp/clojure-lsp/issues/1023
         ns-usage (q/find-namespace-usage-by-alias db uri (symbol ns-or-alias))
@@ -841,10 +841,12 @@
                                   :uri def-uri
                                   :options {:overwrite false
                                             :ignore-if-exists true}}]
-              :changes-by-uri {uri (f.add-missing-libspec/add-known-alias
+              :changes-by-uri {uri (f.add-missing-libspec/add-require-suggestion
                                      local-zloc
-                                     (symbol ns-or-alias)
-                                     (symbol fn-name)
+                                     uri
+                                     ns-or-alias
+                                     ns-or-alias ;; TODO Suggest a better alias
+                                     nil
                                      db)
                                def-uri (into
                                          [{:loc (z/up (z/of-string (format "(ns %s)\n" ns-or-alias)))
@@ -898,7 +900,7 @@
                                   [(n/newlines 1) (n/spaces 2)]
                                   db)]
       (if ns-or-alias
-        (create-function-for-alias local-zloc ns-or-alias fn-name defn-loc uri db)
+        (create-function-for-alias local-zloc ns-or-alias defn-loc uri db)
         [(prepend-preserving-comment (edit/to-top local-zloc) defn-loc)]))))
 
 (defn ^:private create-test-for-source-path

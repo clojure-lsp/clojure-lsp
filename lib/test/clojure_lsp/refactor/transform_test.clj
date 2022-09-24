@@ -790,20 +790,19 @@
       (h/reset-components!)
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
                                                                    (h/file-path "/project/test")}}})
-      (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) (|b/something)"
+      (let [zloc (h/load-code-and-zloc "(ns foo) (|bar.baz/something)"
                                        (h/file-uri "file:///project/src/foo.clj"))
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc (h/file-uri "file:///project/src/foo.clj") (h/db))
             result (update-map changes-by-uri h/with-strings)]
         (is (= [{:kind "create"
-                 :uri (h/file-uri "file:///project/src/bar.clj")
+                 :uri (h/file-uri "file:///project/src/bar/baz.clj")
                  :options {:overwrite false, :ignore-if-exists true}}]
                resource-changes))
         (is (= {(h/file-uri "file:///project/src/foo.clj")
-                [{:range {:row 1 :col 1 :end-row 1 :end-col 32}
-                  :loc (h/code "(ns foo (:require [bar :as b]"
-                               "                  [something :as b]))")}]
-                (h/file-uri "file:///project/src/bar.clj")
-                [{:loc (h/code "(ns b)"
+                [{:range {:row 1 :col 1 :end-row 1 :end-col 9}
+                  :loc (h/code "(ns foo \n  (:require\n   [bar.baz :as bar.baz]))")}]
+                (h/file-uri "file:///project/src/bar/baz.clj")
+                [{:loc (h/code "(ns bar.baz)"
                                "")
                   :range {:row 1 :col 1
                           :end-row 1 :end-col 1}}
@@ -813,36 +812,6 @@
                           :end-row 999999 :end-col 1}}
                  {:loc (h/code ""
                                "")
-                  :range {:row 999999 :col 1
-                          :end-row 999999 :end-col 1}}]}
-               result))))
-    (testing "when namespace is not required and not exists not calling it as function"
-      (h/reset-components!)
-      (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                   (h/file-path "/project/test")}}})
-      (let [zloc (h/load-code-and-zloc "(ns foo (:require [bar :as b])) |b/something"
-                                       (h/file-uri "file:///project/src/foo.clj"))
-            {:keys [changes-by-uri resource-changes]} (transform/create-function zloc (h/file-uri "file:///project/src/foo.clj") (h/db))
-            result (update-map changes-by-uri h/with-strings)]
-        (is (= [{:kind "create"
-                 :uri (h/file-uri "file:///project/src/bar.clj")
-                 :options {:overwrite false, :ignore-if-exists true}}]
-               resource-changes))
-        (is (= {(h/file-uri "file:///project/src/foo.clj")
-                [{:range {:row 1 :col 1 :end-row 1 :end-col 32}
-                  :loc (h/code "(ns foo (:require [bar :as b]"
-                               "                  [something :as b]))")}]
-                (h/file-uri "file:///project/src/bar.clj")
-                [{:loc (h/code "(ns b)"
-                               "")
-                  :range {:row 1 :col 1
-                          :end-row 1 :end-col 1}}
-                 ;; TODO we should not add a arg
-                 {:loc (h/code "(defn something [arg1]"
-                               "  )")
-                  :range {:row 999999 :col 1
-                          :end-row 999999 :end-col 1}}
-                 {:loc (h/code "" "")
                   :range {:row 999999 :col 1
                           :end-row 999999 :end-col 1}}]}
                result))))))

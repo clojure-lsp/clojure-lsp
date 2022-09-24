@@ -31,6 +31,8 @@ Check below how to get the logs for most used clients:
 
 </details>
 
+An alternative is to pass `--trace` to clojure-lsp during process start and clojure-lsp will log the communication to the server-log.
+
 ## Server is not initializing
 
 Make sure you have the [most recent version of `clojure-lsp`](installation.md#native-binary-recommended)

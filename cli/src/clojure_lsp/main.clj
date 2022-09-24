@@ -44,6 +44,7 @@
   [["-h" "--help" "Print the available commands and its options"]
    [nil "--version" "Print clojure-lsp version"]
    [nil "--verbose" "Use stdout for clojure-lsp logs instead of default log settings"]
+   [nil "--trace" "Enable trace logs between client and server, for debugging."]
    ["-s" "--settings SETTINGS" "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
     :id :settings
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
@@ -137,7 +138,7 @@
 (defn ^:private handle-action!
   [action options]
   (if (= "listen" action)
-    (let [finished @(server/run-server!)]
+    (let [finished @(server/run-server! (:trace options))]
       {:result-code (if (= :done finished) 0 1)})
     (try
       (case action

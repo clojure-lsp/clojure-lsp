@@ -3,7 +3,8 @@
         borkdude/dynaload {:mvn/version "0.3.5"}
         nrepl/bencode {:mvn/version "1.1.0"}
         com.taoensso/timbre {:mvn/version "5.2.1"}
-        clojure-lsp/lib {:local/root "../lib"}}
+        clojure-lsp/lib {:local/root "../lib"}
+        funcool/promesa {:mvn/version "8.0.450"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.70.1086"}}
@@ -19,9 +20,9 @@
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
                    :extra-deps {babashka/fs {:mvn/version "0.1.11"}
-                                babashka/process {:mvn/version "0.1.7"}}
+                                babashka/process {:mvn/version "0.2.10"}}
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.8.3" :sha "0d20256"}
-                                  com.github.ericdallo/deps-bin {:mvn/version "0.1.2"}
+                                  com.github.ericdallo/deps-bin {:mvn/version "0.2.0"}
                                   slipset/deps-deploy {:mvn/version "0.2.0"}}
                    :ns-default build}
            :run {:main-opts ["-m" "clojure-lsp.main"]

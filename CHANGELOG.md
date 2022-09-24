@@ -3,12 +3,14 @@
 ## Unreleased
 
 - General
+  - Improve clj-depend merge config to overwrite `source-paths` only if it is nil or empty.  #1264
   - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211
   - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
-  - Bump clj-kondo to `2022.09.09-20220918.164105-17`. #1226 
+  - Bump clj-kondo to `2022.09.09-20220924.161252-19`. #1226 
   - Fix issue with changes being reporting with spurious and incorrect line endings on MS-Windows text files. #1211
   - Index internal data by URI instead of filename, to minimize conversion between these formats when running queries. #1207
+  - Add support to enable trace logs on server via `--trace` flag. (For latest Emacs's lsp-mode this can be enabled easyly via `lsp-clojure-trace-enable` variable)
 
 - Editor
   - Fix to avoid error when checking code actions from an #_x uneval node. #1227
@@ -18,6 +20,9 @@
   - Avoid keeping diagnostics of external closed files for Calva. https://github.com/BetterThanTomorrow/calva/issues/1864
   - Lint opened files after a clojure-lsp or clj-kondo config file is saved on disk, avoiding users to re-edit files. #1247
   - Allow find definition of java class usages where definition comes from clojure, like defrecords.
+  - Fix: wait for rename to apply before allowing another rename, to ensure suggested name is correct. #1270
+  - Process requests in parallel, to prevent typing lag and other performance problems introduced during migration away from lsp4j. #1240
+  - Fix: Avoid wrong ns require after `Create ns and require` code-action/command.
 
 - API/CLI
   - Fix missing diagnostics when `--project-root` is different than current directory. #1245

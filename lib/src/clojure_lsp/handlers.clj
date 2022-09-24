@@ -73,7 +73,9 @@
                result#)))))))
 
 (defmacro process-after-changes [task-id uri db* & body]
-  `(process-after-all-changes ~task-id [~uri] ~db* ~@body))
+  (with-meta
+    `(process-after-all-changes ~task-id [~uri] ~db* ~@body)
+    (meta &form)))
 
 (defn ^:private element->location [db producer element]
   {:uri (f.java-interop/uri->translated-uri (:uri element) db producer)
@@ -166,8 +168,8 @@
     (f.completion/resolve-item item db*)))
 
 (defn prepare-rename [{:keys [db*]} {:keys [text-document position]}]
-  (shared/logging-task
-    :prepare-rename
+  (process-after-changes
+    :prepare-rename (:uri text-document) db*
     (let [[row col] (shared/position->row-col position)]
       (f.rename/prepare-rename (:uri text-document) row col @db*))))
 

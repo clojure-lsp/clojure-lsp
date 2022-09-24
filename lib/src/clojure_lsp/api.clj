@@ -256,15 +256,25 @@
 
   `:output` a map with options on how the result should be printed, available values are:
     `:format` a keyword specifying in which format the data should be returned, defaults to `:edn`.
-    `:filter-keys` a list of keywords in case you want only specific fields from result.
+    `:filter-keys` a list of keywords in case you want only specific fields from output.
 
   `settings` map of settings following https://clojure-lsp.io/settings/
+
+  **Output**
+
+  `:project-root` a string path representing the project root.
+  `:source-paths` list of source-paths considered by clojure-lsp.
+  `:classpath` list of paths of found classpath.
+  `:analysis` clj-kondo analysis normalized for clojure-lsp usage.
+  `:dep-graph` Dependency graph of namespaces relationship derived from clj-kondo analysis.
+  `:findings` clj-kondo findings used for diagnostics.
+  `:settings` a map with all settings considered by clojure-lsp.
 
   **Example**
 
   ```clojure
-  (clojure-lsp.api/dump! {:output {:format :edn
-                                   :filter-keys [:source-paths :analysis]}})
+  (clojure-lsp.api/dump {:output {:format :edn
+                                  :filter-keys [:source-paths :analysis]}})
   => {:source-paths [...]
       :analysis {...}}
   ```"

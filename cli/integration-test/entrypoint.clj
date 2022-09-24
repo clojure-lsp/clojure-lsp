@@ -29,6 +29,7 @@
     integration.api.diagnostics-test
     integration.api.format-test
     integration.api.rename-test
+    integration.api.dump-test
     ])
 
 (defn timeout [timeout-ms callback]

@@ -34,6 +34,7 @@
         "  diagnostics          Analyze the project and find all diagnostics (warnings, errors)."
         "  format               Format code using cljfmt."
         "  rename               Rename a symbol and all references across the project, use --from and --to options."
+        "  dump (experimental)  Dump all project known data including classpath, source-paths, dep-graph and clj-kondo analysis data."
         ""
         ;; "Run \"clojure-lsp help <command>\" for more information about a command."
         "See https://clojure-lsp.io/settings/ for detailed documentation."]
@@ -78,7 +79,7 @@
     :id :ns-exclude-regex
     :parse-fn re-pattern
     :validate [#(instance? java.util.regex.Pattern %) "Specify a valid string regex after --ns-exclude-regex"]]
-   ["-o" "--output EDN" "Optional settings as edn on how the result should be printed. Check `clojure-lsp.api/diagnostics` for all available options to this flag."
+   ["-o" "--output EDN" "Optional settings as edn on how the result should be printed. Check `clojure-lsp.api/diagnostics`/`clojure-lsp.api/dump` for all available options to this flag."
     :id :output
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
                "Invalid --output EDN"]
@@ -116,7 +117,7 @@
       {:action "listen" :options options}
 
       (and (= 1 (count arguments))
-           (#{"clean-ns" "diagnostics" "format" "rename" "listen"} (first arguments)))
+           (#{"clean-ns" "diagnostics" "format" "rename" "dump" "listen"} (first arguments)))
       {:action (first arguments) :options options}
 
       :else
@@ -148,7 +149,8 @@
         "rename" (with-required-options
                    options
                    [:from :to]
-                   internal-api/rename!))
+                   internal-api/rename!)
+        "dump" (internal-api/dump options))
       (catch clojure.lang.ExceptionInfo e
         (ex-data e)))))
 

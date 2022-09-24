@@ -26,6 +26,7 @@
 
 - API/CLI
   - Fix missing diagnostics when `--project-root` is different than current directory. #1245
+  - Add new `dump` feature, returning analysis, project information, dependency-graph and others. Check `clojure-lsp.api/dump` for more information. #744
 
 ## 2022.09.01-15.27.31
 

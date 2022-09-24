@@ -1,5 +1,6 @@
 (ns clojure-lsp.internal-api
   (:require
+   [cheshire.core :as json]
    [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
@@ -22,8 +23,9 @@
 (set! *warn-on-reflection* true)
 
 (defn ^:private cli-print [& msg]
-  (apply print msg)
-  (flush))
+  (binding [*out* *err*]
+    (apply print msg)
+    (flush)))
 
 (defn ^:private cli-println [options & msg]
   (when-not (:raw? options)
@@ -390,6 +392,29 @@
           {:result-code 1 :message (format "Could not rename %s to %s. %s" from to (-> error :message))}))
       {:result-code 1 :message (format "Symbol %s not found in project" from)})))
 
+(defn ^:private db->dump-data [db filter-keys]
+  (as-> db $
+    (select-keys $ [:classpath :analysis :dep-graph :findings :settings])
+    (assoc $
+           :project-root (shared/uri->filename (:project-root-uri db))
+           :source-paths (-> db :settings :source-paths))
+    (select-keys $
+                 (if (not (coll? filter-keys))
+                   (keys $)
+                   (for [[k _] $
+                         :when (contains? (set filter-keys) k)]
+                     k)))))
+
+(defn ^:private dump* [{{:keys [format filter-keys] :or {format :edn}} :output :as options} {:keys [db*] :as components}]
+  (setup-api! components)
+  (setup-project-and-deps-analysis! options components)
+  (let [db @db*
+        dump-data (db->dump-data db filter-keys)]
+    (case format
+      :edn {:result-code 0 :message (with-out-str (pr dump-data))}
+      :json {:result-code 0 :message (json/generate-string dump-data)}
+      {:result-code 1 :message (clojure.core/format "Output format %s not supported" format)})))
+
 (defn analyze-project-and-deps! [options]
   (analyze-project-and-deps!* options (build-components options)))
 
@@ -407,3 +432,6 @@
 
 (defn rename! [options]
   (rename!* options (build-components options)))
+
+(defn dump [options]
+  (dump* options (build-components options)))

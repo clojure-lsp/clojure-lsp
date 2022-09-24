@@ -317,13 +317,14 @@
     (testing "dumping specific fields"
       (let [result (ignoring-prints
                      (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
-                                :output {:filter-keys [:project-root :source-paths]}}))]
+                                :output {:filter-keys [:project-root :source-paths]}}))
+            output (edn/read-string (:message result))]
         (is (= 0 (:result-code result)))
         (is (= [:project-root
                 :source-paths]
-               (keys (edn/read-string (:message result)))))
+               (keys output)))
         (h/assert-submap
           {:project-root (str (fs/canonicalize (io/file "../cli/integration-test/sample-test")))
-           :source-paths [(str (fs/canonicalize (io/file "../cli/integration-test/sample-test/test")))
-                          (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/src")))]}
-          (edn/read-string (:message result)))))))
+           :source-paths #{(str (fs/canonicalize (io/file "../cli/integration-test/sample-test/test")))
+                           (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/src")))}}
+          (update output :source-paths set))))))

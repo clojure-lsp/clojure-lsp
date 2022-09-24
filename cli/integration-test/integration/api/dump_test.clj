@@ -23,9 +23,9 @@
                (keys result)))
         (is (h/assert-submap
               {:project-root h/root-project-path
-               :source-paths [(h/project-path->canon-path "test")
-                              (h/project-path->canon-path "src")]}
-              result)))))
+               :source-paths #{(h/project-path->canon-path "test")
+                               (h/project-path->canon-path "src")}}
+              (update result :source-paths set))))))
   (testing "Dumping as json filtering specific keys"
     (with-open [rdr (lsp/cli! "dump"
                               "--project-root" h/root-project-path
@@ -33,6 +33,6 @@
                                                :filter-keys [:project-root :source-paths]}))]
       (let [result (json/parse-string (slurp rdr))]
         (is (= {"project-root" h/root-project-path
-                "source-paths" [(h/project-path->canon-path "test")
-                                (h/project-path->canon-path "src")]}
-               result))))))
+                "source-paths" #{(h/project-path->canon-path "test")
+                                 (h/project-path->canon-path "src")}}
+               (update result "source-paths" set)))))))

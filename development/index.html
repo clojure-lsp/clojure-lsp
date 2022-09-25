@@ -448,6 +448,26 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    Testing
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#writing-tests" class="md-nav__link">
+    Writing tests
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -623,6 +643,26 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    Testing
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#writing-tests" class="md-nav__link">
+    Writing tests
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -645,17 +685,17 @@
 <ul>
 <li><a href="#the-clojure-way">The Clojure Way</a></li>
 <li>Create a test for your bug/feature, then implement the code following the test (TDD).</li>
-<li>Build <code>clojure-lsp</code> using <code>make</code> each time you have made changes, and test it manually in your client. This is the slowest option.</li>
+<li>Build <code>clojure-lsp[.bat]</code> using <code>bb debug-cli</code> each time you have made changes, and test it manually in your client. This is the slowest option.</li>
 </ul>
-<p>Whichever development path you choose: For final testing, it is good to rebuild the binary with <code>make</code>.</p>
+<p>Whichever development path you choose: For final testing, it is good to rebuild the binary with <code>bb debug-cli</code>.</p>
 <p>There are two custom LSP methods <code>clojure/serverInfo/log</code> and <code>clojure/cursorInfo/log</code>. They can assist in debugging.</p>
 <h2 id="the-clojure-way">The Clojure Way<a class="headerlink" href="#the-clojure-way" title="Permanent link">#</a></h2>
 <p>With a <strong>clojure-lsp + <a href="https://nrepl.org">nREPL</a></strong> powered Clojure editor you can modify your editor session's clojure-lsp server using the Clojure REPL.</p>
 <p>Here's demo video: https://www.youtube.com/watch?v=4UvT0yqBDw8</p>
 <p>These are the steps:</p>
 <ol>
-<li><code>make</code> - to build a <code>clojure-lsp</code> executable that includes cider-nrepl in the jar. This executable will be saved at the root of the project.</li>
-<li>Configure your editor to use this <code>clojure-lsp</code> executable</li>
+<li><code>bb debug-cli</code> - to build a <code>clojure-lsp[.bat]</code> executable that includes cider-nrepl in the jar. This executable will be saved at the root of the project.</li>
+<li>Configure your editor to use this <code>clojure-lsp[.bat]</code> executable</li>
 <li>Have your editor restart its clojure-lsp server</li>
 <li>Issue the clojure-lsp <code>serverInfo</code> command</li>
 <li>Find the <code>port</code> entry in the output</li>
@@ -676,8 +716,12 @@
 <p>The details in how to perform these steps can vary a bit between the various Clojure editors/plugins.</p>
 <h3 id="visual-studio-code-with-calva">Visual Studio Code with Calva<a class="headerlink" href="#visual-studio-code-with-calva" title="Permanent link">#</a></h3>
 <ul>
-<li>This project comes with <a href="https://calva.io">Calva</a> configuration to use the <code>clojure-lsp</code> executable built in step 1 above. You can skip step 2.</li>
-<li>To restart the clojure-lsp server, use the VS Code command <strong>Developer: Reload Window</strong></li>
+<li>
+<p>This project comes with <a href="https://calva.io">Calva</a> configuration to use the <code>clojure-lsp[.bat]</code> executable built in step 1 above. You can skip step 2, unless are running on MS-Widnows, in which case you should update the setting in <code>.vscode/settings.json</code> to add the <code>.bat</code> extension, i.e. <code>"calva.clojureLspPath": "./clojure-lsp.bat"</code>.</p>
+</li>
+<li>
+<p>To restart the clojure-lsp server, use the VS Code command <strong>Developer: Reload Window</strong></p>
+</li>
 <li>The <strong>Hack away!</strong> step needs to start with you issuing the command <strong>Calva: Load Current File and Dependencies</strong>.</li>
 </ul>
 <h3 id="emacs-with-cider">Emacs with CIDER<a class="headerlink" href="#emacs-with-cider" title="Permanent link">#</a></h3>
@@ -718,6 +762,48 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 <p>The nREPL includes tools for debugging and profiling clojure-lsp. See <code>cli/dev/clojure_lsp/debug.clj</code>.</p>
 <p>If you're interested in using the profiling tools in that file, you'll need to be familiar with <a href="https://github.com/hugoduncan/criterium">criterium</a> and <a href="http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/">clj-async-profiler</a>.</p>
 <p>Note that the performance of clojure-lsp is highly dependent on the size of its db. If you load a repl with <code>-A:build</code>, you'll have access to the debugging tools, but the db will be nearly empty. Follow the [steps][#the-clojure-way] above to connect to an nREPL which has a populated db.</p>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h2>
+<p>Run <code>bb tasks</code> for a list of available dev tasks.</p>
+<p>The codebase consists of the <code>lib/</code> library and the <code>cli/</code> program which depends on it.</p>
+<ol>
+<li><code>bb test-lib</code>,</li>
+<li><code>bb test-cli</code>, and</li>
+<li><code>bb test</code> (for both of the above).</li>
+</ol>
+<p><code>cli/</code> produces a standalone <code>.jar</code> file that can be converted to a self contained <code>clojure-lsp[.bat]</code> script or a <code>clojure-lsp[.exe]</code> binary executable file.</p>
+<ol>
+<li><code>bb prod-jar</code> -&gt; <code>cli\</code> standalone jar,</li>
+<li><code>bb prod-cli</code> -&gt; executable script with embedded <code>cli/</code> jar,</li>
+<li><code>bb debug-cli</code> -&gt; same as <code>prod-cli</code> but includes support for <code>cider-nrepl</code> and <code>clj-async-profile</code>, and</li>
+<li><code>bb native-cli</code> -&gt; binary executable produced with <code>graalvm</code>.</li>
+</ol>
+<p>There are also <code>cli/</code> integration tests. They require <code>./clojure[.bat|.exe]</code> to have already been built with one of the above cli tasks (__NOTE:__always ensure that you rebuild the <code>cli/</code> executable every time you make changes to <code>lib/</code> or <code>cli/</code> source code so tha the integration tests use an up to date executable).</p>
+<ol>
+<li><code>bb integration-tests</code></li>
+</ol>
+<p>The same development version can be used to lint all of the source code.</p>
+<ol>
+<li><code>bb lint</code></li>
+</ol>
+<h3 id="writing-tests">Writing tests<a class="headerlink" href="#writing-tests" title="Permanent link">#</a></h3>
+<p>A test should be able to run on all JDK versions in scope starting with 1.8 and across <code>GNU/Linux</code>, <code>macos</code> and <code>MS-Windows</code> operating systems.</p>
+<p>The test author should be aware of the following important differences between <em>nix and windows:
+1. Line endings
+   1.  On </em>nix: the single Line Feed (LF) char, i.e. <code>\n</code>.
+   1.  On windows: the Carriage Return (CR) followed by the LF char (CRLF), i.e. <code>\r\n</code>.
+1. Paths
+   1. On *nix: Use <code>/</code> as the path separator, absolute paths start with <code>/</code>.
+   1. On windows: use <code>\</code> as the path separator, absolute paths start either with a drive letter followed by <code>:\</code>, i.e. <code>[A-Za-Z]:\</code> (e.g. <code>c:\temp</code> and <code>D:\src</code>) or with a double <code>\\</code> indicating a network path (e.g. <code>\\computer39\temp</code>).</p>
+<p>Below are a few <strong>hints</strong> to assist with writing test that work accross the different platforms.
+1. Line Endings
+   1. When comparing strings, Use <code>clojure-lsp.test-helper/string=</code> with <code>\n</code> in your expected result.
+      1. e.g. use <code>(is (h/strings= "one\n" result)</code> instead of <code>(is (= "one\r\n" result))</code> or <code>(is (= "one\n" result))</code>.
+   1. Use <code>h/str-includes?</code> with <code>\n</code> in the string to search for instead of <code>clojure.string/includes?</code>.
+      1. e.g. <code>(is (h/str-includes? (slurp "path") "something\n"))</code> instead of <code>(is (str/includes? (slurp "path") "something\n"))</code> or <code>(is (str/includes? (slurp "path") "something\r\n"))</code>.
+2. Paths
+   1. Always use <code>babashka.fs/canonicalize</code> when converting a relative path to an absolute path. Avoiding using any of java File/Path absolute or canonical equivalent fns. This ensures that the drive letter on windows is always in capitals (e.g. <code>D:\</code> instead of <code>d:\</code>). This is also the convention used throughout the codebase and it works as well with both existing and non-existing files.
+   1. Use <code>clojure-lsp.test-helper/file-path</code>, <code>clojure-lsp.test-helper/file-&gt;uri</code> with *nix paths. They are converted to the format expected by the OS.
+      1. e.g. <code>(load-code (h/file-path "/aaa.clj")  "(ns aaa)")</code> instead of <code>(load-code "/aaa.clj" "(ns aaa)")</code> or <code>(load-code "c:\\aaa.clj" "(ns aaa)")</code></p>
                 
                   
                     
@@ -726,7 +812,7 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 24, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 25, 2022</span>
     
   </small>
 </div>

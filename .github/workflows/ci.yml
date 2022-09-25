@@ -104,16 +104,7 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - name: Install launch4j
-        if: startsWith (matrix.os, 'windows')
-        run: |
-          iwr -UserAgent "Wget" -URI "https://sourceforge.net/projects/launch4j/files/launch4j-3/3.14/launch4j-3.14-win32.exe/download" -OutFile "$env:TEMP/l4j-installer.exe"
-          Start-Process -Filepath "$env:TEMP/l4j-installer.exe" -ArgumentList "/S"
-        shell: pwsh
-
       - name: Generate embedded binary
-        env: # only relevant to the MS-Windows job.
-          LAUNCH4J_HOME: "C:\\Program Files (x86)\\Launch4j"
         run: bb prod-cli
 
       - name: Run integration tests

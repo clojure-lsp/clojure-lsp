@@ -6,11 +6,13 @@
    [babashka.process :as p]))
 
 (def lsp-bin (if (#'fs/windows?)
-               "clojure-lsp.exe"
+               "clojure-lsp.bat"
                "clojure-lsp"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn clean []
+(defn clean
+  "Clean all artifacts produced by the various tasks."
+  []
   (let [files (into ["cli/target"
                      (fs/path "cli" lsp-bin)
                      "cli/clojure-lsp-standalone.jar"
@@ -39,7 +41,9 @@
   (fs/move "lib/target/clojure-lsp.jar" "." {:replace-existing true}))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn cli-jar []
+(defn cli-jar
+  "Build `cli` jar."
+  []
   (-> (deps/clojure ["-T:build" "prod-jar"] {:dir "cli" :inherit true})
       (p/check))
   (fs/move "cli/target/clojure-lsp-standalone.jar" "." {:replace-existing true}))
@@ -58,28 +62,46 @@
   (fs/move "cli/target/clojure-lsp-standalone.jar" "." {:replace-existing true}))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn debug-cli []
+(defn debug-cli
+  "Build the `clojure-lsp[.bat]` cli exec script (`cider-nrepl`/`clj-async-profile` support)."
+  []
   (-> (deps/clojure ["-T:build" "debug-cli"] {:dir "cli" :inherit true})
       p/check)
   (fs/move (fs/path "cli" lsp-bin) "." {:replace-existing true}))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn prod-cli []
+(defn prod-cli
+  "Build the `clojure-lsp[.bat]` cli exec script."
+  []
   (-> (deps/clojure ["-T:build" "prod-cli"] {:dir "cli" :inherit true})
       p/check)
   (fs/move (fs/path "cli" lsp-bin) "." {:replace-existing true}))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn native-cli []
+(defn native-cli
+  "Build the native `clojure-lsp[.exe]` cli executable with `graalvm`."
+  []
   (-> (deps/clojure ["-T:build" "native-cli"] {:dir "cli" :inherit true})
       (p/check))
   (fs/move (fs/path "cli" lsp-bin) "." {:replace-existing true}))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn test []
-  (doseq [dir ["lib" "cli"]]
-    (-> (deps/clojure ["-M:test"] {:dir dir :inherit true})
-        (p/check))))
+(defn test-lib
+  "Run all unit tests in lib/."
+  []
+  (println :running-unit-tests... "lib")
+  (-> (deps/clojure ["-M:test"] {:dir "lib" :inherit true})
+      (p/check))
+  (println))
+
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defn test-cli
+  "Run all unit tests in cli/."
+  []
+  (println :running-unit-tests... "cli")
+  (-> (deps/clojure ["-M:test"] {:dir "cli" :inherit true})
+      (p/check))
+  (println))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn pod-test []
@@ -87,7 +109,9 @@
       (p/check)))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn integration-test []
+(defn integration-test
+  "Run the integration tests in 'test/integration-test/' using `./clojure-lsp[.bat|.exe]`."
+  []
   (let [bb (str \" (.get (.command (.info (java.lang.ProcessHandle/current)))) \")]
     (p/shell {:dir "cli"} (str bb " integration-test ../" lsp-bin))))
 

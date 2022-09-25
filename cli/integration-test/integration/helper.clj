@@ -1,5 +1,6 @@
 (ns integration.helper
   (:require
+   [babashka.fs :as fs]
    [clojure.java.io :as io]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
@@ -13,8 +14,8 @@
   (-> (io/file *file*)
       .getParentFile
       .getParentFile
-      .toPath
-      (.resolve "sample-test")
+      (fs/path "sample-test")
+      fs/canonicalize
       str))
 
 (defn project-path->canon-path
@@ -45,7 +46,7 @@
               (->> (apply str)))))
 
 (defn file->uri [file]
-  (-> file .toPath .toUri .toString))
+  (-> file fs/canonicalize .toUri .toString))
 
 (defn string=
   "Like `clojure.core/=` applied on STRING1 and STRING2, but treats

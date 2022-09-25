@@ -4,9 +4,9 @@ There are several ways of finding and fixing a bug or implementing a new feature
 
 - [The Clojure Way](#the-clojure-way)
 - Create a test for your bug/feature, then implement the code following the test (TDD).
-- Build `clojure-lsp` using `make` each time you have made changes, and test it manually in your client. This is the slowest option.
+- Build `clojure-lsp[.bat]` using `bb debug-cli` each time you have made changes, and test it manually in your client. This is the slowest option.
 
-Whichever development path you choose: For final testing, it is good to rebuild the binary with `make`.
+Whichever development path you choose: For final testing, it is good to rebuild the binary with `bb debug-cli`.
 
 There are two custom LSP methods `clojure/serverInfo/log` and `clojure/cursorInfo/log`. They can assist in debugging.
 
@@ -18,8 +18,8 @@ Here's demo video: https://www.youtube.com/watch?v=4UvT0yqBDw8
 
 These are the steps:
 
-1. `make` - to build a `clojure-lsp` executable that includes cider-nrepl in the jar. This executable will be saved at the root of the project.
-1. Configure your editor to use this `clojure-lsp` executable
+1. `bb debug-cli` - to build a `clojure-lsp[.bat]` executable that includes cider-nrepl in the jar. This executable will be saved at the root of the project.
+1. Configure your editor to use this `clojure-lsp[.bat]` executable
 1. Have your editor restart its clojure-lsp server
 1. Issue the clojure-lsp `serverInfo` command
 1. Find the `port` entry in the output
@@ -40,7 +40,8 @@ The details in how to perform these steps can vary a bit between the various Clo
 
 ### Visual Studio Code with Calva
 
-* This project comes with [Calva](https://calva.io) configuration to use the `clojure-lsp` executable built in step 1 above. You can skip step 2.
+* This project comes with [Calva](https://calva.io) configuration to use the `clojure-lsp[.bat]` executable built in step 1 above. You can skip step 2, unless are running on MS-Widnows, in which case you should update the setting in `.vscode/settings.json` to add the `.bat` extension, i.e. `"calva.clojureLspPath": "./clojure-lsp.bat"`.
+
 * To restart the clojure-lsp server, use the VS Code command **Developer: Reload Window**
 * The **Hack away!** step needs to start with you issuing the command **Calva: Load Current File and Dependencies**.
 
@@ -93,3 +94,53 @@ The nREPL includes tools for debugging and profiling clojure-lsp. See `cli/dev/c
 If you're interested in using the profiling tools in that file, you'll need to be familiar with [criterium](https://github.com/hugoduncan/criterium) and [clj-async-profiler](http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/).
 
 Note that the performance of clojure-lsp is highly dependent on the size of its db. If you load a repl with `-A:build`, you'll have access to the debugging tools, but the db will be nearly empty. Follow the [steps][#the-clojure-way] above to connect to an nREPL which has a populated db.
+
+## Testing
+
+Run `bb tasks` for a list of available dev tasks.
+
+The codebase consists of the `lib/` library and the `cli/` program which depends on it.
+
+1. `bb test-lib`,
+1. `bb test-cli`, and
+1. `bb test` (for both of the above).
+
+`cli/` produces a standalone `.jar` file that can be converted to a self contained `clojure-lsp[.bat]` script or a `clojure-lsp[.exe]` binary executable file.
+
+1. `bb prod-jar` -> `cli\` standalone jar,
+1. `bb prod-cli` -> executable script with embedded `cli/` jar,
+1. `bb debug-cli` -> same as `prod-cli` but includes support for `cider-nrepl` and `clj-async-profile`, and
+1. `bb native-cli` -> binary executable produced with `graalvm`.
+
+There are also `cli/` integration tests. They require `./clojure[.bat|.exe]` to have already been built with one of the above cli tasks (__NOTE:__always ensure that you rebuild the `cli/` executable every time you make changes to `lib/` or `cli/` source code so tha the integration tests use an up to date executable).
+
+1. `bb integration-tests`
+
+The same development version can be used to lint all of the source code.
+
+1. `bb lint`
+
+### Writing tests
+
+A test should be able to run on all JDK versions in scope starting with 1.8 and across `GNU/Linux`, `macos` and `MS-Windows` operating systems.
+
+The test author should be aware of the following important differences between *nix and windows:
+1. Line endings
+   1.  On *nix: the single Line Feed (LF) char, i.e. `\n`.
+   1.  On windows: the Carriage Return (CR) followed by the LF char (CRLF), i.e. `\r\n`.
+1. Paths
+   1. On *nix: Use `/` as the path separator, absolute paths start with `/`.
+   1. On windows: use `\` as the path separator, absolute paths start either with a drive letter followed by `:\`, i.e. `[A-Za-Z]:\` (e.g. `c:\temp` and `D:\src`) or with a double `\\` indicating a network path (e.g. `\\computer39\temp`).
+
+
+Below are a few __hints__ to assist with writing test that work accross the different platforms.
+1. Line Endings
+   1. When comparing strings, Use `clojure-lsp.test-helper/string=` with `\n` in your expected result.
+	  1. e.g. use `(is (h/strings= "one\n" result)` instead of `(is (= "one\r\n" result))` or `(is (= "one\n" result))`.
+   1. Use `h/str-includes?` with `\n` in the string to search for instead of `clojure.string/includes?`.
+	  1. e.g. `(is (h/str-includes? (slurp "path") "something\n"))` instead of `(is (str/includes? (slurp "path") "something\n"))` or `(is (str/includes? (slurp "path") "something\r\n"))`.
+2. Paths
+   1. Always use `babashka.fs/canonicalize` when converting a relative path to an absolute path. Avoiding using any of java File/Path absolute or canonical equivalent fns. This ensures that the drive letter on windows is always in capitals (e.g. `D:\` instead of `d:\`). This is also the convention used throughout the codebase and it works as well with both existing and non-existing files.
+   1. Use `clojure-lsp.test-helper/file-path`, `clojure-lsp.test-helper/file->uri` with *nix paths. They are converted to the format expected by the OS.
+	  1. e.g. `(load-code (h/file-path "/aaa.clj")  "(ns aaa)")` instead of `(load-code "/aaa.clj" "(ns aaa)")` or `(load-code "c:\\aaa.clj" "(ns aaa)")`
+

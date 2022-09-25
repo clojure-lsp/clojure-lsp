@@ -26,7 +26,11 @@
          prod-cli make/prod-cli
          native-cli make/native-cli
 
-         test make/test
+         test-lib make/test-lib
+         test-cli make/test-cli
+         test {:doc "Run all unit tests."
+               :depends [test-lib test-cli]}
+
          pod-test make/pod-test
          integration-test make/integration-test
 

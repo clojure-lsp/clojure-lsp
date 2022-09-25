@@ -16,8 +16,6 @@ The build may take some minutes and the result will be a `./clojure-lsp` native 
 
 - Run `bb debug-cli`.
 
-On Windows, you first need to install [launch4j](http://launch4j.sourceforge.net/) and set the `LAUNCH4J_HOME` to the installation dir.
-
 ## Jar
 
 ### Editor/CLI

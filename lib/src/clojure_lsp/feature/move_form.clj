@@ -3,6 +3,7 @@
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
@@ -117,7 +118,8 @@
                 dest-refs (filter (comp #(= % dest-uri) :uri) refs)
                 per-file-usages (group-by :uri refs)
                 insertion-loc (some-> (f.file-management/force-get-document-text dest-uri components)
-                                      z/of-string
+                                      parser/z-of-string*
+                                      z/down
                                       z/rightmost)
                 insertion-pos (meta (z/node insertion-loc))
                 dest-inner-usages (->> inner-usages
@@ -139,7 +141,7 @@
                                               (let [usage (first usages)
                                                     usage-uri (:uri usage)
                                                     file-loc (some-> (f.file-management/force-get-document-text file-uri components)
-                                                                     z/of-string)
+                                                                     parser/z-of-string*)
                                                     db @db*
                                                     local-buckets (get-in db [:analysis usage-uri])
                                                     source-refer (first (filter #(and (:refer %)

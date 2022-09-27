@@ -4,6 +4,7 @@
    [clojure-lsp.refactor.edit :as edit]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
+   [rewrite-clj.parser :as p]
    [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
@@ -40,6 +41,9 @@
                (string/replace-first new-s token-pattern (str valid-str divider)))
         new-s))))
 
+(defn z-of-string* [s]
+  (some-> s p/parse-string-all (z/of-node* {})))
+
 (defn ^:private z-replace-preserving-meta [zloc replacement]
   (z/replace zloc (with-meta replacement (meta (z/node zloc)))))
 
@@ -52,7 +56,7 @@
           temporary-value (str token zero-width-space)]
       (some-> text
               (replace-incomplete-token real-value temporary-value)
-              z/of-string
+              z-of-string*
               (z/edit->
                 (z/find-value z/next (symbol temporary-value))
                 (z-replace-preserving-meta (n/token-node (symbol real-value))))))))
@@ -65,7 +69,7 @@
             temporary-value zero-width-space]
         (some-> text
                 (replace-incomplete-token real-value temporary-value)
-                z/of-string
+                z-of-string*
                 (z/edit->
                   (z/find-value z/next (symbol temporary-value))
                   (z-replace-preserving-meta (n/token-node (symbol real-value)))))))))
@@ -80,7 +84,7 @@
       (when-let [replaced-node (some-> text
                                        (replace-incomplete-token (str ":" real-value)
                                                                  (str ":" temporary-value))
-                                       z/of-string)]
+                                       z-of-string*)]
         (if (z/find-value replaced-node z/next (keyword temporary-value))
           (z/edit-> replaced-node
                     (z/find-value z/next (keyword temporary-value))
@@ -91,7 +95,7 @@
 
 (defn ^:private zloc-of-string [text]
   (try
-    (z/of-string text)
+    (z-of-string* text)
     (catch clojure.lang.ExceptionInfo e
       (or (handle-end-slash-code text e)
           (handle-keyword-with-end-slash-code text e)

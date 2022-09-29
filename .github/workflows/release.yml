@@ -326,7 +326,7 @@ jobs:
   windows:
     name: Build native Windows binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: windows-2022
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
@@ -358,12 +358,17 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm: 21.3.0
+          graalvm: 22.2.0
           java: java11
 
       - name: Install native-image component
         run: |
           gu.cmd install native-image
+
+      # see https://github.com/oracle/graal/issues/4340
+      - name: GraalVM 22.2.0 workaround to support UPX compression
+        run: |
+          7z d "$env:JAVA_HOME\lib\svm\builder\svm.jar" com/oracle/svm/core/windows/WindowsImageHeapProviderFeature.class
 
       - name: Build Windows native image
         env:

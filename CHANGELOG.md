@@ -241,7 +241,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Enhance move-to-let to introduce and expand let if an existing one doesn't exist. #829
   - Bump `org.clojure/clojure` to `1.11.0`.
   - Fix move-coll-entry to maintain cursor position instead of a range. #862
-  - Clean ns automatically after adding missing require/imports, enabled by default under new `:clean :after-ns-refactor` flag. #558
+  - Clean ns automatically after adding missing require/imports, enabled by default under new `:clean :automatically-after-ns-refactor` flag. #558
 
 - Editor
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683

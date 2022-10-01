@@ -70,7 +70,7 @@
     <dependency>
       <groupId>borkdude</groupId>
       <artifactId>rewrite-edn</artifactId>
-      <version>0.2.0</version>
+      <version>0.3.4</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-clj</groupId>

@@ -1996,8 +1996,9 @@
 <li>Allow find definition of java class usages where definition comes from clojure, like defrecords.</li>
 <li>Fix: wait for rename to apply before allowing another rename, to ensure suggested name is correct. #1270</li>
 <li>Process requests in parallel, to prevent typing lag and other performance problems introduced during migration away from lsp4j. #1240</li>
+<li>Fix: Avoid wrong ns require after <code>Create ns and require</code> code-action/command.</li>
 <li>
-<p>Fix: Avoid wrong ns require after <code>Create ns and require</code> code-action/command.</p>
+<p>Fix: Avoid errors when a file starts with a comment. #1252</p>
 </li>
 <li>
 <p>API/CLI</p>
@@ -3147,7 +3148,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 29, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 1, 2022</span>
     
   </small>
 </div>

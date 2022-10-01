@@ -6,14 +6,22 @@
 
 (set! *warn-on-reflection* true)
 
-(defn top? [loc]
-  (identical? :forms (z/tag (z/up loc))))
+(defn root? [loc]
+  (identical? :forms (z/tag loc)))
 
-(defn to-top [loc]
-  (when loc
-    (if (top? loc)
-      loc
-      (recur (z/up loc)))))
+(defn top? [loc]
+  (root? (z/up loc)))
+
+(defn to-root
+  "Returns the loc of the root `:forms` node."
+  [loc]
+  (z/find loc z/up root?))
+
+(defn to-top
+  "Returns the loc for the top-level form above the loc, or the loc itself if it
+  is top-level, or nil if the loc is at the `:forms` node."
+  [loc]
+  (z/find loc z/up top?))
 
 ;; From rewrite-cljs; very similar to the private function
 ;; rewrite-clj.zip.findz/position-in-range? but based on zloc meta, avoiding the
@@ -33,17 +41,19 @@
   (some-> loc z/node meta (in-range? pos)))
 
 (defn find-by-heritability
-  "Find the deepest zloc from `start-zloc` that satisfies `inherits?`.
+  "Find the leftmost deepest zloc from `start-zloc` that satisfies `inherits?`.
   `inherits?` must be a function such that if zloc satisifies it then so will
-  all of its ancestors. If a parent node satisifies `inherits?` but none of its
-  children do, then this returns the parent, on the assumption that the parent
-  is the last in its lineage with the trait.
+  all of its ancestors.
 
-  This works by scanning right from start-zloc, finding the first ancestor that
-  satisifies `inherits?`, descending into that node, and recurring. As such, it
-  can be much faster than algorithms based on z/next*, which must inspect all
-  children and grandchildren, even if information in the grandparent excludes
-  the entire family."
+  If a parent node satisifies `inherits?` but none of its children do, then this
+  returns the parent, on the assumption that the parent is the last in its
+  lineage with the trait.
+
+  If a parent node doesn't satisfy `inherits?` then none of its descendants will
+  be inspected. Instead, the search will continue with its sibling to the
+  z/right*. As such, this algoritihm can be much faster than ones based on
+  z/next*, which must inspect all descendants, even if information in the parent
+  excludes the entire family."
   [start-zloc inherits?]
   (loop [zloc (cond-> start-zloc
                 (= :forms (z/tag start-zloc)) z/down*)]
@@ -205,9 +215,7 @@
       (z/leftmost (z/up zloc)))))
 
 (defn find-namespace [zloc]
-  (-> zloc
-      (z/find z/up top?)
-      (z/leftmost)
+  (-> (to-root zloc)
       (z/find-value z/next 'ns) ; go to ns
       (z/up))) ; ns form
 

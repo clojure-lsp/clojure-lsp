@@ -83,7 +83,12 @@
     :context      {:diagnostics []}
     :range        {:start {:line line :character character}}}])
 
-(defn hover-request [path line character]
+(defn hover-external-uri-request [uri line character]
+  [:textDocument/hover
+   {:textDocument {:uri uri}
+    :position     {:line line :character character}}])
+
+(defn hover-source-path-request [path line character]
   [:textDocument/hover
    {:textDocument {:uri (h/source-path->uri path)}
     :position     {:line line :character character}}])
@@ -105,16 +110,20 @@
 (defn initialized-notification []
   [:initialized {}])
 
-(defn did-open-notification [path]
-  (let [file (h/source-path->file path)
-        uri (h/file->uri file)
-        text (slurp (.getAbsolutePath file))]
-    [:textDocument/didOpen
-     {:textDocument
-      {:uri uri
-       :languageId "clojure"
-       :version 0
-       :text text}}]))
+(defn ^:private did-open-notification [uri text]
+  [:textDocument/didOpen
+   {:textDocument
+    {:uri uri
+     :languageId "clojure"
+     :version 0
+     :text text}}])
+
+(defn did-open-external-path-notification [uri text]
+  (did-open-notification uri text))
+
+(defn did-open-source-path-notification [path]
+  (let [file (h/source-path->file path)]
+    (did-open-notification (h/file->uri file) (slurp (.getAbsolutePath file)))))
 
 (defn did-change-notification [path version changes]
   [:textDocument/didChange

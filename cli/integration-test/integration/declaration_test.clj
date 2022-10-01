@@ -11,8 +11,8 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "declaration/a.clj"))
-  (lsp/notify! (fixture/did-open-notification "declaration/b.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "declaration/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "declaration/b.clj"))
 
   (testing "var-usages"
     (testing "find declaration of usage with alias"

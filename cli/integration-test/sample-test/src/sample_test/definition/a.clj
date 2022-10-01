@@ -12,3 +12,5 @@
 (some-private-func)
 
 (s/def ::my-key 1)
+
+(cond-> [])

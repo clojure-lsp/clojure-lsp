@@ -11,7 +11,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/unused_public_var.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/unused_public_var.clj"))
 
   (testing "When a public var is unused"
     (h/assert-submaps
@@ -35,7 +35,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/kondo.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/kondo.clj"))
 
   (testing "when report-duplicates is enabled by default"
     (h/assert-submaps
@@ -65,7 +65,7 @@
                                              (assoc fixture/default-init-options
                                                     :linters {:clj-kondo {:report-duplicates false}})}))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/kondo.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/kondo.clj"))
 
   (testing "when report-duplicates is disabled manually"
     (h/assert-submaps
@@ -87,8 +87,8 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/depend/a.clj"))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/depend/b.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/depend/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/depend/b.clj"))
 
   (testing "When there is a wrong namespace dependency relationship"
     (h/assert-submaps
@@ -104,8 +104,8 @@
                                                                           :b {:defined-by         ".*\\.depend\\.b"
                                                                               :accessed-by-layers #{:c}}}})}))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/depend/a.clj"))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/depend/b.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/depend/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/depend/b.clj"))
 
   (testing "When there is a wrong namespace dependency relationship"
     (h/assert-submaps

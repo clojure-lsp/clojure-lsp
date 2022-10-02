@@ -4,9 +4,9 @@
     {
       "lib": "babashka/babashka.pods",
       "url": "https://github.com/babashka/babashka.pods",
-      "rev": "6df443fabf0d7313c8956cb6f55e47318402991f",
+      "rev": "decf791000081ca9e6d2fbea9f20a0aa3fae902e",
       "git-dir": "https/github.com/babashka/babashka.pods",
-      "hash": "sha256-K2gO+CBCC6KEQq35C56qO17spjySHqt0vE9Xbon294o="
+      "hash": "sha256-IZ39Z5CBMVIQGLBDzlAkzYvczXvzfcGT5ICacQB9MpY="
     },
     {
       "lib": "cognitect/test-runner",
@@ -106,14 +106,14 @@
       "hash": "sha256-eFDZmNPLm0jqo3Ja0NItNptIqISi4n+8gCDGP79zUQE="
     },
     {
-      "mvn-path": "borkdude/rewrite-edn/0.2.0/rewrite-edn-0.2.0.jar",
+      "mvn-path": "borkdude/rewrite-edn/0.3.4/rewrite-edn-0.3.4.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-xEsgLvDRpJdCTfWh5jRpLAw0KWcpsl9IMNChK29uR7g="
+      "hash": "sha256-Zmp4sJlNKQjreIHnkoFxKGPFa6ZaYUJOSt6srK8y5/A="
     },
     {
-      "mvn-path": "borkdude/rewrite-edn/0.2.0/rewrite-edn-0.2.0.pom",
+      "mvn-path": "borkdude/rewrite-edn/0.3.4/rewrite-edn-0.3.4.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-ZifK7DUrJThhB/Xez7//bFw75FsL1giAsBHy4TcAUxQ="
+      "hash": "sha256-lgclcJUuHnbaqSyg4EKnhLiX0wQZxEsGb3tEYgoPk3M="
     },
     {
       "mvn-path": "borkdude/sci.impl.reflector/0.0.1/sci.impl.reflector-0.0.1.jar",
@@ -633,14 +633,14 @@
       "hash": "sha256-4LypffdwI9ZRgGAAeLJGJYwiLhUDJ64urPOynp9cIu4="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.3.0/lsp4clj-1.3.0.jar",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.3.1/lsp4clj-1.3.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-2JsoORRkDTZ+5zQi9WXslcdemo8rFmLPpakZ6XAE2Qo="
+      "hash": "sha256-zsTZjIhXsAOQrujaQvLOhF0oZlx5UKvhyiEoQbwM69w="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.3.0/lsp4clj-1.3.0.pom",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.3.1/lsp4clj-1.3.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-WFKKN7fM5fwJikeb38Cu2ZHdTmhIqOqCTFQMmNRfMn0="
+      "hash": "sha256-umFiRasSpFJc0eRv2LjGCdFuvouFHJQDwwpxJQF7SPE="
     },
     {
       "mvn-path": "com/github/ericdallo/deps-bin/0.2.0/deps-bin-0.2.0.jar",

@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.clean-ns
   (:require
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
@@ -425,8 +426,7 @@
 (defn clean-ns-edits
   [zloc uri db]
   (let [settings (settings/all db)
-        ;; TODO: use parser?
-        safe-loc (or zloc (z/of-string (get-in db [:documents uri :text])))
+        safe-loc (or zloc (parser/zloc-of-file db uri))
         ns-loc (edit/find-namespace safe-loc)]
     (when ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)

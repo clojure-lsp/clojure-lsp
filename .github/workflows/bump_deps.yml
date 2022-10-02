@@ -22,10 +22,20 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Check deps
-      uses: nnichols/clojure-dependency-update-action@679163d5c8b407342c79a9176d2d559bd1a83e83
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      env:
+          cache-name: clojure-deps
       with:
-        skips: "pom"
+          path: ~/.m2
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}
+
+    - name: Check deps
+      uses: nnichols/clojure-dependency-update-action@v4
+      with:
+        skips: "pom github-action"
         directories: "cli lib"
         git-username: clojure-lsp-bot
         github-token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}

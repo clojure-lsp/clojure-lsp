@@ -12,12 +12,12 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification sample-file-path))
+  (lsp/notify! (fixture/did-open-source-path-notification sample-file-path))
   (lsp/client-awaits-server-diagnostics sample-file-path)
 
   (testing "Change is applied"
     (is (= "original"
-           (-> (lsp/request! (fixture/hover-request sample-file-path 4 2))
+           (-> (lsp/request! (fixture/hover-source-path-request sample-file-path 4 2))
                :contents
                (get 2))))
 
@@ -25,6 +25,6 @@
     (lsp/client-awaits-server-diagnostics sample-file-path)
 
     (is (= "changed"
-           (-> (lsp/request! (fixture/hover-request sample-file-path 4 2))
+           (-> (lsp/request! (fixture/hover-source-path-request sample-file-path 4 2))
                :contents
                (get 2))))))

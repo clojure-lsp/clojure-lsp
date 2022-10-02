@@ -3,6 +3,7 @@
    [clojure-lsp.common-symbols :as common-sym]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
@@ -44,7 +45,7 @@
                   ;; re-read zloc to get a unchanged zloc with :forms
                   (some-> loc
                           z/root-string
-                          z/of-string
+                          parser/z-of-string*
                           (f.clean-ns/clean-ns-edits uri db)
                           first
                           (assoc :range range))

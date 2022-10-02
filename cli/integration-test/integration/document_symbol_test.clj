@@ -11,8 +11,8 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "document_symbol/a.clj"))
-  (lsp/notify! (fixture/did-open-notification "document_symbol/b.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "document_symbol/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "document_symbol/b.clj"))
 
   (testing "get file document symbols"
     (h/assert-submaps

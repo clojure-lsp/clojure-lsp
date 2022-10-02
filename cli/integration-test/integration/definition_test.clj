@@ -1,5 +1,6 @@
 (ns integration.definition-test
   (:require
+   [clojure.string :as string]
    [clojure.test :refer [deftest testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]
@@ -11,8 +12,8 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "definition/a.clj"))
-  (lsp/notify! (fixture/did-open-notification "definition/b.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "definition/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "definition/b.clj"))
 
   (testing "common vars"
     (testing "find definition on same ns"
@@ -64,3 +65,43 @@
          :range {:start {:line 13 :character 7}
                  :end {:line 13 :character 15}}}
         (lsp/request! (fixture/definition-request "definition/b.clj" 11 2))))))
+
+(deftest definition-external-dependency-jar-scheme
+  (h/delete-project-file "../../.lsp/.cache/")
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request {:initializationOptions (-> fixture/default-init-options
+                                                                        (assoc :dependency-scheme "jar"))}))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-source-path-notification "definition/a.clj"))
+
+  (let [{:keys [uri]} (lsp/request! (fixture/definition-request "definition/a.clj" 15 2))]
+    (lsp/notify! (fixture/did-open-external-path-notification uri (slurp uri)))
+
+    (testing "LSP features work on external clojure opened files"
+      (h/assert-submap
+        {:language "clojure"
+         :value "[x]\n[x message]"}
+        (-> (lsp/request! (fixture/hover-external-uri-request uri 7612 5))
+            :contents
+            (get 1))))))
+
+(deftest definition-external-dependency-zipfile-scheme
+  (h/delete-project-file "../../.lsp/.cache/")
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-source-path-notification "definition/a.clj"))
+
+  (let [{:keys [uri]} (lsp/request! (fixture/definition-request "definition/a.clj" 15 2))]
+    (lsp/notify! (fixture/did-open-external-path-notification uri (-> uri
+                                                                      (string/replace "zipfile:" "jar:file:")
+                                                                      (string/replace "::" "!/")
+                                                                      slurp)))
+
+    (testing "LSP features work on external clojure opened files"
+      (h/assert-submap
+        {:language "clojure"
+         :value "[x]\n[x message]"}
+        (-> (lsp/request! (fixture/hover-external-uri-request uri 7612 5))
+            :contents
+            (get 1))))))

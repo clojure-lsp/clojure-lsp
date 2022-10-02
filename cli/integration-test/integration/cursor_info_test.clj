@@ -11,7 +11,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "cursor_info/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "cursor_info/a.clj"))
 
   (testing "cursor info on empty line"
     (h/assert-submap

@@ -21,8 +21,8 @@
                                        :documentationFormat ["markdown" "plaintext"]
                                        :resolveSupport {:properties ["documentation" "detail" "additionalTextEdits"]}}}}}}))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "completion/a.clj"))
-  (lsp/notify! (fixture/did-open-notification "completion/b.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "completion/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "completion/b.clj"))
 
   (testing "normal completions"
     (testing "get completions"

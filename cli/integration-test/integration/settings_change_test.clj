@@ -26,7 +26,7 @@
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "diagnostics/unused_public_var.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/unused_public_var.clj"))
 
   (testing "When a public var is unused"
     (h/assert-submaps
@@ -51,7 +51,7 @@
     (fn []
       (Thread/sleep 1100)
 
-      (lsp/notify! (fixture/did-open-notification "diagnostics/unused_public_var.clj"))
+      (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/unused_public_var.clj"))
 
       (testing "Config has changed"
         (h/assert-submaps

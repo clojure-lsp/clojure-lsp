@@ -30,7 +30,7 @@
 (deftest to-pos-test
   (testing "complete code"
     (let [zloc (parser/safe-zloc-of-string "  foo  ")]
-      (is (= nil (z/string (parser/to-pos zloc 1 1))))
+      (is (= "  " (z/string (parser/to-pos zloc 1 1))))
       (is (= 'foo (z/sexpr (parser/to-pos zloc 1 3))))
       (is (= 'foo (z/sexpr (parser/to-pos zloc 1 5))))
       (is (= "  " (z/string (parser/to-pos zloc 1 6))))))

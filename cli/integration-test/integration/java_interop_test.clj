@@ -14,7 +14,7 @@
   (lsp/request! (fixture/initialize-request
                   {:initializationOptions (dissoc fixture/default-init-options :java)}))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "java_interop/a.clj"))
 
   (testing "We find java source class"
     (h/assert-submap
@@ -24,7 +24,7 @@
       (lsp/request! (fixture/definition-request "java_interop/a.clj" 7 5)))))
 
 (deftest find-definition-of-java-class-when-source-does-not-exists-for-jar-scheme
-  (h/delete-project-file "../../.lsp/.cache/java")
+  (h/delete-project-file "../../.lsp/.cache")
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
                   {:initializationOptions (-> fixture/default-init-options
@@ -32,7 +32,7 @@
                                               (dissoc :java)
                                               (assoc-in [:java :decompile-jar-as-project?] false))}))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "java_interop/a.clj"))
 
   (let [result (lsp/request! (fixture/definition-request "java_interop/a.clj" 8 5))]
     (testing "We find java compiled class first"
@@ -50,10 +50,10 @@
         (is (string/includes? class-content "Decompiled with CFR"))
         (is (string/includes? class-content "class PersistentVector")))))
 
-  (h/delete-project-file "../../.lsp/.cache/java"))
+  (h/delete-project-file "../../.lsp/.cache"))
 
 (deftest find-definition-of-java-class-when-source-does-not-exists-for-zipfile-scheme
-  (h/delete-project-file "../../.lsp/.cache/java")
+  (h/delete-project-file "../../.lsp/.cache")
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request
                   {:initializationOptions (-> fixture/default-init-options
@@ -61,7 +61,7 @@
                                               (dissoc :java)
                                               (assoc-in [:java :decompile-jar-as-project?] false))}))
   (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-notification "java_interop/a.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "java_interop/a.clj"))
 
   (let [result (lsp/request! (fixture/definition-request "java_interop/a.clj" 8 5))]
     (testing "We find java compiled class first"
@@ -79,4 +79,4 @@
         (is (string/includes? class-content "Decompiled with CFR"))
         (is (string/includes? class-content "class PersistentVector")))))
 
-  (h/delete-project-file "../../.lsp/.cache/java"))
+  (h/delete-project-file "../../.lsp/.cache"))

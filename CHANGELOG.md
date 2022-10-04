@@ -25,6 +25,7 @@
   - Process requests in parallel, to prevent typing lag and other performance problems introduced during migration away from lsp4j. #1240
   - Fix: Avoid wrong ns require after `Create ns and require` code-action/command.
   - Fix: Avoid errors when a file starts with a comment. #1252
+  - Bump promesa to `9.0.462` and use it for parallel request processing.
 
 - API/CLI
   - Fix missing diagnostics when `--project-root` is different than current directory. #1245

@@ -18,13 +18,11 @@
    [lsp4clj.liveness-probe :as lsp.liveness-probe]
    [lsp4clj.lsp.requests :as lsp.requests]
    [lsp4clj.server :as lsp.server]
-   [taoensso.timbre :as timbre])
-  (:import
-   (java.util.concurrent CompletableFuture)
-   (java.util.function Supplier)))
+   [promesa.core :as p]
+   [taoensso.timbre :as timbre]))
 
 (defmacro eventually [& body]
-  `(CompletableFuture/supplyAsync (reify Supplier (get [this] ~@body))))
+  `(p/future ~@body))
 
 (set! *warn-on-reflection* true)
 

@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.hover-test
+(ns clojure-lsp.feature.hover-test
   (:require
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.shared :as shared]

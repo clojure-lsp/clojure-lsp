@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.diagnostics-test
+(ns clojure-lsp.feature.diagnostics-test
   (:require
    [clj-depend.api :as clj-depend]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]

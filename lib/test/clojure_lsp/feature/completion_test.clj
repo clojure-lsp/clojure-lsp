@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.completion-test
+(ns clojure-lsp.feature.completion-test
   (:require
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.test-helper :as h]

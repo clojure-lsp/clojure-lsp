@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.call-hierarchy-test
+(ns clojure-lsp.feature.call-hierarchy-test
   (:require
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
    [clojure-lsp.test-helper :as h]

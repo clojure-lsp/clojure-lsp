@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.code-lens-test
+(ns clojure-lsp.feature.code-lens-test
   (:require
    [clojure-lsp.feature.code-lens :as f.code-lens]
    [clojure-lsp.shared :as shared]

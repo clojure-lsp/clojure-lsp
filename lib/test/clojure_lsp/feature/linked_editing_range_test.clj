@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.linked-editing-range-test
+(ns clojure-lsp.feature.linked-editing-range-test
   (:require
    [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.test-helper :as h]

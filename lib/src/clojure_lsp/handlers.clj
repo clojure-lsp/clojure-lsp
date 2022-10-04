@@ -1,6 +1,5 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.startup :as startup]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
@@ -27,6 +26,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.startup :as startup]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]))
 

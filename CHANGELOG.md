@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.10.05-16.39.51
+
 - General
   - Improve clj-depend merge config to overwrite `source-paths` only if it is nil or empty.  #1264
   - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211

@@ -5,6 +5,8 @@
 - Editor
   - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131
   - Avoid shadowing existing locals when restructuring keys. #1229
+  - For users with fewer cores, avoid unnecessary waits for file analysis.
+  - Bump promesa to `9.0.470`
 
 ## 2022.10.05-16.39.51
 

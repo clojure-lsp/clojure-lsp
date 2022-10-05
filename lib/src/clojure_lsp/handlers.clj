@@ -32,44 +32,6 @@
 
 (set! *warn-on-reflection* true)
 
-(def backoff-start 5)
-(def backoff-mult 1.2)
-(def backoff-max 200)
-
-(comment
-  (->> backoff-start
-       (iterate #(int (min backoff-max (* backoff-mult %))))
-       (reductions (fn [[t _] b]
-                     [(+ t b) b])
-                   [0 0])
-       rest
-       (cons [:total :backoff])
-       (take 20))
-  #_{})
-
-(defn wait-for-all-changes [uris db*]
-  (let [delay-start (System/nanoTime)]
-    (loop [immediate? true
-           backoff backoff-start
-           uris uris]
-      (let [now (System/nanoTime)]
-        (if (> (quot (- now delay-start) 1000000) 60000) ; one minute timeout
-          {:delay/outcome :timed-out
-           :delay/timeout-uris uris}
-          (if-let [processing-uris (seq (filter (:processing-changes @db*) uris))]
-            (do
-              (Thread/sleep backoff)
-              (recur false (min backoff-max (* backoff-mult backoff)) processing-uris))
-            (if immediate?
-              {:delay/outcome :immediate
-               :delay/start delay-start}
-              {:delay/outcome :waited
-               :delay/start delay-start
-               :delay/end now})))))))
-
-(defn wait-for-changes [uri db*]
-  (wait-for-all-changes [uri] db*))
-
 (defmacro logging-delayed-task [delay-data task-id & body]
   (let [process-msg (str task-id " %s")
         wait-and-process-msg (str process-msg " - waited %s")
@@ -182,10 +144,9 @@
     :resolve-completion-item
     (f.completion/resolve-item item db*)))
 
-(defn prepare-rename [{:keys [db*]} {:keys [text-document position]}]
+(defn prepare-rename [{:keys [db* changes-delay]} {:keys [text-document position]}]
   (logging-delayed-task
-    (wait-for-changes (:uri text-document) db*)
-    :prepare-rename
+    changes-delay :prepare-rename
     (let [[row col] (shared/position->row-col position)]
       (f.rename/prepare-rename (:uri text-document) row col @db*))))
 
@@ -219,17 +180,15 @@
       (mapv #(element->location db producer %)
             (q/find-implementations-from-cursor db (:uri text-document) row col)))))
 
-(defn document-symbol [{:keys [db*]} {:keys [text-document]}]
+(defn document-symbol [{:keys [db* changes-delay]} {:keys [text-document]}]
   (logging-delayed-task
-    (wait-for-changes (:uri text-document) db*)
-    :document-symbol
+    changes-delay :document-symbol
     (let [db @db*]
       (f.document-symbol/document-symbols db (:uri text-document)))))
 
-(defn document-highlight [{:keys [db*]} {:keys [text-document position]}]
+(defn document-highlight [{:keys [db* changes-delay]} {:keys [text-document position]}]
   (logging-delayed-task
-    (wait-for-changes (:uri text-document) db*)
-    :document-highlight
+    changes-delay :document-highlight
     (let [db @db*
           [row col] (shared/position->row-col position)
           uri (:uri text-document)
@@ -364,10 +323,9 @@
     :formatting
     (f.format/formatting (:uri text-document) components)))
 
-(defn range-formatting [{:keys [db*]} {:keys [text-document range]}]
+(defn range-formatting [{:keys [db* changes-delay]} {:keys [text-document range]}]
   (logging-delayed-task
-    (wait-for-changes (:uri text-document) db*)
-    :range-formatting
+    changes-delay :range-formatting
     (let [db @db*
           [row col] (shared/position->row-col (:start range))
           [end-row end-col] (shared/position->row-col (:end range))
@@ -383,10 +341,9 @@
     (f.java-interop/read-content! uri @db* producer)))
 
 (defn code-actions
-  [{:keys [db*]} {:keys [range context text-document]}]
+  [{:keys [db* changes-delay]} {:keys [range context text-document]}]
   (logging-delayed-task
-    (wait-for-changes (:uri text-document) db*)
-    :code-actions
+    changes-delay :code-actions
     (let [db @db*
           diagnostics (-> context :diagnostics)
           [row col] (shared/position->row-col (:start range))
@@ -395,10 +352,9 @@
       (f.code-actions/all root-zloc (:uri text-document) row col diagnostics client-capabilities db))))
 
 (defn code-lens
-  [{:keys [db*]} {:keys [text-document]}]
+  [{:keys [db* changes-delay]} {:keys [text-document]}]
   (logging-delayed-task
-    (wait-for-changes (:uri text-document) db*)
-    :code-lens
+    changes-delay :code-lens
     (f.code-lens/reference-code-lens (:uri text-document) @db*)))
 
 (defn code-lens-resolve
@@ -408,18 +364,16 @@
     (f.code-lens/resolve-code-lens uri row col range @db*)))
 
 (defn semantic-tokens-full
-  [{:keys [db*]} {:keys [text-document]}]
+  [{:keys [db* changes-delay]} {:keys [text-document]}]
   (logging-delayed-task
-    (wait-for-changes (:uri text-document) db*)
-    :semantic-tokens-full
+    changes-delay :semantic-tokens-full
     (let [data (f.semantic-tokens/full-tokens (:uri text-document) @db*)]
       {:data data})))
 
 (defn semantic-tokens-range
-  [{:keys [db*]} {:keys [text-document] {:keys [start end]} :range}]
+  [{:keys [db* changes-delay]} {:keys [text-document] {:keys [start end]} :range}]
   (logging-delayed-task
-    (wait-for-changes (:uri text-document) db*)
-    :semantic-tokens-range
+    changes-delay :semantic-tokens-range
     (let [db @db*
           [row col] (shared/position->row-col start)
           [end-row end-col] (shared/position->row-col end)
@@ -459,8 +413,7 @@
           [row col] (shared/position->row-col position)]
       (f.linked-editing-range/ranges (:uri text-document) row col db))))
 
-(defn will-rename-files [{:keys [db*]} {:keys [files]}]
+(defn will-rename-files [{:keys [db* changes-delay]} {:keys [files]}]
   (logging-delayed-task
-    (wait-for-all-changes (map :old-uri files) db*)
-    :will-rename-files
+    changes-delay :will-rename-files
     (f.file-management/will-rename-files files @db*)))

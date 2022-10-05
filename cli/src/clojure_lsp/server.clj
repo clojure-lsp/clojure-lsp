@@ -19,12 +19,59 @@
    [lsp4clj.lsp.requests :as lsp.requests]
    [lsp4clj.server :as lsp.server]
    [promesa.core :as p]
+   [promesa.exec :as p.exec]
    [taoensso.timbre :as timbre]))
 
-(defmacro eventually [& body]
-  `(p/future ~@body))
-
 (set! *warn-on-reflection* true)
+
+(defmacro eventually [& body]
+  `(p/thread ~@body))
+
+(def ^:private changes-executor (memoize p.exec/forkjoin-executor))
+
+(defmacro after-changes [& body]
+  `(p/thread-call (changes-executor) (^:once fn* [] ~@body)))
+
+(def backoff-start 5)
+(def backoff-mult 1.2)
+(def backoff-max 200)
+
+(comment
+  (->> backoff-start
+       (iterate #(min backoff-max (Math/ceil (* backoff-mult %))))
+       (reductions +)
+       (take 15)))
+
+(defn ^:private wait-for-changes* [db* uris]
+  (let [delay-start (System/nanoTime)]
+    (loop [immediate? true
+           backoff backoff-start
+           uris uris]
+      (let [now (System/nanoTime)]
+        (if (> (quot (- now delay-start) 1000000) 60000) ; one minute timeout
+          {:delay/outcome :timed-out
+           :delay/timeout-uris uris}
+          (if-let [processing-uris (seq (filter (:processing-changes @db*) uris))]
+            (do
+              (Thread/sleep backoff)
+              (recur false (min backoff-max (* backoff-mult backoff)) processing-uris))
+            (if immediate?
+              {:delay/outcome :immediate
+               :delay/start delay-start}
+              {:delay/outcome :waited
+               :delay/start delay-start
+               :delay/end now})))))))
+
+(defn ^:private default-uris-from-params [{:keys [text-document]}]
+  [(:uri text-document)])
+
+(defn wait-for-changes
+  ([components params]
+   (wait-for-changes components params default-uris-from-params))
+  ([{:keys [db*] :as components} params uris-from-params]
+   (let [uris (uris-from-params params)
+         changes-delay (wait-for-changes* db* uris)]
+     (assoc components :changes-delay changes-delay))))
 
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
@@ -238,9 +285,9 @@
 
 (defmethod lsp.server/receive-request "textDocument/prepareRename" [_ components params]
   (->> params
-       (handler/prepare-rename components)
+       (handler/prepare-rename (wait-for-changes components params))
        (conform-or-log ::coercer/prepare-rename-or-error)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
@@ -272,7 +319,7 @@
   (when (compare-and-set! formatting false true)
     (try
       (->> params
-           (handler/range-formatting components)
+           (handler/range-formatting (wait-for-changes components params))
            (conform-or-log ::coercer/edits))
       (catch Exception e
         (logger/error e))
@@ -281,15 +328,15 @@
 
 (defmethod lsp.server/receive-request "textDocument/codeAction" [_ components params]
   (->> params
-       (handler/code-actions components)
+       (handler/code-actions (wait-for-changes components params))
        (conform-or-log ::coercer/code-actions)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/codeLens" [_ components params]
   (->> params
-       (handler/code-lens components)
+       (handler/code-lens (wait-for-changes components params))
        (conform-or-log ::coercer/code-lenses)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "codeLens/resolve" [_ components params]
   (->> params
@@ -317,27 +364,27 @@
 
 (defmethod lsp.server/receive-request "textDocument/documentSymbol" [_ components params]
   (->> params
-       (handler/document-symbol components)
+       (handler/document-symbol (wait-for-changes components params))
        (conform-or-log ::coercer/document-symbols)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/documentHighlight" [_ components params]
   (->> params
-       (handler/document-highlight components)
+       (handler/document-highlight (wait-for-changes components params))
        (conform-or-log ::coercer/document-highlights)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/full" [_ components params]
   (->> params
-       (handler/semantic-tokens-full components)
+       (handler/semantic-tokens-full (wait-for-changes components params))
        (conform-or-log ::coercer/semantic-tokens)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/range" [_ components params]
   (->> params
-       (handler/semantic-tokens-range components)
+       (handler/semantic-tokens-range (wait-for-changes components params))
        (conform-or-log ::coercer/semantic-tokens)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/prepareCallHierarchy" [_ components params]
   (->> params
@@ -392,9 +439,9 @@
 
 (defmethod lsp.server/receive-request "workspace/willRenameFiles" [_ components params]
   (->> params
-       (handler/will-rename-files components)
+       (handler/will-rename-files (wait-for-changes components params #(map :old-uri (:files %))))
        (conform-or-log ::coercer/workspace-edit)
-       eventually))
+       after-changes))
 
 (defn capabilities [settings]
   (conform-or-log

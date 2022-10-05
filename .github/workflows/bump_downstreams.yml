@@ -46,6 +46,7 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
+          bb: '0.9.161'
 
       - name: Deploy clojars
         env:

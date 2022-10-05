@@ -19,12 +19,18 @@
    [lsp4clj.lsp.requests :as lsp.requests]
    [lsp4clj.server :as lsp.server]
    [promesa.core :as p]
+   [promesa.exec :as p.exec]
    [taoensso.timbre :as timbre]))
 
-(defmacro eventually [& body]
-  `(p/future ~@body))
-
 (set! *warn-on-reflection* true)
+
+(defmacro eventually [& body]
+  `(p/thread ~@body))
+
+(def ^:private changes-executor (memoize p.exec/forkjoin-executor))
+
+(defmacro after-changes [& body]
+  `(p/thread-call (changes-executor) (^:once fn* [] ~@body)))
 
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
@@ -239,7 +245,7 @@
   (->> params
        (handler/prepare-rename components)
        (conform-or-log ::coercer/prepare-rename-or-error)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
@@ -265,30 +271,23 @@
        (conform-or-log ::coercer/edits)
        eventually))
 
-(def ^:private formatting (atom false))
-
 (defmethod lsp.server/receive-request "textDocument/rangeFormatting" [_this components params]
-  (when (compare-and-set! formatting false true)
-    (try
-      (->> params
-           (handler/range-formatting components)
-           (conform-or-log ::coercer/edits))
-      (catch Exception e
-        (logger/error e))
-      (finally
-        (reset! formatting false)))))
+  (->> params
+       (handler/range-formatting components)
+       (conform-or-log ::coercer/edits)
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/codeAction" [_ components params]
   (->> params
        (handler/code-actions components)
        (conform-or-log ::coercer/code-actions)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/codeLens" [_ components params]
   (->> params
        (handler/code-lens components)
        (conform-or-log ::coercer/code-lenses)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "codeLens/resolve" [_ components params]
   (->> params
@@ -318,25 +317,25 @@
   (->> params
        (handler/document-symbol components)
        (conform-or-log ::coercer/document-symbols)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/documentHighlight" [_ components params]
   (->> params
        (handler/document-highlight components)
        (conform-or-log ::coercer/document-highlights)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/full" [_ components params]
   (->> params
        (handler/semantic-tokens-full components)
        (conform-or-log ::coercer/semantic-tokens)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/range" [_ components params]
   (->> params
        (handler/semantic-tokens-range components)
        (conform-or-log ::coercer/semantic-tokens)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/prepareCallHierarchy" [_ components params]
   (->> params
@@ -393,7 +392,7 @@
   (->> params
        (handler/will-rename-files components)
        (conform-or-log ::coercer/workspace-edit)
-       eventually))
+       after-changes))
 
 (defn capabilities [settings]
   (conform-or-log

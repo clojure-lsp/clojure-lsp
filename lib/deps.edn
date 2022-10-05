@@ -17,9 +17,9 @@
         org.benf/cfr {:mvn/version "0.152"}
 
         babashka/fs {:mvn/version "0.1.11"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.4.0"}
-        ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
-        }
+        com.github.clojure-lsp/lsp4clj {:mvn/version "1.5.0"
+                                        #_#_:local/root "../../lsp4clj"
+                                        :exclusions [funcool/promesa]}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.70.1086"}

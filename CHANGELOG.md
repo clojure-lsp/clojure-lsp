@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131
+
 ## 2022.10.05-16.39.51
 
 - General
@@ -28,7 +31,6 @@
   - Fix: Avoid wrong ns require after `Create ns and require` code-action/command.
   - Fix: Avoid errors when a file starts with a comment. #1252
   - Bump promesa to `9.0.462` and use it for parallel request processing.
-  - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131
 
 - API/CLI
   - Fix missing diagnostics when `--project-root` is different than current directory. #1245

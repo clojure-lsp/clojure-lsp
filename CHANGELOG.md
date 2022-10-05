@@ -7,7 +7,7 @@
   - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211
   - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
-  - Bump clj-kondo to `2022.09.09-20220924.161252-19`. #1226 
+  - Bump clj-kondo to `2022.10.05`. #1226 
   - Fix issue with changes being reporting with spurious and incorrect line endings on MS-Windows text files. #1211
   - Index internal data by URI instead of filename, to minimize conversion between these formats when running queries. #1207
   - Add support to enable trace logs on server via `--trace` flag. (For latest Emacs's lsp-mode this can be enabled easyly via `lsp-clojure-trace-enable` variable)

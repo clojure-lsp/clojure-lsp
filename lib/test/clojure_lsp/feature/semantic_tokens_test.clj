@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.semantic-tokens-test
+(ns clojure-lsp.feature.semantic-tokens-test
   (:require
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.test-helper :as h]

@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.code-actions-test
+(ns clojure-lsp.feature.code-actions-test
   (:require
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.parser :as parser]

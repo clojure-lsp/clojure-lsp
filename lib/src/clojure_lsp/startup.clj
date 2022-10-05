@@ -1,4 +1,4 @@
-(ns clojure-lsp.crawler
+(ns clojure-lsp.startup
   (:require
    [clojure-lsp.classpath :as classpath]
    [clojure-lsp.clj-depend :as lsp.depend]

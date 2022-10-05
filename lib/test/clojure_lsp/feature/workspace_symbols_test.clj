@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.workspace-symbols-test
+(ns clojure-lsp.feature.workspace-symbols-test
   (:require
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.test-helper :as h]

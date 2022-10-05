@@ -1,7 +1,6 @@
 (ns clojure-lsp.internal-api
   (:require
    [cheshire.core :as json]
-   [clojure-lsp.crawler :as crawler]
    [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.diff :as diff]
@@ -14,6 +13,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.startup :as startup]
    [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
    [clojure.string :as string])
@@ -172,7 +172,7 @@
   [{:keys [project-root settings log-path]}
    {:keys [db*] :as components}]
   (try
-    (crawler/initialize-project
+    (startup/initialize-project
       (project-root->uri project-root @db*)
       {:workspace {:workspace-edit {:document-changes true}}}
       (settings/clean-client-settings {})

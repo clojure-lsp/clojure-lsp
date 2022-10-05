@@ -1,11 +1,9 @@
 (ns build
   (:require
    [babashka.fs :as fs]
-   [babashka.process :as p]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.tools.build.api :as b]
-   [clojure.xml :as xml]))
+   [clojure.tools.build.api :as b]))
 
 (def lib 'com.github.clojure-lsp/clojure-lsp)
 (def clojars-lib 'com.github.clojure-lsp/clojure-lsp-standalone)

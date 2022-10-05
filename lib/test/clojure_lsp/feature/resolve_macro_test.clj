@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.resolve-macro-test
+(ns clojure-lsp.feature.resolve-macro-test
   (:require
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.test-helper :as h]

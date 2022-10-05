@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.rename-test
+(ns clojure-lsp.feature.rename-test
   (:require
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.shared :as shared]

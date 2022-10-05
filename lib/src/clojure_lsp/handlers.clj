@@ -1,6 +1,5 @@
 (ns clojure-lsp.handlers
   (:require
-   [clojure-lsp.crawler :as crawler]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
@@ -27,6 +26,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.startup :as startup]
    [clojure.core.async :as async]
    [clojure.pprint :as pprint]))
 
@@ -92,7 +92,7 @@
     (swap! db* assoc :project-analysis-type :project-and-deps)
     (if project-root-uri
       (do
-        (crawler/initialize-project
+        (startup/initialize-project
           project-root-uri
           client-capabilities
           client-settings
@@ -109,7 +109,7 @@
             (let [settings (:settings db)]
               (when (stubs/check-stubs? settings)
                 (stubs/generate-and-analyze-stubs! settings db*))))
-          (logger/info crawler/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
+          (logger/info startup/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
           (producer/refresh-test-tree producer internal-uris)
           (when (settings/get db [:java] true)
             (async/go

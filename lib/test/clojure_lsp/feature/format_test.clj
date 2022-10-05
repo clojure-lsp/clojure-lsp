@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.format-test
+(ns clojure-lsp.feature.format-test
   (:require
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.shared :as shared]

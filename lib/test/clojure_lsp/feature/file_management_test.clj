@@ -1,4 +1,4 @@
-(ns clojure-lsp.features.file-management-test
+(ns clojure-lsp.feature.file-management-test
   (:require
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.shared :as shared]

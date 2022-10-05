@@ -953,6 +953,16 @@
       "hash": "sha256-vitx8EywaKRuikAK25igS7PhvTJe3frtKH/6pMmscZ0="
     },
     {
+      "mvn-path": "funcool/promesa/9.0.462/promesa-9.0.462.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-ZwQEU3okfDBA+s6HTV3eyitNt2WOeXcwtwm+20+tfWY="
+    },
+    {
+      "mvn-path": "funcool/promesa/9.0.462/promesa-9.0.462.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-DtOfHoBJYWW+GG3eysJNw8y0u70ItxsO4z9lBs5dMWM="
+    },
+    {
       "mvn-path": "hawk/hawk/0.2.11/hawk-0.2.11.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-6UPy8MSHxsWmsg5wzpHdXzHkBIlXCRe7oT/OpzyaekM="
@@ -1198,14 +1208,14 @@
       "hash": "sha256-o3pFBButfzw3yua864SedMbz58atvnYFR5VghPuua3I="
     },
     {
-      "mvn-path": "nrepl/nrepl/0.9.0/nrepl-0.9.0.jar",
+      "mvn-path": "nrepl/nrepl/1.0.0/nrepl-1.0.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-CidROnSs968Tf7CVUPWNRmPMULznf564c0fodAiYCt4="
+      "hash": "sha256-owuXNP8uY582Xw11U7SHcwbypUPPAh4pnRW/HqvWpbs="
     },
     {
-      "mvn-path": "nrepl/nrepl/0.9.0/nrepl-0.9.0.pom",
+      "mvn-path": "nrepl/nrepl/1.0.0/nrepl-1.0.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-vl/TzORpjvJAjK8hyUmxlG279eP9JR5qRvL4JpgTj70="
+      "hash": "sha256-dHN5LZGfjodYUES5nySqLqFVNCBgRI2opHhGvkXz2nI="
     },
     {
       "mvn-path": "org/apache/activemq/artemis-commons/1.4.0/artemis-commons-1.4.0.jar",

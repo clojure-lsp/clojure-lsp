@@ -313,18 +313,11 @@
        (conform-or-log ::coercer/edits)
        eventually))
 
-(def ^:private formatting (atom false))
-
 (defmethod lsp.server/receive-request "textDocument/rangeFormatting" [_this components params]
-  (when (compare-and-set! formatting false true)
-    (try
-      (->> params
-           (handler/range-formatting (wait-for-changes components params))
-           (conform-or-log ::coercer/edits))
-      (catch Exception e
-        (logger/error e))
-      (finally
-        (reset! formatting false)))))
+  (->> params
+       (handler/range-formatting (wait-for-changes components params))
+       (conform-or-log ::coercer/edits)
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/codeAction" [_ components params]
   (->> params

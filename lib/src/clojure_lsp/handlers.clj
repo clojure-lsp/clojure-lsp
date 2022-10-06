@@ -33,22 +33,22 @@
 (set! *warn-on-reflection* true)
 
 (defmacro logging-delayed-task [delay-data task-id & body]
-  (let [process-msg (str task-id " %s")
-        wait-and-process-msg (str process-msg " - waited %s")
-        timeout-msg (format "Timeout in %s waiting for changes to %%s" task-id)
+  (let [timed-out-msg (format "Timeout in %s waiting for changes to %%s" task-id)
+        immediate-msg (str task-id " %s")
+        waited-msg (str immediate-msg " - waited %s")
         msg-sym (gensym "log-message")]
     `(let [delay-data# ~delay-data
            delay-outcome# (:delay/outcome delay-data#)]
        (if (= :timed-out delay-outcome#)
-         (let [~msg-sym (format ~timeout-msg (first (:delay/timeout-uris delay-data#)))]
+         (let [~msg-sym (format ~timed-out-msg (first (:delay/timeout-uris delay-data#)))]
            ~(with-meta `(logger/warn ~msg-sym) (meta &form)))
          (let [result# (do ~@body)
                ~msg-sym (case delay-outcome#
                           :immediate
-                          (format ~process-msg
+                          (format ~immediate-msg
                                   (shared/start-time->end-time-ms (:delay/start delay-data#)))
                           :waited
-                          (format ~wait-and-process-msg
+                          (format ~waited-msg
                                   (shared/start-time->end-time-ms (:delay/end delay-data#))
                                   (shared/format-time-delta-ms (:delay/start delay-data#) (:delay/end delay-data#))))]
            ~(with-meta `(logger/info ~msg-sym) (meta &form))

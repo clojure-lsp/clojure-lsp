@@ -42,7 +42,9 @@
         (ghr/overwrite-asset {:org "clojure-lsp"
                               :repo "clojure-lsp"
                               :file file
-                              :tag tag}))
+                              :tag tag
+                              :overwrite false
+                              :sha256 true}))
 
       latest-dev-tag
       (do
@@ -50,7 +52,9 @@
         (ghr/overwrite-asset {:org "clojure-lsp"
                               :repo "clojure-lsp-dev-builds"
                               :file file
-                              :tag latest-dev-tag}))
+                              :tag latest-dev-tag
+                              :overwrite false
+                              :sha256 true}))
 
       :else
       (println "No prod or dev tags found!"))

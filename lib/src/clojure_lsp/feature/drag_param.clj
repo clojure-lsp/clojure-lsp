@@ -114,7 +114,8 @@
                              uri
                              (assoc components :db db))]
             (if usages-skipped?
-              (warn-skipped-usages producer)
+              (do (warn-skipped-usages producer)
+                  nil)
               (update defn-edits :changes-by-uri shared/deep-merge usage-edits))))))))
 
 (defn drag-backward [zloc cursor-position uri components] (drag zloc :backward cursor-position uri components))

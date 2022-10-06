@@ -22,10 +22,10 @@
 
   :script The filename of the executable script wrapper."
   [usage]
-  (let [lsp-bin "clojure-lsp"]
-    (case usage
-      :native (cond-> lsp-bin windows? (str ".exe"))
-      :script (cond-> lsp-bin windows? (str ".bat")))))
+  (cond-> "clojure-lsp"
+    windows? (str (case usage
+                    :native ".exe"
+                    :script ".bat"))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn clean
@@ -46,89 +46,77 @@
     (doseq [f files]
       (fs/delete-tree f))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn lib-pom []
-  (-> (deps/clojure ["-T:build" "pom"] {:dir "lib" :inherit true})
+(defn ^:private clj! [dir cmd]
+  (-> (deps/clojure cmd {:dir dir, :inherit true})
       (p/check)))
 
+(defn ^:private build [dir tool] (clj! dir ["-T:build" tool]))
+
+(defn ^:private unit-test [dir]
+  (println :running-unit-tests... dir)
+  (clj! dir ["-M:test"])
+  (println))
+
+(defn ^:private mv-here [file]
+  (fs/move file "." {:replace-existing true}))
+
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn cli-pom []
-  (-> (deps/clojure ["-T:build" "pom"] {:dir "cli" :inherit true})
-      (p/check)))
+(defn lib-pom [] (build "lib" "pom"))
+
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defn cli-pom [] (build "cli" "pom"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn lib-jar []
-  (-> (deps/clojure ["-T:build" "jar"] {:dir "lib" :inherit true})
-      (p/check))
-  (fs/move "lib/target/clojure-lsp.jar" "." {:replace-existing true}))
+  (build "lib" "jar")
+  (mv-here "lib/target/clojure-lsp.jar"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn cli-jar
   "Build `cli` jar."
   []
-  (-> (deps/clojure ["-T:build" "prod-jar"] {:dir "cli" :inherit true})
-      (p/check))
-  (fs/move "cli/target/clojure-lsp-standalone.jar" "." {:replace-existing true}))
+  (build "cli" "prod-jar")
+  (mv-here "cli/target/clojure-lsp-standalone.jar"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn cli-debug-jar []
-  (-> (deps/clojure ["-T:build" "debug-jar"] {:dir "cli" :inherit true})
-      (p/check))
-  (fs/move "cli/target/clojure-lsp-standalone.jar" "." {:replace-existing true}))
+  (build "cli" "debug-jar")
+  (mv-here "cli/target/clojure-lsp-standalone.jar"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn cli-jar-for-native []
-  (-> (deps/clojure ["-T:build" "prod-jar-for-native"]
-                    {:dir "cli"})
-      (p/check))
-  (fs/move "cli/target/clojure-lsp-standalone.jar" "." {:replace-existing true}))
+  (build "cli" "prod-jar-for-native")
+  (mv-here "cli/target/clojure-lsp-standalone.jar"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn debug-cli
   "Build the `clojure-lsp[.bat]` cli exec script (suppots `cider-nrepl`/`clj-async-profile`)."
   []
-  (-> (deps/clojure ["-T:build" "debug-cli"] {:dir "cli" :inherit true})
-      p/check)
-  (fs/move (fs/path "cli" (lsp-bin-filename :script)) "." {:replace-existing true}))
+  (build "cli" "debug-cli")
+  (mv-here (fs/path "cli" (lsp-bin-filename :script))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn prod-cli
   "Build the `clojure-lsp[.bat]` cli exec script."
   []
-  (-> (deps/clojure ["-T:build" "prod-cli"] {:dir "cli" :inherit true})
-      p/check)
-  (fs/move (fs/path "cli" (lsp-bin-filename :script)) "." {:replace-existing true}))
+  (build "cli" "prod-cli")
+  (mv-here (fs/path "cli" (lsp-bin-filename :script))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn native-cli
   "Build the native `clojure-lsp[.exe]` cli executable with `graalvm`."
   []
-  (-> (deps/clojure ["-T:build" "native-cli"] {:dir "cli" :inherit true})
-      (p/check))
-  (fs/move (fs/path "cli" (lsp-bin-filename :native)) "." {:replace-existing true}))
+  (build "cli" "native-cli")
+  (mv-here (fs/path "cli" (lsp-bin-filename :native))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn test-lib
-  "Run all unit tests in lib/."
-  []
-  (println :running-unit-tests... "lib")
-  (-> (deps/clojure ["-M:test"] {:dir "lib" :inherit true})
-      (p/check))
-  (println))
+(defn test-lib "Run all unit tests in lib/." [] (unit-test "lib"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn test-cli
-  "Run all unit tests in cli/."
-  []
-  (println :running-unit-tests... "cli")
-  (-> (deps/clojure ["-M:test"] {:dir "cli" :inherit true})
-      (p/check))
-  (println))
+(defn test-cli "Run all unit tests in cli/." [] (unit-test "cli"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn pod-test []
-  (-> (deps/clojure ["-M:pod-test"] {:dir "cli" :inherit true})
-      (p/check)))
+(defn pod-test [] (clj! "cli" ["-M:pod-test"]))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn integration-test
@@ -137,14 +125,8 @@
   There should only be one clojure-lsp executable found, throws error
   otherwise."
   []
-
-  (let [bin-native (str  (lsp-bin-filename :native))
-        bin-script (str  (lsp-bin-filename :script))
-        lsp-bins [bin-native bin-script]
-        lsp-bins-found (reduce (fn [col bin] (if (and (not (col bin)) (fs/exists? bin))
-                                               (conj col bin)
-                                               col))
-                               #{}  #{bin-native bin-script})
+  (let [lsp-bins (->> [:native :script] (map lsp-bin-filename) distinct)
+        lsp-bins-found (->> lsp-bins (filter fs/exists?) (into #{}))
         bb (str \" (.get (.command (.info (java.lang.ProcessHandle/current)))) \")]
     (case (count lsp-bins-found)
       0 (throw (ex-info "No clojure-lsp executables found." {:searched-for lsp-bins}))
@@ -152,46 +134,33 @@
       (throw (ex-info "More than one clojure-lsp executables found. Can only work with one."
                       {:bin-found lsp-bins-found})))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn lint-clean []
-  (-> (deps/clojure ["-M:run" "clean-ns" "--dry" "--ns-exclude-regex" "sample-test.*" "--project-root" "../"]
-                    {:dir "cli" :inherit true})
-      (p/check)))
+(defn ^:private lint
+  ([linter] (lint linter {}))
+  ([linter {:keys [dry?]}]
+   (clj! "cli" (cond-> ["-M:run" linter "--ns-exclude-regex" "sample-test.*" "--project-root" "../"]
+                 dry? (conj "--dry")))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn lint-format []
-  (-> (deps/clojure ["-M:run" "format" "--dry" "--ns-exclude-regex" "sample-test.*" "--project-root" "../"]
-                    {:dir "cli" :inherit true})
-      (p/check)))
+(defn lint-clean [] (lint "clean-ns" {:dry? true}))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn lint-diagnostics []
-  (-> (deps/clojure ["-M:run" "diagnostics" "--dry" "--ns-exclude-regex" "sample-test.*" "--project-root" "../"]
-                    {:dir "cli" :inherit true})
-      (p/check)))
+(defn lint-format [] (lint "format" {:dry? true}))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn lint-fix []
-  (doseq [linter ["clean-ns" "format"]]
-    (-> (deps/clojure ["-M:run" linter "--ns-exclude-regex" "sample-test.*" "--project-root" "../"]
-                      {:dir "cli" :inherit true})
-        (p/check))))
+(defn lint-diagnostics [] (lint "diagnostics" {:dry? true}))
+
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defn lint-fix [] (run! lint ["clean-ns" "format"]))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn release []
   (p/shell "./release"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn deploy-clojars []
-  (-> (deps/clojure ["-T:build" "deploy-clojars"]
-                    {:dir "lib" :inherit true})
-      (p/check)))
+(defn deploy-clojars [] (build "lib" "deploy-clojars"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn deploy-clojars-standalone []
-  (-> (deps/clojure ["-T:build" "deploy-clojars"]
-                    {:dir "cli" :inherit true})
-      (p/check)))
+(defn deploy-clojars-standalone [] (build "cli" "deploy-clojars"))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn local-webpage []

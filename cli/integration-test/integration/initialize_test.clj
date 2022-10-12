@@ -34,6 +34,8 @@
                                             "destructure-keys"
                                             "drag-backward"
                                             "drag-forward"
+                                            "drag-param-backward"
+                                            "drag-param-forward"
                                             "expand-let"
                                             "extract-function"
                                             "extract-to-def"

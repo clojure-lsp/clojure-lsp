@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131
+
 ## 2022.10.05-16.39.51
 
 - General

@@ -11,7 +11,6 @@
   It associates comments 'above' a clause and on the same line 'after' a clause
   with the clause."
   (:require
-   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
@@ -44,9 +43,9 @@
 (defn ^:private skip-whitespace-left [zloc] (skip-whitespace z/left* zloc))
 (defn z-right [zloc] (some-> zloc z/right* skip-whitespace-right))
 (defn z-left [zloc] (some-> zloc z/left* skip-whitespace-left))
-(defn ^:private z-down [zloc] (some-> zloc z/down* skip-whitespace-right))
-(defn ^:private z-up [zloc] (some-> zloc z/up* skip-whitespace-left))
-(defn ^:private z-leftmost? [zloc] (nil? (skip-whitespace-left (z/left* zloc))))
+(defn z-down [zloc] (some-> zloc z/down* skip-whitespace-right))
+(defn z-up [zloc] (some-> zloc z/up* skip-whitespace-left))
+(defn z-leftmost? [zloc] (nil? (skip-whitespace-left (z/left* zloc))))
 
 ;;;; More helpers
 
@@ -80,6 +79,9 @@
       (recur (z/right* zloc) (conj satisfies zloc))
       [satisfies zloc])))
 
+(defn ^:private z-update-children [parent-zloc f]
+  (z/edit* parent-zloc #(n/replace-children % (f (n/children %)))))
+
 ;;;; Main algorithm
 
 ;;;; Identify clauses
@@ -103,24 +105,23 @@
   an empty sequence. There may or may not be a final item of padding."
   [parent-zloc]
   (loop [zloc (-> parent-zloc
-                  (z/edit* (fn [parent-node]
-                             (n/replace-children
-                               parent-node
-                               (mapcat (fn [node]
-                                         (if (newline-comment? node)
-                                           (let [{:keys [row col end-row end-col]} (meta node)
-                                                 len (count (:s node))]
-                                             (assert (= (inc row) end-row) "unexpected multiline comment")
-                                             [(with-meta
-                                                (update node :s subs 0 (dec len))
-                                                {:row row :col col
-                                                 :end-row row :end-col (+ col len)})
-                                              (with-meta
-                                                (n/newline-node "\n")
-                                                {:row row, :col (+ col len),
-                                                 :end-row end-row, :end-col end-col})])
-                                           [node]))
-                                       (n/children parent-node)))))
+                  (z-update-children
+                    (fn [child-nodes]
+                      (mapcat (fn [node]
+                                (if (newline-comment? node)
+                                  (let [{:keys [row col end-row end-col]} (meta node)
+                                        len (count (:s node))]
+                                    (assert (= (inc row) end-row) "unexpected multiline comment")
+                                    [(with-meta
+                                       (update node :s subs 0 (dec len))
+                                       {:row row :col col
+                                        :end-row row :end-col (+ col len)})
+                                     (with-meta
+                                       (n/newline-node "\n")
+                                       {:row row, :col (+ col len),
+                                        :end-row end-row, :end-col end-col})])
+                                  [node]))
+                              child-nodes)))
                   z/down*)
 
          state  :in-padding
@@ -170,10 +171,7 @@
 (defn identify
   "Identifies the clauses described by the clause-spec."
   [{:keys [zloc breadth rind pulp]}]
-  (let [zloc (edit/mark-position zloc ::orig)
-        parent-zloc (z-up zloc)
-
-        elems+padding (divide-parent parent-zloc)
+  (let [elems+padding (divide-parent (z-up zloc))
 
         [ignore-left _] rind
         [rind-before rst] (split-at (inc (* 2 ignore-left)) elems+padding)
@@ -188,20 +186,16 @@
                        (let [[clause-nodes padding-nodes]
                              (->> clause-elems+padding
                                   (split-at clause-width)
-                                  (map flatten))
-                             origin? (some #(edit/node-marked? % ::orig) clause-nodes)]
+                                  (map flatten))]
                          [;; clause
                           {:idx clause-idx
-                           :nodes clause-nodes
-                           :origin? origin?}
+                           :nodes clause-nodes}
                           ;; padding
-                          {:nodes padding-nodes}]))))
-        origin-clause (->> clauses+padding (filter :origin?) first)]
+                          {:nodes padding-nodes}]))))]
     {:rind-before {:nodes (flatten rind-before)}
      :rind-after {:nodes (flatten rind-after)}
      :clauses+padding clauses+padding
-     :clause-count (quot pulp breadth)
-     :origin-clause origin-clause}))
+     :clause-count (quot pulp breadth)}))
 
 (defn loc-of-nodes [clause-nodes]
   (z/up (z/of-node (n/forms-node clause-nodes))))
@@ -313,27 +307,30 @@
   ;; case and condp permit final default expression, which should not be dragged.
   ;; assoc, assoc!, cond->, cond->>, and case sometimes appear inside other threading expressions.
   ;; condp has a variation with ternary expressions.
-  (case (some-> list-zloc z-down z-safe-simple-sym)
-    cond
-    #_=> {:context :call, :breadth 2, :rind [1 0]}
-    (cond-> cond->> assoc assoc!)
-    #_=> {:context :call, :breadth 2, :rind [(if (in-threading? list-zloc) 1 2) 0]}
-    case
-    #_=> {:context :call, :breadth 2, :rind (if (in-threading? list-zloc)
-                                              [1 (if (odd? child-count) 0 1)]
-                                              [2 (if (even? child-count) 0 1)])}
-    condp
-    #_=> (let [breadth (if (z/find-next-value (z-down list-zloc) z-right :>>) 3 2)
-               ignore-left 3
-               ignore-right (mod (- child-count ignore-left) breadth)
-               invalid-ternary? (= 2 ignore-right)]
-           (when-not invalid-ternary?
-             {:context :call, :breadth breadth, :rind [ignore-left ignore-right]}))
-    are
-    #_=> (let [param-count (-> list-zloc z-down z-right count-children)]
-           (when (< 0 param-count)
-             {:context :call, :breadth param-count, :rind [3 0]}))
-    {:context :list, :breadth 1, :rind no-rind}))
+  (let [in-threading? (in-threading? list-zloc)
+        spec
+        (case (some-> list-zloc z-down z-safe-simple-sym)
+          cond
+          #_=> {:context :call, :breadth 2, :rind [1 0]}
+          (cond-> cond->> assoc assoc!)
+          #_=> {:context :call, :breadth 2, :rind [(if in-threading? 1 2) 0]}
+          case
+          #_=> {:context :call, :breadth 2, :rind (if in-threading?
+                                                    [1 (if (odd? child-count) 0 1)]
+                                                    [2 (if (even? child-count) 0 1)])}
+          condp
+          #_=> (let [breadth (if (z/find-next-value (z-down list-zloc) z-right :>>) 3 2)
+                     ignore-left 3
+                     ignore-right (mod (- child-count ignore-left) breadth)
+                     invalid-ternary? (= 2 ignore-right)]
+                 (when-not invalid-ternary?
+                   {:context :call, :breadth breadth, :rind [ignore-left ignore-right]}))
+          are
+          #_=> (let [param-count (-> list-zloc z-down z-right count-children)]
+                 (when (pos? param-count)
+                   {:context :call, :breadth param-count, :rind [3 0]}))
+          {:context :list, :breadth 1, :rind no-rind})]
+    (some-> spec (assoc :in-threading? in-threading?))))
 
 (defn ^:private pulp [[ignore-left ignore-right] child-count]
   (- child-count ignore-left ignore-right))
@@ -351,9 +348,7 @@
       [parent-zloc (z-up parent-zloc)]
       [zloc parent-zloc])))
 
-(defn clause-spec
-  "Returns a clause spec for the `zloc`."
-  [zloc uri db]
+(defn clause-spec [zloc uri db]
   (when zloc
     (let [[zloc parent-zloc] (target-locs zloc)]
       (when parent-zloc

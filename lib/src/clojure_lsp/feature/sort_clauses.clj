@@ -21,22 +21,22 @@
 (defn sort-clauses [zloc uri db]
   (when-let [clause-spec (clause-spec zloc uri db)]
     (let [{:keys [rind-before clauses+padding rind-after]} (f.clauses/identify clause-spec)
-          rind-before (:nodes rind-before)
-          rind-after (:nodes rind-after)
-          clauses (->> clauses+padding (filter :idx) (map :nodes))
-          padding (->> clauses+padding (remove :idx) (map :nodes))
-          original-pulp (mapcat :nodes clauses+padding)
+          rind-nodes-before (:nodes rind-before)
+          rind-nodes-after (:nodes rind-after)
+          clauses-nodes (->> clauses+padding (filter :idx) (map :nodes))
+          padding-nodes (->> clauses+padding (remove :idx) (map :nodes))
+          original-pulp-nodes (mapcat :nodes clauses+padding)
           sorted-clauses (sort-by (fn [clause-nodes]
                                     (->> clause-nodes
                                          (remove (comp f.clauses/whitespace-or-comment-tags n/tag))
                                          first
                                          n/string))
-                                  clauses)
-          pulp (flatten (medley/interleave-all sorted-clauses padding))
-          trailing-node (or (last rind-after) (last pulp))
+                                  clauses-nodes)
+          new-pulp-nodes (flatten (medley/interleave-all sorted-clauses padding-nodes))
+          trailing-node (or (last rind-nodes-after) (last new-pulp-nodes))
           trailing-comment-fix (when (some-> trailing-node n/comment?)
-                                 (let [orig-leading-node (or (first rind-before) (first original-pulp))
+                                 (let [orig-leading-node (or (first rind-nodes-before) (first original-pulp-nodes))
                                        col (:col (meta orig-leading-node))]
                                    [(n/newline-node "\n") (n/spaces (dec col))]))]
-      [{:range (f.clauses/nodes-range original-pulp)
-        :loc (f.clauses/loc-of-nodes (concat pulp trailing-comment-fix))}])))
+      [{:range (f.clauses/nodes-range original-pulp-nodes)
+        :loc (f.clauses/loc-of-nodes (concat new-pulp-nodes trailing-comment-fix))}])))

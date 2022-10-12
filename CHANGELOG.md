@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Editor
+  - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131
   - Avoid shadowing existing locals when restructuring keys. #1229
 
 ## 2022.10.05-16.39.51

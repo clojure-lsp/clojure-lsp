@@ -230,7 +230,7 @@
 
 (defn ^:private widest-scoped-local [zloc uri db]
   (let [z-meta (meta (z/node zloc))
-        local-defs (->> (q/find-local-usages-under-form db uri z-meta)
+        local-defs (->> (q/find-local-usages-defined-outside-form db uri z-meta)
                         (map #(q/find-definition db %)))]
     (reduce
       (fn [accum d]
@@ -436,7 +436,7 @@
               used-syms (into []
                               (comp (map :name)
                                     (distinct))
-                              (q/find-local-usages-under-form db uri expr-meta))
+                              (q/find-local-usages-defined-outside-form db uri expr-meta))
 
               expr-edit (z/of-node (list* fn-sym used-syms))
               private? true
@@ -645,7 +645,7 @@
                            (z/right)))
         ;; Prepend locals to param lists.
         ;; We prepend because it works whether replacing with `partial` or `#()`.
-        used-locals (->> (q/find-local-usages-under-form db uri fn-form-meta)
+        used-locals (->> (q/find-local-usages-defined-outside-form db uri fn-form-meta)
                          (map :name))
         add-locals (fn [zloc]
                      ;; Navigate to the params node and prepend all the locals.

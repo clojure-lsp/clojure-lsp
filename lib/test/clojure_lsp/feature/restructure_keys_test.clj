@@ -150,6 +150,31 @@
                          (h/code "(defn foo [|#::{:keys [a], :as loc}] a)"))
     (assert-restructures (h/code "(defn foo [loc] (+ (:a loc) (tangent loc)))")
                          (h/code "(defn foo [|{:keys [a], :as loc}] (+ a (tangent loc)))")))
+  (testing "doesn't shadow other locals with element name"
+    (assert-restructures (h/code "(defn foobar"
+                                 "  [{element :top-a"
+                                 "    element-1 :top-b}]"
+                                 "  (:b element-1) (:a element))")
+                         (h/code "(defn foobar"
+                                 "  [{element :top-a"
+                                 "    |{:keys [b]} :top-b}]"
+                                 "  b (:a element))"))
+    (assert-restructures (h/code "(defn foobar"
+                                 "  [{element-1 :top-a"
+                                 "    element-2 :top-b}]"
+                                 "  (:b element-2) (:a element-1))")
+                         (h/code "(defn foobar"
+                                 "  [{element-1 :top-a"
+                                 "    |{:keys [b]} :top-b}]"
+                                 "  b (:a element-1))"))
+    (assert-restructures (h/code "(defn foobar"
+                                 "  [{element :top-a}]"
+                                 "  (let [element-1 :top-b]"
+                                 "    (:b element-1) (:a element)))")
+                         (h/code "(defn foobar"
+                                 "  [{element :top-a}]"
+                                 "  (let [|{:keys [b]} :top-b]"
+                                 "    b (:a element)))")))
   (testing "uses :or for default values"
     (assert-restructures (h/code "(defn foo [element] (get element :a 1))")
                          (h/code "(defn foo [|{:keys [a] :or {a 1}}] a)"))

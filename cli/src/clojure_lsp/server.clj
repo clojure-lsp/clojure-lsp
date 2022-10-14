@@ -87,7 +87,6 @@
 
   (publish-diagnostic [_this diagnostic]
     (lsp.server/discarding-stdout
-      (logger/debug (format "Publishing %s diagnostics for %s" (count (:diagnostics diagnostic)) (:uri diagnostic)))
       (shared/logging-task
         :publish-diagnostics
         (->> diagnostic

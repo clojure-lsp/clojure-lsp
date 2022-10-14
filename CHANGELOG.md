@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-kondo to `2022.10.14`.
+
 - Editor
   - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131
   - Avoid shadowing existing locals when restructuring keys. #1229

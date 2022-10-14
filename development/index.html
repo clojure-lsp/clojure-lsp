@@ -787,23 +787,41 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 </ol>
 <h3 id="writing-tests">Writing tests<a class="headerlink" href="#writing-tests" title="Permanent link">#</a></h3>
 <p>A test should be able to run on all JDK versions in scope starting with 1.8 and across <code>GNU/Linux</code>, <code>macos</code> and <code>MS-Windows</code> operating systems.</p>
-<p>The test author should be aware of the following important differences between <em>nix and windows:
-1. Line endings
-   1.  On </em>nix: the single Line Feed (LF) char, i.e. <code>\n</code>.
-   1.  On windows: the Carriage Return (CR) followed by the LF char (CRLF), i.e. <code>\r\n</code>.
-1. Paths
-   1. On *nix: Use <code>/</code> as the path separator, absolute paths start with <code>/</code>.
-   1. On windows: use <code>\</code> as the path separator, absolute paths start either with a drive letter followed by <code>:\</code>, i.e. <code>[A-Za-Z]:\</code> (e.g. <code>c:\temp</code> and <code>D:\src</code>) or with a double <code>\\</code> indicating a network path (e.g. <code>\\computer39\temp</code>).</p>
-<p>Below are a few <strong>hints</strong> to assist with writing test that work accross the different platforms.
-1. Line Endings
-   1. When comparing strings, Use <code>clojure-lsp.test-helper/string=</code> with <code>\n</code> in your expected result.
-      1. e.g. use <code>(is (h/strings= "one\n" result)</code> instead of <code>(is (= "one\r\n" result))</code> or <code>(is (= "one\n" result))</code>.
-   1. Use <code>h/str-includes?</code> with <code>\n</code> in the string to search for instead of <code>clojure.string/includes?</code>.
-      1. e.g. <code>(is (h/str-includes? (slurp "path") "something\n"))</code> instead of <code>(is (str/includes? (slurp "path") "something\n"))</code> or <code>(is (str/includes? (slurp "path") "something\r\n"))</code>.
-2. Paths
-   1. Always use <code>babashka.fs/canonicalize</code> when converting a relative path to an absolute path. Avoiding using any of java File/Path absolute or canonical equivalent fns. This ensures that the drive letter on windows is always in capitals (e.g. <code>D:\</code> instead of <code>d:\</code>). This is also the convention used throughout the codebase and it works as well with both existing and non-existing files.
-   1. Use <code>clojure-lsp.test-helper/file-path</code>, <code>clojure-lsp.test-helper/file-&gt;uri</code> with *nix paths. They are converted to the format expected by the OS.
-      1. e.g. <code>(load-code (h/file-path "/aaa.clj")  "(ns aaa)")</code> instead of <code>(load-code "/aaa.clj" "(ns aaa)")</code> or <code>(load-code "c:\\aaa.clj" "(ns aaa)")</code></p>
+<p>The test author should be aware of the following important differences between *nix and windows:</p>
+<ol>
+<li>Line endings<ol>
+<li>On *nix: the single Line Feed (LF) char, i.e. <code>\n</code>.</li>
+<li>On windows: the Carriage Return (CR) followed by the LF char (CRLF), i.e. <code>\r\n</code>.</li>
+</ol>
+</li>
+<li>Paths<ol>
+<li>On *nix: Use <code>/</code> as the path separator, absolute paths start with <code>/</code>.</li>
+<li>On windows: use <code>\</code> as the path separator, absolute paths start either with a drive letter followed by <code>:\</code>, i.e. <code>[A-Za-Z]:\</code> (e.g. <code>c:\temp</code> and <code>D:\src</code>) or with a double <code>\\</code> indicating a network path (e.g. <code>\\computer39\temp</code>).</li>
+</ol>
+</li>
+</ol>
+<p>Below are a few <strong>hints</strong> to assist with writing test that work accross the different platforms.</p>
+<ol>
+<li>Line Endings<ol>
+<li>When comparing strings, Use <code>clojure-lsp.test-helper/string=</code> with <code>\n</code> in your expected result.<ol>
+<li>e.g. use <code>(is (h/strings= "one\n" result)</code> instead of <code>(is (= "one\r\n" result))</code> or <code>(is (= "one\n" result))</code>.</li>
+</ol>
+</li>
+<li>Use <code>h/str-includes?</code> with <code>\n</code> in the string to search for instead of <code>clojure.string/includes?</code>.<ol>
+<li>e.g. <code>(is (h/str-includes? (slurp "path") "something\n"))</code> instead of <code>(is (str/includes? (slurp "path") "something\n"))</code> or <code>(is (str/includes? (slurp "path") "something\r\n"))</code>.</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>Paths<ol>
+<li>Always use <code>babashka.fs/canonicalize</code> when converting a relative path to an absolute path. Avoiding using any of java File/Path absolute or canonical equivalent fns. This ensures that the drive letter on windows is always in capitals (e.g. <code>D:\</code> instead of <code>d:\</code>). This is also the convention used throughout the codebase and it works as well with both existing and non-existing files.</li>
+<li>Use <code>clojure-lsp.test-helper/file-path</code>, <code>clojure-lsp.test-helper/file-&gt;uri</code> with *nix paths. They are converted to the format expected by the OS.<ol>
+<li>e.g. <code>(load-code (h/file-path "/aaa.clj")  "(ns aaa)")</code> instead of <code>(load-code "/aaa.clj" "(ns aaa)")</code> or <code>(load-code "c:\\aaa.clj" "(ns aaa)")</code></li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
                 
                   
                     

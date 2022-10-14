@@ -464,6 +464,8 @@
                       (:capabilities params)
                       (client-settings params)
                       (some-> params :work-done-token str))
+  (when-let [trace-level (:trace params)]
+    (lsp.server/set-trace-level server trace-level))
   (when-let [parent-process-id (:process-id params)]
     (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(exit server)))
   {:capabilities (capabilities (settings/all @db*))})
@@ -491,6 +493,9 @@
          (catch Exception e#
            (logger/error e# (format "Error during async task %s" ~task-name))))
        (recur))))
+
+(defmethod lsp.server/receive-notification "$/setTrace" [_ {:keys [server]} {:keys [value]}]
+  (lsp.server/set-trace-level server value))
 
 (defn ^:private spawn-async-tasks!
   [{:keys [producer current-changes-chan diagnostics-chan
@@ -539,15 +544,16 @@
     ;; db/db*, so it can be inspected in the nREPL.
     (alter-var-root #'db/db* (constantly db*))))
 
-(defn run-server! [trace?]
+(defn run-server! [trace-level]
   (lsp.server/discarding-stdout
     (let [timbre-logger (->TimbreLogger)
           log-path (logger/setup timbre-logger)
           db (assoc db/initial-db :log-path log-path)
           db* (atom db)
           log-ch (async/chan (async/sliding-buffer 20))
-          server (lsp.io-server/stdio-server (cond-> {:log-ch log-ch}
-                                               trace? (assoc :trace-ch log-ch)))
+          server (lsp.io-server/stdio-server {:log-ch log-ch
+                                              :trace-ch log-ch
+                                              :trace-level trace-level})
           producer (ClojureLspProducer. server db*)
           components {:db* db*
                       :logger timbre-logger

@@ -40,11 +40,16 @@
         "See https://clojure-lsp.io/settings/ for detailed documentation."]
        (string/join \newline)))
 
+(def ^:private trace-levels
+  #{"off" "messages" "verbose"})
+
 (defn ^:private cli-options []
   [["-h" "--help" "Print the available commands and its options"]
    [nil "--version" "Print clojure-lsp version"]
    [nil "--verbose" "Use stdout for clojure-lsp logs instead of default log settings"]
-   [nil "--trace" "Enable trace logs between client and server, for debugging."]
+   [nil "--trace LEVEL" "Enable trace logs between client and server, for debugging. Set to 'messages' for basic traces, or 'verbose' for more detailed traces."
+    :default "off"
+    :validate [trace-levels (str "Must be in " trace-levels)]]
    ["-s" "--settings SETTINGS" "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
     :id :settings
     :validate [#(try (edn/read-string %) true (catch Exception _ false))

@@ -295,6 +295,23 @@
            :edits edits}))
       {:result-code 0 :message "Nothing to clear!"})))
 
+(defn ^:private definition*
+  [{:keys [from] :as options}
+   {:keys [db*] :as components}]
+  (setup-api! components)
+  (setup-project-and-deps-analysis! options components)
+  (let [db @db*
+        from-ns (symbol (namespace from))
+        from-name (symbol (name from))]
+    (if-let [element (q/find-element-for-symbol db from-ns from-name)]
+      (if-let [definition (q/find-definition db element)]
+        {:result-code 0
+         :definition definition}
+        {:result-code 1
+         :message "Definition not found"})
+      {:result-code 1
+       :message (format "Symbol %s not found" from)})))
+
 (defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]} db]
   (let [project-path (shared/uri->filename (project-root->uri project-root db))]
     (mapcat (fn [[uri diags]]
@@ -372,7 +389,7 @@
         from-ns (if ns-only?
                   from
                   (symbol (namespace from)))]
-    (if-let [{:keys [uri name-row name-col]} (q/find-element-for-rename db from-ns from-name)]
+    (if-let [{:keys [uri name-row name-col]} (q/find-element-for-symbol db from-ns from-name)]
       (let [{:keys [error document-changes]} (-> uri
                                                  (open-file! components)
                                                  (f.rename/rename-from-position (str to) name-row name-col db))]
@@ -426,14 +443,17 @@
 (defn clean-ns! [options]
   (clean-ns!* options (build-components options)))
 
+(defn definition [options]
+  (definition* options (build-components options)))
+
 (defn diagnostics [options]
   (diagnostics* options (build-components options)))
+
+(defn dump [options]
+  (dump* options (build-components options)))
 
 (defn format! [options]
   (format!* options (build-components options)))
 
 (defn rename! [options]
   (rename!* options (build-components options)))
-
-(defn dump [options]
-  (dump* options (build-components options)))

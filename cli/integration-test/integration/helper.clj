@@ -4,11 +4,20 @@
    [clojure.java.io :as io]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
-   [clojure.test :refer [is]]))
+   [clojure.test :refer [is]])
+  (:import
+   [java.net
+    URLDecoder]
+   [java.nio.charset StandardCharsets]))
 
 (def windows?
   "Whether is running on MS-Windows."
   (string/starts-with? (System/getProperty "os.name") "Windows"))
+
+(def ^:dynamic escape-uris? false)
+
+(defn set-escape-uris! [escape?]
+  (alter-var-root #'escape-uris? (constantly escape?)))
 
 (def root-project-path
   (-> (io/file *file*)
@@ -45,8 +54,22 @@
               rest
               (->> (apply str)))))
 
+(defn unescape-uri
+  [^String uri]
+  (try
+    (URLDecoder/decode uri (.name StandardCharsets/UTF_8)) ;; compatible with Java 1.8 too!
+    (catch IllegalArgumentException _
+      uri)))
+
+(defn escape-uri [uri]
+  ;; Do a better escape considering more chars
+  (string/replace uri "::" "%3A%3A"))
+
 (defn file->uri [file]
-  (-> file fs/canonicalize .toUri .toString))
+  (let [uri (-> file fs/canonicalize .toUri .toString)]
+    (if escape-uris?
+      (escape-uri uri)
+      uri)))
 
 (defn string=
   "Like `clojure.core/=` applied on STRING1 and STRING2, but treats

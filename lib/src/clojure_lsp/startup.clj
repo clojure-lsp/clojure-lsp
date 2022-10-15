@@ -172,7 +172,10 @@
         encoding-settings {:uri-format {:upper-case-drive-letter? (->> project-root-uri URI. .getPath
                                                                        (re-find #"^/[A-Z]:/")
                                                                        boolean)
-                                        :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
+                                        ;; We need a more reliable way to know when clients will send URIs encoded.
+                                        ;; Some clients encode only `::` and not `:` from `file://` for example.
+                                        :encode-colons-in-path? (or (string/includes? project-root-uri "%3A")
+                                                                    (= "zipfile" (:dependency-scheme client-settings)))}}
         settings (shared/deep-merge encoding-settings
                                     client-settings
                                     project-settings

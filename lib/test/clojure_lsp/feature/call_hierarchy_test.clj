@@ -45,7 +45,7 @@
   (h/load-code-and-locs c-code (h/file-uri "file:///some/c.clj"))
   (h/load-code-and-locs d-code (h/file-uri "file:///some/d.clj"))
   (testing "single element"
-    (let [items (f.call-hierarchy/prepare (h/file-uri "file:///some/d.clj") 2 7 (h/db*))]
+    (let [items (f.call-hierarchy/prepare (h/file-uri "file:///some/d.clj") 2 7 (h/db))]
       (is (= 1 (count items)))
       (is (= {:name            "d-func []"
               :kind            :function

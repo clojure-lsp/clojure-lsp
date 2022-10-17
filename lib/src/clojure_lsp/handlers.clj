@@ -458,7 +458,7 @@
   (shared/logging-task
     :prepare-call-hierarchy
     (let [[row col] (shared/position->row-col position)]
-      (f.call-hierarchy/prepare (:uri text-document) row col db*))))
+      (f.call-hierarchy/prepare (:uri text-document) row col @db*))))
 
 (defn call-hierarchy-incoming
   [components {{:keys [uri range]} :item}]

@@ -224,8 +224,8 @@
 
 (deftest normalize-uri-from-client
   (testing "jar files"
-    (are [client-uri] (= (h/file-path "jar:file:///some/path/some.jar!/some/file.clj")
-                         (shared/normalize-uri-from-client (h/file-path client-uri)))
+    (are [client-uri] (= (h/file-uri "jar:file:///some/path/some.jar!/some/file.clj")
+                         (shared/normalize-uri-from-client (h/file-uri client-uri)))
       ;; standard
       "jar:file:///some/path/some.jar!/some/file.clj"
       ;; Calva
@@ -236,22 +236,22 @@
     ;; or else the Calva jar file test above fails. I think it's rare for jar file
     ;; paths to contain spaces, so I'm leaving this test commented out. Would be
     ;; nice to fix someday.
-    #_(is (= (h/file-path "jar:file:///some%20spaces/path/some.jar!/some%20spaces/file.clj")
-             (shared/normalize-uri-from-client (h/file-path "jar:file:///some%20spaces/path/some.jar!/some%20spaces/file.clj")))))
+    #_(is (= (h/file-uri "jar:file:///some%20spaces/path/some.jar!/some%20spaces/file.clj")
+             (shared/normalize-uri-from-client (h/file-uri "jar:file:///some%20spaces/path/some.jar!/some%20spaces/file.clj")))))
   (testing "zipfiles"
-    (are [client-uri] (= (h/file-path "zipfile:///some/path/some.jar::some/file.clj")
-                         (shared/normalize-uri-from-client (h/file-path client-uri)))
+    (are [client-uri] (= (h/file-uri "zipfile:///some/path/some.jar::some/file.clj")
+                         (shared/normalize-uri-from-client (h/file-uri client-uri)))
       ;; standard
       "zipfile:///some/path/some.jar::some/file.clj"
       ;; coc.nvim
       "zipfile:/some/path/some.jar%3a%3asome/file.clj"))
   (testing "standard files"
     ;; standard
-    (is (= (h/file-path "file:///some/file.clj")
-           (shared/normalize-uri-from-client (h/file-path "file:///some/file.clj"))))
+    (is (= (h/file-uri "file:///some/file.clj")
+           (shared/normalize-uri-from-client (h/file-uri "file:///some/file.clj"))))
     ;; with spaces
-    (is (= (h/file-path "file:///some%20spaces/file%20spaces.clj")
-           (shared/normalize-uri-from-client (h/file-path "file:///some%20spaces/file%20spaces.clj"))))
+    (is (= (h/file-uri "file:///some%20spaces/file%20spaces.clj")
+           (shared/normalize-uri-from-client (h/file-uri "file:///some%20spaces/file%20spaces.clj"))))
     ;; Windows
     (when h/windows?
       (are [uri] (= "file:///c:/c.clj"

@@ -224,12 +224,16 @@
 
 (deftest normalize-uri-from-client
   (testing "jar files"
-    (are [client-uri] (= (h/file-uri "jar:file:///some/path/some.jar!/some/file.clj")
-                         (shared/normalize-uri-from-client (h/file-uri client-uri)))
-      ;; standard
-      "jar:file:///some/path/some.jar!/some/file.clj"
-      ;; Calva
-      "jar:file%3A///some/path/some.jar%21/some/file.clj")
+    ;; standard
+    (is (= (h/file-uri "jar:file:///some/path/some.jar!/some/file.clj")
+           (shared/normalize-uri-from-client (h/file-uri "jar:file:///some/path/some.jar!/some/file.clj"))))
+    ;; Calva
+    ;; Calva escapes aggressively, meaning h/file-uri doesn't work
+    (if h/windows? ;; TODO: is this how URIs look on Windows in Calva
+      (is (= "jar:file:///C:/some/path/some.jar!/some/file.clj"
+             (shared/normalize-uri-from-client "jar:file%3A///C%3A/some/path/some.jar%21/some/file.clj")))
+      (is (= "jar:file:///some/path/some.jar!/some/file.clj"
+             (shared/normalize-uri-from-client "jar:file%3A///some/path/some.jar%21/some/file.clj"))))
     ;; with spaces
     ;; TODO: this fails because `(unescape-uri uri)` converts %20 to a space
     ;; character, which we don't want. But, we can't remove `(unescape-uri uri)`,
@@ -239,12 +243,16 @@
     #_(is (= (h/file-uri "jar:file:///some%20spaces/path/some.jar!/some%20spaces/file.clj")
              (shared/normalize-uri-from-client (h/file-uri "jar:file:///some%20spaces/path/some.jar!/some%20spaces/file.clj")))))
   (testing "zipfiles"
-    (are [client-uri] (= (h/file-uri "zipfile:///some/path/some.jar::some/file.clj")
-                         (shared/normalize-uri-from-client (h/file-uri client-uri)))
-      ;; standard
-      "zipfile:///some/path/some.jar::some/file.clj"
-      ;; coc.nvim
-      "zipfile:/some/path/some.jar%3a%3asome/file.clj"))
+    ;; standard
+    (is (= (h/file-uri "zipfile:///some/path/some.jar::some/file.clj")
+           (shared/normalize-uri-from-client (h/file-uri "zipfile:///some/path/some.jar::some/file.clj"))))
+    ;; coc.nvim
+    ;; coc.nvim doesn't include // authority, meaning h/file-uri doesn't work
+    (if h/windows?
+      (is (= "zipfile:///C:/some/path/some.jar::some/file.clj"
+             (shared/normalize-uri-from-client "zipfile:/C:/some/path/some.jar%3a%3asome/file.clj")))
+      (is (= "zipfile:///some/path/some.jar::some/file.clj"
+             (shared/normalize-uri-from-client "zipfile:/some/path/some.jar%3a%3asome/file.clj")))))
   (testing "standard files"
     ;; standard
     (is (= (h/file-uri "file:///some/file.clj")

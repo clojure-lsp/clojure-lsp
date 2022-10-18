@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :refer [are deftest is testing]]
    [medley.core :as medley]))
 
 (h/reset-components-before-test)
@@ -46,15 +46,21 @@
 (deftest filename->uri
   (testing "when it is not a jar"
     (h/reset-components!)
-    (is (= (if h/windows? "file:///C:/some%20project/foo/bar_baz.clj" "file:///some%20project/foo/bar_baz.clj")
+    (is (= (if h/windows?
+             "file:///C:/some%20project/foo/bar_baz.clj"
+             "file:///some%20project/foo/bar_baz.clj")
            (shared/filename->uri (h/file-path "/some project/foo/bar_baz.clj") (h/db)))))
   (testing "when it is a jar via zipfile"
     (h/reset-components!)
-    (is (= (if h/windows? "zipfile:///C:/home/some/.m2/some-jar.jar::clojure/core.clj" "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj")
+    (is (= (if h/windows?
+             "zipfile:///C:/home/some/.m2/some-jar.jar::clojure/core.clj"
+             "zipfile:///home/some/.m2/some-jar.jar::clojure/core.clj")
            (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") (h/db)))))
   (testing "when it is a jar via jarfile"
     (swap! (h/db*) shared/deep-merge {:settings {:dependency-scheme "jar"}})
-    (is (= (if h/windows? "jar:file:///C:/home/some/.m2/some-jar.jar!/clojure/core.clj" "jar:file:///home/some/.m2/some-jar.jar!/clojure/core.clj")
+    (is (= (if h/windows?
+             "jar:file:///C:/home/some/.m2/some-jar.jar!/clojure/core.clj"
+             "jar:file:///home/some/.m2/some-jar.jar!/clojure/core.clj")
            (shared/filename->uri (h/file-path "/home/some/.m2/some-jar.jar:clojure/core.clj") (h/db)))))
   (testing "Windows URIs"
     (h/reset-components!)
@@ -215,3 +221,48 @@
   (is (= true (shared/class-file? "file:///foo/bar.class")))
   (is (= false (shared/class-file? "jar:file:///foo/bar.jar!/some/file.clj")))
   (is (= true (shared/class-file? "jar:file:///foo/bar.jar!/some/file.class"))))
+
+(deftest normalize-uri-from-client
+  (testing "jar files"
+    ;; standard
+    (is (= (h/file-uri "jar:file:///some/path/some.jar!/some/file.clj")
+           (shared/normalize-uri-from-client (h/file-uri "jar:file:///some/path/some.jar!/some/file.clj"))))
+    ;; Calva
+    ;; Calva escapes aggressively, meaning h/file-uri doesn't work
+    (if h/windows? ;; TODO: is this how URIs look on Windows in Calva
+      (is (= "jar:file:///C:/some/path/some.jar!/some/file.clj"
+             (shared/normalize-uri-from-client "jar:file%3A///C%3A/some/path/some.jar%21/some/file.clj")))
+      (is (= "jar:file:///some/path/some.jar!/some/file.clj"
+             (shared/normalize-uri-from-client "jar:file%3A///some/path/some.jar%21/some/file.clj"))))
+    ;; with spaces
+    ;; TODO: this fails because `(unescape-uri uri)` converts %20 to a space
+    ;; character, which we don't want. But, we can't remove `(unescape-uri uri)`,
+    ;; or else the Calva jar file test above fails. I think it's rare for jar file
+    ;; paths to contain spaces, so I'm leaving this test commented out. Would be
+    ;; nice to fix someday.
+    #_(is (= (h/file-uri "jar:file:///some%20spaces/path/some.jar!/some%20spaces/file.clj")
+             (shared/normalize-uri-from-client (h/file-uri "jar:file:///some%20spaces/path/some.jar!/some%20spaces/file.clj")))))
+  (testing "zipfiles"
+    ;; standard
+    (is (= (h/file-uri "zipfile:///some/path/some.jar::some/file.clj")
+           (shared/normalize-uri-from-client (h/file-uri "zipfile:///some/path/some.jar::some/file.clj"))))
+    ;; coc.nvim
+    ;; coc.nvim doesn't include // authority, meaning h/file-uri doesn't work
+    (if h/windows?
+      (is (= "zipfile:///C:/some/path/some.jar::some/file.clj"
+             (shared/normalize-uri-from-client "zipfile:/C:/some/path/some.jar%3a%3asome/file.clj")))
+      (is (= "zipfile:///some/path/some.jar::some/file.clj"
+             (shared/normalize-uri-from-client "zipfile:/some/path/some.jar%3a%3asome/file.clj")))))
+  (testing "standard files"
+    ;; standard
+    (is (= (h/file-uri "file:///some/file.clj")
+           (shared/normalize-uri-from-client (h/file-uri "file:///some/file.clj"))))
+    ;; with spaces
+    (is (= (h/file-uri "file:///some%20spaces/file%20spaces.clj")
+           (shared/normalize-uri-from-client (h/file-uri "file:///some%20spaces/file%20spaces.clj"))))
+    ;; Windows
+    (when h/windows?
+      (are [uri] (= "file:///c:/c.clj"
+                    (shared/normalize-uri-from-client uri))
+        "file:/c:/c.clj"
+        "file:///c:/c.clj"))))

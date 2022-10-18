@@ -121,10 +121,16 @@
                                                                     (string/replace "::" "!/")
                                                                     slurp)))
 
-      (testing "LSP features work on external clojure opened files"
+      (testing "LSP hover feature works on external clojure opened files"
         (h/assert-submap
           {:language "clojure"
            :value "[x]\n[x message]"}
           (-> (lsp/request! (fixture/hover-external-uri-request (h/escape-uri uri) 7612 5))
               :contents
-              (get 1)))))))
+              (get 1))))
+
+      (testing "LSP definition from external clojure opened file works"
+        (h/assert-submap
+          {:language "clojure"
+           :value "[x]\n[x message]"}
+          (lsp/request! (fixture/definition-request (h/escape-uri uri) 7612 5)))))))

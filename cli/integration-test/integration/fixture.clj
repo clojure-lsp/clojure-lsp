@@ -23,9 +23,9 @@
    {:textDocument {:uri (h/source-path->uri path)}
     :position {:line line :character character}}])
 
-(defn definition-request [path line character]
+(defn definition-request [uri line character]
   [:textDocument/definition
-   {:textDocument {:uri (h/source-path->uri path)}
+   {:textDocument {:uri uri}
     :position {:line line :character character}}])
 
 (defn declaration-request [path line character]

@@ -108,23 +108,23 @@
 
 (deftest definition-external-dependency-zipfile-scheme-escaped-uris
   (h/delete-project-file "../../.lsp/.cache/")
-  (h/set-escape-uris! true)
-  (lsp/start-process!)
-  (lsp/request! (fixture/initialize-request))
-  (lsp/notify! (fixture/initialized-notification))
-  (lsp/notify! (fixture/did-open-source-path-notification "definition/a.clj"))
+  (with-redefs [h/*escape-uris?* true]
+    (lsp/start-process!)
+    (lsp/request! (fixture/initialize-request))
+    (lsp/notify! (fixture/initialized-notification))
+    (lsp/notify! (fixture/did-open-source-path-notification "definition/a.clj"))
 
-  (let [{:keys [uri]} (lsp/request! (fixture/definition-request "definition/a.clj" 15 2))]
-    (lsp/notify! (fixture/did-open-external-path-notification uri (-> (h/unescape-uri uri)
-                                                                      (string/replace "zipfile:" "jar:file:")
-                                                                      (string/replace "::" "!/")
-                                                                      slurp)))
+    (let [{:keys [uri]} (lsp/request! (fixture/definition-request "definition/a.clj" 15 2))]
+      (lsp/notify! (fixture/did-open-external-path-notification (h/escape-uri uri)
+                                                                (-> (h/unescape-uri uri)
+                                                                    (string/replace "zipfile:" "jar:file:")
+                                                                    (string/replace "::" "!/")
+                                                                    slurp)))
 
-    (testing "LSP features work on external clojure opened files"
-      (h/assert-submap
-        {:language "clojure"
-         :value "[x]\n[x message]"}
-        (-> (lsp/request! (fixture/hover-external-uri-request uri 7612 5))
-            :contents
-            (get 1)))))
-  (h/set-escape-uris! false))
+      (testing "LSP features work on external clojure opened files"
+        (h/assert-submap
+          {:language "clojure"
+           :value "[x]\n[x message]"}
+          (-> (lsp/request! (fixture/hover-external-uri-request (h/escape-uri uri) 7612 5))
+              :contents
+              (get 1)))))))

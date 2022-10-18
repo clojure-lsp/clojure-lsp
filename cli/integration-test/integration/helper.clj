@@ -14,10 +14,7 @@
   "Whether is running on MS-Windows."
   (string/starts-with? (System/getProperty "os.name") "Windows"))
 
-(def ^:dynamic escape-uris? false)
-
-(defn set-escape-uris! [escape?]
-  (alter-var-root #'escape-uris? (constantly escape?)))
+(def ^:dynamic *escape-uris?* false)
 
 (def root-project-path
   (-> (io/file *file*)
@@ -67,7 +64,7 @@
 
 (defn file->uri [file]
   (let [uri (-> file fs/canonicalize .toUri .toString)]
-    (if escape-uris?
+    (if *escape-uris?*
       (escape-uri uri)
       uri)))
 

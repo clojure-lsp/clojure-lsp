@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2022.10.14`.
+  - Bump clj-kondo to `2022.10.15-20221021.124734-3` avoiding breaking changes on custom hooks.
 
 - Editor
   - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131

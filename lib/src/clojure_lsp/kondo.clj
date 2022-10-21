@@ -131,11 +131,13 @@
 
     [element]))
 
-(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col]}]
+(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col derived-name-location derived-location]}]
   (and name-row
        name-col
        name-end-row
-       name-end-col))
+       name-end-col
+       (not derived-name-location)
+       (not derived-location)))
 
 (defn ^:private normalize-analysis [external? analysis]
   (reduce-kv

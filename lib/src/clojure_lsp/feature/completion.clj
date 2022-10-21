@@ -35,6 +35,7 @@
    :clojure-core
    :clojurescript-core
    :java-usages
+   :java-class-definitions
    :java-built-in
    :snippet])
 
@@ -422,20 +423,19 @@
                     :priority :clojurescript-core}
                    resolve-support))
 
-(defn ^:private with-java-items [matches-fn]
-  (concat
-    (->> common-sym/java-lang-syms
-         (filter (comp matches-fn str))
-         (map (fn [sym] {:label (str sym)
-                         :kind :class
-                         :detail (str "java.lang." sym)
-                         :priority :java-built-in})))
-    (->> common-sym/java-util-syms
-         (filter (comp matches-fn str))
-         (map (fn [sym] {:label (str sym)
-                         :kind :class
-                         :detail (str "java.util." sym)
-                         :priority :java-built-in})))))
+(defn ^:private with-java-items [matches-fn cursor-value db]
+  ;; For performance reasons, only calculating the java classes completions if user really intend
+  ;; avoiding calculating all the time for empty cursor-value completions
+  (when (string/starts-with? cursor-value "j")
+    (into []
+          (comp
+            q/xf-analysis->java-class-definitions
+            (filter (comp #(string/starts-with? % "java") :class))
+            (filter (comp matches-fn :class))
+            (map (fn [{:keys [class]}] {:label (str class)
+                                        :kind :class
+                                        :priority :java-class-definitions})))
+          (:analysis db))))
 
 (defn ^:private remove-first-and-last-char [s]
   (-> (string/join "" (drop-last s))
@@ -566,7 +566,7 @@
 
                       (and simple-cursor?
                            (supports-clj-core? uri))
-                      (into (with-java-items matches-fn))
+                      (into (with-java-items matches-fn cursor-value db))
 
                       (and support-snippets?
                            simple-cursor?)

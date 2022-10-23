@@ -290,8 +290,8 @@
          :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
                   :analysis config-for-full-analysis}}
-        (shared/assoc-in-some :lang (when (not= :unknown lang)
-                                      lang))
+        (shared/assoc-in-some [:lang] (when (not= :unknown lang)
+                                        lang))
         (with-additional-config (settings/all db)))))
 
 (defn ^:private run-kondo! [config err-hint]

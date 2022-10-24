@@ -1185,8 +1185,8 @@
 </tr>
 <tr>
 <td><code>:dependency-scheme</code></td>
-<td>How the dependencies should be linked, <code>jar</code> will make urls compatible with java's JarURLConnection. You can have the client make an lsp extension request of <code>clojure/dependencyContents</code> with the jar uri and the server will return the jar entry's contents. <a href="https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298">Similar to java clients</a></td>
-<td><code>zip</code></td>
+<td>Defines the format that the client and server should use for URLs of dependencies in jars. The two valid values are <code>"jar"</code> and <code>"zipfile"</code>. Different editors may handle these URLs differently. For example, in nvim when a <code>"zipfile"</code> URI is opened, the file will be editable, but <code>"jar"</code> URIs will not be. (This can be powerful, but if you edit a jar in your .m2 directory, you may break other projects.) <code>"jar"</code> will make urls compatible with java's JarURLConnection. Clients that can't extract the jar natively can make an LSP extension request of <code>clojure/dependencyContents</code> with the jar uri and the server will return the jar entry's contents, an approach <a href="https://github.com/redhat-developer/vscode-java/blob/a24945453092e1c39267eac9367c759a6c7b0497/src/extension.ts#L290-L298">used by some Java clients</a></td>
+<td><code>"zipfile"</code></td>
 </tr>
 <tr>
 <td><code>:document-formatting?</code></td>
@@ -1515,7 +1515,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 23, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 24, 2022</span>
     
   </small>
 </div>

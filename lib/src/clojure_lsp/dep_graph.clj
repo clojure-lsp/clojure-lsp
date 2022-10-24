@@ -132,13 +132,11 @@
       (select-keys ["file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
                     "jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"]))
   '{"file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
-    {:uri        "file:///path/to/code/clojure-lsp/cli/src/clojure_lsp/main.clj"
-     :internal?  true
+    {:internal?  true
      :langs      #{:clj}
      :namespaces #{clojure-lsp.main}}
     "jar:file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar!/clojure/tools/cli.cljc"
-    {:uri        "file:///path/to/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar:clojure/tools/cli.cljc"
-     :internal?  false
+    {:internal?  false
      :langs      #{:clj :cljs}
      :namespaces #{clojure.tools.cli}}})
 

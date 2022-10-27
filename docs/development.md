@@ -85,7 +85,7 @@ nnoremap <silent> crsp :execute 'Connect' CocRequest('clojure-lsp', 'clojure/ser
 
 ### Neovim with Conjure
 
-* Change the lsp [config](https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#clojure_lsp) `cmd` to "~/path/to/clojure-lsp/clojure-lsp", adjusting the past as necessary.
+* Change the lsp [config](https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#clojure_lsp) `cmd` to "~/path/to/clojure-lsp/clojure-lsp", adjusting the path as necessary.
 * To [restart](https://neovim.io/doc/user/lsp.html#lsp-faq) the LSP:
   * To stop the clojure-lsp server, use `:lua vim.lsp.stop_client(vim.lsp.get_active_clients())`
   * To start the clojure-lsp server, use `:edit`

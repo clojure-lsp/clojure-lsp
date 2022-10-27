@@ -430,6 +430,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#neovim-with-conjure" class="md-nav__link">
+    Neovim with Conjure
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#your-favorite-editor" class="md-nav__link">
     Your Favorite Editor
   </a>
@@ -625,6 +632,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#neovim-with-conjure" class="md-nav__link">
+    Neovim with Conjure
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#your-favorite-editor" class="md-nav__link">
     Your Favorite Editor
   </a>
@@ -756,6 +770,15 @@ nnoremap &lt;silent&gt; crsl :call setreg(&#39;*&#39;, CocRequest(&#39;clojure-l
 &quot; Connects to nrepl
 nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-lsp&#39;, &#39;clojure/serverInfo/raw&#39;)[&#39;port&#39;]&lt;CR&gt;
 </code></pre></div>
+<h3 id="neovim-with-conjure">Neovim with Conjure<a class="headerlink" href="#neovim-with-conjure" title="Permanent link">#</a></h3>
+<ul>
+<li>Change the lsp <a href="https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#clojure_lsp">config</a> <code>cmd</code> to "~/path/to/clojure-lsp/clojure-lsp", adjusting the path as necessary.</li>
+<li>To <a href="https://neovim.io/doc/user/lsp.html#lsp-faq">restart</a> the LSP:</li>
+<li>To stop the clojure-lsp server, use <code>:lua vim.lsp.stop_client(vim.lsp.get_active_clients())</code></li>
+<li>To start the clojure-lsp server, use <code>:edit</code></li>
+<li>To find the server info or the log file, use <code>:lua clients = vim.lsp.get_active_clients() for k, client_data in ipairs(clients) do id = client_data.id end client = vim.lsp.get_client_by_id(id) result = client.request_sync("clojure/serverInfo/raw", {}, 5000, 15) print('port = ' .. result.result.port) print('log-path = ' .. result.result['log-path'])</code></li>
+<li>To connect the nREPL client, run <code>:ConjureConnect &lt;port&gt;</code></li>
+</ul>
 <h3 id="your-favorite-editor">Your Favorite Editor<a class="headerlink" href="#your-favorite-editor" title="Permanent link">#</a></h3>
 <p>TBD. PR welcome.</p>
 <h2 id="debugging-profiling">Debugging &amp; Profiling<a class="headerlink" href="#debugging-profiling" title="Permanent link">#</a></h2>
@@ -830,7 +853,7 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 24, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 27, 2022</span>
     
   </small>
 </div>

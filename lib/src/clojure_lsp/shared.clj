@@ -189,14 +189,16 @@
         canonical (-> uri-path .toString io/file .getCanonicalPath .toString)]
     canonical))
 
+(defn ^:private jar-uri-string->jar-url-connection ^JarURLConnection [uri]
+  (.openConnection (URL. (unescape-uri uri))))
+
 (defn uri->filename
   "Converts a URI string into an absolute file path.
 
   The output path representation matches that of the operating system."
   [^String uri]
   (if (string/starts-with? uri "jar:")
-    (let [unescaped-uri (unescape-uri uri)
-          conn ^JarURLConnection (.openConnection (URL. unescaped-uri))
+    (let [conn (jar-uri-string->jar-url-connection uri)
           jar-file (uri-obj->filepath ^URI (.toURI ^URL (.getJarFileURL conn)))]
       (str jar-file ":" (.getEntryName conn)))
 
@@ -529,3 +531,13 @@
   expects Clojure style JSON, or when a map needs to be round-tripped from
   clojure-lsp to the client and back without case changes."
   lsp.responses/preserve-kebab-case)
+
+(defn normalize-uri-from-client [uri]
+  ;; Technically jar:file is not a valid URI scheme. It's a Jar URL and must be
+  ;; treated as such.
+  (if (string/starts-with? uri "jar:")
+    (.toString (.getURL (jar-uri-string->jar-url-connection uri)))
+    ;; unescape %3a%3a to ::
+    (let [uri (URI. uri)]
+      ;; normalize scheme:/some/path to scheme:///some/path
+      (uri-encode (.getScheme uri) (.getPath uri)))))

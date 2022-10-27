@@ -131,11 +131,13 @@
 
     [element]))
 
-(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col]}]
+(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col derived-name-location derived-location]}]
   (and name-row
        name-col
        name-end-row
-       name-end-col))
+       name-end-col
+       (not derived-name-location)
+       (not derived-location)))
 
 (defn ^:private normalize-analysis [external? analysis]
   (reduce-kv
@@ -278,16 +280,18 @@
 (defn ^:private config-for-single-file [uri db*]
   (let [db @db*
         filename (shared/uri->filename uri)
-        custom-lint-fn #(custom-lint-file! filename uri @db* %)]
+        custom-lint-fn #(custom-lint-file! filename uri @db* %)
+        lang (shared/uri->file-type uri)]
     (-> {:cache true
          :lint ["-"]
          :copy-configs (settings/get db [:copy-kondo-configs?] true)
-         :lang (shared/uri->file-type uri)
          :filename filename
          :config-dir (project-config-dir (:project-root-uri db))
          :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
                   :analysis config-for-full-analysis}}
+        (shared/assoc-in-some [:lang] (when (not= :unknown lang)
+                                        lang))
         (with-additional-config (settings/all db)))))
 
 (defn ^:private run-kondo! [config err-hint]

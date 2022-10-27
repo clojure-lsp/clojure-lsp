@@ -3,12 +3,16 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2022.10.14`.
+  - Bump clj-kondo to `2022.10.15-20221021.124734-3` avoiding breaking changes on custom hooks.
 
 - Editor
   - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131
   - Avoid shadowing existing locals when restructuring keys. #1229
   - Let editors control whether the server's log includes traces of the messages they are exchanging. https://github.com/clojure-lsp/lsp4clj/issues/27
+  - Bump promesa to `9.0.470`
+  - Bump lsp4clj to `1.5.0`
+  - For users with fewer cores, avoid unnecessary waits for file analysis.
+  - Reduce CPU usage by aborting requests that the client won't use.
 
 ## 2022.10.05-16.39.51
 

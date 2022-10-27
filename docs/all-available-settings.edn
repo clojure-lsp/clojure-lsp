@@ -34,7 +34,7 @@
  :keep-parens-when-threading? false
  :document-formatting? true
  :document-range-formatting? true
- :dependency-scheme :zip
+ :dependency-scheme "zipfile"
  :text-document-sync-kind :full
  :cljfmt-config-path ".cljfmt.edn"
  :cljfmt {}

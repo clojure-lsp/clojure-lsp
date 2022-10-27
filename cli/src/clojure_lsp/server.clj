@@ -18,19 +18,31 @@
    [lsp4clj.liveness-probe :as lsp.liveness-probe]
    [lsp4clj.lsp.requests :as lsp.requests]
    [lsp4clj.server :as lsp.server]
+   [medley.core :as medley]
    [promesa.core :as p]
+   [promesa.exec :as p.exec]
    [taoensso.timbre :as timbre]))
 
-(defmacro eventually [& body]
-  `(p/future ~@body))
-
 (set! *warn-on-reflection* true)
+
+(defmacro eventually [& body]
+  `(p/thread ~@body))
+
+(def ^:private changes-executor (memoize p.exec/forkjoin-executor))
+
+(defmacro after-changes [& body]
+  `(p/thread-call (changes-executor) (^:once fn* [] ~@body)))
 
 (def diagnostics-debounce-ms 100)
 (def change-debounce-ms 300)
 (def watched-files-debounce-ms 1000)
 
 (def known-files-pattern "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}")
+
+(def normalize-uri shared/normalize-uri-from-client)
+
+(defn normalize-doc-uri [params]
+  (medley/update-existing-in params [:text-document :uri] normalize-uri))
 
 (defn log! [level args fmeta]
   (timbre/log! level :p args {:?line (:line fmeta)
@@ -159,7 +171,7 @@
 ;;;; clojure extra features
 
 (defmethod lsp.server/receive-request "clojure/dependencyContents" [_ components params]
-  (->> params
+  (->> (medley/update-existing params :uri normalize-uri)
        (handler/dependency-contents components)
        (conform-or-log ::coercer/uri)
        eventually))
@@ -179,13 +191,14 @@
 
 (defmethod lsp.server/receive-request "clojure/cursorInfo/raw" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/cursor-info-raw components)
        eventually))
 
 (defmethod lsp.server/receive-notification "clojure/cursorInfo/log" [_ components params]
-  (eventually
+  (future
     (try
-      (handler/cursor-info-log components params)
+      (handler/cursor-info-log components (normalize-doc-uri params))
       (catch Throwable e
         (logger/error e)
         (throw e)))))
@@ -200,30 +213,32 @@
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_synchronization
 
 (defmethod lsp.server/receive-notification "textDocument/didOpen" [_ components params]
-  (handler/did-open components params))
+  (handler/did-open components (normalize-doc-uri params)))
 
 (defmethod lsp.server/receive-notification "textDocument/didChange" [_ components params]
-  (handler/did-change components params))
+  (handler/did-change components (normalize-doc-uri params)))
 
 (defmethod lsp.server/receive-notification "textDocument/didSave" [_ components params]
   (future
     (try
-      (handler/did-save components params)
+      (handler/did-save components (normalize-doc-uri params))
       (catch Throwable e
         (logger/error e)
         (throw e)))))
 
 (defmethod lsp.server/receive-notification "textDocument/didClose" [_ components params]
-  (handler/did-close components params))
+  (handler/did-close components (normalize-doc-uri params)))
 
 (defmethod lsp.server/receive-request "textDocument/references" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/references components)
        (conform-or-log ::coercer/locations)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/completion" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/completion components)
        (conform-or-log ::coercer/completion-items)
        eventually))
@@ -237,9 +252,10 @@
 
 (defmethod lsp.server/receive-request "textDocument/prepareRename" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/prepare-rename components)
        (conform-or-log ::coercer/prepare-rename-or-error)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
@@ -249,97 +265,104 @@
 
 (defmethod lsp.server/receive-request "textDocument/hover" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/hover components)
        (conform-or-log ::coercer/hover)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/signatureHelp" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/signature-help components)
        (conform-or-log ::coercer/signature-help)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/formatting" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/formatting components)
        (conform-or-log ::coercer/edits)
        eventually))
 
-(def ^:private formatting (atom false))
-
 (defmethod lsp.server/receive-request "textDocument/rangeFormatting" [_this components params]
-  (when (compare-and-set! formatting false true)
-    (try
-      (->> params
-           (handler/range-formatting components)
-           (conform-or-log ::coercer/edits))
-      (catch Exception e
-        (logger/error e))
-      (finally
-        (reset! formatting false)))))
+  (->> params
+       (normalize-doc-uri)
+       (handler/range-formatting components)
+       (conform-or-log ::coercer/edits)
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/codeAction" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/code-actions components)
        (conform-or-log ::coercer/code-actions)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/codeLens" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/code-lens components)
        (conform-or-log ::coercer/code-lenses)
-       eventually))
+       after-changes))
 
-(defmethod lsp.server/receive-request "codeLens/resolve" [_ components params]
-  (->> params
+(defmethod lsp.server/receive-request "codeLens/resolve" [_ components code-lens]
+  (->> code-lens
        (handler/code-lens-resolve components)
        (conform-or-log ::coercer/code-lens)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/definition" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/definition components)
        (conform-or-log ::coercer/location)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/declaration" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/declaration components)
        (conform-or-log ::coercer/location)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/implementation" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/implementation components)
        (conform-or-log ::coercer/locations)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/documentSymbol" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/document-symbol components)
        (conform-or-log ::coercer/document-symbols)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/documentHighlight" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/document-highlight components)
        (conform-or-log ::coercer/document-highlights)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/full" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/semantic-tokens-full components)
        (conform-or-log ::coercer/semantic-tokens)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/range" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/semantic-tokens-range components)
        (conform-or-log ::coercer/semantic-tokens)
-       eventually))
+       after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/prepareCallHierarchy" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/prepare-call-hierarchy components)
        (conform-or-log ::coercer/call-hierarchy-items)
        eventually))
@@ -358,6 +381,7 @@
 
 (defmethod lsp.server/receive-request "textDocument/linkedEditingRange" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/linked-editing-ranges components)
        (conform-or-log ::coercer/linked-editing-ranges-or-error)
        eventually))
@@ -379,7 +403,11 @@
   (logger/warn params))
 
 (defmethod lsp.server/receive-notification "workspace/didChangeWatchedFiles" [_ components params]
-  (->> params
+  (->> (medley/update-existing params
+                               :changes (fn [changes]
+                                          (mapv (fn [change]
+                                                  (medley/update-existing change :uri normalize-uri))
+                                                changes)))
        (conform-or-log ::coercer/did-change-watched-files-params)
        (handler/did-change-watched-files components)))
 
@@ -390,10 +418,16 @@
        eventually))
 
 (defmethod lsp.server/receive-request "workspace/willRenameFiles" [_ components params]
-  (->> params
+  (->> (medley/update-existing params
+                               :files (fn [files]
+                                        (mapv (fn [file]
+                                                (-> file
+                                                    (medley/update-existing :old-uri normalize-uri)
+                                                    (medley/update-existing :new-uri normalize-uri)))
+                                              files)))
        (handler/will-rename-files components)
        (conform-or-log ::coercer/workspace-edit)
-       eventually))
+       after-changes))
 
 (defn capabilities [settings]
   (conform-or-log
@@ -459,7 +493,7 @@
   ;; about which messages are sent when probably needs to be handled in lsp4clj.
   ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
   (handler/initialize components
-                      (:root-uri params)
+                      (normalize-uri (:root-uri params))
                       (:capabilities params)
                       (client-settings params)
                       (some-> params :work-done-token str))

@@ -30,9 +30,8 @@
      :range (shared/->range parent-element)
      :selection-range (shared/->range usage-element)}))
 
-(defn prepare [uri row col db*]
-  (let [db @db*
-        cursor-element (q/find-element-under-cursor db uri row col)]
+(defn prepare [uri row col db]
+  (let [cursor-element (q/find-element-under-cursor db uri row col)]
     [(element-by-uri->call-hierarchy-item
        {:uri uri
         :usage-element cursor-element

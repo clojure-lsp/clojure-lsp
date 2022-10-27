@@ -21,7 +21,7 @@
       {:uri (h/source-path->uri "java_interop/SampleClass.java")
        :range {:start {:line 0 :character 0}
                :end {:line 0 :character 0}}}
-      (lsp/request! (fixture/definition-request "java_interop/a.clj" 7 5)))))
+      (lsp/request! (fixture/definition-request (h/source-path->uri "java_interop/a.clj") 7 5)))))
 
 (deftest find-definition-of-java-class-when-source-does-not-exists-for-jar-scheme
   (h/delete-project-file "../../.lsp/.cache")
@@ -34,7 +34,7 @@
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-source-path-notification "java_interop/a.clj"))
 
-  (let [result (lsp/request! (fixture/definition-request "java_interop/a.clj" 8 5))]
+  (let [result (lsp/request! (fixture/definition-request (h/source-path->uri "java_interop/a.clj") 8 5))]
     (testing "We find java compiled class first"
       (h/assert-submap
         {:uri (-> "integration-test/sample-test/.lsp/.cache/java/decompiled/clojure/lang/PersistentVector.java"
@@ -63,7 +63,7 @@
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-source-path-notification "java_interop/a.clj"))
 
-  (let [result (lsp/request! (fixture/definition-request "java_interop/a.clj" 8 5))]
+  (let [result (lsp/request! (fixture/definition-request (h/source-path->uri "java_interop/a.clj") 8 5))]
     (testing "We find java compiled class first"
       (h/assert-submap
         {:uri (-> "integration-test/sample-test/.lsp/.cache/java/decompiled/clojure/lang/PersistentVector.java"

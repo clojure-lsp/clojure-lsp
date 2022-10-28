@@ -38,19 +38,17 @@ An alternative is to pass `--trace` to clojure-lsp during process start and cloj
 Make sure you have the [most recent version of `clojure-lsp`](installation.md#native-binary-recommended)
 
 Check if the executable is working running it from the command line, it should start up and start reading from stdin.
-Type `{}\n\n` and you should get something like:
+Type `Content-Length: 51\n\n{"jsonrpc":"2.0","method":"foo","id":1,"params":{}}`. After a few moments you should get something like:
 
 ```
-$ clojure-lsp
-{}
+$ ./clojure-lsp
+Content-Length: 51
 
-Apr 12, 2019 7:07:02 AM org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer fireError
-SEVERE: Missing header Content-Length in input "{}
+{"jsonrpc":"2.0","method":"foo","id":1,"params":{}}
 
-"
-java.lang.IllegalStateException: Missing header Content-Length in input "{}""""
+Content-Length: 101
 
-"""
+{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found","data":{"method":"foo"}}}
 ```
 
 If that is ok, clojure-lsp logs to `/tmp/clojure-lsp.*.out`, so watch that file and start your editor.

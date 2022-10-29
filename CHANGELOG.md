@@ -13,6 +13,7 @@
   - Bump lsp4clj to `1.5.0`
   - For users with fewer cores, avoid unnecessary waits for file analysis.
   - Reduce CPU usage by aborting requests that the client won't use.
+  - Fix to mark some code actions as preferred, so editors can emphasize them. https://github.com/clojure-lsp/lsp4clj/issues/32
 
 ## 2022.10.05-16.39.51
 

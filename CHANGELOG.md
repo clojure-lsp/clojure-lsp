@@ -4,6 +4,7 @@
 
 - General
   - Bump clj-kondo to `2022.10.15-20221021.124734-3` avoiding breaking changes on custom hooks.
+  - Bump graalvm to 22.3.0. #1345
 
 - Editor
   - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131

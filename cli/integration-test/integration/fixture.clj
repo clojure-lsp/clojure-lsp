@@ -10,8 +10,10 @@
   ([]
    (initialize-request {:initializationOptions default-init-options}))
   ([params]
+   (initialize-request params (h/file->uri (io/file h/root-project-path))))
+  ([params project-root]
    [:initialize
-    (merge {:rootUri (h/file->uri (io/file h/root-project-path))}
+    (merge {:rootUri project-root}
            params)]))
 
 (defn shutdown-request

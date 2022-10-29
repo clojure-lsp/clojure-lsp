@@ -59,6 +59,18 @@
 (defn ^:private mv-here [file]
   (fs/move file "." {:replace-existing true}))
 
+(defn ^:private lsp-binary []
+  (let [lsp-bins (->> [:native :script] (map lsp-bin-filename) distinct)
+        lsp-bins-found (->> lsp-bins (filter fs/exists?) (into #{}))]
+    (case (count lsp-bins-found)
+      0 (throw (ex-info "No clojure-lsp executables found." {:searched-for lsp-bins}))
+      1 (str (fs/path ".." (first lsp-bins-found)))
+      (throw (ex-info "More than one clojure-lsp executables found. Can only work with one."
+                      {:bin-found lsp-bins-found})))))
+
+(defn ^:private bb-binary []
+  (str \" (.get (.command (.info (java.lang.ProcessHandle/current)))) \"))
+
 (defn lib-pom [] (build "lib" "pom"))
 
 (defn cli-pom [] (build "cli" "pom"))
@@ -106,19 +118,14 @@
 (defn pod-test [] (clj! "cli" ["-M:pod-test"]))
 
 (defn integration-test
-  "Run the integration tests in 'test/integration-test/' using `./clojure-lsp[.bat|.exe]`.
-
-  There should only be one clojure-lsp executable found, throws error
-  otherwise."
+  "Run the integration tests in 'test/integration-test/' using `./clojure-lsp[.bat|.exe]`."
   []
-  (let [lsp-bins (->> [:native :script] (map lsp-bin-filename) distinct)
-        lsp-bins-found (->> lsp-bins (filter fs/exists?) (into #{}))
-        bb (str \" (.get (.command (.info (java.lang.ProcessHandle/current)))) \")]
-    (case (count lsp-bins-found)
-      0 (throw (ex-info "No clojure-lsp executables found." {:searched-for lsp-bins}))
-      1 (p/shell {:dir "cli"} bb "integration-test" (str (fs/path ".." (first lsp-bins-found))))
-      (throw (ex-info "More than one clojure-lsp executables found. Can only work with one."
-                      {:bin-found lsp-bins-found})))))
+  (p/shell {:dir "cli"} (bb-binary) "integration-test" (lsp-binary)))
+
+(defn performance-test
+  "Run the performance tests in 'test/performance-test/' using `./clojure-lsp[.bat|.exe]`."
+  []
+  (p/shell {:dir "cli"} (bb-binary) "performance-test" (lsp-binary)))
 
 (defn ^:private lint
   ([linter] (lint linter {}))

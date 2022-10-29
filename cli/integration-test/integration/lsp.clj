@@ -10,25 +10,28 @@
 (def ^:dynamic *mock-client* nil)
 
 (defn start-server
-  ([binary]
-   (start-server binary []))
-  ([binary args]
+  ([binary project-root]
+   (start-server binary project-root []))
+  ([binary project-root args]
    (p/process (into [(.getCanonicalPath (io/file binary))] args)
-              {:dir "integration-test/sample-test/"})))
+              {:dir project-root})))
 
-(defn start-process! []
-  (let [server (start-server (first *command-line-args*))
-        client (client/client (:in server) (:out server))]
-    (client/start client nil)
-    (async/go-loop []
-      (when-let [log (async/<! (:log-ch client))]
-        (println log)
-        (recur)))
-    (alter-var-root #'*clojure-lsp-process* (constantly server))
-    (alter-var-root #'*mock-client* (constantly client))))
+(defn start-process!
+  ([]
+   (start-process! "integration-test/sample-test/"))
+  ([project-root]
+   (let [server (start-server (first *command-line-args*) project-root)
+         client (client/client (:in server) (:out server))]
+     (client/start client nil)
+     (async/go-loop []
+       (when-let [log (async/<! (:log-ch client))]
+         (println log)
+         (recur)))
+     (alter-var-root #'*clojure-lsp-process* (constantly server))
+     (alter-var-root #'*mock-client* (constantly client)))))
 
 (defn cli! [& args]
-  (let [server (start-server (first *command-line-args*) args)]
+  (let [server (start-server (first *command-line-args*) "integration-test/sample-test/" args)]
     (alter-var-root #'*clojure-lsp-process* (constantly server))
     (io/reader (:out server))))
 

@@ -1,8 +1,10 @@
-{:paths ["integration-test"]
+{:paths ["integration-test"
+         "performance-test"]
  :min-bb-version "0.4.0"
  :deps {medley/medley {:mvn/version "1.4.0"}
         com.github.clojure-lsp/lsp4clj {:mvn/version "1.5.0"
                                         #_#_:local/root "../../lsp4clj"}
         org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
                                  :git/sha "8df0712896f596680da7a32ae44bb000b7e45e68"}}
- :tasks {integration-test entrypoint/run-all}}
+ :tasks {integration-test integration.entrypoint/run-all
+         performance-test performance.entrypoint/run-all}}

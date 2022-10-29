@@ -1,4 +1,4 @@
-(ns entrypoint
+(ns integration.entrypoint
   (:require
    [clojure.java.shell :as sh]
    [clojure.test :as t]

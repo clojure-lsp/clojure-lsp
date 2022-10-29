@@ -11,9 +11,9 @@
     {
       "lib": "cognitect/test-runner",
       "url": "https://github.com/cognitect-labs/test-runner",
-      "rev": "a85b3b02765fb68684ab9ee4a8598eacf7e471d2",
+      "rev": "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023",
       "git-dir": "https/github.com/cognitect-labs/test-runner",
-      "hash": "sha256-DhSzXVKLrnTwCEmU5M5IGk4F8EKSLLNdRY5LHlnD1fY="
+      "hash": "sha256-/opMnUA5tnUFZrDr34ug1Zy5hWnuYNap6yf3iJAGkLw="
     },
     {
       "lib": "io.github.clojure/tools.build",
@@ -201,16 +201,16 @@
       "hash": "sha256-4MoY394FmlFXLiwtetWjDmEbh1NGFv1wRPZx33qbtlg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2022.09.09-SNAPSHOT/clj-kondo-2022.09.09-20220924.161252-19.jar",
-      "snapshot": "clj-kondo-2022.09.09-SNAPSHOT.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2022.10.15-SNAPSHOT/clj-kondo-2022.10.15-20221021.124734-3.jar",
+      "snapshot": "clj-kondo-2022.10.15-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-ZiuEWEPKVQVuQdPj3c/3aMKPsPQoyNF+pjwdPQwRLgc="
+      "hash": "sha256-wR1tjWc9L9QLv8ZBgXM30YquZr8EhWaBGnxRUTmimJQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2022.09.09-SNAPSHOT/clj-kondo-2022.09.09-20220924.161252-19.pom",
-      "snapshot": "clj-kondo-2022.09.09-SNAPSHOT.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2022.10.15-SNAPSHOT/clj-kondo-2022.10.15-20221021.124734-3.pom",
+      "snapshot": "clj-kondo-2022.10.15-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-i/6BJAcJYTR1IYR7rd0fhtfALLsbSL0tPqybO7WYTf0="
+      "hash": "sha256-y8MrJjkV5anKvnS25X6nRwQ5lFRhHigzBzfwTk/as84="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -293,24 +293,24 @@
       "hash": "sha256-LvTRPdHDFaV0sKMDfPcsqv+5rJR2QcBv7H4bMGy2vkE="
     },
     {
-      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/1.0.0/clj-async-profiler-1.0.0.jar",
+      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/1.0.1/clj-async-profiler-1.0.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-WVOz+T8qh3Hrrgw2+RnnCZeYrW86HEr8m6oX0yskbJQ="
+      "hash": "sha256-X4YDOMwxuKUOHFTovhDemIqtWA7ErvvPfCVIdyTrkvo="
     },
     {
-      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/1.0.0/clj-async-profiler-1.0.0.pom",
+      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/1.0.1/clj-async-profiler-1.0.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-nO/f2cV6nwRjLQhz41KzzEAt+pYtRKU72S6y+kC+H7U="
+      "hash": "sha256-fR5jFbsN/eV228mbL/Z/jjfM6RiE//rgOT007jWqPuo="
     },
     {
-      "mvn-path": "com/clojure-goes-fast/clj-memory-meter/0.1.3/clj-memory-meter-0.1.3.jar",
+      "mvn-path": "com/clojure-goes-fast/clj-memory-meter/0.2.1/clj-memory-meter-0.2.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-/9q1Q3vbLTJvxc+9/pZlau0CoNAL7Ng8lsVLa3SbBkY="
+      "hash": "sha256-mUYTq415gk90cgTcxkw26aaxyizd14WI8VSWX9RLRTA="
     },
     {
-      "mvn-path": "com/clojure-goes-fast/clj-memory-meter/0.1.3/clj-memory-meter-0.1.3.pom",
+      "mvn-path": "com/clojure-goes-fast/clj-memory-meter/0.2.1/clj-memory-meter-0.2.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-tIMkiHcYjq7dY0zBQqMxnZOnSLC12ZAz6fPZE1ZSjFM="
+      "hash": "sha256-OFCCwwgGPcpWKGFJ/VzK9oRQA8yZUXkEUTaeyRvel8g="
     },
     {
       "mvn-path": "com/cognitect/aws/api/0.8.539/api-0.8.539.jar",
@@ -633,14 +633,14 @@
       "hash": "sha256-4LypffdwI9ZRgGAAeLJGJYwiLhUDJ64urPOynp9cIu4="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.3.1/lsp4clj-1.3.1.jar",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.5.0/lsp4clj-1.5.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-zsTZjIhXsAOQrujaQvLOhF0oZlx5UKvhyiEoQbwM69w="
+      "hash": "sha256-h1+kQ2JGVoaYJjWLphHGeJUCa86EfLTxzkGYIdfJFuA="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.3.1/lsp4clj-1.3.1.pom",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.5.0/lsp4clj-1.5.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-umFiRasSpFJc0eRv2LjGCdFuvouFHJQDwwpxJQF7SPE="
+      "hash": "sha256-fb0fH8t8xlfAMjKtOfXubgZpGDo1Qk8d5Wo79YR6fnw="
     },
     {
       "mvn-path": "com/github/ericdallo/deps-bin/0.2.0/deps-bin-0.2.0.jar",
@@ -943,24 +943,14 @@
       "hash": "sha256-P2Di1pJQOTGtfSkAWkscgWtE/s59hS5qGPijHF5zcgo="
     },
     {
-      "mvn-path": "funcool/promesa/8.0.450/promesa-8.0.450.jar",
+      "mvn-path": "funcool/promesa/9.0.470/promesa-9.0.470.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-Mx+awz6jyRG8IFy5MjL3KISjCv90UQr9l2G0Iqki+s4="
+      "hash": "sha256-qqXd2khqsaPS5Nde/BcZoPavqdt7+MZy+0PpSfVk/EU="
     },
     {
-      "mvn-path": "funcool/promesa/8.0.450/promesa-8.0.450.pom",
+      "mvn-path": "funcool/promesa/9.0.470/promesa-9.0.470.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-vitx8EywaKRuikAK25igS7PhvTJe3frtKH/6pMmscZ0="
-    },
-    {
-      "mvn-path": "funcool/promesa/9.0.462/promesa-9.0.462.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-ZwQEU3okfDBA+s6HTV3eyitNt2WOeXcwtwm+20+tfWY="
-    },
-    {
-      "mvn-path": "funcool/promesa/9.0.462/promesa-9.0.462.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-DtOfHoBJYWW+GG3eysJNw8y0u70ItxsO4z9lBs5dMWM="
+      "hash": "sha256-ikrrUy3SSzDe5BzlbPGBDg3s5Nmajh89dquZZaAVtYM="
     },
     {
       "mvn-path": "hawk/hawk/0.2.11/hawk-0.2.11.jar",
@@ -1108,14 +1098,14 @@
       "hash": "sha256-akG+RS2LDFdD5JTONXJiyYWYhyc3XNLXLwjpJVARhDQ="
     },
     {
-      "mvn-path": "lambdaisland/kaocha/1.70.1086/kaocha-1.70.1086.jar",
+      "mvn-path": "lambdaisland/kaocha/1.71.1119/kaocha-1.71.1119.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-kLDgovIcZ+Ef1a28CvR3NLN7wc4iyCTOsxJlDpyuvjU="
+      "hash": "sha256-eTqa+ejBopfqgNQxrfwrrmiBzZn9oO52d7sqy18fZu4="
     },
     {
-      "mvn-path": "lambdaisland/kaocha/1.70.1086/kaocha-1.70.1086.pom",
+      "mvn-path": "lambdaisland/kaocha/1.71.1119/kaocha-1.71.1119.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-EAagkXQMSjPpN3EYxTFkibtJun1SscIEFjC7vx9A6Dc="
+      "hash": "sha256-1s+iLRpnhqD0op4pWkq+skn0Pmnr7NFff/1gyjWWrv4="
     },
     {
       "mvn-path": "lambdaisland/tools.namespace/0.1.247/tools.namespace-0.1.247.jar",

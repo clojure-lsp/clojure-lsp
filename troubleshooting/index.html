@@ -710,21 +710,19 @@ You can open server logs in a buffer with <code>M-x</code> <code>lsp-clojure-ser
 
 </details>
 
-<p>An alternative is to pass <code>--trace</code> to clojure-lsp during process start and clojure-lsp will log the communication to the server-log.</p>
+<p>An alternative is to pass <code>--trace-level verbose</code> to clojure-lsp during process start and clojure-lsp will log the communication to the server-log.</p>
 <h2 id="server-is-not-initializing">Server is not initializing<a class="headerlink" href="#server-is-not-initializing" title="Permanent link">#</a></h2>
 <p>Make sure you have the <a href="../installation/#native-binary-recommended">most recent version of <code>clojure-lsp</code></a></p>
 <p>Check if the executable is working running it from the command line, it should start up and start reading from stdin.
-Type <code>{}\n\n</code> and you should get something like:</p>
-<div class="highlight"><pre><span></span><code>$ clojure-lsp
-{}
+Type <code>Content-Length: 51\n\n{"jsonrpc":"2.0","method":"foo","id":1,"params":{}}</code>. After a few moments you should get something like:</p>
+<div class="highlight"><pre><span></span><code>$ ./clojure-lsp
+Content-Length: 51
 
-Apr 12, 2019 7:07:02 AM org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer fireError
-SEVERE: Missing header Content-Length in input &quot;{}
+{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;method&quot;:&quot;foo&quot;,&quot;id&quot;:1,&quot;params&quot;:{}}
 
-&quot;
-java.lang.IllegalStateException: Missing header Content-Length in input &quot;{}&quot;&quot;&quot;&quot;
+Content-Length: 101
 
-&quot;&quot;&quot;
+{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:1,&quot;error&quot;:{&quot;code&quot;:-32601,&quot;message&quot;:&quot;Method not found&quot;,&quot;data&quot;:{&quot;method&quot;:&quot;foo&quot;}}}
 </code></pre></div>
 <p>If that is ok, clojure-lsp logs to <code>/tmp/clojure-lsp.*.out</code>, so watch that file and start your editor.</p>
 <p>LSP Clients also generally have a way to trace server interactions. Turn that on and attach both server and client logs to an issue if it's not obvious what's going on.</p>
@@ -833,7 +831,7 @@ in your <code>coc-settings.json</code> the line <code>disableDiagnostics</code> 
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 27, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 29, 2022</span>
     
   </small>
 </div>

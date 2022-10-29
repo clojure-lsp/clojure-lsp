@@ -2,7 +2,7 @@
         org.clojure/tools.cli {:mvn/version "1.0.206"}
         borkdude/dynaload {:mvn/version "0.3.5"}
         nrepl/bencode {:mvn/version "1.1.0"}
-        com.taoensso/timbre {:mvn/version "5.2.1"}
+        com.taoensso/timbre {:mvn/version "6.0.1"}
         clojure-lsp/lib {:local/root "../lib"}
         funcool/promesa {:mvn/version "9.0.470"}}
  :paths ["src" "resources"]

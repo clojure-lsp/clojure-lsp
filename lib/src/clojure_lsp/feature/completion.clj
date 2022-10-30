@@ -36,7 +36,6 @@
    :clojurescript-core
    :java-usages
    :java-class-definitions
-   :java-built-in
    :snippet])
 
 (def priority-kw->number
@@ -423,19 +422,30 @@
                     :priority :clojurescript-core}
                    resolve-support))
 
-(defn ^:private with-java-items [matches-fn cursor-value db]
-  ;; For performance reasons, only calculating the java classes completions if user really intend
-  ;; avoiding calculating all the time for empty cursor-value completions
-  (when (string/starts-with? cursor-value "j")
-    (into []
-          (comp
-            q/xf-analysis->java-class-definitions
-            (filter (comp #(string/starts-with? % "java") :class))
-            (filter (comp matches-fn :class))
-            (map (fn [{:keys [class]}] {:label (str class)
-                                        :kind :class
-                                        :priority :java-class-definitions})))
-          (:analysis db))))
+(defn ^:private with-java-definition-items [matches-fn cursor-value db]
+  ;; For performance reasons, we have thousands of class definitions usually
+  ;; we only consider it if user typed anything and is auto completing
+  (when (seq (str cursor-value))
+    (flatten
+      (into []
+            (comp
+              q/xf-analysis->java-class-definitions
+              (keep (fn [{:keys [class]}]
+                      (let [class-name* (delay (last (string/split class #"\.")))]
+                        (cond-> []
+
+                          (matches-fn class)
+                          (conj {:label (str class)
+                                 :kind :class
+                                 :priority :java-class-definitions})
+
+                          (and (string/starts-with? class "java.lang")
+                               (matches-fn @class-name*))
+                          (conj {:label @class-name*
+                                 :detail class
+                                 :kind :class
+                                 :priority :java-class-definitions}))))))
+            (:analysis db)))))
 
 (defn ^:private remove-first-and-last-char [s]
   (-> (string/join "" (drop-last s))
@@ -474,6 +484,12 @@
        (sort-by (juxt #(get priority-kw->number (:priority %) 0) :label :detail))
        (mapv #(dissoc % :priority))
        not-empty))
+
+(defn ^:private limiting-items
+  "Limit the returned items for better performance.
+  If user needs more items one should be more specific in the completion query."
+  [size items]
+  (drop-last (- (count items) size) items))
 
 (defn completion [uri row col db]
   (let [root-zloc (parser/safe-zloc-of-file db uri)
@@ -566,12 +582,14 @@
 
                       (and simple-cursor?
                            (supports-clj-core? uri))
-                      (into (with-java-items matches-fn cursor-value db))
+                      (into (with-java-definition-items matches-fn cursor-value db))
 
                       (and support-snippets?
                            simple-cursor?)
                       (merging-snippets cursor-loc next-loc function-call? matches-fn settings)))]
-        (sorting-and-distincting-items items)))))
+        (->> items
+             sorting-and-distincting-items
+             (limiting-items 600))))))
 
 ;;;; Resolve Completion Item (completionItem/resolve)
 

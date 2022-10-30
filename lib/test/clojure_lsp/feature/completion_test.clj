@@ -7,6 +7,7 @@
 (h/reset-components-before-test)
 
 (deftest test-completion
+  (h/load-java-path "test/fixtures/java_interop/System.java")
   (h/load-code-and-locs (h/code "(ns alpaca.ns (:require [user :as alpaca]))"
                                 "(alpaca/)"
                                 "(def barr)"
@@ -82,7 +83,7 @@
       [{:label "System", :detail "java.lang.System"}]
       (f.completion/completion (h/file-uri "file:///e.clj") 3 6 (h/db))))
   (testing "complete non symbols doesn't blow up"
-    (is (= nil (f.completion/completion (h/file-uri "file:///e.clj") 5 3 (h/db)))))
+    (is (= [] (f.completion/completion (h/file-uri "file:///e.clj") 5 3 (h/db)))))
   (testing "complete all available namespace definitions when inside require"
     (h/assert-submaps
       [{:label "alpaca.ns" :kind :module}]

@@ -35,7 +35,7 @@
    :clojure-core
    :clojurescript-core
    :java-usages
-   :java-built-in
+   :java-class-definitions
    :snippet])
 
 (def priority-kw->number
@@ -422,20 +422,30 @@
                     :priority :clojurescript-core}
                    resolve-support))
 
-(defn ^:private with-java-items [matches-fn]
-  (concat
-    (->> common-sym/java-lang-syms
-         (filter (comp matches-fn str))
-         (map (fn [sym] {:label (str sym)
-                         :kind :class
-                         :detail (str "java.lang." sym)
-                         :priority :java-built-in})))
-    (->> common-sym/java-util-syms
-         (filter (comp matches-fn str))
-         (map (fn [sym] {:label (str sym)
-                         :kind :class
-                         :detail (str "java.util." sym)
-                         :priority :java-built-in})))))
+(defn ^:private with-java-definition-items [matches-fn cursor-value db]
+  ;; For performance reasons, we have thousands of class definitions usually
+  ;; we only consider it if user typed anything and is auto completing
+  (when (seq (str cursor-value))
+    (flatten
+      (into []
+            (comp
+              q/xf-analysis->java-class-definitions
+              (keep (fn [{:keys [class]}]
+                      (let [class-name* (delay (last (string/split class #"\.")))]
+                        (cond-> []
+
+                          (matches-fn class)
+                          (conj {:label (str class)
+                                 :kind :class
+                                 :priority :java-class-definitions})
+
+                          (and (string/starts-with? class "java.lang")
+                               (matches-fn @class-name*))
+                          (conj {:label @class-name*
+                                 :detail class
+                                 :kind :class
+                                 :priority :java-class-definitions}))))))
+            (:analysis db)))))
 
 (defn ^:private remove-first-and-last-char [s]
   (-> (string/join "" (drop-last s))
@@ -566,12 +576,16 @@
 
                       (and simple-cursor?
                            (supports-clj-core? uri))
-                      (into (with-java-items matches-fn))
+                      (into (with-java-definition-items matches-fn cursor-value db))
 
                       (and support-snippets?
                            simple-cursor?)
                       (merging-snippets cursor-loc next-loc function-call? matches-fn settings)))]
-        (sorting-and-distincting-items items)))))
+        (->> items
+             sorting-and-distincting-items
+             ;; Limit the returned items for better performance.
+             ;; If user needs more items one should be more specific in the completion query.
+             (take 600))))))
 
 ;;;; Resolve Completion Item (completionItem/resolve)
 

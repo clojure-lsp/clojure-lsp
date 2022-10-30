@@ -1,6 +1,7 @@
 (ns clojure-lsp.test-helper
   (:require
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
@@ -174,6 +175,12 @@
   ([code uri] (load-code code uri (components)))
   ([code uri components]
    (handlers/did-open components {:text-document {:uri uri :text code}})))
+
+(defn load-java-path [uri]
+  (#'f.java-interop/analyze-and-cache-jdk-source!
+   [uri]
+   {}
+   (db*)))
 
 (defn load-code-and-locs
   ([code] (load-code-and-locs code default-uri))

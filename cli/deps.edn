@@ -7,14 +7,14 @@
         funcool/promesa {:mvn/version "9.0.470"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.70.1086"}}
+                               lambdaisland/kaocha {:mvn/version "1.71.1119"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test
            {:replace-paths ["pod-test"]
             :replace-deps {com.cognitect/transit-clj {:mvn/version "1.0.329"}
                            cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
-                                                  :sha "a522ab2851a2aa5bf9c22a942b45287a3a019310"}
+                                                  :sha "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}
                            babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"
                                                    :sha "decf791000081ca9e6d2fbea9f20a0aa3fae902e"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
@@ -29,7 +29,7 @@
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-paths ["dev"]
                    :extra-deps {cider/cider-nrepl {:mvn/version "0.28.6"}
-                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.0"}
+                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.1"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.2.1"}
                                 criterium/criterium {:mvn/version "0.4.6"}
                                 nrepl/nrepl {:mvn/version "1.0.0"}}

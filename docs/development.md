@@ -83,6 +83,15 @@ nnoremap <silent> crsl :call setreg('*', CocRequest('clojure-lsp', 'clojure/serv
 nnoremap <silent> crsp :execute 'Connect' CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['port']<CR>
 ```
 
+### Neovim with Conjure
+
+* Change the lsp [config](https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#clojure_lsp) `cmd` to "~/path/to/clojure-lsp/clojure-lsp", adjusting the path as necessary.
+* To [restart](https://neovim.io/doc/user/lsp.html#lsp-faq) the LSP:
+  * To stop the clojure-lsp server, use `:lua vim.lsp.stop_client(vim.lsp.get_active_clients())`
+  * To start the clojure-lsp server, use `:edit`
+* To find the server info or the log file, use `:lua clients = vim.lsp.get_active_clients() for k, client_data in ipairs(clients) do id = client_data.id end client = vim.lsp.get_client_by_id(id) result = client.request_sync("clojure/serverInfo/raw", {}, 5000, 15) print('port = ' .. result.result.port) print('log-path = ' .. result.result['log-path'])`
+* To connect the nREPL client, run `:ConjureConnect <port>`
+
 ### Your Favorite Editor
 
 TBD. PR welcome.

@@ -4,6 +4,7 @@
 
 - General
   - Bump clj-kondo to `2022.10.15-20221021.124734-3` avoiding breaking changes on custom hooks.
+  - Bump graalvm to 22.3.0. #1345
 
 - Editor
   - Add refactorings to change param order of `defn`/`defmacro`, also changing call sites. #1131
@@ -13,6 +14,7 @@
   - Bump lsp4clj to `1.5.0`
   - For users with fewer cores, avoid unnecessary waits for file analysis.
   - Reduce CPU usage by aborting requests that the client won't use.
+  - Fix to mark some code actions as preferred, so editors can emphasize them. https://github.com/clojure-lsp/lsp4clj/issues/32
 
 ## 2022.10.05-16.39.51
 

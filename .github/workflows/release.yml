@@ -100,7 +100,7 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm: 22.2.0
+          graalvm: 22.3.0
           java: java11
 
       - name: Install native-image component
@@ -157,7 +157,7 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: '22.2.0'
+          version: '22.3.0'
           java-version: '11'
           components: 'native-image'
           native-image-musl: 'true'
@@ -207,9 +207,9 @@ jobs:
           setup: |
             mkdir -p "${PWD}/artifacts"
             mv clojure-lsp-standalone.jar "${PWD}/artifacts/"
-            wget -q https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.2.0/graalvm-ce-java11-linux-aarch64-22.2.0.tar.gz
-            tar -xzf graalvm-ce-java11-linux-aarch64-22.2.0.tar.gz
-            mv graalvm-ce-java11-22.2.0 graalvm-ce-java11
+            wget -q https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.3.0/graalvm-ce-java11-linux-aarch64-22.3.0.tar.gz
+            tar -xzf graalvm-ce-java11-linux-aarch64-22.3.0.tar.gz
+            mv graalvm-ce-java11-22.3.0 graalvm-ce-java11
           dockerRunArgs: |
             --volume "${PWD}/graalvm-ce-java11:/graalvm-ce-java11"
             --volume "${PWD}/artifacts:/artifacts"
@@ -291,7 +291,7 @@ jobs:
       - name: Install GraalVM
         uses: DeLaGuardo/setup-graalvm@master
         with:
-          graalvm: 22.2.0
+          graalvm: 22.3.0
           java: java11
 
       - name: Install native-image component
@@ -366,7 +366,7 @@ jobs:
           gu.cmd install native-image
 
       # see https://github.com/oracle/graal/issues/4340
-      - name: GraalVM 22.2.0 workaround to support UPX compression
+      - name: GraalVM workaround to support UPX compression
         run: |
           7z d "$env:JAVA_HOME\lib\svm\builder\svm.jar" com/oracle/svm/core/windows/WindowsImageHeapProviderFeature.class
 

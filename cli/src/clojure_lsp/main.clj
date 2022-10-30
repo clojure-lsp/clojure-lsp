@@ -47,7 +47,8 @@
   [["-h" "--help" "Print the available commands and its options"]
    [nil "--version" "Print clojure-lsp version"]
    [nil "--verbose" "Use stdout for clojure-lsp logs instead of default log settings"]
-   [nil "--trace LEVEL" "Enable trace logs between client and server, for debugging. Set to 'messages' for basic traces, or 'verbose' for more detailed traces."
+   [nil "--trace" "Deprecated: use --trace-level instead."]
+   [nil "--trace-level LEVEL" "Enable trace logs between client and server, for debugging. Set to 'messages' for basic traces, or 'verbose' for more detailed traces. Defaults to 'off' for no traces."
     :default "off"
     :validate [trace-levels (str "Must be in " trace-levels)]]
    ["-s" "--settings SETTINGS" "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
@@ -143,7 +144,7 @@
 (defn ^:private handle-action!
   [action options]
   (if (= "listen" action)
-    (let [finished @(server/run-server! (:trace options))]
+    (let [finished @(server/run-server! (:trace-level options))]
       {:result-code (if (= :done finished) 0 1)})
     (try
       (case action

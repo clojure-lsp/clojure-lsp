@@ -27,7 +27,6 @@
                     :native ".exe"
                     :script ".bat"))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn clean
   "Clean all artifacts produced by the various tasks."
   []
@@ -60,65 +59,52 @@
 (defn ^:private mv-here [file]
   (fs/move file "." {:replace-existing true}))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn lib-pom [] (build "lib" "pom"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn cli-pom [] (build "cli" "pom"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn lib-jar []
   (build "lib" "jar")
   (mv-here "lib/target/clojure-lsp.jar"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn cli-jar
   "Build `cli` jar."
   []
   (build "cli" "prod-jar")
   (mv-here "cli/target/clojure-lsp-standalone.jar"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn cli-debug-jar []
   (build "cli" "debug-jar")
   (mv-here "cli/target/clojure-lsp-standalone.jar"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn cli-jar-for-native []
   (build "cli" "prod-jar-for-native")
   (mv-here "cli/target/clojure-lsp-standalone.jar"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn debug-cli
   "Build the `clojure-lsp[.bat]` cli exec script (suppots `cider-nrepl`/`clj-async-profile`)."
   []
   (build "cli" "debug-cli")
   (mv-here (fs/path "cli" (lsp-bin-filename :script))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn prod-cli
   "Build the `clojure-lsp[.bat]` cli exec script."
   []
   (build "cli" "prod-cli")
   (mv-here (fs/path "cli" (lsp-bin-filename :script))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn native-cli
   "Build the native `clojure-lsp[.exe]` cli executable with `graalvm`."
   []
   (build "cli" "native-cli")
   (mv-here (fs/path "cli" (lsp-bin-filename :native))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn test-lib "Run all unit tests in lib/." [] (unit-test "lib"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn test-cli "Run all unit tests in cli/." [] (unit-test "cli"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn pod-test [] (clj! "cli" ["-M:pod-test"]))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn integration-test
   "Run the integration tests in 'test/integration-test/' using `./clojure-lsp[.bat|.exe]`.
 
@@ -140,29 +126,21 @@
    (clj! "cli" (cond-> ["-M:run" linter "--ns-exclude-regex" "sample-test.*" "--project-root" "../"]
                  dry? (conj "--dry")))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn lint-clean [] (lint "clean-ns" {:dry? true}))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn lint-format [] (lint "format" {:dry? true}))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn lint-diagnostics [] (lint "diagnostics" {:dry? true}))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn lint-fix [] (run! lint ["clean-ns" "format"]))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn release []
   (p/shell "./release"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn deploy-clojars [] (build "lib" "deploy-clojars"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn deploy-clojars-standalone [] (build "cli" "deploy-clojars"))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn local-webpage []
   (let [files ["CHANGELOG.md" "README.md"]]
     (doseq [f files]

@@ -8,7 +8,7 @@
 (h/reset-components-before-test)
 
 (deftest internal-analysis
-  (testing "when dependency-scheme is zip"
+  (testing "when dependency-scheme is zipfile"
     (h/reset-components!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
@@ -22,7 +22,7 @@
     (is (= 2 (count (q/internal-analysis (h/db)))))))
 
 (deftest external-analysis
-  (testing "when dependency-scheme is zip"
+  (testing "when dependency-scheme is zipfile"
     (h/reset-components!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))

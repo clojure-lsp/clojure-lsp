@@ -485,12 +485,6 @@
        (mapv #(dissoc % :priority))
        not-empty))
 
-(defn ^:private limiting-items
-  "Limit the returned items for better performance.
-  If user needs more items one should be more specific in the completion query."
-  [size items]
-  (drop-last (- (count items) size) items))
-
 (defn completion [uri row col db]
   (let [root-zloc (parser/safe-zloc-of-file db uri)
         ;; (dec col) because we're completing what's behind the cursor
@@ -589,7 +583,9 @@
                       (merging-snippets cursor-loc next-loc function-call? matches-fn settings)))]
         (->> items
              sorting-and-distincting-items
-             (limiting-items 600))))))
+             ;; Limit the returned items for better performance.
+             ;; If user needs more items one should be more specific in the completion query.
+             (take 600))))))
 
 ;;;; Resolve Completion Item (completionItem/resolve)
 

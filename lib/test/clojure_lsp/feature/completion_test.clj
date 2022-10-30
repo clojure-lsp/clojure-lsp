@@ -1,10 +1,10 @@
 (ns clojure-lsp.feature.completion-test
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
-   [clojure.test :refer [deftest is testing]]
-   [babashka.fs :as fs]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)
 

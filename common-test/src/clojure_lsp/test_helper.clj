@@ -8,7 +8,6 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
-   [clojure.java.io :as io]
    [clojure.pprint :as pprint]
    [clojure.string :as string]
    [clojure.test :refer [is use-fixtures]]
@@ -177,9 +176,9 @@
   ([code uri components]
    (handlers/did-open components {:text-document {:uri uri :text code}})))
 
-(defn load-java-path [path]
+(defn load-java-path [uri]
   (#'f.java-interop/analyze-and-cache-jdk-source!
-   [(io/as-url (io/file path))]
+   [uri]
    {}
    (db*)))
 

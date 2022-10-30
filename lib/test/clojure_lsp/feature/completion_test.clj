@@ -2,12 +2,14 @@
   (:require
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.java.io :as io]
+   [clojure.test :refer [deftest is testing]]
+   [babashka.fs :as fs]))
 
 (h/reset-components-before-test)
 
 (deftest test-completion
-  (h/load-java-path "test/fixtures/java_interop/System.java")
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "System.java"))))
   (h/load-code-and-locs (h/code "(ns alpaca.ns (:require [user :as alpaca]))"
                                 "(alpaca/)"
                                 "(def barr)"

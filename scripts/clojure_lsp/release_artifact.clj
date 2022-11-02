@@ -1,7 +1,7 @@
 (ns clojure-lsp.release-artifact
   (:require
    [babashka.process :refer [sh]]
-   [borkdude.gh-release-artifact :as ghr]
+   [borkdude.gh-release-artifact.internal :as ghr]
    [clojure.string :as str]))
 
 (defn current-branch []

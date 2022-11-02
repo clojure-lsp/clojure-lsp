@@ -4,6 +4,7 @@
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
+   [clojure-lsp.feature.format]
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
@@ -109,8 +110,11 @@
     (#{:keyword-usages :keyword-definitions} bucket)
     (keyword-element->str element cursor-alias priority)
 
-    (#{:namespace-alias :namespace-usages} bucket)
+    (#{:namespace-alias} bucket)
     (some-> alias name)
+
+    (#{:namespace-usages} bucket)
+    (some-> element :name name)
 
     (#{:java-class-usages} bucket)
     (java-element->class-name element)
@@ -227,6 +231,10 @@
   [_bucket matches-fn _cursor-element]
   (name-matches-xf matches-fn))
 
+(defmethod bucket-elems-xf :namespace-usages
+  [_bucket matches-fn _cursor-element]
+  (name-matches-xf matches-fn))
+
 (defmethod bucket-elems-xf :var-definitions
   [_bucket matches-fn {cursor-from :from cursor-bucket :bucket}]
   (let [on-var-usage? (identical? :var-usages cursor-bucket)]
@@ -269,7 +277,13 @@
                                                (contains? cursor-langs (:lang %)))))
                             (get local-buckets bucket))))
             (map #(element->completion-item % nil :simple-cursor resolve-support)))
-          [:namespace-definitions :var-definitions :keyword-definitions :keyword-usages :locals :java-class-usages])))
+          [:namespace-definitions
+           :namespace-usages
+           :var-definitions
+           :keyword-definitions
+           :keyword-usages
+           :locals
+           :java-class-usages])))
 
 (defn ^:private with-definition-kws-args-element-items
   [matches-fn {:keys [arglist-kws name-row name-col uri]} resolve-support]

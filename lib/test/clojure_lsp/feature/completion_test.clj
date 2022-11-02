@@ -289,6 +289,25 @@
                                                 (h/db*)))
     (swap! (h/db*) merge {:settings {:completion {:additional-edits-warning-text nil}}})))
 
+(deftest completing-namespace-usages
+  (h/load-code-and-locs
+    (h/code "(ns some.foo-ns)") (h/file-uri "file:///a.clj"))
+  (h/load-code-and-locs
+    (h/code "(ns some.bar-ns)") (h/file-uri "file:///b.clj"))
+  (let [[[row col]] (h/load-code-and-locs
+                      (h/code "(ns some.baz-ns"
+                              "  (:require [some.foo-ns :as f]"
+                              "            [some.bar-ns]))"
+                              "some.|") (h/file-uri "file:///c.clj"))]
+    (testing "completing all available namespace-usages"
+      (h/assert-submaps
+        [{:label "some.bar-ns" :kind :module :detail ""}
+         {:label "some.baz-ns" :kind :module}
+         ;; TODO avoid adding same namespace twice
+         {:label "some.foo-ns" :kind :module :detail ""}
+         {:label "some.foo-ns" :kind :property :detail ":as f"}]
+        (f.completion/completion (h/file-uri "file:///c.clj") row col (h/db))))))
+
 (deftest completing-refers
   (h/load-code-and-locs
     (h/code "(ns some-ns)"

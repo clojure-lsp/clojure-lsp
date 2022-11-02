@@ -200,7 +200,7 @@
     (:params msg)))
 
 (defn request-and-await-server-response! [client method body]
-  (let [timeout-ms 90000
+  (let [timeout-ms 180000
         resp (deref (protocols.endpoint/send-request client method body)
                     timeout-ms
                     ::timeout)]

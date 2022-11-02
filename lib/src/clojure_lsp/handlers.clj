@@ -32,49 +32,87 @@
 
 (set! *warn-on-reflection* true)
 
-;; e.g. 2^0, 2^1, ..., up to 200ms
 (def backoff-start 5)
 (def backoff-mult 1.2)
 (def backoff-max 200)
+
 (comment
   (->> backoff-start
-       (iterate #(min backoff-max (Math/ceil (* backoff-mult %))))
-       (reductions +)
-       (take 15)))
+       (iterate #(int (min backoff-max (* backoff-mult %))))
+       (reductions (fn [[t _] b]
+                     [(+ t b) b])
+                   [0 0])
+       rest
+       (cons [:total :backoff])
+       (take 20))
+  #_{})
 
-(defmacro process-after-all-changes [task-id uris db* & body]
-  (let [waiting-start-sym (gensym "waiting-start-time")
-        start-sym (gensym "start-time")
-        backoff-sym (gensym "backoff")
-        uris-sym (gensym "uris")
-        process-msg (str task-id " %s")
-        wait-and-process-msg (str task-id " %s - waited %s")]
-    `(let [~waiting-start-sym (System/nanoTime)]
-       (loop [~backoff-sym backoff-start
-              ~uris-sym ~uris]
-         (if (> (quot (- (System/nanoTime) ~waiting-start-sym) 1000000) 60000) ; one minute timeout
-           ~(with-meta
-              `(logger/warn (format "Timeout in %s waiting for changes to %s" ~task-id (first ~uris-sym)))
-              (meta &form))
-           (if-let [processing-uris# (seq (filter (:processing-changes @~db*) ~uris-sym))]
-             (do
-               (Thread/sleep ~backoff-sym)
-               (recur (min backoff-max (* backoff-mult ~backoff-sym)) processing-uris#))
-             (let [~start-sym (System/nanoTime)
-                   result# (do ~@body)]
-               ~(with-meta
-                  `(logger/info
-                     (if (= backoff-start ~backoff-sym)
-                       (format ~process-msg (shared/start-time->end-time-ms ~waiting-start-sym))
-                       (format ~wait-and-process-msg
-                               (shared/start-time->end-time-ms ~start-sym)
-                               (shared/format-time-delta-ms ~waiting-start-sym ~start-sym))))
-                  (meta &form))
-               result#)))))))
+(defn ^:private wait-for-changes [{:keys [db* :lsp4clj.server/req-cancelled?]} uris]
+  (let [delay-start (System/nanoTime)]
+    (loop [immediate? true
+           backoff backoff-start
+           uris uris]
+      (let [now (System/nanoTime)]
+        (cond
+          (some-> req-cancelled? deref)
+          {:delay/outcome :cancelled
+           :delay/start delay-start
+           :delay/end now}
+          (> (quot (- now delay-start) 1000000) 60000) ; one minute timeout
+          {:delay/outcome :timed-out
+           :delay/timeout-uris uris}
+          :else
+          (if-let [processing-uris (seq (filter (:processing-changes @db*) uris))]
+            (do
+              (Thread/sleep backoff)
+              (recur false (min backoff-max (* backoff-mult backoff)) processing-uris))
+            (if immediate?
+              {:delay/outcome :immediate
+               :delay/start delay-start}
+              {:delay/outcome :waited
+               :delay/start delay-start
+               :delay/end now})))))))
 
-(defmacro process-after-changes [task-id uri db* & body]
+(defmacro logging-delayed-task [delay-data task-id & body]
+  (let [cancelled-msg (str task-id " cancelled - waited %s")
+        timed-out-msg (format "Timeout in %s waiting for changes to %%s" task-id)
+        immediate-msg (str task-id " %s")
+        waited-msg (str immediate-msg " - waited %s")
+        msg-sym (gensym "log-message")]
+    `(let [delay-data# ~delay-data
+           delay-outcome# (:delay/outcome delay-data#)]
+       (case delay-outcome#
+         :cancelled
+         (let [~msg-sym (format ~cancelled-msg (shared/format-time-delta-ms (:delay/start delay-data#) (:delay/end delay-data#)))]
+           ~(with-meta `(logger/debug ~msg-sym) (meta &form)))
+         :timed-out
+         (let [~msg-sym (format ~timed-out-msg (first (:delay/timeout-uris delay-data#)))]
+           ~(with-meta `(logger/warn ~msg-sym) (meta &form)))
+         (let [result# (do ~@body)
+               ~msg-sym (case delay-outcome#
+                          :immediate
+                          (format ~immediate-msg
+                                  (shared/start-time->end-time-ms (:delay/start delay-data#)))
+                          :waited
+                          (format ~waited-msg
+                                  (shared/start-time->end-time-ms (:delay/end delay-data#))
+                                  (shared/format-time-delta-ms (:delay/start delay-data#) (:delay/end delay-data#))))]
+           ~(with-meta `(logger/info ~msg-sym) (meta &form))
+           result#)))))
+
+(defmacro process-after-all-changes
+  [components uris task & body]
   (with-meta
-    `(process-after-all-changes ~task-id [~uri] ~db* ~@body)
+    `(logging-delayed-task
+       (wait-for-changes ~components ~uris)
+       ~task
+       ~@body)
+    (meta &form)))
+
+(defmacro process-after-changes
+  [components uri task & body]
+  (with-meta
+    `(process-after-all-changes ~components [~uri] ~task ~@body)
     (meta &form)))
 
 (defn ^:private element->location [db producer element]
@@ -167,9 +205,10 @@
     :resolve-completion-item
     (f.completion/resolve-item item db*)))
 
-(defn prepare-rename [{:keys [db*]} {:keys [text-document position]}]
+(defn prepare-rename [{:keys [db*] :as components} {:keys [text-document position]}]
   (process-after-changes
-    :prepare-rename (:uri text-document) db*
+    components (:uri text-document)
+    :prepare-rename
     (let [[row col] (shared/position->row-col position)]
       (f.rename/prepare-rename (:uri text-document) row col @db*))))
 
@@ -203,15 +242,17 @@
       (mapv #(element->location db producer %)
             (q/find-implementations-from-cursor db (:uri text-document) row col)))))
 
-(defn document-symbol [{:keys [db*]} {:keys [text-document]}]
+(defn document-symbol [{:keys [db*] :as components} {:keys [text-document]}]
   (process-after-changes
-    :document-symbol (:uri text-document) db*
+    components (:uri text-document)
+    :document-symbol
     (let [db @db*]
       (f.document-symbol/document-symbols db (:uri text-document)))))
 
-(defn document-highlight [{:keys [db*]} {:keys [text-document position]}]
+(defn document-highlight [{:keys [db*] :as components} {:keys [text-document position]}]
   (process-after-changes
-    :document-highlight (:uri text-document) db*
+    components (:uri text-document)
+    :document-highlight
     (let [db @db*
           [row col] (shared/position->row-col position)
           uri (:uri text-document)
@@ -346,9 +387,10 @@
     :formatting
     (f.format/formatting (:uri text-document) components)))
 
-(defn range-formatting [{:keys [db*]} {:keys [text-document range]}]
+(defn range-formatting [{:keys [db*] :as components} {:keys [text-document range]}]
   (process-after-changes
-    :range-formatting (:uri text-document) db*
+    components (:uri text-document)
+    :range-formatting
     (let [db @db*
           [row col] (shared/position->row-col (:start range))
           [end-row end-col] (shared/position->row-col (:end range))
@@ -364,9 +406,10 @@
     (f.java-interop/read-content! uri @db* producer)))
 
 (defn code-actions
-  [{:keys [db*]} {:keys [range context text-document]}]
+  [{:keys [db*] :as components} {:keys [range context text-document]}]
   (process-after-changes
-    :code-actions (:uri text-document) db*
+    components (:uri text-document)
+    :code-actions
     (let [db @db*
           diagnostics (-> context :diagnostics)
           [row col] (shared/position->row-col (:start range))
@@ -375,9 +418,10 @@
       (f.code-actions/all root-zloc (:uri text-document) row col diagnostics client-capabilities db))))
 
 (defn code-lens
-  [{:keys [db*]} {:keys [text-document]}]
+  [{:keys [db*] :as components} {:keys [text-document]}]
   (process-after-changes
-    :code-lens (:uri text-document) db*
+    components (:uri text-document)
+    :code-lens
     (f.code-lens/reference-code-lens (:uri text-document) @db*)))
 
 (defn code-lens-resolve
@@ -387,16 +431,18 @@
     (f.code-lens/resolve-code-lens uri row col range @db*)))
 
 (defn semantic-tokens-full
-  [{:keys [db*]} {:keys [text-document]}]
+  [{:keys [db*] :as components} {:keys [text-document]}]
   (process-after-changes
-    :semantic-tokens-full (:uri text-document) db*
+    components (:uri text-document)
+    :semantic-tokens-full
     (let [data (f.semantic-tokens/full-tokens (:uri text-document) @db*)]
       {:data data})))
 
 (defn semantic-tokens-range
-  [{:keys [db*]} {:keys [text-document] {:keys [start end]} :range}]
+  [{:keys [db*] :as components} {:keys [text-document] {:keys [start end]} :range}]
   (process-after-changes
-    :semantic-tokens-range (:uri text-document) db*
+    components (:uri text-document)
+    :semantic-tokens-range
     (let [db @db*
           [row col] (shared/position->row-col start)
           [end-row end-col] (shared/position->row-col end)
@@ -412,7 +458,7 @@
   (shared/logging-task
     :prepare-call-hierarchy
     (let [[row col] (shared/position->row-col position)]
-      (f.call-hierarchy/prepare (:uri text-document) row col db*))))
+      (f.call-hierarchy/prepare (:uri text-document) row col @db*))))
 
 (defn call-hierarchy-incoming
   [components {{:keys [uri range]} :item}]
@@ -436,8 +482,8 @@
           [row col] (shared/position->row-col position)]
       (f.linked-editing-range/ranges (:uri text-document) row col db))))
 
-(defn will-rename-files [{:keys [db*]} {:keys [files]}]
+(defn will-rename-files [{:keys [db*] :as components} {:keys [files]}]
   (process-after-all-changes
+    components (map :old-uri files)
     :will-rename-files
-    (map :old-uri files) db*
     (f.file-management/will-rename-files files @db*)))

@@ -142,6 +142,25 @@
                    replacement)})
          reference-elems)))
 
+(defn ^:private unshadowed-element-name [db uri replace-loc]
+  (or (when-let [scope-loc (some-> replace-loc edit/find-op z/up)] ;; defn, let, etc.
+        (when-let [conflicting-names (->> (q/find-local-usages-under-form db uri (meta (z/node scope-loc)))
+                                          (map (comp str :name))
+                                          (keep #(re-find #"^element(-\d+)?$" %))
+                                          (map second) ;; "-1" or nil if original was just "element"
+                                          distinct
+                                          seq)]
+          (symbol
+            (str "element-"
+                 (->> conflicting-names
+                      (map (fn [dash-num]
+                             (if dash-num
+                               (Long/valueOf (subs dash-num 1))
+                               0)))
+                      (apply max)
+                      inc)))))
+      'element))
+
 (defn restructure-keys [zloc uri db]
   (when-let [{:keys [map-loc replace-loc], :as restructure-config}
              (map-to-restructure zloc uri db)]
@@ -153,7 +172,7 @@
                            (map (fn [[_ val-loc]]
                                   (z/sexpr val-loc)))
                            first)
-          element-name (or provided-as 'element)
+          element-name (or provided-as (unshadowed-element-name db uri replace-loc))
           default-values (->> map-entry-locs
                               (filter (fn [[key-loc _]] (= "or" (loc-kw-name key-loc))))
                               (map (fn [[_ val-loc]]

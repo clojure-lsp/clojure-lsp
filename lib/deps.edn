@@ -8,7 +8,7 @@
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
         medley/medley {:mvn/version "1.4.0"}
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
-        clj-kondo/clj-kondo {:mvn/version "2022.10.05"
+        clj-kondo/clj-kondo {:mvn/version "2022.10.15-20221102.115926-11"
                              :exclude [com.cognitect/transit-clj
                                        babashka/fs]}
         com.fabiodomingues/clj-depend {:mvn/version "0.6.1"}
@@ -17,12 +17,12 @@
         org.benf/cfr {:mvn/version "0.152"}
 
         babashka/fs {:mvn/version "0.1.11"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.3.1"}
-        ;; com.github.clojure-lsp/lsp4clj {:local/root "../../lsp4clj"}
-        }
+        com.github.clojure-lsp/lsp4clj {:mvn/version "1.5.0"
+                                        #_#_:local/root "../../lsp4clj"
+                                        :exclusions [funcool/promesa]}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.70.1086"}
+                               lambdaisland/kaocha {:mvn/version "1.71.1119"}
                                com.taoensso/timbre {:mvn/version "5.2.1"}}
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                   :extra-paths ["test"]

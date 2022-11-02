@@ -30,9 +30,8 @@
      :range (shared/->range parent-element)
      :selection-range (shared/->range usage-element)}))
 
-(defn prepare [uri row col db*]
-  (let [db @db*
-        cursor-element (q/find-element-under-cursor db uri row col)]
+(defn prepare [uri row col db]
+  (let [cursor-element (q/find-element-under-cursor db uri row col)]
     [(element-by-uri->call-hierarchy-item
        {:uri uri
         :usage-element cursor-element
@@ -87,10 +86,10 @@
     (when-let [definition (parent-var-def root-zloc db uri row col)]
       (->> (q/find-var-usages-under-form db
                                          uri
-                                         (:name-row definition)
-                                         (:name-col definition)
-                                         (:end-row definition)
-                                         (:end-col definition))
+                                         {:row (:name-row definition)
+                                          :col (:name-col definition)
+                                          :end-row (:end-row definition)
+                                          :end-col (:end-col definition)})
            (keep (partial element->outgoing-usage-by-uri db))
            (mapv (fn [element-by-uri]
                    {:from-ranges []

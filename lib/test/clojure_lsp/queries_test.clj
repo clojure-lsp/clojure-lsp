@@ -8,7 +8,7 @@
 (h/reset-components-before-test)
 
 (deftest internal-analysis
-  (testing "when dependency-scheme is zip"
+  (testing "when dependency-scheme is zipfile"
     (h/reset-components!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
@@ -22,7 +22,7 @@
     (is (= 2 (count (q/internal-analysis (h/db)))))))
 
 (deftest external-analysis
-  (testing "when dependency-scheme is zip"
+  (testing "when dependency-scheme is zipfile"
     (h/reset-components!)
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
@@ -1060,22 +1060,33 @@
       (is (= '#{java.util.Date java.util.Calendar java.time.LocalDateTime}
              (q/find-unused-imports (h/db) (h/file-uri "file:///a.cljc")))))))
 
-(deftest find-local-usages-under-cursor
+(deftest find-local-usages-defined-outside-form
   (testing "inside let"
     (let [[[sum-pos-r sum-pos-c]
            [sum-end-pos-r sum-end-pos-c]]
           (h/load-code-and-locs "(ns a) (let [a 2 b 1] |(+ 2 b)| (- 2 a))")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-local-usages-under-form (h/db) (h/file-uri "file:///a.clj")
-                                        {:row sum-pos-r, :col sum-pos-c
-                                         :end-row sum-end-pos-r, :end-col sum-end-pos-c}))))
+        (q/find-local-usages-defined-outside-form (h/db) (h/file-uri "file:///a.clj")
+                                                  {:row sum-pos-r, :col sum-pos-c
+                                                   :end-row sum-end-pos-r, :end-col sum-end-pos-c}))))
   (testing "inside defn"
     (let [[[let-pos-r let-pos-c]
            [let-end-pos-r let-end-pos-c]]
           (h/load-code-and-locs "(ns a) (defn ab [b] |(let [a 1] (b a))|) (defn other [c] c)")]
       (h/assert-submaps
         [{:name 'b}]
-        (q/find-local-usages-under-form (h/db) (h/file-uri "file:///a.clj")
-                                        {:row let-pos-r, :col let-pos-c
-                                         :end-row let-end-pos-r, :end-col let-end-pos-c})))))
+        (q/find-local-usages-defined-outside-form (h/db) (h/file-uri "file:///a.clj")
+                                                  {:row let-pos-r, :col let-pos-c
+                                                   :end-row let-end-pos-r, :end-col let-end-pos-c})))))
+
+(deftest find-local-usages-under-form
+  (let [[[start-r start-c]
+         [end-r end-c]]
+        (h/load-code-and-locs "(let [a 2] |(let [b 1] (+ 2 b) (- 2 a))|)")]
+    (h/assert-submaps
+      [{:name 'b}
+       {:name 'a}]
+      (q/find-local-usages-under-form (h/db) (h/file-uri "file:///a.clj")
+                                      {:row start-r, :col start-c
+                                       :end-row end-r, :end-col end-c}))))

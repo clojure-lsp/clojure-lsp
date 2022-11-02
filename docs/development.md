@@ -83,6 +83,15 @@ nnoremap <silent> crsl :call setreg('*', CocRequest('clojure-lsp', 'clojure/serv
 nnoremap <silent> crsp :execute 'Connect' CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['port']<CR>
 ```
 
+### Neovim with Conjure
+
+* Change the lsp [config](https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#clojure_lsp) `cmd` to "~/path/to/clojure-lsp/clojure-lsp", adjusting the path as necessary.
+* To [restart](https://neovim.io/doc/user/lsp.html#lsp-faq) the LSP:
+  * To stop the clojure-lsp server, use `:lua vim.lsp.stop_client(vim.lsp.get_active_clients())`
+  * To start the clojure-lsp server, use `:edit`
+* To find the server info or the log file, use `:lua clients = vim.lsp.get_active_clients() for k, client_data in ipairs(clients) do id = client_data.id end client = vim.lsp.get_client_by_id(id) result = client.request_sync("clojure/serverInfo/raw", {}, 5000, 15) print('port = ' .. result.result.port) print('log-path = ' .. result.result['log-path'])`
+* To connect the nREPL client, run `:ConjureConnect <port>`
+
 ### Your Favorite Editor
 
 TBD. PR welcome.
@@ -125,22 +134,23 @@ The same development version can be used to lint all of the source code.
 A test should be able to run on all JDK versions in scope starting with 1.8 and across `GNU/Linux`, `macos` and `MS-Windows` operating systems.
 
 The test author should be aware of the following important differences between *nix and windows:
-1. Line endings
-   1.  On *nix: the single Line Feed (LF) char, i.e. `\n`.
-   1.  On windows: the Carriage Return (CR) followed by the LF char (CRLF), i.e. `\r\n`.
-1. Paths
-   1. On *nix: Use `/` as the path separator, absolute paths start with `/`.
-   1. On windows: use `\` as the path separator, absolute paths start either with a drive letter followed by `:\`, i.e. `[A-Za-Z]:\` (e.g. `c:\temp` and `D:\src`) or with a double `\\` indicating a network path (e.g. `\\computer39\temp`).
 
+1. Line endings
+    1.  On *nix: the single Line Feed (LF) char, i.e. `\n`.
+    1.  On windows: the Carriage Return (CR) followed by the LF char (CRLF), i.e. `\r\n`.
+1. Paths
+    1. On *nix: Use `/` as the path separator, absolute paths start with `/`.
+    1. On windows: use `\` as the path separator, absolute paths start either with a drive letter followed by `:\`, i.e. `[A-Za-Z]:\` (e.g. `c:\temp` and `D:\src`) or with a double `\\` indicating a network path (e.g. `\\computer39\temp`).
 
 Below are a few __hints__ to assist with writing test that work accross the different platforms.
+
 1. Line Endings
-   1. When comparing strings, Use `clojure-lsp.test-helper/string=` with `\n` in your expected result.
-	  1. e.g. use `(is (h/strings= "one\n" result)` instead of `(is (= "one\r\n" result))` or `(is (= "one\n" result))`.
-   1. Use `h/str-includes?` with `\n` in the string to search for instead of `clojure.string/includes?`.
-	  1. e.g. `(is (h/str-includes? (slurp "path") "something\n"))` instead of `(is (str/includes? (slurp "path") "something\n"))` or `(is (str/includes? (slurp "path") "something\r\n"))`.
+    1. When comparing strings, Use `clojure-lsp.test-helper/string=` with `\n` in your expected result.
+        1. e.g. use `(is (h/strings= "one\n" result)` instead of `(is (= "one\r\n" result))` or `(is (= "one\n" result))`.
+    1. Use `h/str-includes?` with `\n` in the string to search for instead of `clojure.string/includes?`.
+        1. e.g. `(is (h/str-includes? (slurp "path") "something\n"))` instead of `(is (str/includes? (slurp "path") "something\n"))` or `(is (str/includes? (slurp "path") "something\r\n"))`.
 2. Paths
-   1. Always use `babashka.fs/canonicalize` when converting a relative path to an absolute path. Avoiding using any of java File/Path absolute or canonical equivalent fns. This ensures that the drive letter on windows is always in capitals (e.g. `D:\` instead of `d:\`). This is also the convention used throughout the codebase and it works as well with both existing and non-existing files.
-   1. Use `clojure-lsp.test-helper/file-path`, `clojure-lsp.test-helper/file->uri` with *nix paths. They are converted to the format expected by the OS.
-	  1. e.g. `(load-code (h/file-path "/aaa.clj")  "(ns aaa)")` instead of `(load-code "/aaa.clj" "(ns aaa)")` or `(load-code "c:\\aaa.clj" "(ns aaa)")`
+    1. Always use `babashka.fs/canonicalize` when converting a relative path to an absolute path. Avoiding using any of java File/Path absolute or canonical equivalent fns. This ensures that the drive letter on windows is always in capitals (e.g. `D:\` instead of `d:\`). This is also the convention used throughout the codebase and it works as well with both existing and non-existing files.
+    1. Use `clojure-lsp.test-helper/file-path`, `clojure-lsp.test-helper/file->uri` with *nix paths. They are converted to the format expected by the OS.
+        1. e.g. `(load-code (h/file-path "/aaa.clj")  "(ns aaa)")` instead of `(load-code "/aaa.clj" "(ns aaa)")` or `(load-code "c:\\aaa.clj" "(ns aaa)")`
 

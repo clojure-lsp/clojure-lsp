@@ -4,6 +4,7 @@
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
+   [clojure-lsp.feature.format]
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
@@ -35,7 +36,7 @@
    :clojure-core
    :clojurescript-core
    :java-usages
-   :java-built-in
+   :java-class-definitions
    :snippet])
 
 (def priority-kw->number
@@ -109,8 +110,11 @@
     (#{:keyword-usages :keyword-definitions} bucket)
     (keyword-element->str element cursor-alias priority)
 
-    (#{:namespace-alias :namespace-usages} bucket)
+    (#{:namespace-alias} bucket)
     (some-> alias name)
+
+    (#{:namespace-usages} bucket)
+    (some-> element :name name)
 
     (#{:java-class-usages} bucket)
     (java-element->class-name element)
@@ -227,6 +231,10 @@
   [_bucket matches-fn _cursor-element]
   (name-matches-xf matches-fn))
 
+(defmethod bucket-elems-xf :namespace-usages
+  [_bucket matches-fn _cursor-element]
+  (name-matches-xf matches-fn))
+
 (defmethod bucket-elems-xf :var-definitions
   [_bucket matches-fn {cursor-from :from cursor-bucket :bucket}]
   (let [on-var-usage? (identical? :var-usages cursor-bucket)]
@@ -269,7 +277,13 @@
                                                (contains? cursor-langs (:lang %)))))
                             (get local-buckets bucket))))
             (map #(element->completion-item % nil :simple-cursor resolve-support)))
-          [:namespace-definitions :var-definitions :keyword-definitions :keyword-usages :locals :java-class-usages])))
+          [:namespace-definitions
+           :namespace-usages
+           :var-definitions
+           :keyword-definitions
+           :keyword-usages
+           :locals
+           :java-class-usages])))
 
 (defn ^:private with-definition-kws-args-element-items
   [matches-fn {:keys [arglist-kws name-row name-col uri]} resolve-support]
@@ -422,20 +436,30 @@
                     :priority :clojurescript-core}
                    resolve-support))
 
-(defn ^:private with-java-items [matches-fn]
-  (concat
-    (->> common-sym/java-lang-syms
-         (filter (comp matches-fn str))
-         (map (fn [sym] {:label (str sym)
-                         :kind :class
-                         :detail (str "java.lang." sym)
-                         :priority :java-built-in})))
-    (->> common-sym/java-util-syms
-         (filter (comp matches-fn str))
-         (map (fn [sym] {:label (str sym)
-                         :kind :class
-                         :detail (str "java.util." sym)
-                         :priority :java-built-in})))))
+(defn ^:private with-java-definition-items [matches-fn cursor-value db]
+  ;; For performance reasons, we have thousands of class definitions usually
+  ;; we only consider it if user typed anything and is auto completing
+  (when (seq (str cursor-value))
+    (flatten
+      (into []
+            (comp
+              q/xf-analysis->java-class-definitions
+              (keep (fn [{:keys [class]}]
+                      (let [class-name* (delay (last (string/split class #"\.")))]
+                        (cond-> []
+
+                          (matches-fn class)
+                          (conj {:label (str class)
+                                 :kind :class
+                                 :priority :java-class-definitions})
+
+                          (and (string/starts-with? class "java.lang")
+                               (matches-fn @class-name*))
+                          (conj {:label @class-name*
+                                 :detail class
+                                 :kind :class
+                                 :priority :java-class-definitions}))))))
+            (:analysis db)))))
 
 (defn ^:private remove-first-and-last-char [s]
   (-> (string/join "" (drop-last s))
@@ -566,12 +590,16 @@
 
                       (and simple-cursor?
                            (supports-clj-core? uri))
-                      (into (with-java-items matches-fn))
+                      (into (with-java-definition-items matches-fn cursor-value db))
 
                       (and support-snippets?
                            simple-cursor?)
                       (merging-snippets cursor-loc next-loc function-call? matches-fn settings)))]
-        (sorting-and-distincting-items items)))))
+        (->> items
+             sorting-and-distincting-items
+             ;; Limit the returned items for better performance.
+             ;; If user needs more items one should be more specific in the completion query.
+             (take 600))))))
 
 ;;;; Resolve Completion Item (completionItem/resolve)
 

@@ -1,12 +1,15 @@
 (ns clojure-lsp.feature.completion-test
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.test-helper :as h]
+   [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)
 
 (deftest test-completion
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "System.java"))))
   (h/load-code-and-locs (h/code "(ns alpaca.ns (:require [user :as alpaca]))"
                                 "(alpaca/)"
                                 "(def barr)"
@@ -82,7 +85,7 @@
       [{:label "System", :detail "java.lang.System"}]
       (f.completion/completion (h/file-uri "file:///e.clj") 3 6 (h/db))))
   (testing "complete non symbols doesn't blow up"
-    (is (= nil (f.completion/completion (h/file-uri "file:///e.clj") 5 3 (h/db)))))
+    (is (= [] (f.completion/completion (h/file-uri "file:///e.clj") 5 3 (h/db)))))
   (testing "complete all available namespace definitions when inside require"
     (h/assert-submaps
       [{:label "alpaca.ns" :kind :module}]
@@ -285,6 +288,25 @@
                                                                        :uri (h/file-uri "file:///aaa.clj")}]]}}
                                                 (h/db*)))
     (swap! (h/db*) merge {:settings {:completion {:additional-edits-warning-text nil}}})))
+
+(deftest completing-namespace-usages
+  (h/load-code-and-locs
+    (h/code "(ns some.foo-ns)") (h/file-uri "file:///a.clj"))
+  (h/load-code-and-locs
+    (h/code "(ns some.bar-ns)") (h/file-uri "file:///b.clj"))
+  (let [[[row col]] (h/load-code-and-locs
+                      (h/code "(ns some.baz-ns"
+                              "  (:require [some.foo-ns :as f]"
+                              "            [some.bar-ns]))"
+                              "some.|") (h/file-uri "file:///c.clj"))]
+    (testing "completing all available namespace-usages"
+      (h/assert-submaps
+        [{:label "some.bar-ns" :kind :module :detail ""}
+         {:label "some.baz-ns" :kind :module}
+         ;; TODO avoid adding same namespace twice
+         {:label "some.foo-ns" :kind :module :detail ""}
+         {:label "some.foo-ns" :kind :property :detail ":as f"}]
+        (f.completion/completion (h/file-uri "file:///c.clj") row col (h/db))))))
 
 (deftest completing-refers
   (h/load-code-and-locs

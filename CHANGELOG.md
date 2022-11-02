@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2022.10.15-20221021.124734-3` avoiding breaking changes on custom hooks.
+  - Bump clj-kondo to `2022.10.15-20221102.115926-11` avoiding breaking changes on custom hooks.
   - Bump graalvm to 22.3.0. #1345
 
 - Editor

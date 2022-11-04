@@ -181,7 +181,7 @@
                 :text-document-sync-kind :full}
                :log-path log-path)
              settings)
-      nil
+      "clojure-lsp-api"
       components)
     true
     (catch clojure.lang.ExceptionInfo e

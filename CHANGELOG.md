@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Only publish progress on initialize if client provided a `workDoneProgress`. #1363
+
 ## 2022.11.03-00.14.57
 
 - General

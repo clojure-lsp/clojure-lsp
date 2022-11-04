@@ -63,7 +63,8 @@
          :task/current-percent (lerp start-percent end-percent (/ subtask-idx subtask-count))))
 
 (defn publish-task-progress [producer {:keys [:task/title :task/current-percent :task/start-percent]} progress-token]
-  (producer/publish-progress producer (or current-percent start-percent) title progress-token))
+  (when progress-token
+    (producer/publish-progress producer (or current-percent start-percent) title progress-token)))
 
 (defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
   (let [kondo-result* (future

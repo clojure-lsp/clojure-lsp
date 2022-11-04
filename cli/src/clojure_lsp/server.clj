@@ -131,7 +131,7 @@
   (publish-progress [_this percentage message progress-token]
     (lsp.server/discarding-stdout
       ;; ::coercer/notify-progress
-      (->> (lsp.requests/work-done-progress percentage message (or progress-token "clojure-lsp"))
+      (->> (lsp.requests/work-done-progress percentage message progress-token)
            (lsp.server/send-notification server "$/progress"))))
 
   (show-message-request [_this message type actions]

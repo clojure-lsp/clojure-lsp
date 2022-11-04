@@ -103,7 +103,8 @@
                        :serverInfo true
                        :clojuredocs true}}}
 
-      (lsp/request! (fixture/initialize-request))))
+      (lsp/request! (fixture/initialize-request (merge fixture/default-init-options
+                                                       {:workDoneToken "integration-test"})))))
 
   (h/assert-submap
     {:token "clojure-lsp"

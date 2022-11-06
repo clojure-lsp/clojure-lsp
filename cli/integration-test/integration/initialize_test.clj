@@ -107,7 +107,7 @@
                                                        {:workDoneToken "integration-test"})))))
 
   (h/assert-submap
-    {:token "clojure-lsp"
+    {:token "integration-test"
      :value {:kind "begin"
              :title "clojure-lsp"
              :percentage 0}}

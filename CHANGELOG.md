@@ -4,6 +4,7 @@
 
 - General
   - Only publish progress on initialize if client provided a `workDoneProgress`. #1363
+  - Bump clj-kondo to `2022.11.03-20221105.203751-5`.
 
 ## 2022.11.03-00.14.57
 

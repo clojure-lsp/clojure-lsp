@@ -201,14 +201,16 @@
       "hash": "sha256-4MoY394FmlFXLiwtetWjDmEbh1NGFv1wRPZx33qbtlg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2022.11.02/clj-kondo-2022.11.02.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2022.11.03-SNAPSHOT/clj-kondo-2022.11.03-20221105.203751-5.jar",
+      "snapshot": "clj-kondo-2022.11.03-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-uGlWGEeG4GLG6PIFzW8Hz8wTHPtqOzuiZyPpZ5JiLrQ="
+      "hash": "sha256-drfpgnKtsnVQLTviYUhiOn50Yv0AyUEwtHQJVag9I7w="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2022.11.02/clj-kondo-2022.11.02.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2022.11.03-SNAPSHOT/clj-kondo-2022.11.03-20221105.203751-5.pom",
+      "snapshot": "clj-kondo-2022.11.03-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-cMwPgPqAkC7Tn2akGR5uXvPo/JkrOapFs5dlBnFC/y8="
+      "hash": "sha256-ZEEekk7HA+JmUzg+4XDH7FA5BcTro/XaoEDWgeZEuTI="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",

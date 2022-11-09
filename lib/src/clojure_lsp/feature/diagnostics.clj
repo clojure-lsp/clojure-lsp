@@ -6,7 +6,8 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]))
+   [clojure.core.async :as async]
+   [clojure.set :as set]))
 
 (set! *warn-on-reflection* true)
 
@@ -61,6 +62,16 @@
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
         (some #(re-matches (re-pattern (str %)) (str (:defined-by definition))) excluded-defined-by-syms-regex)
         (:export definition))))
+
+(defprotocol Stats
+  (get-stats [this profile]))
+
+(defrecord PlayerStats [name])
+
+(extend-protocol Stats
+    PlayerStats
+    (get-stats [this profile] (assoc profile :stats this))
+    (compute-advanced-stats [this] this))
 
 (defn ^:private kondo-finding->diagnostic
   [{:keys [type message level row col end-row] :as finding}]
@@ -180,8 +191,14 @@
                            (q/xf-all-var-usages-to-namespaces var-nses)
                            (map q/var-usage-signature))
                          (q/nses-and-dependents-analysis project-db var-nses))
+        protocol-impls (into #{}
+                             (comp
+                               (q/xf-all-protocol-impls-to-namespaces var-nses)
+                               (map q/protocol-impl-signature))
+                             (q/nses-and-dependents-analysis project-db var-nses))
+        all-usages (set/union var-usages protocol-impls)
         var-used? (fn [var-def]
-                    (some var-usages (q/var-definition-signatures var-def)))
+                    (some all-usages (q/var-definition-signatures var-def)))
         kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
                             (remove exclude-def?))
         kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords

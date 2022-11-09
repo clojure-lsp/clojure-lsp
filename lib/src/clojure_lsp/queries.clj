@@ -133,6 +133,7 @@
 
 (def kw-signature (juxt :ns :name))
 (def var-usage-signature (juxt :to :name))
+(def protocol-impl-signature (juxt :protocol-ns :method-name))
 (defn var-definition-signatures [var-def]
   (into #{}
         (map (fn [var-name]
@@ -448,8 +449,9 @@
 
 (defmethod find-references :var-definitions
   [db var-definition include-declaration?]
-  (let [names (var-definition-names var-definition)]
-    (into []
+  (let [names (var-definition-names var-definition)
+        implementations (find-implementations db var-definition)]
+    (into implementations
           (comp
             (if include-declaration? xf-analysis->vars xf-analysis->var-usages)
             (filter #(contains? names (:name %)))
@@ -718,5 +720,10 @@
     xf-analysis->var-usages
     (filter #(contains? namespaces (:to %)))
     (remove var-usage-from-own-definition?)))
+
+(defn xf-all-protocol-impls-to-namespaces [namespaces]
+  (comp
+    xf-analysis->protocol-impls
+    (filter #(contains? namespaces (:protocol-ns %)))))
 
 (def xf-all-keyword-usages xf-analysis->keyword-usages)

@@ -17,7 +17,7 @@ nav:
   - Features: features.md
   - Installation: installation.md
   - Outside editor (API):
-    - What is it?:  api/what-is-it.md
+    - What is clojure-lsp API?:  api/what-is-it.md
     - API (JVM): api/api.md
     - CLI: api/cli.md
     - CI: api/ci.md

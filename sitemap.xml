@@ -52,6 +52,10 @@
      <lastmod>2022-11-10</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
+     <loc>https://clojure-lsp.io/api/lein-plugin/</loc>
+     <lastmod>2022-11-10</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
      <loc>https://clojure-lsp.io/api/bb-pod/</loc>
      <lastmod>2022-11-10</lastmod>
      <changefreq>daily</changefreq>

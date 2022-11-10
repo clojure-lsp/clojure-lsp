@@ -21,7 +21,7 @@ nav:
     - API (JVM): api/api.md
     - CLI: api/cli.md
     - CI: api/ci.md
-    - Lein plugin: api/lein.md
+    - Lein plugin: api/lein-plugin.md
     - Babashka pod: api/bb-pod.md
   - Support Us: https://github.com/sponsors/clojure-lsp
   - Changelog: CHANGELOG.md

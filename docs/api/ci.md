@@ -1,4 +1,4 @@
-### CI
+# CI
 
 Having [clojure-lsp cli](./cli.md) in your CI machine is enough to run any task, if using Github Actions, you can use [setup-clojure-lsp](https://github.com/marketplace/actions/setup-clojure-lsp) GitHub action to install clojure-lsp in your CI.
 

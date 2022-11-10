@@ -16,7 +16,13 @@ nav:
     - Capabilities: capabilities.md
   - Features: features.md
   - Installation: installation.md
-  - API: api.md
+  - Outside editor (API):
+    - What is it?:  api/what-is-it.md
+    - API (JVM): api/api.md
+    - CLI: api/cli.md
+    - CI: api/ci.md
+    - Lein plugin: api/lein.md
+    - Babashka pod: api/bb-pod.md
   - Support Us: https://github.com/sponsors/clojure-lsp
   - Changelog: CHANGELOG.md
 

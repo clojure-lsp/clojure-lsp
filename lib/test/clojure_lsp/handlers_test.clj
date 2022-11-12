@@ -82,13 +82,13 @@
                               :tags []}
                                ;; defmulti
                              {:name "mult",
-                              :kind :variable,
+                              :kind :interface,
                               :range {:start {:line 0, :character 39}, :end {:line 0, :character 63}},
                               :selection-range {:start {:line 0, :character 49}, :end {:line 0, :character 53}}
                               :tags []}
                                ;; defmethod
                              {:name "mult \"foo\"",
-                              :kind :variable,
+                              :kind :function,
                               :range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},
                               :selection-range {:start {:line 0, :character 75}, :end {:line 0, :character 79}}
                               :tags []}]}}]

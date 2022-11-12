@@ -6,6 +6,9 @@
   - Only publish progress on initialize if client provided a `workDoneProgress`. #1363
   - Bump clj-kondo to `2022.11.03-20221105.203751-5`.
 
+- Editor
+  - Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types.
+
 ## 2022.11.03-00.14.57
 
 - General

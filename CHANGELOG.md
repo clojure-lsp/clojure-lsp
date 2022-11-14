@@ -7,7 +7,7 @@
   - Bump clj-kondo to `2022.11.03-20221105.203751-5`.
 
 - Editor
-  - Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types.
+  - Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types on `workspace/symbol` and `textDocument/documentSymbol`.
 
 ## 2022.11.03-00.14.57
 

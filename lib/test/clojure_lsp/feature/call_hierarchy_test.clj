@@ -144,7 +144,7 @@
     (h/assert-submaps
       [{:from-ranges []
         :to {:name "println [& args]"
-             :kind :variable
+             :kind :function
              :tags []
              :detail "clojure.core"
              :uri (h/file-uri "zipfile:///.m2/clojure.jar::clojure/core.clj")

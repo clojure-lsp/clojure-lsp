@@ -7,77 +7,71 @@
 (h/reset-components-before-test)
 
 (deftest workspace-symbols
-  (h/load-code-and-locs (h/code "(ns foo.alpaca.ns (:require [clojure.string :as string]))"
-                                "(defonce my-alpapapaca (atom {}))"
-                                "(def alpac 1)"
-                                "(defn alpacas [a b] alpac)"
-                                "(defmulti llama identity)"))
-  (h/load-code-and-locs (h/code "(ns foo.goat.ns (:require [foo.alpaca.ns :as a]))"
-                                "(defn goats-from-alpacas [alpacas] (map inc alpacas))"
-                                "(defmethod a/llama \"wooly\")")
+  (h/load-code-and-locs (h/code "(ns ns-def (:require [clojure.string :as string]))"
+                                "(defonce var-defonce (atom {}))"
+                                "(def var-def 1)"
+                                "(defn fn-defn-fixed [a b] a)"
+                                "(defn fn-defn-multi ([a] a) ([a b] a))"
+                                "(defn fn-defn-varargs [a & args] a)"
+                                "(defmacro fn-defmacro [a] ``(inc a))"
+                                "(defmulti interface-defmulti identity)"
+                                "(defmethod interface-defmulti :fn-defmethod [x] x)"
+                                "(defprotocol InterfaceDefprotocol"
+                                "  (fn-defprotocol [this a]))"
+                                "(definterface InterfaceDefinterface"
+                                "  (^String fn-definterface [a]))"))
+  (h/load-code-and-locs (h/code "(ns ns-def-2 (:require [ns-def :as ns-alias]))"
+                                "(defmethod ns-alias/interface-defmulti :fn-defmethod-other-ns [x] x)"
+                                "(defrecord ClassDefrecord []"
+                                "  ns-alias/InterfaceDefprotocol"
+                                "  (fn-defprotocol [this a] a)"
+                                "  ns-alias/InterfaceDefinterface"
+                                "  (fn-definterface [this a] a))"
+                                "(deftype ClassDeftype [])")
                         (h/file-uri "file:///b.clj"))
   (testing "querying all symbols"
-    (is (= [;; a.clj
-            {:name "foo.alpaca.ns"
-             :kind :namespace
-             :location
-             {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 0 :character 0} :end {:line 0 :character 57}}}}
-            {:name "my-alpapapaca"
-             :kind :variable
-             :location
-             {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 1 :character 0} :end {:line 1 :character 33}}}}
-            {:name "alpac"
-             :kind :variable
-             :location
-             {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 2 :character 0} :end {:line 2 :character 13}}}}
-            {:name "alpacas"
-             :kind :function
-             :location
-             {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 3 :character 0} :end {:line 3 :character 26}}}}
-            {:name "llama",
-             :kind :variable,
-             :location
-             {:uri (h/file-uri "file:///a.clj"),
-              :range {:start {:line 4, :character 0}, :end {:line 4, :character 25}}}}
-            ;; b.clj
-            {:kind :namespace,
-             :location {:range {:start {:line 0, :character 0}, :end {:line 0, :character 49}},
-                        :uri (h/file-uri "file:///b.clj")},
-             :name "foo.goat.ns"}
-            {:kind :function,
-             :location {:range {:start {:line 1, :character 0}, :end {:line 1, :character 53}},
-                        :uri (h/file-uri "file:///b.clj")},
-             :name "goats-from-alpacas"}
-            {:name "llama \"wooly\"",
-             :kind :variable,
-             :location {:range {:start {:line 2, :character 11}, :end {:line 2, :character 18}},
-                        :uri (h/file-uri "file:///b.clj")}}]
-           (f.workspace-symbols/workspace-symbols "" (h/db)))))
+    (let [all-symbols (f.workspace-symbols/workspace-symbols "" (h/db))]
+      (testing "sets location"
+        (is (= {:name "ns-def",
+                :kind :namespace,
+                :location {:uri (h/file-uri "file:///a.clj"),
+                           :range {:start {:line 0, :character 0}, :end {:line 0, :character 50}}}}
+               (first all-symbols))))
+      (testing "set correct kind"
+        (is (= [;; a.clj
+                ["ns-def"                                    :namespace]
+                ["var-defonce"                               :variable]
+                ["var-def"                                   :variable]
+                ["fn-defn-fixed"                             :function]
+                ["fn-defn-multi"                             :function]
+                ["fn-defn-varargs"                           :function]
+                ["fn-defmacro"                               :function]
+                ["interface-defmulti"                        :interface]
+                ["InterfaceDefprotocol"                      :interface]
+                ["fn-defprotocol"                            :function]
+                ["InterfaceDefinterface"                     :interface]
+                ;; TODO: should defmethods be sorted by line number?
+                ["interface-defmulti :fn-defmethod"          :function]
+                ;; b.clj
+                ["ns-def-2"                                  :namespace]
+                ;; TODO: should implementations of protocol and interface methods be included?
+                ["ClassDefrecord"                            :class]
+                ["->ClassDefrecord"                          :function]
+                ["map->ClassDefrecord"                       :function]
+                ["ClassDeftype"                              :class]
+                ["->ClassDeftype"                            :function]
+                ;; TODO: should defmethods be sorted by line number?
+                ["interface-defmulti :fn-defmethod-other-ns" :function]]
+               (map (juxt :name :kind)
+                    all-symbols))))))
   (testing "querying a specific function using fuzzy search"
-    (is (= [;; a.clj
-            {:name "foo.alpaca.ns"
-             :kind :namespace
-             :location
-             {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 0 :character 0} :end {:line 0 :character 57}}}}
-            ;; later in file, but better search score
-            {:name "alpacas"
-             :kind :function
-             :location
-             {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 3 :character 0} :end {:line 3 :character 26}}}}
-            {:name "my-alpapapaca"
-             :kind :variable
-             :location
-             {:uri (h/file-uri "file:///a.clj")
-              :range {:start {:line 1 :character 0} :end {:line 1 :character 33}}}}
-            ;; b.clj
-            {:kind :function,
-             :location {:range {:start {:line 1, :character 0}, :end {:line 1, :character 53}},
-                        :uri (h/file-uri "file:///b.clj")},
-             :name "goats-from-alpacas"}]
-           (f.workspace-symbols/workspace-symbols "alpaca" (h/db))))))
+    (is (= [["fn-defn-fixed" 3]
+            ["fn-defn-multi" 4]
+            ["fn-defn-varargs" 5]
+            ["fn-defmacro" 6]
+            ["fn-defprotocol" 10]
+            ;; earlier in file, but worse search score
+            ["var-defonce" 1]
+            ["InterfaceDefinterface" 11]]
+           (map (juxt :name #(get-in % [:location :range :start :line]))
+                (f.workspace-symbols/workspace-symbols "fn" (h/db)))))))

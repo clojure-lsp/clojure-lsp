@@ -5,13 +5,31 @@
 
 (set! *warn-on-reflection* true)
 
-(defn element->symbol-kind [el]
-  (cond
-    (#{:namespace-usages :namespace-definitions} (:bucket el)) :namespace
-    (or (:macro el)
-        (:fixed-arities el)) :function
-    (#{:var-definitions :var-usages} (:bucket el)) :variable
-    :else :null))
+(def ^:private defines-interface?
+  '#{clojure.core/defprotocol cljs.core/defprotocol
+     clojure.core/definterface cljs.core/definterface
+     clojure.core/defmulti cljs.core/defmulti})
+
+(def ^:private defines-class?
+  '#{clojure.core/defrecord cljs.core/defrecord
+     clojure.core/deftype cljs.core/deftype})
+
+(defn element->symbol-kind [{:keys [bucket] :as el}]
+  (case bucket
+    (:namespace-usages :namespace-definitions) :namespace
+    :var-definitions (cond
+                       (or (:fixed-arities el) (:varargs-min-arity el) (:macro el))
+                       #_=> :function
+                       (some->> el :defined-by defines-interface?)
+                       #_=> :interface
+                       (some->> el :defined-by defines-class?)
+                       #_=> :class
+                       :else
+                       #_=> :variable)
+    :var-usages (if (:defmethod el)
+                  :function
+                  :variable)
+    :null))
 
 (defn element->name [{elem-name :name :keys [dispatch-val-str]}]
   (cond-> (name elem-name)

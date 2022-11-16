@@ -21,14 +21,13 @@
 (def clj-kondo-analysis-batch-size 150)
 
 (defn ^:private project-config-dir [project-root-uri]
-  (when project-root-uri
-    ;; TODO: might be better to use clj-kondo.impl.core/config-dir, but it's not
-    ;; yet part of the public kondo api.
-    #_(kondo/config-dir (shared/uri->filename project-root-uri))
-    (let [config-dir (io/file (shared/uri->filename project-root-uri) ".clj-kondo")]
-      (when (and (shared/file-exists? config-dir)
-                 (shared/directory? config-dir))
-        config-dir))))
+  ;; TODO: might be better to use clj-kondo.impl.core/config-dir, but it's not
+  ;; yet part of the public kondo api.
+  #_(kondo/config-dir (shared/uri->filename project-root-uri))
+  (let [config-dir (io/file (shared/uri->filename project-root-uri) ".clj-kondo")]
+    (when (and (shared/file-exists? config-dir)
+               (shared/directory? config-dir))
+      config-dir)))
 
 (defn ^:private config-path [config-dir]
   (let [config-file (io/file config-dir "config.edn")]
@@ -248,6 +247,7 @@
 (defn ^:private config-for-paths [paths file-analyzed-fn db]
   (-> {:cache true
        :parallel true
+       :config-dir (some-> db :project-root-uri project-config-dir)
        :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lint [(string/join (System/getProperty "path.separator") paths)]
        :config {:output {:canonical-paths true}}
@@ -268,12 +268,14 @@
   {:cache true
    :parallel true
    :skip-lint true
+   :config-dir (some-> db :project-root-uri project-config-dir)
    :copy-configs (settings/get db [:copy-kondo-configs?] true)
    :lint [(string/join (System/getProperty "path.separator") paths)]
    :config {:output {:canonical-paths true}}})
 
-(defn ^:private config-for-jdk-source [paths]
+(defn ^:private config-for-jdk-source [paths db]
   {:lint paths
+   :config-dir (some-> db :project-root-uri project-config-dir)
    :config {:output {:canonical-paths true}
             :analysis {:java-class-definitions true}}})
 
@@ -286,7 +288,7 @@
          :lint ["-"]
          :copy-configs (settings/get db [:copy-kondo-configs?] true)
          :filename filename
-         :config-dir (project-config-dir (:project-root-uri db))
+         :config-dir (some-> db :project-root-uri project-config-dir)
          :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
                   :analysis config-for-full-analysis}}
@@ -366,6 +368,6 @@
 (defn run-kondo-on-jdk-source! [paths db]
   (let [normalization-config {:external? true
                               :filter-analysis #(select-keys % [:java-class-definitions])}]
-    (-> (config-for-jdk-source paths)
+    (-> (config-for-jdk-source paths db)
         (run-kondo! (str "paths " paths))
         (normalize normalization-config db))))

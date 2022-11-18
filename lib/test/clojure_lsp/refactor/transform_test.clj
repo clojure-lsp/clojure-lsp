@@ -943,52 +943,6 @@
         (is (= nil resource-changes))
         (is (= nil changes-by-uri))))))
 
-(deftest inline-symbol
-  (testing "simple let"
-    (h/reset-components!)
-    (h/load-code-and-locs "(let [something 1] something something)")
-    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 (h/db)))
-          a-results (get results (h/file-uri "file:///a.clj"))]
-      (is (map? results))
-      (is (= 1 (count results)))
-      (is (= 3 (count a-results)))
-      (h/assert-submaps
-        [{:loc nil :range {:row 1 :col 7 :end-row 1 :end-col 18}}
-         {:loc "1" :range {:row 1 :col 20 :end-row 1 :end-col 29}}
-         {:loc "1" :range {:row 1 :col 30 :end-row 1 :end-col 39}}]
-        (map #(-> %
-                  (update :loc z/string)
-                  (update :range select-keys [:row :col :end-row :end-col])) a-results))))
-  (testing "multiple binding let"
-    (h/reset-components!)
-    (h/load-code-and-locs "(let [something 1 other 2] something other something)")
-    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 (h/db)))
-          a-results (get results (h/file-uri "file:///a.clj"))]
-      (is (map? results))
-      (is (= 1 (count results)))
-      (is (= 3 (count a-results)))
-      (h/assert-submaps
-        [{:loc nil :range {:row 1 :col 7 :end-row 1 :end-col 18}}
-         {:loc "1" :range {:row 1 :col 28 :end-row 1 :end-col 37}}
-         {:loc "1" :range {:row 1 :col 44 :end-row 1 :end-col 53}}]
-        (map #(-> %
-                  (update :loc z/string)
-                  (update :range select-keys [:row :col :end-row :end-col])) a-results))))
-  (testing "def in another file"
-    (h/reset-components!)
-    (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
-          _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
-          results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c (h/db)))
-          a-results (get results (h/file-uri "file:///a.clj"))
-          b-results (get results (h/file-uri "file:///b.clj"))]
-      (is (map? results))
-      (is (= 2 (count results)))
-      (is (= [nil] (map (comp z/string :loc) a-results)))
-      (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results)))))
-  (testing "invalid location"
-    (let [[[pos-l pos-c]] (h/load-code-and-locs "|;; comment")]
-      (is (nil? (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c (h/db)))))))
-
 (defn suppress-diagnostic [code diagnostic-code]
   (h/with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))
 

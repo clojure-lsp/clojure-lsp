@@ -9,6 +9,7 @@
 
 - Editor
   - Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types on `workspace/symbol` and `textDocument/documentSymbol`.
+  - Inlining the last binding of a let removes the let. #210
 
 ## 2022.11.03-00.14.57
 

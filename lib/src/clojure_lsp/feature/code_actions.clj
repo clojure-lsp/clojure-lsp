@@ -4,6 +4,7 @@
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.drag-param :as f.drag-param]
+   [clojure-lsp.feature.inline-symbol :as f.inline-symbol]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
    [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
@@ -355,7 +356,7 @@
         can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
         can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
-        inline-symbol?* (future (r.transform/inline-symbol? uri row col db))
+        inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
     (cond-> []

@@ -5,6 +5,7 @@
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.drag-param :as f.drag-param]
+   [clojure-lsp.feature.inline-symbol :as f.inline-symbol]
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
@@ -90,7 +91,7 @@
   (f.thread-get/get-in-none loc))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col db]}]
-  (r.transform/inline-symbol uri row col db))
+  (f.inline-symbol/inline-symbol uri row col db))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
   (apply r.transform/introduce-let loc args))

@@ -2,7 +2,6 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.logger :as logger]
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -728,48 +727,6 @@
                    name-loc)]
       [{:loc (z/replace source switch)
         :range (meta (z/node source))}])))
-
-(defn ^:private inline-data [uri row col db]
-  (let [{:keys [uri bucket name-row name-col] :as definition} (q/find-definition-from-cursor db uri row col)]
-    (when (or (identical? :locals bucket)
-              (identical? :var-definitions bucket))
-      (when-let [zloc (some-> (parser/safe-zloc-of-file db uri)
-                              (parser/to-pos name-row name-col))]
-        (when-let [op (some-> zloc edit/find-op z/sexpr #{'let 'def})]
-          {:def-elem definition
-           :def-zloc zloc
-           :def-uri uri
-           :def-op op})))))
-
-(defn inline-symbol? [uri row col db]
-  (boolean (inline-data uri row col db)))
-
-(defn inline-symbol
-  [uri row col db]
-  (when-let [{:keys [def-zloc def-uri def-op def-elem]} (inline-data uri row col db)]
-    (let [references (q/find-references db def-elem false)
-          val-loc    (z/right def-zloc)
-          end-pos    (if (= def-op 'def)
-                       (meta (z/node (z/up def-zloc)))
-                       (meta (z/node val-loc)))
-          prev-loc   (if (= def-op 'def)
-                       (z/left (z/up def-zloc))
-                       (z/left def-zloc))
-          start-pos  (if prev-loc
-                       (set/rename-keys (meta (z/node prev-loc))
-                                        {:end-row :row :end-col :col})
-                       (meta (z/node def-zloc)))
-          def-range  {:row     (:row start-pos)
-                      :col     (:col start-pos)
-                      :end-row (:end-row end-pos)
-                      :end-col (:end-col end-pos)}]
-      {:changes-by-uri
-       (reduce
-         (fn [accum {:keys [uri] :as element}]
-           (update accum uri (fnil conj [])
-                   {:loc val-loc :range element}))
-         {def-uri [{:loc nil :range def-range}]}
-         references)})))
 
 (defn can-create-function? [zloc]
   (and zloc

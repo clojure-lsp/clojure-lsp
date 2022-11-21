@@ -327,4 +327,9 @@
           {:project-root (str (fs/canonicalize (io/file "../cli/integration-test/sample-test")))
            :source-paths #{(str (fs/canonicalize (io/file "../cli/integration-test/sample-test/test")))
                            (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/src")))}}
-          (update output :source-paths set))))))
+          (update output :source-paths set))))
+    (testing "dumping with different analysis type"
+      (let [result (ignoring-prints
+                     (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
+                                :analysis {:type :project-and-dependencies}}))]
+        (is (= 0 (:result-code result)))))))

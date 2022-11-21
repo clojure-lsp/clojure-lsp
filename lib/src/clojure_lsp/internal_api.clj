@@ -192,14 +192,19 @@
 (defn ^:private setup-project-and-deps-analysis! [options {:keys [db*] :as components}]
   (let [db @db*]
     (when (or (not (:analysis db))
-              (not= :project-and-deps (:project-analysis-type db)))
-      (swap! db* assoc :project-analysis-type :project-and-deps)
+              (not= :project-and-dependencies (:project-analysis-type db)))
+      (swap! db* assoc :project-analysis-type :project-and-dependencies)
       (analyze! options components))))
 
 (defn ^:private setup-project-only-analysis! [options {:keys [db*] :as components}]
   (when (not (:analysis @db*))
     (swap! db* assoc :project-analysis-type :project-only)
     (analyze! options components)))
+
+(defn ^:private dynamic-setup-project-analysis! [options components]
+  (case (get-in options [:analysis :type] :project-only)
+    :project-and-dependencies (setup-project-and-deps-analysis! options components)
+    :project-only (setup-project-only-analysis! options components)))
 
 (defn ^:private open-file! [uri components]
   (f.file-management/load-document! uri (slurp uri) (:db* components))
@@ -409,7 +414,7 @@
 
 (defn ^:private dump* [{{:keys [format filter-keys] :or {format :edn}} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
-  (setup-project-and-deps-analysis! options components)
+  (dynamic-setup-project-analysis! options components)
   (let [db @db*
         dump-data (db->dump-data db filter-keys)]
     (case format

@@ -1,8 +1,10 @@
 (ns clojure-lsp.feature.add-missing-libspec-test
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
+   [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
 
@@ -328,6 +330,8 @@
   (swap! (h/db*) shared/deep-merge {:settings (merge
                                                 {:clean {:automatically-after-ns-refactor false}}
                                                 settings)})
+
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
   (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db)))
 
 (deftest add-import-to-namespace-test
@@ -399,12 +403,12 @@
                (add-import-to-namespace "java.util.Date")
                (h/changes->code (h/db)))))))
 
-(deftest add-common-import-to-namespace-test
+(deftest add-known-import-to-namespace-test
   (testing "when we known the import"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
-                   "    java.util.Date))")
-           (-> "(ns foo.bar) |Date."
+                   "    java.io.File))")
+           (-> "(ns foo.bar) |File."
                (add-import-to-namespace nil)
                as-root-str))))
   (testing "when we don't known the import"
@@ -500,13 +504,16 @@
                             "|;; comment")
                     (add-require-suggestion "clojure.string" nil "split")))))))
 
-(defn- find-missing-import [code]
-  (f.add-missing-libspec/find-missing-import (h/zloc-from-code code)))
+(defn- find-missing-imports [code]
+  (f.add-missing-libspec/find-missing-imports (h/zloc-from-code code) (h/db)))
 
 (deftest find-missing-import-test
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
+  (testing "when usage is a java class"
+    (is (= '["java.io.File"] (find-missing-imports "(ns a) |File"))))
   (testing "when usage is a java constructor"
-    (is (= 'java.util.Date (find-missing-import "(ns a) |Date."))))
+    (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File.)"))))
   (testing "when usage is a java ns"
-    (is (= 'java.util.Date (find-missing-import "(ns a) |Date/parse"))))
+    (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File/of \"foo\")"))))
   (testing "when usage is invalid"
-    (is (nil? (find-missing-import "(ns a) |;; comment")))))
+    (is (nil? (find-missing-imports "(ns a) |;; comment")))))

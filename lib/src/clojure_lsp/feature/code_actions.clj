@@ -51,13 +51,16 @@
 (defn ^:private find-missing-requires [diagnostics uri db]
   (keep (partial find-missing-require uri db) diagnostics))
 
-(defn ^:private find-missing-import [{:keys [position zloc]}]
-  (when-let [missing-import (f.add-missing-libspec/find-missing-import zloc)]
-    {:missing-import missing-import
-     :position       position}))
+(defn ^:private find-missing-import [db {:keys [position zloc]}]
+  (->> (f.add-missing-libspec/find-missing-imports zloc db)
+       (mapv (fn [missing-import]
+               {:missing-import missing-import
+                :position       position}))))
 
-(defn ^:private find-missing-imports [diagnostics]
-  (keep find-missing-import diagnostics))
+(defn ^:private find-missing-imports [diagnostics db]
+  (->> diagnostics
+       (keep (partial find-missing-import db))
+       flatten))
 
 (defn ^:private find-private-function-to-create [diagnostics]
   (when-let [{:keys [message position zloc]} (->> diagnostics
@@ -344,7 +347,7 @@
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
         missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
-        missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
+        missing-imports* (future (find-missing-imports resolvable-require-diagnostics db))
         require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
         can-sort-clauses?* (future (f.sort-clauses/can-sort? zloc uri db))
         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))

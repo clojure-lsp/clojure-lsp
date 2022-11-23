@@ -720,3 +720,9 @@
     (remove var-usage-from-own-definition?)))
 
 (def xf-all-keyword-usages xf-analysis->keyword-usages)
+
+(defn xf-all-java-definitions-by-class-name [class-name]
+  (comp
+    xf-analysis->java-class-definitions
+    (filter (fn [element]
+              (= class-name (last (string/split (:class element) #"\.")))))))

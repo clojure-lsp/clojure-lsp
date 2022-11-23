@@ -84,20 +84,30 @@
 
 (defn ^:private find-class-name [zloc]
   (when-let [sym (safe-sym zloc)]
-    (let [value (z/string zloc)]
+    (let [value (z/string zloc)
+          class? (and (first value)
+                      (Character/isUpperCase ^Character (first value)))
+          dot-call? (and (string/includes? value ".")
+                         (= (dec (count value)) (.indexOf ^String value ".")))]
       (cond
-        (string/ends-with? value ".")
-        (->> value drop-last (string/join "") symbol)
+        (not class?)
+        nil
 
         (namespace sym)
-        (-> sym namespace symbol)
+        (some-> sym namespace (string/split #"\.") last)
 
-        :else sym))))
+        dot-call?
+        (->> value drop-last (string/join ""))
 
-(defn find-missing-import [zloc]
-  (->> zloc
-       find-class-name
-       (get common-sym/java-util-imports)))
+        :else value))))
+
+(defn find-missing-imports [zloc db]
+  (when-let [class-name (find-class-name zloc)]
+    (into []
+          (comp
+            (q/xf-all-java-definitions-by-class-name class-name)
+            (map :class))
+          (:analysis db))))
 
 (defn add-to-namespace* [zloc {libspec-type :type lib-sym :lib refer-sym :refer alias-sym :alias} db]
   (let [ns-loc (edit/find-namespace zloc)
@@ -190,7 +200,7 @@
 
 (defn add-missing-import [zloc uri import-name db]
   (when-let [import-name (or import-name
-                             (find-missing-import zloc))]
+                             (first (find-missing-imports zloc db)))]
     (->> (add-to-namespace zloc :import nil (symbol import-name) db)
          (cleaning-ns-edits uri db))))
 

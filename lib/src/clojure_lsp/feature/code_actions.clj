@@ -10,6 +10,7 @@
    [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
    [clojure-lsp.feature.thread-get :as f.thread-get]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
@@ -40,6 +41,7 @@
 (defn ^:private find-all-require-suggestions [diagnostics missing-requires uri db]
   (->> diagnostics
        (mapcat (partial find-require-suggestions uri db))
+       distinct
        (remove (fn [suggestion]
                  (some (comp #{(:ns suggestion)} :ns)
                        missing-requires)))))
@@ -53,9 +55,13 @@
 
 (defn ^:private find-missing-import [db {:keys [position zloc]}]
   (->> (f.add-missing-libspec/find-missing-imports zloc db)
+       distinct
        (mapv (fn [missing-import]
                {:missing-import missing-import
-                :position       position}))))
+                :usages-count   (count (q/find-all-java-class-usages-on-imports-by-class db missing-import))
+                :position       position}))
+       (sort-by :usages-count)
+       reverse))
 
 (defn ^:private find-missing-imports [diagnostics db]
   (->> diagnostics
@@ -93,14 +99,16 @@
        alias-suggestions))
 
 (defn ^:private missing-import-actions [uri missing-imports]
-  (map (fn [{:keys [missing-import position]}]
-         {:title        (str "Add import '" missing-import "'")
-          :kind         :quick-fix
-          :is-preferred true
-          :command      {:title     "Add missing import"
-                         :command   "add-missing-import"
-                         :arguments [uri (:line position) (:character position)]}})
-       missing-imports))
+  (let [show-count? (> (count missing-imports) 1)]
+    (map (fn [{:keys [missing-import usages-count position]}]
+           {:title        (str "Add import '" missing-import "'"
+                               (if show-count? (str " x " usages-count) ""))
+            :kind         :quick-fix
+            :is-preferred true
+            :command      {:title     "Add missing import"
+                           :command   "add-missing-import"
+                           :arguments [uri (:line position) (:character position)]}})
+         missing-imports)))
 
 (defn ^:private change-colls-actions [uri line character other-colls]
   (map (fn [coll]

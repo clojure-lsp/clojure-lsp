@@ -79,6 +79,7 @@
         (xf-by-bucket->buckets-elems bucket-names)))
 
 (def xf-analysis->java-class-definitions (xf-analysis->bucket-elems :java-class-definitions))
+(def xf-analysis->java-class-usages (xf-analysis->bucket-elems :java-class-usages))
 (def xf-analysis->keyword-definitions (xf-analysis->bucket-elems :keyword-definitions))
 (def xf-analysis->keyword-usages (xf-analysis->bucket-elems :keyword-usages))
 (def xf-analysis->keywords (xf-analysis->buckets-elems :keyword-definitions :keyword-usages))
@@ -726,3 +727,11 @@
     xf-analysis->java-class-definitions
     (filter (fn [element]
               (= class-name (last (string/split (:class element) #"\.")))))))
+
+(defn find-all-java-class-usages-on-imports-by-class [db class-name]
+  (into []
+        (comp
+          xf-analysis->java-class-usages
+          (filter #(and (:import %)
+                        (safe-equal? class-name (:class %)))))
+        (:analysis db)))

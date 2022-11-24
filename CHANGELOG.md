@@ -11,6 +11,7 @@
   - Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types on `workspace/symbol` and `textDocument/documentSymbol`.
   - Inlining the last binding of a let removes the let. #210
   - Allow import java classes via code-actions `Add import 'x.y.Z'`.
+  - Make `add-import` command/code-action smarter, checking if there is already a package import to just include the classname instead of full import.
 
 - API/CLI
   - Allow specify analysis type for `dump` command, default to analyze project only analysis. #1383

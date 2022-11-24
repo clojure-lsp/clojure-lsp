@@ -338,44 +338,73 @@
   (testing "when there is no :import form"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
-                   "    java.util.Date))")
+                   "    [java.util Date]))")
            (-> "(ns foo.bar) |Date."
                (add-import-to-namespace "java.util.Date")
                as-root-str))))
   (testing "when there is no :import form with ns-inner-blocks-indentation :same-line"
     (is (= (h/code "(ns foo.bar "
-                   "  (:import java.util.Date))")
+                   "  (:import [java.util Date]))")
            (-> "(ns foo.bar) |Date."
                (add-import-to-namespace "java.util.Date"  {:clean {:ns-inner-blocks-indentation :same-line}})
                as-root-str))))
   (testing "when there is no :import form with deprecated :keep-require-at-start?"
     (is (= (h/code "(ns foo.bar "
-                   "  (:import java.util.Date))")
+                   "  (:import [java.util Date]))")
            (-> "(ns foo.bar) |Date."
                (add-import-to-namespace "java.util.Date"  {:keep-require-at-start? true})
                as-root-str))))
-  (testing "when there is a :import form already"
+  (testing "when there is a :import form already as full package import"
     (is (= (h/code "(ns foo.bar "
                    "  (:import "
-                   "    java.util.Calendar"
-                   "    java.util.Date))")
+                   "    [java.util Calendar Date]))")
            (-> (h/code "(ns foo.bar "
                        "  (:import "
                        "    java.util.Calendar)) |Date.")
+               (add-import-to-namespace "java.util.Date")
+               as-root-str))))
+  (testing "when there is more than one :import form already as full package import"
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import "
+                   "    java.util.Calendar"
+                   "    java.util.GregorianCalendar"
+                   "    java.util.Date))")
+           (-> (h/code "(ns foo.bar "
+                       "  (:import "
+                       "    java.util.Calendar"
+                       "    java.util.GregorianCalendar)) |Date.")
+               (add-import-to-namespace "java.util.Date")
+               as-root-str))))
+  (testing "when there is a :import form already as vector import"
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import "
+                   "    [java.util Calendar Date]))")
+           (-> (h/code "(ns foo.bar "
+                       "  (:import "
+                       "    [java.util Calendar])) |Date.")
+               (add-import-to-namespace "java.util.Date")
+               as-root-str))))
+  (testing "when there is a :import form already as list import"
+    (is (= (h/code "(ns foo.bar "
+                   "  (:import "
+                   "    (java.util Calendar Date)))")
+           (-> (h/code "(ns foo.bar "
+                       "  (:import "
+                       "    (java.util Calendar))) |Date.")
                (add-import-to-namespace "java.util.Date")
                as-root-str))))
   (testing "when there is already that :import imported"
     (is (= nil
            (-> (h/code "(ns foo.bar "
                        "  (:import "
-                       "    java.util.Date)) |Date.")
+                       "    [java.util Date])) |Date.")
                (add-import-to-namespace "java.util.Date")))))
   (testing "when there is only a :require form"
     (is (= (h/code "(ns foo.bar"
                    "  (:require"
                    "    [foo.baz :as baz]) "
                    "  (:import"
-                   "    java.util.Date))")
+                   "    [java.util Date]))")
            (-> (h/code "(ns foo.bar"
                        "  (:require"
                        "    [foo.baz :as baz])) |Date.")
@@ -386,8 +415,7 @@
                    "  (:require"
                    "    [foo.baz :as baz])"
                    "  (:import"
-                   "    java.util.Calendar"
-                   "    java.util.Date))")
+                   "    [java.util Calendar Date]))")
            (-> (h/code "(ns foo.bar"
                        "  (:require"
                        "    [foo.baz :as baz])"
@@ -398,7 +426,7 @@
   (testing "when on an invalid location"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
-                   "    java.util.Date)) ;; comment")
+                   "    [java.util Date])) ;; comment")
            (-> (h/code "(ns foo.bar) |;; comment")
                (add-import-to-namespace "java.util.Date")
                (h/changes->code (h/db)))))))
@@ -407,7 +435,7 @@
   (testing "when we known the import"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
-                   "    java.io.File))")
+                   "    [java.io File]))")
            (-> "(ns foo.bar) |File."
                (add-import-to-namespace nil)
                as-root-str))))

@@ -259,6 +259,7 @@
 
 (defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
+       (normalize-doc-uri)
        (handler/rename components)
        (conform-or-log ::coercer/workspace-edit-or-error)
        eventually))

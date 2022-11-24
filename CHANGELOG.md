@@ -3,6 +3,7 @@
 ## Unreleased
 
 - General
+  - Fix rename issue with VS-Code/Calva on MS-Windows. #1388
   - Only publish progress on initialize if client provided a `workDoneProgress`. #1363
   - Bump clj-kondo to `2022.11.03-20221116.204630-13`.
   - Avoid wrong clj-kondo configs in case clojure-lsp process is spawned from a different directory than project-root.

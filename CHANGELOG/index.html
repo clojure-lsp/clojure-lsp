@@ -2110,8 +2110,9 @@
 </li>
 <li>Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types on <code>workspace/symbol</code> and <code>textDocument/documentSymbol</code>.</li>
 <li>Inlining the last binding of a let removes the let. #210</li>
+<li>Allow import java classes via code-actions <code>Add import 'x.y.Z'</code>.</li>
 <li>
-<p>Allow import java classes via code-actions <code>Add import 'x.y.Z'</code>.</p>
+<p>Make <code>add-import</code> command/code-action smarter, checking if there is already a package import to just include the classname instead of full import.</p>
 </li>
 <li>
 <p>API/CLI</p>

@@ -58,9 +58,16 @@
     (catch IllegalArgumentException _
       uri)))
 
-(defn escape-uri [uri]
+(defn escape-uri
+  "Escapes enough URI characters for testing purposes and returns it.
+
+  On MS-Windows, it will also escape the drive colon, mimicking
+  VS-Code/Calva's behavior."
+  [uri]
   ;; Do a better escape considering more chars
-  (string/replace uri "::" "%3A%3A"))
+  (cond-> (string/replace uri "::" "%3A%3A")
+    windows?
+    (string/replace  #"/([a-zA-Z]):/" "/$1%3A/")))
 
 (defn file->uri [file]
   (let [uri (-> file fs/canonicalize .toUri .toString)]

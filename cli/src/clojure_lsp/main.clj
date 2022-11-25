@@ -171,12 +171,12 @@
   (let [{:keys [action options exit-message ok?]} (parse args)]
     (if exit-message
       {:result-code (if ok? 0 1)
-       :message exit-message}
+       :message-fn (constantly  exit-message)}
       (handle-action! action options))))
 
 (defn main [& args]
-  (let [{:keys [result-code message]} (apply run! args)]
-    (exit result-code message)))
+  (let [{:keys [result-code message-fn]} (apply run! args)]
+    (exit result-code (when message-fn (message-fn)))))
 
 (def musl?
   "Captured at compile time, to know if we are running inside a

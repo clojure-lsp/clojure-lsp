@@ -16,6 +16,7 @@
 
 - API/CLI
   - Allow specify analysis type for `dump` command, default to analyze project only analysis. #1383
+  - Add `:result` to the dump command. #1390
 
 ## 2022.11.03-00.14.57
 

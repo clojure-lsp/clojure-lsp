@@ -4,7 +4,7 @@
         nrepl/bencode {:mvn/version "1.1.0"}
         com.taoensso/timbre {:mvn/version "6.0.2"}
         clojure-lsp/lib {:local/root "../lib"}
-        funcool/promesa {:mvn/version "9.2.541"}}
+        funcool/promesa {:mvn/version "9.2.542"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.71.1119"}}

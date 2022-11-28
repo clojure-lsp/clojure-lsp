@@ -30,7 +30,7 @@
     <dependency>
       <groupId>funcool</groupId>
       <artifactId>promesa</artifactId>
-      <version>9.2.541</version>
+      <version>9.2.542</version>
     </dependency>
     <dependency>
       <groupId>nrepl</groupId>

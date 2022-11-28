@@ -29,6 +29,7 @@
                                             "create-function"
                                             "create-test"
                                             "cycle-coll"
+                                            "cycle-keyword-auto-resolve"
                                             "cycle-privacy"
                                             "demote-fn"
                                             "destructure-keys"

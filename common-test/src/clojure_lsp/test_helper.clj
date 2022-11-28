@@ -278,3 +278,10 @@
 
 (defn changes-by-uri->code [changes-by-uri uri db]
   (changes->code (get changes-by-uri uri) uri db))
+
+(defn first-edit-as-root-string [[{:keys [loc]}]]
+  (when loc
+    (z/root-string loc)))
+
+(defn edits-as-strings [edits]
+  (mapv (comp z/string :loc) edits))

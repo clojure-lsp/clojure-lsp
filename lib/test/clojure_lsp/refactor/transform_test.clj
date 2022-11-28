@@ -13,9 +13,6 @@
 (defn as-strings [results]
   (map (comp z/string :loc) results))
 
-(defn- as-root-string [[{:keys [loc]}]]
-  (z/root-string loc))
-
 (defn- as-string [[{:keys [loc]}]]
   (z/string loc))
 
@@ -50,16 +47,16 @@
     (is (= "((a) (b))" (z/root-string zloc)))))
 
 (defn- thread-first [code]
-  (as-root-string (transform/thread-first (h/zloc-from-code code) (h/db))))
+  (h/first-edit-as-root-string (transform/thread-first (h/zloc-from-code code) (h/db))))
 
 (defn- thread-first-all [code]
-  (as-root-string (transform/thread-first-all (h/zloc-from-code code) (h/db))))
+  (h/first-edit-as-root-string (transform/thread-first-all (h/zloc-from-code code) (h/db))))
 
 (defn- thread-last [code]
-  (as-root-string (transform/thread-last (h/zloc-from-code code) (h/db))))
+  (h/first-edit-as-root-string (transform/thread-last (h/zloc-from-code code) (h/db))))
 
 (defn- thread-last-all [code]
-  (as-root-string (transform/thread-last-all (h/zloc-from-code code) (h/db))))
+  (h/first-edit-as-root-string (transform/thread-last-all (h/zloc-from-code code) (h/db))))
 
 (deftest thread-test
   (let [code "|(remove nil? (filter :id (map (comp now doit) xs)))"]
@@ -102,7 +99,7 @@
            (thread-last-all "|(bar (foo [1 2]))")))))
 
 (defn- move-to-let [code new-sym]
-  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db) new-sym)))
+  (h/first-edit-as-root-string (transform/move-to-let (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db) new-sym)))
 
 (deftest move-to-let-test
   (is (= (h/code "(let [a 1"
@@ -178,7 +175,7 @@
   (is (nil? (transform/move-to-let nil "file:///a.clj" (h/db) 'x))))
 
 (defn- introduce-let [code new-sym]
-  (as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
+  (h/first-edit-as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
 
 (deftest introduce-let-test
   (testing "simple"
@@ -225,7 +222,7 @@
   (is (nil? (transform/introduce-let nil 'b))))
 
 (defn- expand-let [code]
-  (as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" (h/db))))
+  (h/first-edit-as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" (h/db))))
 
 (deftest expand-let-test
   (testing "simple"

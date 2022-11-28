@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.drag-param :as f.drag-param]
@@ -146,6 +147,9 @@
 
 (defmethod refactor :move-form [{:keys [loc uri args components]}]
   (apply f.move-form/move-form loc uri components args))
+
+(defmethod refactor :cycle-keyword-auto-resolve  [{:keys [loc uri db components]}]
+  (f.cycle-keyword/cycle-keyword-auto-resolve loc uri db components))
 
 (def available-refactors
   (->> refactor

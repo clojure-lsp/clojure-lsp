@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.code-actions
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
+   [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.drag-param :as f.drag-param]
@@ -139,6 +140,16 @@
    :command {:title     "Move to let"
              :command   "move-to-let"
              :arguments [uri line character "new-binding"]}})
+
+(defn ^:private cycle-kwd-action [uri line character cycle-kwd-status]
+  (let [title (if (= :from-auto-resolve-to-namespace (:status cycle-kwd-status))
+                "Change auto-resolved keyword to namespaced"
+                "Change namespaced keyword to auto-resolved")]
+    {:title   title
+     :kind    :refactor-rewrite
+     :command {:title     title
+               :command   "cycle-keyword-auto-resolve"
+               :arguments [uri line character]}}))
 
 (defn ^:private cycle-privacy-action [uri line character]
   {:title   "Cycle privacy"
@@ -368,6 +379,7 @@
         can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
         inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
+        cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
     (cond-> []
@@ -391,6 +403,9 @@
 
       @other-colls*
       (into (change-colls-actions uri line character @other-colls*))
+
+      @cycle-kwd-status*
+      (conj (cycle-kwd-action uri line character @cycle-kwd-status*))
 
       can-add-let?
       (conj (move-to-let-action uri line character))

@@ -12,11 +12,6 @@
 (defn top? [loc]
   (root? (z/up loc)))
 
-(defn to-root
-  "Returns the loc of the root `:forms` node."
-  [loc]
-  (z/find loc z/up root?))
-
 (defn to-top
   "Returns the loc for the top-level form above the loc, or the loc itself if it
   is top-level, or nil if the loc is at the `:forms` node."
@@ -212,7 +207,12 @@
   (when (inside-refer? zloc)
     (if (= :vector (z/tag zloc))
       (z/leftmost zloc)
-      (z/leftmost (z/up zloc)))))
+      (z/leftmost (z/up zloc))))) ; ns form
+
+(defn to-root
+  "Returns the loc of the root `:forms` node."
+  [loc]
+  (z/find loc z/up root?))
 
 (defn find-namespace [zloc]
   (-> (to-root zloc)

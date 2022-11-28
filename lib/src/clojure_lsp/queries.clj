@@ -722,6 +722,11 @@
 
 (def xf-all-keyword-usages xf-analysis->keyword-usages)
 
+(defn find-keyword-usages-by-keyword [db uri kwd-ns kwd-name]
+  (into []
+        (xf-same-fqn kwd-ns kwd-name)
+        (get-in db [:analysis uri :keyword-usages])))
+
 (defn xf-all-java-definitions-by-class-name [class-name]
   (comp
     xf-analysis->java-class-definitions

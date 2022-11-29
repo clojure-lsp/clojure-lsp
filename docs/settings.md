@@ -109,7 +109,7 @@ __You can find all settings and its default values [here](https://github.com/clo
 
 clojure-lsp needs to analyze the whole project and its dependencies to understand your code for most features, during the startup clojure-lsp will try to find the classpath of your project to pass to clj-kondo later.
 
-You can configure how clojure-lsp should find the classpath with the `project-specs` setting, but keep in mind that usually the [default](https://github.com/clojure-lsp/clojure-lsp/blob/master/lib/src/clojure_lsp/classpath.clj#L108-L123) is enough, it will also consider the `:source-aliases` setting if any to find the classpath using those aliases.
+You can configure how clojure-lsp should find the classpath with the `project-specs` setting, but keep in mind that usually the [default](https://github.com/clojure-lsp/clojure-lsp/blob/master/lib/src/clojure_lsp/classpath.clj#L169) is enough, it will also consider the `:source-aliases` setting if any to find the classpath using those aliases.
 
 Supported project types at the moment are:
 

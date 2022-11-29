@@ -10,7 +10,7 @@
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex ""
-                       :config {:linters {:unused-public-var {:level :off}}}}
+                       :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}}
            :clj-depend {:level :info}} ;; Only if any clj-depend config is found
  :clean {:automatically-after-ns-refactor true
          :ns-inner-blocks-indentation :next-line

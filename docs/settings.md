@@ -165,7 +165,7 @@ Example:
 {:linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex "some-ns.*"
-                       :config {:linters {:unused-public-var {:level :off}}}}}}
+                       :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}}}}
 ```
 
 <details>

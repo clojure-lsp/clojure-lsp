@@ -155,7 +155,8 @@ It has the possible key/values:
 - `:clj-kondo`
   - `:level` with available values: `:off`, `:on` with default value of `:on`
   - `:report-duplicates` which will show all linters of the same symbol instead of showing only the first spot. Available values: `true`, `false` with default value of `true`
-  - `ns-exclude-regex` which will exclude the diagnostics/findings for namespaces that match this regex.
+  - `:ns-exclude-regex` which will exclude the diagnostics/findings for namespaces that match this regex.
+  - `:config` which will merge with project config overriding shared settings. Uses the same data structure as `.clj-kondo/config.edn`
 
 Example:
 
@@ -163,7 +164,8 @@ Example:
 ```clojure
 {:linters {:clj-kondo {:level :on
                        :report-duplicates true
-                       :ns-exclude-regex "some-ns.*"}}}
+                       :ns-exclude-regex "some-ns.*"
+                       :config {:linters {:unused-public-var {:level :off}}}}}}
 ```
 
 <details>

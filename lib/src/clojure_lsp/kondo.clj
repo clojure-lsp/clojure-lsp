@@ -193,12 +193,18 @@
 
 (defn ^:private with-additional-config
   [config settings]
-  (cond-> config
-    (get-in settings [:linters :clj-kondo :report-duplicates] true)
-    (->
-      (assoc-in [:config :linters :unresolved-symbol :report-duplicates] true)
-      (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
-      (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
+  (let [additional-config (-> settings :linters :clj-kondo :config)]
+    (cond-> config
+      (get-in settings [:linters :clj-kondo :report-duplicates] true)
+      (-> (assoc-in [:config :linters :unresolved-symbol :report-duplicates]
+                    true)
+          (assoc-in [:config :linters :unresolved-namespace
+                     :report-duplicates]
+                    true)
+          (assoc-in [:config :linters :unresolved-var :report-duplicates]
+                    true))
+      additional-config
+      (update :config #(shared/deep-merge % additional-config)))))
 
 (defn ^:private run-custom-lint? [config]
   (not= :off (get-in config [:linters :clojure-lsp/unused-public-var :level])))

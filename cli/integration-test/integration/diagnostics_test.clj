@@ -120,3 +120,61 @@
         :message "\"sample-test.diagnostics.depend.b\" should not depends on \"sample-test.diagnostics.depend.a\""
         :tags []}]
       (lsp/client-awaits-server-diagnostics "diagnostics/depend/b.clj"))))
+
+(deftest additional-config
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/kondo.clj"))
+
+  (testing "When using default severity"
+    (h/assert-submaps
+      [{:range {:start {:line 2 :character 16} :end {:line 2 :character 19}}
+        :severity 2
+        :code "unused-private-var"
+        :source "clj-kondo"
+        :message "Unused private var sample-test.diagnostics.kondo/foo"
+        :tags [1]}
+       {:range {:start {:line 5 :character 0} :end {:line 5 :character 3}}
+        :severity 1
+        :code "unresolved-symbol"
+        :source "clj-kondo"
+        :message "Unresolved symbol: bar"
+        :tags []}
+       {:range {:start {:line 7, :character 0}, :end {:line 7, :character 3}},
+        :tags [],
+        :message "Unresolved symbol: bar",
+        :code "unresolved-symbol",
+        :severity 1,
+        :source "clj-kondo"}]
+      (lsp/client-awaits-server-diagnostics "diagnostics/kondo.clj")))
+
+  (lsp/request! (fixture/initialize-request
+                  {:initializationOptions
+                   (assoc fixture/default-init-options
+                          :linters {:clj-kondo {:config {:linters {:unused-private-var {:level :error}
+                                                                   :unresolved-symbol {:level :warning}}}}})}))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/kondo.clj"))
+
+  (testing "When additional config overrides severity"
+    (h/assert-submaps
+      [{:range {:start {:line 2 :character 16} :end {:line 2 :character 19}}
+        :severity 1
+        :code "unused-private-var"
+        :source "clj-kondo"
+        :message "Unused private var sample-test.diagnostics.kondo/foo"
+        :tags [1]}
+       {:range {:start {:line 5 :character 0} :end {:line 5 :character 3}}
+        :severity 2
+        :code "unresolved-symbol"
+        :source "clj-kondo"
+        :message "Unresolved symbol: bar"
+        :tags []}
+       {:range {:start {:line 7, :character 0}, :end {:line 7, :character 3}},
+        :tags [],
+        :message "Unresolved symbol: bar",
+        :code "unresolved-symbol",
+        :severity 2,
+        :source "clj-kondo"}]
+      (lsp/client-awaits-server-diagnostics "diagnostics/kondo.clj"))))

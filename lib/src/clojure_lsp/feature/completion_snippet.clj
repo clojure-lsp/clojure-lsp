@@ -126,7 +126,7 @@
    {:label "ns"
     :function-call function-call?
     :detail "Insert ns"
-    :insert-text "(ns ${1:name}\n  $0:references})"}
+    :insert-text "(ns ${1:name}\n  ${0:references})"}
    {:label "ns-doc"
     :function-call function-call?
     :detail "Insert ns with docstring"

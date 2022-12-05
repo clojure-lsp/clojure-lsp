@@ -7,6 +7,7 @@
   - Only publish progress on initialize if client provided a `workDoneProgress`. #1363
   - Bump clj-kondo to `2022.11.03-20221116.204630-13`.
   - Avoid wrong clj-kondo configs in case clojure-lsp process is spawned from a different directory than project-root.
+  - Fall back on CLJS var when finding definition from Clojure and nothing was found. #1403
 
 - Editor
   - Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types on `workspace/symbol` and `textDocument/documentSymbol`.

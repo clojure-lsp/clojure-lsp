@@ -398,7 +398,7 @@
                      :bucket :var-usages
                      :defmethod true
                      :to 'a}
-                     ;; usage
+                    ;; usage
                     {:name-row 5 :name-col 2 :name-end-row 5 :name-end-col 12
                      :row 5 :col 1 :end-row 5 :end-col 31
                      :name 'my-multi
@@ -543,8 +543,8 @@
                                                           "|f/cljs-only") (h/file-uri "file:///b.clj"))
             db (h/db)]
         (h/assert-submap
-         {:ns 'foo, :name 'cljs-only, :uri (h/file-uri "zipfile:///some.jar::other-jar.cljs")}
-         (q/find-definition-from-cursor db (h/file-uri "file:///b.clj") bar-r bar-c)))))
+          {:ns 'foo, :name 'cljs-only, :uri (h/file-uri "zipfile:///some.jar::other-jar.cljs")}
+          (q/find-definition-from-cursor db (h/file-uri "file:///b.clj") bar-r bar-c)))))
   (testing "when on a cljs file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.cljs"))

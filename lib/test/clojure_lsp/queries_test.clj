@@ -537,7 +537,14 @@
           db (h/db)]
       (h/assert-submap
         {:name 'bar :uri (h/file-uri "zipfile:///some.jar::some-jar.clj")}
-        (q/find-definition-from-cursor db (h/file-uri "file:///b.clj") bar-r bar-c))))
+        (q/find-definition-from-cursor db (h/file-uri "file:///b.clj") bar-r bar-c)))
+    (testing "fallback to cljs file"
+      (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as-alias f]))"
+                                                          "|f/cljs-only") (h/file-uri "file:///b.clj"))
+            db (h/db)]
+        (h/assert-submap
+         {:ns 'foo, :name 'cljs-only, :uri (h/file-uri "zipfile:///some.jar::other-jar.cljs")}
+         (q/find-definition-from-cursor db (h/file-uri "file:///b.clj") bar-r bar-c)))))
   (testing "when on a cljs file"
     (let [[[bar-r bar-c]] (h/load-code-and-locs (h/code "(ns baz (:require [foo :as f]))"
                                                         "|f/bar") (h/file-uri "file:///b.cljs"))
@@ -576,11 +583,11 @@
 
 (deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs
   (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "zipfile:///some.jar::some-jar.clj"))
-  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "zipfile:///some.jar::other-jar.cljs"))
+  (h/load-code-and-locs (h/code "(ns foo) (def bar) (def cljs-only)") (h/file-uri "zipfile:///some.jar::other-jar.cljs"))
   (assert-find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs))
 
 (deftest find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs-in-other-load-order
-  (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "zipfile:///some.jar::other-jar.cljs"))
+  (h/load-code-and-locs (h/code "(ns foo) (def bar) (def cljs-only)") (h/file-uri "zipfile:///some.jar::other-jar.cljs"))
   (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "zipfile:///some.jar::some-jar.clj"))
   (assert-find-definition-from-cursor-when-it-has-same-namespace-from-clj-and-cljs))
 

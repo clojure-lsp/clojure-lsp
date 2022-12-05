@@ -250,7 +250,7 @@
       (let [definition (find-definition db (assoc var-usage :lang :clj))]
         (when (:macro definition)
           definition)))
-    ;; fallback to navigate from clojure to clojurescript vars
+    ;; Fallback to navigate from clojure to clojurescript vars, see #1403
     (find-definition db (assoc var-usage :lang :cljs))))
 
 (defmethod find-definition :local-usages

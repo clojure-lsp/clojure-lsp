@@ -249,7 +249,9 @@
       ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
       (let [definition (find-definition db (assoc var-usage :lang :clj))]
         (when (:macro definition)
-          definition)))))
+          definition)))
+    ;; fallback to navigate from clojure to clojurescript vars
+    (find-definition db (assoc var-usage :lang :cljs))))
 
 (defmethod find-definition :local-usages
   [db {:keys [id uri] :as _local-usage}]

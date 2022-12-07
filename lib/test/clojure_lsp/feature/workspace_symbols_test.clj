@@ -50,6 +50,7 @@
                 ["InterfaceDefprotocol"                      :interface]
                 ["fn-defprotocol"                            :function]
                 ["InterfaceDefinterface"                     :interface]
+                ["fn-definterface"                           :function]
                 ;; TODO: should defmethods be sorted by line number?
                 ["interface-defmulti :fn-defmethod"          :function]
                 ;; b.clj
@@ -70,6 +71,7 @@
             ["fn-defn-varargs" 5]
             ["fn-defmacro" 6]
             ["fn-defprotocol" 10]
+            ["fn-definterface" 12]
             ;; earlier in file, but worse search score
             ["var-defonce" 1]
             ["InterfaceDefinterface" 11]]

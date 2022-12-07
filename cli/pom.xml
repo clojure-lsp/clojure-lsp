@@ -25,7 +25,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>timbre</artifactId>
-      <version>6.0.2</version>
+      <version>6.0.3</version>
     </dependency>
     <dependency>
       <groupId>funcool</groupId>

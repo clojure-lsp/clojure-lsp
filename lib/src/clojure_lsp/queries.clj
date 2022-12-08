@@ -340,14 +340,16 @@
   [db var-definition]
   (if-let [xf (cond
                 ;; protocol method definition
-                (and (= 'clojure.core/defprotocol (:defined-by var-definition))
+                (and ('#{clojure.core/defprotocol
+                         clojure.core/definterface} (:defined-by var-definition))
                      (:protocol-name var-definition))
                 (comp xf-analysis->protocol-impls
                       (xf-same-fqn (:ns var-definition) (:name var-definition)
                                    :protocol-ns :method-name))
 
                 ;; protocol name definition
-                (= 'clojure.core/defprotocol (:defined-by var-definition))
+                ('#{clojure.core/defprotocol
+                    clojure.core/definterface} (:defined-by var-definition))
                 (comp xf-analysis->var-usages
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to))
 

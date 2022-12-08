@@ -2114,8 +2114,9 @@
 <li>Inlining the last binding of a let removes the let. #210</li>
 <li>Allow import java classes via code-actions <code>Add import 'x.y.Z'</code>.</li>
 <li>Make <code>add-import</code> command/code-action smarter, checking if there is already a package import to just include the classname instead of full import.</li>
+<li>Add new refactoring <code>cycle-keyword-auto-resolve</code>, e.g. <code>::bar</code> -&gt; <code>:foo/bar</code> and vice-versa. #1128</li>
 <li>
-<p>Add new refactoring <code>cycle-keyword-auto-resolve</code>, e.g. <code>::bar</code> -&gt; <code>:foo/bar</code> and vice-versa. #1128</p>
+<p>Supporting find definition/references/implementations of <code>definterface</code>.</p>
 </li>
 <li>
 <p>API/CLI</p>
@@ -3324,7 +3325,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 7, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 8, 2022</span>
     
   </small>
 </div>

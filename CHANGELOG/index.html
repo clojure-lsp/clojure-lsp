@@ -2115,8 +2115,9 @@
 <li>Allow import java classes via code-actions <code>Add import 'x.y.Z'</code>.</li>
 <li>Make <code>add-import</code> command/code-action smarter, checking if there is already a package import to just include the classname instead of full import.</li>
 <li>Add new refactoring <code>cycle-keyword-auto-resolve</code>, e.g. <code>::bar</code> -&gt; <code>:foo/bar</code> and vice-versa. #1128</li>
+<li>Supporting find definition/references/implementations of <code>definterface</code>.</li>
 <li>
-<p>Supporting find definition/references/implementations of <code>definterface</code>.</p>
+<p>Avoid watching ignored source-paths, causing find-definition/references and other features go to wrong files.</p>
 </li>
 <li>
 <p>API/CLI</p>

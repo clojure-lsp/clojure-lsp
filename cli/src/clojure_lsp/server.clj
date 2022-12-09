@@ -519,17 +519,18 @@
 (defmethod lsp.server/receive-notification "exit" [_ {:keys [server]} _params]
   (exit server))
 
-(defmacro ^:private safe-async-task [task-name & task-body]
-  `(async/thread
-     (loop []
-       (try
-         ~@task-body
-         (catch Exception e#
-           (logger/error e# (format "Error during async task %s" ~task-name))))
-       (recur))))
-
 (defmethod lsp.server/receive-notification "$/setTrace" [_ {:keys [server]} {:keys [value]}]
   (lsp.server/set-trace-level server value))
+
+(defn- spawn-async-loop! [task-name ch f]
+  (async/thread
+    (loop []
+      (when-let [v (async/<!! ch)]
+        (try
+          (f v)
+          (catch Exception e
+            (logger/error e (format "Error during async task %s" task-name))))
+        (recur)))))
 
 (defn ^:private spawn-async-tasks!
   [{:keys [producer current-changes-chan diagnostics-chan
@@ -537,23 +538,23 @@
   (let [debounced-diags (shared/debounce-by diagnostics-chan diagnostics-debounce-ms :uri)
         debounced-changes (shared/debounce-by current-changes-chan change-debounce-ms :uri)
         debounced-watched-files (shared/debounce-all watched-files-chan watched-files-debounce-ms)]
-    (safe-async-task
-      :edits
-      (when-let [edit (async/<!! edits-chan)]
+    (spawn-async-loop!
+      :edits edits-chan
+      (fn [edit]
         (producer/publish-workspace-edit producer edit)))
-    (safe-async-task
-      :diagnostics
-      (when-let [diagnostic (async/<!! debounced-diags)]
+    (spawn-async-loop!
+      :diagnostics debounced-diags
+      (fn [diagnostic]
         (producer/publish-diagnostic producer diagnostic)))
-    (safe-async-task
-      :changes
-      (when-let [changes (async/<!! debounced-changes)] ;; do not put inside shared/logging-task; parked time gets included in task time
+    (spawn-async-loop!
+      :changes debounced-changes
+      (fn [changes]
         (shared/logging-task
           :analyze-file
           (f.file-management/analyze-changes changes components))))
-    (safe-async-task
-      :watched-files
-      (when-let [watched-files (async/<!! debounced-watched-files)] ;; do not put inside shared/logging-task; parked time gets included in task time
+    (spawn-async-loop!
+      :watched-files debounced-watched-files
+      (fn [watched-files]
         (shared/logging-task
           :analyze-files-in-watched-dir
           (f.file-management/analyze-watched-files! watched-files components))))))

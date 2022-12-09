@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022.12.09-15.51.10
+
 - General
   - Fix rename issue with VS-Code/Calva on MS-Windows. #1388
   - Only publish progress on initialize if client provided a `workDoneProgress`. #1363

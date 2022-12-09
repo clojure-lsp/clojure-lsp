@@ -251,8 +251,8 @@
         (when (:macro definition)
           definition)))
     ;; Fallback to navigate from clojure to clojurescript vars, see #1403
-    (when (identical? :clj (:lang var-usage))
-      (find-definition db (assoc var-usage :lang :cljs)))))
+    (when-not (:fallbacking? var-usage)
+      (find-definition db (assoc var-usage :lang :cljs :fallbacking? true)))))
 
 (defmethod find-definition :local-usages
   [db {:keys [id uri] :as _local-usage}]

@@ -124,6 +124,7 @@
            (h/take-or-timeout mock-changes-chan 500)))))
 
 (deftest did-change-watched-files
+  (swap! (h/db*) medley/deep-merge {:project-root-uri (h/file-uri "file:///")})
   (testing "created file"
     (let [mock-watched-files-chan (async/chan 1)]
       (f.file-management/did-change-watched-files
@@ -148,7 +149,21 @@
         (assoc (h/components)
                :diagnostics-chan mock-diagnostics-chan))
       (is (= {:uri h/default-uri, :diagnostics []}
-             (h/take-or-timeout mock-diagnostics-chan 500))))))
+             (h/take-or-timeout mock-diagnostics-chan 500)))))
+  (testing "watched files ignored by source-path-ignore-regex"
+    (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/target")
+                                                                 (h/file-path "/src")}}
+                                      :project-root-uri (h/file-uri "file:///project")})
+    (let [mock-watched-files-chan (async/chan 2)]
+      (f.file-management/did-change-watched-files
+        [{:type :changed
+          :uri (h/file-uri "file:///project/target/a.clj")}
+         {:type :changed
+          :uri (h/file-uri "file:///project/src/a.clj")}]
+        (assoc (h/components)
+               :watched-files-chan mock-watched-files-chan))
+      (is (= (h/file-uri "file:///project/src/a.clj") (h/take-or-timeout mock-watched-files-chan 1000)))
+      (h/assert-no-take mock-watched-files-chan 500))))
 
 (deftest var-dependency-reference-uris
   (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}

@@ -78,7 +78,7 @@
        (mapv #(->> % (shared/to-file root-path) .getCanonicalPath str))))
 
 (defn process-source-paths [settings root-path classpath given-source-paths]
-  (let [source-paths-ignore-regex (get settings :source-paths-ignore-regex ["resources.*" "target.*"])
+  (let [source-paths-ignore-regex (get settings :source-paths-ignore-regex config/default-source-path-ignore-regexs)
         {:keys [origins source-paths]} (resolve-source-paths root-path classpath given-source-paths)
         final-source-paths (absolutize-source-paths source-paths root-path source-paths-ignore-regex)]
     (when (contains? origins :settings) (logger/info startup-paths-logger-tag "Using given source-paths:" final-source-paths))

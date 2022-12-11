@@ -91,11 +91,11 @@ esac
 ext="zip"
 util="$(which unzip) -qqo"
 
-case "$platform" in
-    linux) filename="clojure-lsp-native-static-$platform-$arch."$ext
-           ;;
-    *)     filename="clojure-lsp-native-$platform-$arch."$ext
-           ;;
+case "$platform-$arch" in
+    linux-amd64)   filename="clojure-lsp-native-static-$platform-$arch."$ext
+                   ;;
+    *)             filename="clojure-lsp-native-$platform-$arch."$ext
+                   ;;
 esac
 
 if [[ "$version" == "nightly" ]]; then

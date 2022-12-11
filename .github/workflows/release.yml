@@ -9,7 +9,7 @@ jobs:
   build-lib-jar:
     if: startsWith(github.ref, 'refs/tags/2')
     name: Build JVM lib
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.2.0
         with:
@@ -41,7 +41,7 @@ jobs:
   build-cli-jar:
     if: startsWith(github.ref, 'refs/tags/2')
     name: Build JVM cli
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.2.0
         with:
@@ -82,7 +82,7 @@ jobs:
   linux-amd64:
     name: Build native linux amd64 binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
@@ -140,7 +140,7 @@ jobs:
   linux-amd64-static:
     name: Build native linux amd64 static binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
@@ -191,7 +191,7 @@ jobs:
     continue-on-error: true
     strategy:
       fail-fast: false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
@@ -401,7 +401,7 @@ jobs:
     name: Create Release
     environment: prod-release
     needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, macos, windows]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.2.0
         with:
@@ -431,7 +431,7 @@ jobs:
   upload-to-release:
     name: Upload artifacts to release
     needs: [release]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.2.0
         with:

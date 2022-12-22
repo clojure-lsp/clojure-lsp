@@ -287,9 +287,11 @@ Keep the first class inside a package import on the same line and next children 
            Foo])
 ```
 
+Also, check `:sort :import-classes` below for more customizations.
+
 #### sort
 
-to disable a specific import you can set it to nil, example:
+to disable a specific sort you can set it to nil, example:
 
 ```clojure
 {:clean {:sort {:import-classes nil}}}
@@ -311,7 +313,7 @@ Whether to enable sort of `:import` form.
 
 Whether to enable sort of package classes inside `:import` form.
 
-- `:classes-per-line`: the max classes allowed to keep in a single line, if more than this value, clojure-lsp will move all classes to `:next-line` or `:same-line` following `:ns-import-classes-indentation`.
+- `:classes-per-line`: the max classes allowed to keep in a single line, if more than this value, clojure-lsp will move all classes to `:next-line` or `:same-line` following `:ns-import-classes-indentation`, Possivel values: any positive number or `-1` to keep all classes in the same line.
 
 ##### `refer`
 

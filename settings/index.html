@@ -1528,8 +1528,9 @@ Note: package imports with only one class will keep indentation: Ex: <code>[java
   <span class="p">[</span><span class="nv">java.io</span> <span class="nv">File</span>
            <span class="nv">Foo</span><span class="p">])</span>
 </code></pre></div>
+<p>Also, check <code>:sort :import-classes</code> below for more customizations.</p>
 <h4 id="sort">sort<a class="headerlink" href="#sort" title="Permanent link">#</a></h4>
-<p>to disable a specific import you can set it to nil, example:</p>
+<p>to disable a specific sort you can set it to nil, example:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:clean</span> <span class="p">{</span><span class="ss">:sort</span> <span class="p">{</span><span class="ss">:import-classes</span> <span class="nv">nil</span><span class="p">}}}</span>
 </code></pre></div>
 <h5 id="ns"><code>ns</code><a class="headerlink" href="#ns" title="Permanent link">#</a></h5>
@@ -1541,7 +1542,7 @@ Note: package imports with only one class will keep indentation: Ex: <code>[java
 <h5 id="import-classes"><code>import-classes</code><a class="headerlink" href="#import-classes" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of package classes inside <code>:import</code> form.</p>
 <ul>
-<li><code>:classes-per-line</code>: the max classes allowed to keep in a single line, if more than this value, clojure-lsp will move all classes to <code>:next-line</code> or <code>:same-line</code> following <code>:ns-import-classes-indentation</code>.</li>
+<li><code>:classes-per-line</code>: the max classes allowed to keep in a single line, if more than this value, clojure-lsp will move all classes to <code>:next-line</code> or <code>:same-line</code> following <code>:ns-import-classes-indentation</code>, Possivel values: any positive number or <code>-1</code> to keep all classes in the same line.</li>
 </ul>
 <h5 id="refer"><code>refer</code><a class="headerlink" href="#refer" title="Permanent link">#</a></h5>
 <p>Whether to enable sort of <code>:refer</code> form.</p>
@@ -1613,7 +1614,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 20, 2022</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 22, 2022</span>
     
   </small>
 </div>

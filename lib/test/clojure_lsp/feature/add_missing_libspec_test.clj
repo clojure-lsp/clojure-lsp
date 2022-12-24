@@ -325,7 +325,7 @@
     (is (nil? (-> "(ns foo) |;; comment"
                   add-missing-libspec)))))
 
-(defn add-import-to-namespace [code import-name & [settings]]
+(defn add-missing-import [code import-name & [settings]]
   (h/reset-components!)
   (swap! (h/db*) shared/deep-merge {:settings (merge
                                                 {:clean {:automatically-after-ns-refactor false}}
@@ -334,25 +334,25 @@
   (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
   (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db)))
 
-(deftest add-import-to-namespace-test
+(deftest add-missing-import-test
   (testing "when there is no :import form"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
                    "    [java.util Date]))")
            (-> "(ns foo.bar) |Date."
-               (add-import-to-namespace "java.util.Date")
+               (add-missing-import "java.util.Date")
                as-root-str))))
   (testing "when there is no :import form with ns-inner-blocks-indentation :same-line"
     (is (= (h/code "(ns foo.bar "
                    "  (:import [java.util Date]))")
            (-> "(ns foo.bar) |Date."
-               (add-import-to-namespace "java.util.Date"  {:clean {:ns-inner-blocks-indentation :same-line}})
+               (add-missing-import "java.util.Date"  {:clean {:ns-inner-blocks-indentation :same-line}})
                as-root-str))))
   (testing "when there is no :import form with deprecated :keep-require-at-start?"
     (is (= (h/code "(ns foo.bar "
                    "  (:import [java.util Date]))")
            (-> "(ns foo.bar) |Date."
-               (add-import-to-namespace "java.util.Date"  {:keep-require-at-start? true})
+               (add-missing-import "java.util.Date"  {:keep-require-at-start? true})
                as-root-str))))
   (testing "when there is a :import form already as full package import"
     (is (= (h/code "(ns foo.bar "
@@ -361,7 +361,7 @@
            (-> (h/code "(ns foo.bar "
                        "  (:import "
                        "    java.util.Calendar)) |Date.")
-               (add-import-to-namespace "java.util.Date")
+               (add-missing-import "java.util.Date")
                as-root-str))))
   (testing "when there is more than one :import form already as full package import"
     (is (= (h/code "(ns foo.bar "
@@ -373,7 +373,7 @@
                        "  (:import "
                        "    java.util.Calendar"
                        "    java.util.GregorianCalendar)) |Date.")
-               (add-import-to-namespace "java.util.Date")
+               (add-missing-import "java.util.Date")
                as-root-str))))
   (testing "when there is a :import form already as vector import"
     (is (= (h/code "(ns foo.bar "
@@ -382,7 +382,7 @@
            (-> (h/code "(ns foo.bar "
                        "  (:import "
                        "    [java.util Calendar])) |Date.")
-               (add-import-to-namespace "java.util.Date")
+               (add-missing-import "java.util.Date")
                as-root-str))))
   (testing "when there is a :import form already as list import"
     (is (= (h/code "(ns foo.bar "
@@ -391,14 +391,14 @@
            (-> (h/code "(ns foo.bar "
                        "  (:import "
                        "    (java.util Calendar))) |Date.")
-               (add-import-to-namespace "java.util.Date")
+               (add-missing-import "java.util.Date")
                as-root-str))))
   (testing "when there is already that :import imported"
     (is (= nil
            (-> (h/code "(ns foo.bar "
                        "  (:import "
                        "    [java.util Date])) |Date.")
-               (add-import-to-namespace "java.util.Date")))))
+               (add-missing-import "java.util.Date")))))
   (testing "when there is only a :require form"
     (is (= (h/code "(ns foo.bar"
                    "  (:require"
@@ -408,7 +408,7 @@
            (-> (h/code "(ns foo.bar"
                        "  (:require"
                        "    [foo.baz :as baz])) |Date.")
-               (add-import-to-namespace "java.util.Date")
+               (add-missing-import "java.util.Date")
                as-root-str))))
   (testing "when there is a :require form and :import form"
     (is (= (h/code "(ns foo.bar"
@@ -421,14 +421,14 @@
                        "    [foo.baz :as baz])"
                        "  (:import"
                        "    java.util.Calendar)) |Date.")
-               (add-import-to-namespace "java.util.Date")
+               (add-missing-import "java.util.Date")
                as-root-str))))
   (testing "when on an invalid location"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
                    "    [java.util Date])) ;; comment")
            (-> (h/code "(ns foo.bar) |;; comment")
-               (add-import-to-namespace "java.util.Date")
+               (add-missing-import "java.util.Date")
                (h/changes->code (h/db)))))))
 
 (deftest add-known-import-to-namespace-test
@@ -437,12 +437,12 @@
                    "  (:import"
                    "    [java.io File]))")
            (-> "(ns foo.bar) |File."
-               (add-import-to-namespace nil)
+               (add-missing-import nil)
                as-root-str))))
   (testing "when we don't known the import"
-    (is (nil? (add-import-to-namespace "(ns foo.bar) |MyClass." nil))))
+    (is (nil? (add-missing-import "(ns foo.bar) |MyClass." nil))))
   (testing "when on invalid location"
-    (is (nil? (add-import-to-namespace "(ns foo.bar) |;; comment" nil)))))
+    (is (nil? (add-missing-import "(ns foo.bar) |;; comment" nil)))))
 
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
   (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db)))

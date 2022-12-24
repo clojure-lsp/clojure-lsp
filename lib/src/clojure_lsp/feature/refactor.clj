@@ -22,7 +22,10 @@
 
 (defmulti refactor :refactoring)
 
-(defmethod refactor :add-import-to-namespace [{:keys [loc uri args db]}]
+(defmethod ^{:deprecated "Use add-missing-import instead"} refactor :add-import-to-namespace [{:keys [loc uri args db]}]
+  (apply f.add-missing-libspec/add-missing-import loc uri (concat args [db])))
+
+(defmethod refactor :add-missing-import [{:keys [loc uri db args]}]
   (apply f.add-missing-libspec/add-missing-import loc uri (concat args [db])))
 
 (defmethod refactor :add-missing-libspec [{:keys [loc uri db]}]
@@ -30,9 +33,6 @@
 
 (defmethod refactor :add-require-suggestion [{:keys [loc uri args db]}]
   (apply f.add-missing-libspec/add-require-suggestion loc uri (concat args [db])))
-
-(defmethod refactor :add-missing-import [{:keys [loc uri db]}]
-  (f.add-missing-libspec/add-missing-import loc uri nil db))
 
 (defmethod refactor :clean-ns [{:keys [loc uri db]}]
   (f.clean-ns/clean-ns-edits loc uri db))

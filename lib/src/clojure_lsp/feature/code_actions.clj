@@ -108,7 +108,7 @@
             :is-preferred true
             :command      {:title     "Add missing import"
                            :command   "add-missing-import"
-                           :arguments [uri (:line position) (:character position)]}})
+                           :arguments [uri (:line position) (:character position) missing-import]}})
          missing-imports)))
 
 (defn ^:private change-colls-actions [uri line character other-colls]

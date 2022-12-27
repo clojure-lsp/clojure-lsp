@@ -4,6 +4,9 @@
 
 - General
   - Bump clj-kondo to `2022.12.11-20221220.093423-5`
+  
+- Editor
+  - Fix add missing import code action when there are multiple options. #1422
 
 ## 2022.12.09-15.51.10
 

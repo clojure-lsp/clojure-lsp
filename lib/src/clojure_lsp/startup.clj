@@ -203,7 +203,7 @@
           task-list (if fast-startup? fast-tasks slow-tasks)]
       (if use-db-analysis?
         (let [classpath (:classpath @db*)]
-          (logger/info startup-logger-tag "Using cached db for project root" root-path)
+          (logger/info startup-logger-tag (format "Using cached classpath %s" classpath))
           (swap! db* assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
           (publish-task-progress producer (:copying-kondo fast-tasks) progress-token)

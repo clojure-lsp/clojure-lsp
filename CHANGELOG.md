@@ -8,6 +8,9 @@
 - Editor
   - Fix add missing import code action when there are multiple options. #1422
   - Only show completion items if no changed code is being processed, avoiding wrong completion items. #1425
+  
+- API/CLI
+  - Make diagnostics command print as json or edn. #1419
 
 ## 2022.12.09-15.51.10
 

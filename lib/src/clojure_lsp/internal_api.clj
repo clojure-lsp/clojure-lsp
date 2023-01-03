@@ -319,7 +319,7 @@
                      diags)))
             diagnostics)))
 
-(defn ^:private diagnostics* [options {:keys [db*] :as components}]
+(defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
   (setup-project-and-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
@@ -337,7 +337,11 @@
         warnings? (some (comp #(= 2 %) :severity) diags)]
     (if (seq diags-by-uri)
       {:result-code (cond errors? 3 warnings? 2 :else 0)
-       :message-fn (fn [] (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db)))
+       :message-fn (fn []
+                     (case format
+                       :edn (with-out-str (pr diags-by-uri))
+                       :json (json/generate-string diags-by-uri)
+                       (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
        :diagnostics diags-by-uri}
       {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
 

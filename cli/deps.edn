@@ -2,9 +2,9 @@
         org.clojure/tools.cli {:mvn/version "1.0.214"}
         borkdude/dynaload {:mvn/version "0.3.5"}
         nrepl/bencode {:mvn/version "1.1.0"}
-        com.taoensso/timbre {:mvn/version "5.2.1"}
+        com.taoensso/timbre {:mvn/version "6.0.4"}
         clojure-lsp/lib {:local/root "../lib"}
-        funcool/promesa {:mvn/version "9.0.470"}}
+        funcool/promesa {:mvn/version "10.0.582"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.71.1119"}}
@@ -16,12 +16,12 @@
                            cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
                                                   :sha "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}
                            babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"
-                                                   :sha "decf791000081ca9e6d2fbea9f20a0aa3fae902e"}}
+                                                   :sha "4fb0da7daf68cf1cb8dac983d399e62794ff4f60"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
-                   :extra-deps {babashka/fs {:mvn/version "0.1.11"}
+                   :extra-deps {babashka/fs {:mvn/version "0.2.12"}
                                 babashka/process {:mvn/version "0.3.11"}}
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.8.3" :sha "0d20256"}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.9.0" :sha "8c93e0c"}
                                   com.github.ericdallo/deps-bin {:mvn/version "0.2.0"}
                                   slipset/deps-deploy {:mvn/version "0.2.0"}}
                    :ns-default build}
@@ -29,7 +29,7 @@
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-paths ["dev"]
                    :extra-deps {cider/cider-nrepl {:mvn/version "0.28.6"}
-                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.1"}
+                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.3"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.2.1"}
                                 criterium/criterium {:mvn/version "0.4.6"}
                                 nrepl/nrepl {:mvn/version "1.0.0"}}

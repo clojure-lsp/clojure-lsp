@@ -1,9 +1,11 @@
 (ns clojure-lsp.feature.code-actions-test
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
+   [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
 
@@ -176,13 +178,14 @@
                                       (h/db))))))
 
 (deftest add-common-missing-import-code-action
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
   (h/load-code-and-locs (str "(ns another-ns)\n"
                              "(def bar ons/bar)\n"
                              "(def foo sns/foo)\n"
                              "(deftest some-test)\n"
                              "MyClass.\n"
-                             "Date.\n"
-                             "Date/parse")
+                             "File.\n"
+                             "File/parse")
                         (h/file-uri "file:///c.clj"))
   (testing "when it has no unresolved-symbol diagnostic"
     (is (not-any? #(string/starts-with? (:title %) "Add import")
@@ -205,7 +208,7 @@
                                       (h/db)))))
   (testing "when it has unresolved-symbol and it's a common import"
     (h/assert-contains-submaps
-      [{:title "Add import 'java.util.Date'"
+      [{:title "Add import 'java.io.File'"
         :command {:command "add-missing-import"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
@@ -217,7 +220,7 @@
                           (h/db))))
   (testing "when it has unresolved-namespace and it's a common import via method"
     (h/assert-contains-submaps
-      [{:title "Add import 'java.util.Date'"
+      [{:title "Add import 'java.io.File'"
         :command {:command "add-missing-import"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")

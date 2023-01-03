@@ -11,12 +11,12 @@
   [options & body]
   `(try
      (let [~'_result ~@body]
-       (when-let [~'_message (and (not (:raw? ~options))
-                                  (:message ~'_result))]
-         (println ~'_message))
+       (when-let [~'_message-fn (and (not (:raw? ~options))
+                                     (:message-fn ~'_result))]
+         (println (~'_message-fn)))
        ~'_result)
      (catch clojure.lang.ExceptionInfo e#
-       (some-> e# ex-data :message println)
+       (some-> e# ex-data :message-fn (apply []) println)
        e#)))
 
 (defn analyze-project-and-deps!
@@ -254,6 +254,9 @@
 
   `:project-root` a java.io.File representing the project root.
 
+  `:analysis` a map with options on how clojure-lsp should analyze the project, available values are:
+    `:type` keyword values: `project-only` or `project-and-dependencies`. Default to `project-only`.
+
   `:output` a map with options on how the result should be printed, available values are:
     `:format` a keyword specifying in which format the data should be returned, defaults to `:edn`.
     `:filter-keys` a list of keywords in case you want only specific fields from output.
@@ -262,21 +265,27 @@
 
   **Output**
 
-  `:project-root` a string path representing the project root.
-  `:source-paths` list of source-paths considered by clojure-lsp.
-  `:classpath` list of paths of found classpath.
-  `:analysis` clj-kondo analysis normalized for clojure-lsp usage.
-  `:dep-graph` Dependency graph of namespaces relationship derived from clj-kondo analysis.
-  `:findings` clj-kondo findings used for diagnostics.
-  `:settings` a map with all settings considered by clojure-lsp.
+  `result-code` an integer representing whether the action was successful, 0 means ok, 1 means error
+
+  `message-fn` a function of no arity to be called if want the result as a stringfied version.
+
+  `:result`
+    `:project-root` a string path representing the project root.
+    `:source-paths` list of source-paths considered by clojure-lsp.
+    `:classpath` list of paths of found classpath.
+    `:analysis` clj-kondo analysis normalized for clojure-lsp usage.
+    `:dep-graph` Dependency graph of namespaces relationship derived from clj-kondo analysis.
+    `:findings` clj-kondo findings used for diagnostics.
+    `:settings` a map with all settings considered by clojure-lsp.
 
   **Example**
 
   ```clojure
   (clojure-lsp.api/dump {:output {:format :edn
                                   :filter-keys [:source-paths :analysis]}})
-  => {:source-paths [...]
-      :analysis {...}}
+  => {:result {:source-paths [...]
+               :analysis {...}}
+      :result-code 0}
   ```"
   [{:keys [project-root output settings] :as options}]
   {:pre [(or (nil? project-root)

@@ -82,7 +82,7 @@
                                      :dry? true
                                      :raw? true})]
           (is (= 1 (:result-code result)))
-          (is (= expected-msg  (:message result)))))
+          (is (= expected-msg  (apply (:message-fn result) [])))))
       (testing "when ns does not matches uri"
         (clean-api-db!)
         (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -90,7 +90,7 @@
                                      :dry? true
                                      :raw? true})]
           (is (= 1 (:result-code result)))
-          (is (= expected-msg (:message result))))))
+          (is (= expected-msg (apply (:message-fn result) []))))))
     (testing "when ns is already clear"
       (clean-api-db!)
       (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -98,7 +98,7 @@
                                    :dry? true
                                    :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "Nothing to clear!" (:message result)))))
+        (is (= "Nothing to clear!" (apply (:message-fn result) [])))))
     (testing "specifying a ns-exclude-regex"
       (clean-api-db!)
       (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -106,7 +106,7 @@
                                    :dry? true
                                    :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "Nothing to clear!" (:message result)))))
+        (is (= "Nothing to clear!" (apply (:message-fn result) [])))))
     (testing "different line endings types"
       (clean-api-db!)
       (let [result (api/clean-ns! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -115,7 +115,7 @@
                                    :dry? true
                                    :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "Nothing to clear!" (:message result)))))))
+        (is (= "Nothing to clear!" (apply (:message-fn result) [])))))))
 
 (deftest diagnostics
   (testing "when project-root is not a file"
@@ -131,7 +131,7 @@
                                      :namespace '[sample-test.api.diagnostics.a]
                                      :raw? true})]
         (is (= 3 (:result-code result)))
-        (is (= (str (h/file-path "src/sample_test/api/diagnostics/a.clj") ":2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var") (:message result)))
+        (is (= (str (h/file-path "src/sample_test/api/diagnostics/a.clj") ":2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var") (apply (:message-fn result) [])))
         (is (= 1 (count (:diagnostics result))))))
     (testing "unused-public-var custom lint fn returning only info"
       (clean-api-db!)
@@ -139,7 +139,7 @@
                                      :namespace '[sample-test.api.diagnostics.d]
                                      :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= (str (h/file-path "src/sample_test/api/diagnostics/d.clj") ":2:6: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'") (:message result)))
+        (is (= (str (h/file-path "src/sample_test/api/diagnostics/d.clj") ":2:6: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'") (apply (:message-fn result) [])))
         (is (= 1 (count (:diagnostics result))))))
     (testing "when namespace does not exists"
       (clean-api-db!)
@@ -147,7 +147,7 @@
                                      :namespace '[sample-test.api.diagnostics.c]
                                      :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "No diagnostics found!" (:message result)))
+        (is (= "No diagnostics found!" (apply (:message-fn result) [])))
         (is (= 0 (count (:diagnostics result))))))
     (testing "With canonical-paths output"
       (clean-api-db!)
@@ -158,7 +158,7 @@
         (is (= 3 (:result-code result)))
         (is (= (format "%s:2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var"
                        (.getCanonicalPath (io/file "../cli/integration-test/sample-test/src/sample_test/api/diagnostics/a.clj")))
-               (:message result)))
+               (apply (:message-fn result) [])))
         (is (= 1 (count (:diagnostics result))))))
     (testing "when namespace has no diagnostics"
       (clean-api-db!)
@@ -166,7 +166,7 @@
                                      :namespace '[sample-test.api.diagnostics.b]
                                      :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "No diagnostics found!" (:message result)))
+        (is (= "No diagnostics found!" (apply (:message-fn result) [])))
         (is (nil? (:diagnostics result)))))
     (testing "specifying a ns-exclude-regex"
       (clean-api-db!)
@@ -174,7 +174,7 @@
                                      :ns-exclude-regex #".*"
                                      :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "No diagnostics found!" (:message result)))))))
+        (is (= "No diagnostics found!" (apply (:message-fn result) [])))))))
 
 (deftest format!
   (testing "when project-root is not a file"
@@ -197,7 +197,7 @@
                                  :dry? true
                                  :raw? true})]
         (is (= 1 (:result-code result)))
-        (is (:message result))))
+        (is (apply (:message-fn result) []))))
     (testing "when ns does not matches uri"
       (clean-api-db!)
       (let [result (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -205,7 +205,7 @@
                                  :dry? true
                                  :raw? true})]
         (is (= 1 (:result-code result)))
-        (is (:message result))))
+        (is (apply (:message-fn result) []))))
     (testing "when ns is already formatted"
       (clean-api-db!)
       (let [result (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -213,7 +213,7 @@
                                  :dry? true
                                  :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "Nothing to format!" (:message result)))))
+        (is (= "Nothing to format!" (apply (:message-fn result) [])))))
     (testing "when single filename is specified"
       (clean-api-db!)
       (let [result (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -221,7 +221,7 @@
                                  :dry? true
                                  :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "Nothing to format!" (:message result)))))
+        (is (= "Nothing to format!" (apply (:message-fn result) [])))))
     (testing "when filenames are specified"
       (clean-api-db!)
       (let [result (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -230,7 +230,7 @@
                                  :dry? true
                                  :raw? true})]
         (is (= 1 (:result-code result)))
-        (is (:message result))))
+        (is (apply (:message-fn result) []))))
     (testing "specifying a ns-exclude-regex"
       (clean-api-db!)
       (let [result (api/format! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -238,7 +238,7 @@
                                  :dry? true
                                  :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "Nothing to format!" (:message result)))))))
+        (is (= "Nothing to format!" (apply (:message-fn result) [])))))))
 
 (deftest rename!
   (testing "when project-root is not a file"
@@ -290,9 +290,11 @@
                  (api/dump {:project-root (io/file "../cli/integration-test/sample-test/bla")}))))
   (testing "when project-root is valid"
     (testing "dumping all fields as edn"
-      (let [result (ignoring-prints
-                     (api/dump {:project-root (io/file "../cli/integration-test/sample-test")}))]
-        (is (= 0 (:result-code result)))
+      (let [{:keys [message-fn result result-code]}
+            (ignoring-prints
+              (api/dump {:project-root (io/file "../cli/integration-test/sample-test")}))]
+        (is (= 0 result-code))
+        (is result)
         (is (= [:classpath
                 :analysis
                 :dep-graph
@@ -300,12 +302,14 @@
                 :settings
                 :project-root
                 :source-paths]
-               (keys (edn/read-string (:message result)))))))
+               (keys (edn/read-string (apply message-fn [])))))))
     (testing "dumping all fields as json"
-      (let [result (ignoring-prints
-                     (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
-                                :output {:format :json}}))]
-        (is (= 0 (:result-code result)))
+      (let [{:keys [result result-code message-fn]}
+            (ignoring-prints
+              (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
+                         :output {:format :json}}))]
+        (is (= 0 result-code))
+        (is result)
         (is (= ["classpath"
                 "analysis"
                 "dep-graph"
@@ -313,13 +317,15 @@
                 "settings"
                 "project-root"
                 "source-paths"]
-               (keys (json/parse-string (:message result)))))))
+               (keys (json/parse-string (apply message-fn [])))))))
     (testing "dumping specific fields"
-      (let [result (ignoring-prints
-                     (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
-                                :output {:filter-keys [:project-root :source-paths]}}))
-            output (edn/read-string (:message result))]
-        (is (= 0 (:result-code result)))
+      (let [{:keys [result result-code message-fn]}
+            (ignoring-prints
+              (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
+                         :output {:filter-keys [:project-root :source-paths]}}))
+            output (edn/read-string (apply message-fn []))]
+        (is (= 0 result-code))
+        (is result)
         (is (= [:project-root
                 :source-paths]
                (keys output)))
@@ -327,4 +333,11 @@
           {:project-root (str (fs/canonicalize (io/file "../cli/integration-test/sample-test")))
            :source-paths #{(str (fs/canonicalize (io/file "../cli/integration-test/sample-test/test")))
                            (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/src")))}}
-          (update output :source-paths set))))))
+          (update output :source-paths set))))
+    (testing "dumping with different analysis type"
+      (let [{:keys [result result-code]}
+            (ignoring-prints
+              (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
+                         :analysis {:type :project-and-dependencies}}))]
+        (is result)
+        (is (= 0 result-code))))))

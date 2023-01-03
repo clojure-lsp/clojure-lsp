@@ -6,7 +6,6 @@ set -euo pipefail
 
 version=""
 checksum=""
-static_binary="false"
 default_install_dir="/usr/local/bin"
 install_dir="$default_install_dir"
 download_dir=""
@@ -15,7 +14,7 @@ print_help() {
     echo "Installs latest (or specific) version of clojure-lsp. Installation directory defaults to $default_install_dir."
     echo -e
     echo "Usage:"
-    echo "install [--dir <dir>] [--download-dir <download-dir>] [--version <version> or \"nightly\"] [--checksum <checksum>] [--static]"
+    echo "install [--dir <dir>] [--download-dir <download-dir>] [--version <version> or \"nightly\"] [--checksum <checksum>]"
     echo -e
     echo "Defaults:"
     echo " * Installation directory: ${default_install_dir}"
@@ -25,7 +24,6 @@ print_help() {
     else
         echo " * Checksum: ${checksum}"
     fi
-    echo " * Static binary: ${static_binary}"
     echo " * Version: <Latest release on github>"
     exit 1
 }
@@ -55,10 +53,10 @@ do
             shift
             ;;
         --static)
-            static_binary="true"
+            # Retro compatible, always static if available for that arch.
             shift
             ;;
-        *)    # unknown option
+        *)  # unknown option
             print_help
             shift
             ;;
@@ -93,14 +91,11 @@ esac
 ext="zip"
 util="$(which unzip) -qqo"
 
-case "$platform-$static_binary" in
-    linux-true) filename="clojure-lsp-native-static-$platform-$arch."$ext
-                ;;
-    *-true)     >&2 echo "Static binaries are only available in Linux platform! Using the non-static one..."
-                filename="clojure-lsp-native-$platform-$arch."$ext
-                ;;
-    *)          filename="clojure-lsp-native-$platform-$arch."$ext
-                ;;
+case "$platform-$arch" in
+    linux-amd64)   filename="clojure-lsp-native-static-$platform-$arch."$ext
+                   ;;
+    *)             filename="clojure-lsp-native-$platform-$arch."$ext
+                   ;;
 esac
 
 if [[ "$version" == "nightly" ]]; then

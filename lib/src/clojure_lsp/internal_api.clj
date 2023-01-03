@@ -57,7 +57,7 @@
   (cli-println options (format "\n[%s] %s" (string/upper-case (name type)) message))
   (when (and (= :error type)
              (settings/get @db* [:api :exit-on-errors?] true))
-    (throw (ex-info message {:result-code 1 :message extra}))))
+    (throw (ex-info message {:result-code 1 :message-fn (constantly extra)}))))
 
 (defrecord APIProducer [db* options]
   producer/IProducer
@@ -192,14 +192,19 @@
 (defn ^:private setup-project-and-deps-analysis! [options {:keys [db*] :as components}]
   (let [db @db*]
     (when (or (not (:analysis db))
-              (not= :project-and-deps (:project-analysis-type db)))
-      (swap! db* assoc :project-analysis-type :project-and-deps)
+              (not= :project-and-dependencies (:project-analysis-type db)))
+      (swap! db* assoc :project-analysis-type :project-and-dependencies)
       (analyze! options components))))
 
 (defn ^:private setup-project-only-analysis! [options {:keys [db*] :as components}]
   (when (not (:analysis @db*))
     (swap! db* assoc :project-analysis-type :project-only)
     (analyze! options components)))
+
+(defn ^:private dynamic-setup-project-analysis! [options components]
+  (case (get-in options [:analysis :type] :project-only)
+    :project-and-dependencies (setup-project-and-deps-analysis! options components)
+    :project-only (setup-project-only-analysis! options components)))
 
 (defn ^:private open-file! [uri components]
   (f.file-management/load-document! uri (slurp uri) (:db* components))
@@ -283,7 +288,7 @@
     (if (seq edits)
       (if dry?
         {:result-code 1
-         :message (edits->diff-string edits options db)
+         :message-fn (fn [] (edits->diff-string edits options db))
          :edits edits}
         (do
           (run! #(apply-workspace-edit-summary! % components) edits)
@@ -291,9 +296,9 @@
                (mapcat #(dep-graph/ns-names-for-uri db (:uri %)))
                (run! #(cli-println options "Cleaned" %)))
           {:result-code 0
-           :message (format "Cleared %s namespaces" (count edits))
+           :message-fn (constantly (format "Cleared %s namespaces" (count edits)))
            :edits edits}))
-      {:result-code 0 :message "Nothing to clear!"})))
+      {:result-code 0 :message-fn (constantly "Nothing to clear!")})))
 
 (defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]} db]
   (let [project-path (shared/uri->filename (project-root->uri project-root db))]
@@ -314,7 +319,7 @@
                      diags)))
             diagnostics)))
 
-(defn ^:private diagnostics* [options {:keys [db*] :as components}]
+(defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
   (setup-project-and-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
@@ -332,9 +337,13 @@
         warnings? (some (comp #(= 2 %) :severity) diags)]
     (if (seq diags-by-uri)
       {:result-code (cond errors? 3 warnings? 2 :else 0)
-       :message (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))
+       :message-fn (fn []
+                     (case format
+                       :edn (with-out-str (pr diags-by-uri))
+                       :json (json/generate-string diags-by-uri)
+                       (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
        :diagnostics diags-by-uri}
-      {:result-code 0 :message "No diagnostics found!"})))
+      {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
 
 (defn ^:private format!* [{:keys [dry?] :as options} {:keys [db*] :as components}]
   (setup-api! components)
@@ -351,7 +360,7 @@
     (if (seq edits)
       (if dry?
         {:result-code 1
-         :message (edits->diff-string edits options @db*)
+         :message-fn (fn [] (edits->diff-string edits options @db*))
          :edits edits}
         (do
           (run! #(apply-workspace-edit-summary! % components) edits)
@@ -359,9 +368,9 @@
                (mapcat #(dep-graph/ns-names-for-uri db (:uri %)))
                (run! #(cli-println options "Formatted" %)))
           {:result-code 0
-           :message (format "Formatted %s namespaces" (count edits))
+           :message-fn (constantly (format "Formatted %s namespaces" (count edits)))
            :edits edits}))
-      {:result-code 0 :message "Nothing to format!"})))
+      {:result-code 0 :message-fn (constantly "Nothing to format!")})))
 
 (defn ^:private rename!* [{:keys [from to dry?] :as options} {:keys [db*] :as components}]
   (setup-api! components)
@@ -383,16 +392,16 @@
                               seq)]
             (if dry?
               {:result-code 0
-               :message (edits->diff-string edits options db)
+               :message-fn (fn [] (edits->diff-string edits options db))
                :edits edits}
               (do
                 (run! #(apply-workspace-edit-summary! % components) edits)
                 {:result-code 0
-                 :message (format "Renamed %s to %s" from to)
+                 :message-fn (constantly (format "Renamed %s to %s" from to))
                  :edits edits}))
-            {:result-code 1 :message "Nothing to rename"})
-          {:result-code 1 :message (format "Could not rename %s to %s. %s" from to (-> error :message))}))
-      {:result-code 1 :message (format "Symbol %s not found in project" from)})))
+            {:result-code 1 :message-fn (constantly "Nothing to rename")})
+          {:result-code 1 :message-fn (constantly (format "Could not rename %s to %s. %s" from to (-> error :message)))}))
+      {:result-code 1 :message-fn (constantly (format "Symbol %s not found in project" from))})))
 
 (defn ^:private db->dump-data [db filter-keys]
   (as-> db $
@@ -409,13 +418,19 @@
 
 (defn ^:private dump* [{{:keys [format filter-keys] :or {format :edn}} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
-  (setup-project-and-deps-analysis! options components)
+  (dynamic-setup-project-analysis! options components)
   (let [db @db*
         dump-data (db->dump-data db filter-keys)]
     (case format
-      :edn {:result-code 0 :message (with-out-str (pr dump-data))}
-      :json {:result-code 0 :message (json/generate-string dump-data)}
-      {:result-code 1 :message (clojure.core/format "Output format %s not supported" format)})))
+      :edn {:result-code 0
+            :result dump-data
+            :message-fn (fn [] (with-out-str (pr dump-data)))}
+      :json (let [json-string (json/generate-string dump-data)]
+              {:result-code 0
+               :result json-string
+               :message-fn (constantly json-string)})
+      {:result-code 1
+       :message-fn (constantly (clojure.core/format "Output format %s not supported" format))})))
 
 (defn analyze-project-and-deps! [options]
   (analyze-project-and-deps!* options (build-components options)))

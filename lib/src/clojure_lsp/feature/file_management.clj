@@ -2,6 +2,7 @@
   (:require
    [babashka.fs :as fs]
    [clojure-lsp.clj-depend :as lsp.depend]
+   [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
@@ -293,11 +294,19 @@
 (defn ^:private dir-or-file-uri->analyzable-uris [uri db]
   ;; If the URI is for an entire directory that has been created/deleted, we
   ;; expand it.
-  (let [files (-> uri shared/uri->filename io/file file-seq)]
-    (->> files
-         (map #(.getAbsolutePath ^java.io.File %))
-         (map #(shared/filename->uri % db))
-         (remove #(= :unknown (shared/uri->file-type %))))))
+  (let [source-paths-ignore-regexs (get-in db [:settings :source-paths-ignore-regex] config/default-source-path-ignore-regexs)
+        root-path (shared/uri->path (:project-root-uri db))
+        files (-> uri shared/uri->filename io/file file-seq)]
+    (into []
+          (comp
+            ;; avoid watching ignored source-paths
+            (remove (fn [file]
+                      (let [relative-source-path (shared/relativize-filepath (str file) (str root-path))]
+                        (some #(re-matches (re-pattern %) relative-source-path) source-paths-ignore-regexs))))
+            (map #(.getAbsolutePath ^java.io.File %))
+            (map #(shared/filename->uri % db))
+            (remove #(identical? :unknown (shared/uri->file-type %))))
+          files)))
 
 (defn did-change-watched-files
   [changes

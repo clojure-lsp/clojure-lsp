@@ -1,14 +1,17 @@
 (ns clojure-lsp.feature.code-actions
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
+   [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.drag-param :as f.drag-param]
+   [clojure-lsp.feature.inline-symbol :as f.inline-symbol]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
    [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
    [clojure-lsp.feature.thread-get :as f.thread-get]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.shared :as shared]
@@ -39,6 +42,7 @@
 (defn ^:private find-all-require-suggestions [diagnostics missing-requires uri db]
   (->> diagnostics
        (mapcat (partial find-require-suggestions uri db))
+       distinct
        (remove (fn [suggestion]
                  (some (comp #{(:ns suggestion)} :ns)
                        missing-requires)))))
@@ -50,13 +54,20 @@
 (defn ^:private find-missing-requires [diagnostics uri db]
   (keep (partial find-missing-require uri db) diagnostics))
 
-(defn ^:private find-missing-import [{:keys [position zloc]}]
-  (when-let [missing-import (f.add-missing-libspec/find-missing-import zloc)]
-    {:missing-import missing-import
-     :position       position}))
+(defn ^:private find-missing-import [db {:keys [position zloc]}]
+  (->> (f.add-missing-libspec/find-missing-imports zloc db)
+       distinct
+       (mapv (fn [missing-import]
+               {:missing-import missing-import
+                :usages-count   (count (q/find-all-java-class-usages-on-imports-by-class db missing-import))
+                :position       position}))
+       (sort-by :usages-count)
+       reverse))
 
-(defn ^:private find-missing-imports [diagnostics]
-  (keep find-missing-import diagnostics))
+(defn ^:private find-missing-imports [diagnostics db]
+  (->> diagnostics
+       (keep (partial find-missing-import db))
+       flatten))
 
 (defn ^:private find-private-function-to-create [diagnostics]
   (when-let [{:keys [message position zloc]} (->> diagnostics
@@ -89,14 +100,16 @@
        alias-suggestions))
 
 (defn ^:private missing-import-actions [uri missing-imports]
-  (map (fn [{:keys [missing-import position]}]
-         {:title        (str "Add import '" missing-import "'")
-          :kind         :quick-fix
-          :is-preferred true
-          :command      {:title     "Add missing import"
-                         :command   "add-missing-import"
-                         :arguments [uri (:line position) (:character position)]}})
-       missing-imports))
+  (let [show-count? (> (count missing-imports) 1)]
+    (map (fn [{:keys [missing-import usages-count position]}]
+           {:title        (str "Add import '" missing-import "'"
+                               (if show-count? (str " x " usages-count) ""))
+            :kind         :quick-fix
+            :is-preferred true
+            :command      {:title     "Add missing import"
+                           :command   "add-missing-import"
+                           :arguments [uri (:line position) (:character position) missing-import]}})
+         missing-imports)))
 
 (defn ^:private change-colls-actions [uri line character other-colls]
   (map (fn [coll]
@@ -127,6 +140,16 @@
    :command {:title     "Move to let"
              :command   "move-to-let"
              :arguments [uri line character "new-binding"]}})
+
+(defn ^:private cycle-kwd-action [uri line character cycle-kwd-status]
+  (let [title (if (= :from-auto-resolve-to-namespace (:status cycle-kwd-status))
+                "Change auto-resolved keyword to namespaced"
+                "Change namespaced keyword to auto-resolved")]
+    {:title   title
+     :kind    :refactor-rewrite
+     :command {:title     title
+               :command   "cycle-keyword-auto-resolve"
+               :arguments [uri line character]}}))
 
 (defn ^:private cycle-privacy-action [uri line character]
   {:title   "Cycle privacy"
@@ -343,7 +366,7 @@
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
         missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
-        missing-imports* (future (find-missing-imports resolvable-require-diagnostics))
+        missing-imports* (future (find-missing-imports resolvable-require-diagnostics db))
         require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
         can-sort-clauses?* (future (f.sort-clauses/can-sort? zloc uri db))
         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
@@ -355,7 +378,8 @@
         can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
         can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
-        inline-symbol?* (future (r.transform/inline-symbol? uri row col db))
+        inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
+        cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
     (cond-> []
@@ -379,6 +403,9 @@
 
       @other-colls*
       (into (change-colls-actions uri line character @other-colls*))
+
+      @cycle-kwd-status*
+      (conj (cycle-kwd-action uri line character @cycle-kwd-status*))
 
       can-add-let?
       (conj (move-to-let-action uri line character))

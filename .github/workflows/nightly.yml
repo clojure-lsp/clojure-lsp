@@ -21,7 +21,7 @@ on:
 jobs:
   release-dev-build:
     name: Release dev build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       tag: ${{ steps.dev-tag.outputs.tag}}
     steps:
@@ -50,7 +50,7 @@ jobs:
 
   build-cli-jar:
     needs: release-dev-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.2.0
         with:
@@ -93,7 +93,7 @@ jobs:
   linux-amd64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
     steps:
@@ -158,7 +158,7 @@ jobs:
   linux-amd64-static:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
     steps:
@@ -349,7 +349,7 @@ jobs:
   notify:
     needs: [release-dev-build, build-cli-jar, linux-amd64, linux-amd64-static, macos]
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
     steps:

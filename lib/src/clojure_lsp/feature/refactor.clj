@@ -2,9 +2,11 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.drag-param :as f.drag-param]
+   [clojure-lsp.feature.inline-symbol :as f.inline-symbol]
    [clojure-lsp.feature.move-form :as f.move-form]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
@@ -20,7 +22,10 @@
 
 (defmulti refactor :refactoring)
 
-(defmethod refactor :add-import-to-namespace [{:keys [loc uri args db]}]
+(defmethod ^{:deprecated "Use add-missing-import instead"} refactor :add-import-to-namespace [{:keys [loc uri args db]}]
+  (apply f.add-missing-libspec/add-missing-import loc uri (concat args [db])))
+
+(defmethod refactor :add-missing-import [{:keys [loc uri db args]}]
   (apply f.add-missing-libspec/add-missing-import loc uri (concat args [db])))
 
 (defmethod refactor :add-missing-libspec [{:keys [loc uri db]}]
@@ -28,9 +33,6 @@
 
 (defmethod refactor :add-require-suggestion [{:keys [loc uri args db]}]
   (apply f.add-missing-libspec/add-require-suggestion loc uri (concat args [db])))
-
-(defmethod refactor :add-missing-import [{:keys [loc uri db]}]
-  (f.add-missing-libspec/add-missing-import loc uri nil db))
 
 (defmethod refactor :clean-ns [{:keys [loc uri db]}]
   (f.clean-ns/clean-ns-edits loc uri db))
@@ -90,7 +92,7 @@
   (f.thread-get/get-in-none loc))
 
 (defmethod refactor :inline-symbol [{:keys [uri row col db]}]
-  (r.transform/inline-symbol uri row col db))
+  (f.inline-symbol/inline-symbol uri row col db))
 
 (defmethod refactor :introduce-let [{:keys [loc args]}]
   (apply r.transform/introduce-let loc args))
@@ -145,6 +147,9 @@
 
 (defmethod refactor :move-form [{:keys [loc uri args components]}]
   (apply f.move-form/move-form loc uri components args))
+
+(defmethod refactor :cycle-keyword-auto-resolve  [{:keys [loc uri db components]}]
+  (f.cycle-keyword/cycle-keyword-auto-resolve loc uri db components))
 
 (def available-refactors
   (->> refactor

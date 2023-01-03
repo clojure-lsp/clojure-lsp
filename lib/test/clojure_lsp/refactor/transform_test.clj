@@ -13,9 +13,6 @@
 (defn as-strings [results]
   (map (comp z/string :loc) results))
 
-(defn- as-root-string [[{:keys [loc]}]]
-  (z/root-string loc))
-
 (defn- as-string [[{:keys [loc]}]]
   (z/string loc))
 
@@ -50,16 +47,16 @@
     (is (= "((a) (b))" (z/root-string zloc)))))
 
 (defn- thread-first [code]
-  (as-root-string (transform/thread-first (h/zloc-from-code code) (h/db))))
+  (h/first-edit-as-root-string (transform/thread-first (h/zloc-from-code code) (h/db))))
 
 (defn- thread-first-all [code]
-  (as-root-string (transform/thread-first-all (h/zloc-from-code code) (h/db))))
+  (h/first-edit-as-root-string (transform/thread-first-all (h/zloc-from-code code) (h/db))))
 
 (defn- thread-last [code]
-  (as-root-string (transform/thread-last (h/zloc-from-code code) (h/db))))
+  (h/first-edit-as-root-string (transform/thread-last (h/zloc-from-code code) (h/db))))
 
 (defn- thread-last-all [code]
-  (as-root-string (transform/thread-last-all (h/zloc-from-code code) (h/db))))
+  (h/first-edit-as-root-string (transform/thread-last-all (h/zloc-from-code code) (h/db))))
 
 (deftest thread-test
   (let [code "|(remove nil? (filter :id (map (comp now doit) xs)))"]
@@ -102,7 +99,7 @@
            (thread-last-all "|(bar (foo [1 2]))")))))
 
 (defn- move-to-let [code new-sym]
-  (as-root-string (transform/move-to-let (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db) new-sym)))
+  (h/first-edit-as-root-string (transform/move-to-let (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db) new-sym)))
 
 (deftest move-to-let-test
   (is (= (h/code "(let [a 1"
@@ -178,7 +175,7 @@
   (is (nil? (transform/move-to-let nil "file:///a.clj" (h/db) 'x))))
 
 (defn- introduce-let [code new-sym]
-  (as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
+  (h/first-edit-as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
 
 (deftest introduce-let-test
   (testing "simple"
@@ -225,7 +222,7 @@
   (is (nil? (transform/introduce-let nil 'b))))
 
 (defn- expand-let [code]
-  (as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" (h/db))))
+  (h/first-edit-as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" (h/db))))
 
 (deftest expand-let-test
   (testing "simple"
@@ -942,52 +939,6 @@
             {:keys [changes-by-uri resource-changes]} (transform/create-test zloc (h/file-uri "file:///project/test/some/ns_test.clj") (h/db) (h/components))]
         (is (= nil resource-changes))
         (is (= nil changes-by-uri))))))
-
-(deftest inline-symbol
-  (testing "simple let"
-    (h/reset-components!)
-    (h/load-code-and-locs "(let [something 1] something something)")
-    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 (h/db)))
-          a-results (get results (h/file-uri "file:///a.clj"))]
-      (is (map? results))
-      (is (= 1 (count results)))
-      (is (= 3 (count a-results)))
-      (h/assert-submaps
-        [{:loc nil :range {:row 1 :col 7 :end-row 1 :end-col 18}}
-         {:loc "1" :range {:row 1 :col 20 :end-row 1 :end-col 29}}
-         {:loc "1" :range {:row 1 :col 30 :end-row 1 :end-col 39}}]
-        (map #(-> %
-                  (update :loc z/string)
-                  (update :range select-keys [:row :col :end-row :end-col])) a-results))))
-  (testing "multiple binding let"
-    (h/reset-components!)
-    (h/load-code-and-locs "(let [something 1 other 2] something other something)")
-    (let [results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") 1 7 (h/db)))
-          a-results (get results (h/file-uri "file:///a.clj"))]
-      (is (map? results))
-      (is (= 1 (count results)))
-      (is (= 3 (count a-results)))
-      (h/assert-submaps
-        [{:loc nil :range {:row 1 :col 7 :end-row 1 :end-col 18}}
-         {:loc "1" :range {:row 1 :col 28 :end-row 1 :end-col 37}}
-         {:loc "1" :range {:row 1 :col 44 :end-row 1 :end-col 53}}]
-        (map #(-> %
-                  (update :loc z/string)
-                  (update :range select-keys [:row :col :end-row :end-col])) a-results))))
-  (testing "def in another file"
-    (h/reset-components!)
-    (let [[[pos-l pos-c]] (h/load-code-and-locs "(ns a) (def |something (1 * 60))")
-          _ (h/load-code-and-locs "(ns b (:require a)) (inc a/something)" (h/file-uri "file:///b.clj"))
-          results (:changes-by-uri (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c (h/db)))
-          a-results (get results (h/file-uri "file:///a.clj"))
-          b-results (get results (h/file-uri "file:///b.clj"))]
-      (is (map? results))
-      (is (= 2 (count results)))
-      (is (= [nil] (map (comp z/string :loc) a-results)))
-      (is (= ["(1 * 60)"] (map (comp z/string :loc) b-results)))))
-  (testing "invalid location"
-    (let [[[pos-l pos-c]] (h/load-code-and-locs "|;; comment")]
-      (is (nil? (transform/inline-symbol (h/file-uri "file:///a.clj") pos-l pos-c (h/db)))))))
 
 (defn suppress-diagnostic [code diagnostic-code]
   (h/with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))

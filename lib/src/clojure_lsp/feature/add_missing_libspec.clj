@@ -84,26 +84,49 @@
 
 (defn ^:private find-class-name [zloc]
   (when-let [sym (safe-sym zloc)]
-    (let [value (z/string zloc)]
+    (let [value (z/string zloc)
+          class? (and (first value)
+                      (Character/isUpperCase ^Character (first value)))
+          dot-call? (and (string/includes? value ".")
+                         (= (dec (count value)) (.indexOf ^String value ".")))]
       (cond
-        (string/ends-with? value ".")
-        (->> value drop-last (string/join "") symbol)
+        (not class?)
+        nil
 
         (namespace sym)
-        (-> sym namespace symbol)
+        (some-> sym namespace (string/split #"\.") last)
 
-        :else sym))))
+        dot-call?
+        (->> value drop-last (string/join ""))
 
-(defn find-missing-import [zloc]
-  (->> zloc
-       find-class-name
-       (get common-sym/java-util-imports)))
+        :else value))))
 
-(defn add-to-namespace* [zloc {libspec-type :type lib-sym :lib refer-sym :refer alias-sym :alias} db]
+(defn find-missing-imports [zloc db]
+  (when-let [class-name (find-class-name zloc)]
+    (into []
+          (comp
+            (q/xf-all-java-definitions-by-class-name class-name)
+            (map :class))
+          (:analysis db))))
+
+(defn ^:private find-when-starts-with-sym [zloc sym]
+  (z/find-next zloc z/next #(and (= :token (z/tag %))
+                                 (string/starts-with? (z/string %) (str sym)))))
+(defn add-to-namespace*
+  [zloc
+   {libspec-type :type
+    lib-sym :lib
+    refer-sym :refer
+    alias-sym :alias
+    class-sym :class}
+   db]
   (let [ns-loc (edit/find-namespace zloc)
         ns-zip (zsub/subzip ns-loc)
         need-to-add? (or
-                       ;; missing import or namespace
+                       ;; missing import
+                       (and class-sym (not (z/find-value ns-zip z/next class-sym)))
+
+                       ;; missing namespace
                        (and lib-sym (not (z/find-value ns-zip z/next lib-sym)))
 
                        ;; missing refer
@@ -112,16 +135,7 @@
                        ;; missing alias
                        (and alias-sym (not (z/find-value ns-zip z/next alias-sym))))]
     (when need-to-add?
-      (let [form-to-add (cond
-                          (= :import libspec-type)
-                          lib-sym
-
-                          (= :require libspec-type)
-                          (cond-> (with-meta lib-sym nil)
-                            (or alias-sym refer-sym) (vector)
-                            alias-sym (conj :as (with-meta alias-sym nil))
-                            refer-sym (conj :refer [(with-meta refer-sym nil)])))
-            add-form-type? (not (z/find-value ns-zip z/next libspec-type))
+      (let [add-form-type? (not (z/find-value ns-zip z/next libspec-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next libspec-type)
             ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             col (if form-type-loc
@@ -136,6 +150,31 @@
                                            wrapped-require)))
             existing-refer (when existing-wrapped-require
                              (z/find-value (zsub/subzip existing-wrapped-require) z/next ':refer))
+            existing-import-package-only (when class-sym
+                                           (z/find-value (z/up form-type-loc) z/next lib-sym))
+            existing-import-package-by-segment (when (and existing-import-package-only
+                                                          (#{:list :vector} (z/tag (z/prev existing-import-package-only))))
+                                                 (z/up existing-import-package-only))
+            exisiting-import-package-by-full-package (when (and class-sym
+                                                                (not existing-import-package-by-segment))
+                                                       (find-when-starts-with-sym ns-zip lib-sym))
+            exisiting-import-package-by-single-full-package (when (and exisiting-import-package-by-full-package
+                                                                       (not (find-when-starts-with-sym exisiting-import-package-by-full-package lib-sym)))
+                                                              exisiting-import-package-by-full-package)
+            form-to-add (cond
+                          (and exisiting-import-package-by-full-package
+                               (= :import libspec-type))
+                          (with-meta (symbol (str lib-sym "." class-sym)) nil)
+
+                          (= :import libspec-type)
+                          [(with-meta lib-sym nil)
+                           (with-meta class-sym nil)]
+
+                          (= :require libspec-type)
+                          (cond-> (with-meta lib-sym nil)
+                            (or alias-sym refer-sym) (vector)
+                            alias-sym (conj :as (with-meta alias-sym nil))
+                            refer-sym (conj :refer [(with-meta refer-sym nil)])))
             result-loc (cond
                          existing-refer
                          (z/subedit-> ns-zip
@@ -162,6 +201,19 @@
                                       (z/append-child :refer)
                                       (z/append-child [refer-sym]))
 
+                         existing-import-package-by-segment
+                         (z/subedit-> ns-zip
+                                      (z/find-value z/next lib-sym)
+                                      z/up
+                                      (z/append-child* (n/spaces 1))
+                                      (z/append-child class-sym))
+
+                         exisiting-import-package-by-single-full-package
+                         (let [existing-class-name (symbol (last (string/split (z/string exisiting-import-package-by-single-full-package) #"\.")))]
+                           (z/subedit-> ns-zip
+                                        (z/find-next z/next #(= exisiting-import-package-by-single-full-package %))
+                                        (z/replace [lib-sym existing-class-name class-sym])))
+
                          :else
                          (z/subedit-> ns-zip
                                       (cond->
@@ -185,14 +237,17 @@
                     :require-refer {:type :require :lib ns-sym :refer sym}
                     :require-alias {:type :require :lib ns-sym :alias sym}
                     :require-simple {:type :require :lib ns-sym}
-                    :import {:type :import :lib sym})]
+                    :import {:type :import :lib ns-sym :class sym})]
       (add-to-namespace* zloc libspec db))))
 
 (defn add-missing-import [zloc uri import-name db]
   (when-let [import-name (or import-name
-                             (find-missing-import zloc))]
-    (->> (add-to-namespace zloc :import nil (symbol import-name) db)
-         (cleaning-ns-edits uri db))))
+                             (first (find-missing-imports zloc db)))]
+    (let [split (string/split import-name #"\.")
+          package-name (symbol (string/join "." (drop-last split)))
+          class-name (symbol (last split))]
+      (->> (add-to-namespace zloc :import package-name class-name db)
+           (cleaning-ns-edits uri db)))))
 
 (defn add-known-alias
   [zloc alias-to-add qualified-ns-to-add db]

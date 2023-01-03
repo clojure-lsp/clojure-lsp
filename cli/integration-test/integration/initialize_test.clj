@@ -29,6 +29,7 @@
                                             "create-function"
                                             "create-test"
                                             "cycle-coll"
+                                            "cycle-keyword-auto-resolve"
                                             "cycle-privacy"
                                             "demote-fn"
                                             "destructure-keys"
@@ -78,7 +79,8 @@
                                                        "class"
                                                        "variable"
                                                        "method"
-                                                       "event"]
+                                                       "event"
+                                                       "interface"]
                                           :tokenModifiers ["definition"
                                                            "defaultLibrary"
                                                            "implementation"]}

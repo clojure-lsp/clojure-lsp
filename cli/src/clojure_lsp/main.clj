@@ -97,7 +97,12 @@
    [nil "--to TO" "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename"
     :id :to
     :parse-fn symbol
-    :validate [symbol? "Specify a valid clojure full qualified symbol or the namespace after --to"]]])
+    :validate [symbol? "Specify a valid clojure full qualified symbol or the namespace after --to"]]
+   [nil "--analysis EDN" "Optional settings as edn on how clojure-lsp should consider the analysis. Check `clojure-lsp.api/dump` for all available options to this flag."
+    :id :analysis
+    :validate [#(try (edn/read-string %) true (catch Exception _ false))
+               "Invalid --analysis EDN"]
+    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]])
 
 (defn ^:private error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"
@@ -166,12 +171,12 @@
   (let [{:keys [action options exit-message ok?]} (parse args)]
     (if exit-message
       {:result-code (if ok? 0 1)
-       :message exit-message}
+       :message-fn (constantly  exit-message)}
       (handle-action! action options))))
 
 (defn main [& args]
-  (let [{:keys [result-code message]} (apply run! args)]
-    (exit result-code message)))
+  (let [{:keys [result-code message-fn]} (apply run! args)]
+    (exit result-code (when message-fn (message-fn)))))
 
 (def musl?
   "Captured at compile time, to know if we are running inside a

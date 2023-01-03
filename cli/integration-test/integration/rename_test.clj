@@ -80,7 +80,8 @@
           :newText "your-key"}
          {:range {:start {:line 13 :character 7} :end {:line 13 :character 13}}
           :newText "your-key"}]}}
-      (lsp/request! (fixture/rename-request "rename/a.cljc" ":your-key" 12 15)))))
+      (with-redefs [h/*escape-uris?* true]
+        (lsp/request! (fixture/rename-request "rename/a.cljc" ":your-key" 12 15))))))
 
 (deftest rename-namespaced-keywords
   (lsp/start-process!)

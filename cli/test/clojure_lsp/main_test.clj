@@ -60,12 +60,19 @@
     (testing "to"
       (is (= nil (:to (:options (#'main/parse [])))))
       (is (= 'abc (:to (:options (#'main/parse ["--to" "abc"])))))
-      (is (= 'bla/abc (:to (:options (#'main/parse ["--to" "bla/abc"])))))))
+      (is (= 'bla/abc (:to (:options (#'main/parse ["--to" "bla/abc"]))))))
+    (testing "analysis"
+      (is (= nil (:analysis (:options (#'main/parse [])))))
+      (is (= 1 (:analysis (:options (#'main/parse ["--analysis" "1"])))))
+      (is (= {} (:analysis (:options (#'main/parse ["--analysis" "{}"])))))
+      (is (= nil (:analysis (:options (#'main/parse ["--analysis" "}"])))))
+      (is (= {:a {:b 1} :c 2} (:analysis (:options (#'main/parse ["--analysis" "{:a {:b 1} :c 2}"])))))))
   (testing "commands"
     (is (= "listen" (:action (#'main/parse []))))
     (is (= "listen" (:action (#'main/parse ["listen"]))))
     (is (= "clean-ns" (:action (#'main/parse ["clean-ns"]))))
     (is (= "rename" (:action (#'main/parse ["rename"]))))
+    (is (= "dump" (:action (#'main/parse ["dump"]))))
     (is (= nil (:action (#'main/parse ["clean-ns" "listen"])))))
   (testing "final options"
     (is (string? (:exit-message (#'main/parse ["--help"]))))

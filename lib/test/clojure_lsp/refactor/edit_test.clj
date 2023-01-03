@@ -174,3 +174,9 @@
     (is (not (edit/find-refer-ns zloc))))
   (let [zloc (h/zloc-from-code "(require '[clojure.test :refer [|testing]])")]
     (is (= 'clojure.test (z/sexpr (edit/find-refer-ns zloc))))))
+
+(deftest find-namespace-test
+  (let [zloc (h/zloc-from-code "(ns my-ns) |:foo")]
+    (is (= "(ns my-ns)" (z/string (edit/find-namespace zloc)))))
+  (let [zloc (h/zloc-from-code "(ns other-ns)\n\n:bar\n (ns my-ns)\n|:foo")]
+    (is (= "(ns other-ns)" (z/string (edit/find-namespace zloc))))))

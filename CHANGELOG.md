@@ -3,8 +3,38 @@
 ## Unreleased
 
 - General
+  - Bump clj-kondo to `2022.12.11-20221220.093423-5`
+  
+- Editor
+  - Fix add missing import code action when there are multiple options. #1422
+  - Only show completion items if no changed code is being processed, avoiding wrong completion items. #1425
+  - Improve semantic tokens for defprotocol, definterface coloring as `interface` tokens.
+  
+- API/CLI
+  - Make diagnostics command print as json or edn. #1419
+
+## 2022.12.09-15.51.10
+
+- General
+  - Fix rename issue with VS-Code/Calva on MS-Windows. #1388
   - Only publish progress on initialize if client provided a `workDoneProgress`. #1363
-  - Bump clj-kondo to `2022.11.03-20221105.203751-5`.
+  - Bump clj-kondo to `2022.12.08`.
+  - Avoid wrong clj-kondo configs in case clojure-lsp process is spawned from a different directory than project-root.
+  - Fall back on CLJS var when finding definition from Clojure and nothing was found. #1403
+
+- Editor
+  - Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types on `workspace/symbol` and `textDocument/documentSymbol`.
+  - Inlining the last binding of a let removes the let. #210
+  - Allow import java classes via code-actions `Add import 'x.y.Z'`.
+  - Make `add-import` command/code-action smarter, checking if there is already a package import to just include the classname instead of full import.
+  - Add new refactoring `cycle-keyword-auto-resolve`, e.g. `::bar` -> `:foo/bar` and vice-versa. #1128
+  - Supporting find definition/references/implementations of `definterface`.
+  - Avoid watching ignored source-paths, causing find-definition/references and other features go to wrong files.
+
+- API/CLI
+  - Allow specify analysis type for `dump` command, default to analyze project only analysis. #1383
+  - Add `:result` to the dump command. #1390
+  - Important regression fix where clojure-lsp may do inconsistent lint when classpath scan fail without showing to user the error.
 
 ## 2022.11.03-00.14.57
 

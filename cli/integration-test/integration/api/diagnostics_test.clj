@@ -1,5 +1,6 @@
 (ns integration.api.diagnostics-test
   (:require
+   [clojure.edn :as edn]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
    [integration.helper :as h]
@@ -14,6 +15,12 @@
                               "--namespace" "sample-test.api.diagnostics.a")]
       (is (string/includes? (slurp rdr) (format "%s:2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var"
                                                 (h/file-path "src/sample_test/api/diagnostics/a.clj"))))))
+  (testing "output format edn"
+    (with-open [rdr (lsp/cli! "diagnostics"
+                              "--project-root" h/root-project-path
+                              "--output" "{:format :edn}"
+                              "--namespace" "sample-test.api.diagnostics.a")]
+      (is (seq (edn/read-string (slurp rdr))))))
   (testing "passing multiple namespaces but only one has diagnostics"
     (with-open [rdr (lsp/cli! "diagnostics"
                               "--project-root" h/root-project-path

@@ -137,7 +137,7 @@
 (defn ^:private load-db-cache! [root-path db*]
   (let [db @db*]
     (when-let [db-cache (db/read-local-cache root-path db)]
-      (when-not (and (= :project-and-deps (:project-analysis-type db))
+      (when-not (and (= :project-and-dependencies (:project-analysis-type db))
                      (= :project-only (:project-analysis-type db-cache)))
         (swap! db* (fn [state-db]
                      (-> state-db
@@ -199,11 +199,11 @@
           use-db-analysis? (and (= (:project-hash @db*) project-hash)
                                 (= (:kondo-config-hash @db*) kondo-config-hash))
           fast-startup? (or use-db-analysis?
-                            (not= :project-and-deps (:project-analysis-type @db*)))
+                            (not= :project-and-dependencies (:project-analysis-type @db*)))
           task-list (if fast-startup? fast-tasks slow-tasks)]
       (if use-db-analysis?
         (let [classpath (:classpath @db*)]
-          (logger/info startup-logger-tag "Using cached db for project root" root-path)
+          (logger/info startup-logger-tag (format "Using cached classpath %s" classpath))
           (swap! db* assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
           (publish-task-progress producer (:copying-kondo fast-tasks) progress-token)
@@ -219,7 +219,7 @@
 
             (publish-task-progress producer (:copying-kondo slow-tasks) progress-token)
             (copy-configs-from-classpath! classpath settings @db*)
-            (when (= :project-and-deps (:project-analysis-type @db*))
+            (when (= :project-and-dependencies (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
             (logger/info "Caching db for next startup...")

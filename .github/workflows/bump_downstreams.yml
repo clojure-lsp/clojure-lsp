@@ -10,7 +10,7 @@ jobs:
   release-clojars:
     name: Release artifact to Clojars
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Prepare java
@@ -34,7 +34,7 @@ jobs:
   release-clojars-standalone:
     name: Release standalone artifact to Clojars
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Prepare java
@@ -111,7 +111,7 @@ jobs:
   bump-setup-clojure-lsp:
     name: Bump setup-clojure-lsp Github Action
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.2.0
         with:
@@ -139,7 +139,7 @@ jobs:
     name: Bump lein-clojure-lsp
     needs: [release-clojars-standalone]
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.2.0
         with:
@@ -168,7 +168,7 @@ jobs:
   #   name: Bump nixpkgs
   #   needs: [release-clojars]
   #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
-  #   runs-on: ubuntu-latest
+  #   runs-on: ubuntu-20.04
   #   steps:
   #     - uses: actions/checkout@v2.2.0
   #       with:

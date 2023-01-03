@@ -44,7 +44,7 @@ You will get:
 
 For all available documentation, check the official [website](https://clojure-lsp.io/).
 
-Also, clojure-lsp doesn't need to run only with an editor, for more information check the [API documentation section](https://clojure-lsp.io/api/).
+Also, clojure-lsp doesn't need to run only with an editor, for more information check the [Outside editor (API)](https://clojure-lsp.io/api/what-is-it) section.
 
 ---
 ## Contribution

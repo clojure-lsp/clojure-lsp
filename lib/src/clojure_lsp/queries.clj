@@ -79,6 +79,7 @@
         (xf-by-bucket->buckets-elems bucket-names)))
 
 (def xf-analysis->java-class-definitions (xf-analysis->bucket-elems :java-class-definitions))
+(def xf-analysis->java-class-usages (xf-analysis->bucket-elems :java-class-usages))
 (def xf-analysis->keyword-definitions (xf-analysis->bucket-elems :keyword-definitions))
 (def xf-analysis->keyword-usages (xf-analysis->bucket-elems :keyword-usages))
 (def xf-analysis->keywords (xf-analysis->buckets-elems :keyword-definitions :keyword-usages))
@@ -249,7 +250,10 @@
       ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
       (let [definition (find-definition db (assoc var-usage :lang :clj))]
         (when (:macro definition)
-          definition)))))
+          definition)))
+    ;; Fallback to navigate from clojure to clojurescript vars, see #1403
+    (when-not (:fallbacking? var-usage)
+      (find-definition db (assoc var-usage :lang :cljs :fallbacking? true)))))
 
 (defmethod find-definition :local-usages
   [db {:keys [id uri] :as _local-usage}]
@@ -338,14 +342,16 @@
   [db var-definition]
   (if-let [xf (cond
                 ;; protocol method definition
-                (and (= 'clojure.core/defprotocol (:defined-by var-definition))
+                (and ('#{clojure.core/defprotocol
+                         clojure.core/definterface} (:defined-by var-definition))
                      (:protocol-name var-definition))
                 (comp xf-analysis->protocol-impls
                       (xf-same-fqn (:ns var-definition) (:name var-definition)
                                    :protocol-ns :method-name))
 
                 ;; protocol name definition
-                (= 'clojure.core/defprotocol (:defined-by var-definition))
+                ('#{clojure.core/defprotocol
+                    clojure.core/definterface} (:defined-by var-definition))
                 (comp xf-analysis->var-usages
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to))
 
@@ -727,3 +733,22 @@
     (filter #(contains? namespaces (:protocol-ns %)))))
 
 (def xf-all-keyword-usages xf-analysis->keyword-usages)
+
+(defn find-keyword-usages-by-keyword [db uri kwd-ns kwd-name]
+  (into []
+        (xf-same-fqn kwd-ns kwd-name)
+        (get-in db [:analysis uri :keyword-usages])))
+
+(defn xf-all-java-definitions-by-class-name [class-name]
+  (comp
+    xf-analysis->java-class-definitions
+    (filter (fn [element]
+              (= class-name (last (string/split (:class element) #"\.")))))))
+
+(defn find-all-java-class-usages-on-imports-by-class [db class-name]
+  (into []
+        (comp
+          xf-analysis->java-class-usages
+          (filter #(and (:import %)
+                        (safe-equal? class-name (:class %)))))
+        (:analysis db)))

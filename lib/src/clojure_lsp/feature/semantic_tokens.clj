@@ -15,7 +15,8 @@
    :class
    :variable
    :method
-   :event])
+   :event
+   :interface])
 
 (def token-types-str
   (->> token-types
@@ -86,8 +87,13 @@
     [(element->absolute-token element :class)]))
 
 (defn ^:private var-definition-element->absolute-tokens
-  [{:keys [defined-by] :as element}]
+  [{:keys [defined-by protocol-ns] :as element}]
   (cond
+
+    (and (not protocol-ns)
+         (contains? #{'clojure.core/defprotocol
+                      'clojure.core/definterface} defined-by))
+    [(element->absolute-token element :interface [])]
 
     defined-by
     [(element->absolute-token element :function [:definition])]

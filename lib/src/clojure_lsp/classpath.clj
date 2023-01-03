@@ -140,7 +140,7 @@
             (do
               (logger/warn (format "Classpath lookup retry skipped by user"))
               paths))
-          (logger/warn (format "Invalid classpath lookup option, skipping lookup"))))
+          (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly." command) :error error)))
       paths)))
 
 (defn scan-classpath! [{:keys [db* producer]}]

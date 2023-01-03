@@ -190,6 +190,13 @@
             0 0 9 2 1
             2 1 11 7 4
             0 13 4 6 0]
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
+  (testing "defrecord/definterface"
+    (h/load-code-and-locs (code "(defprotocol Something"
+                                "  (some-method [this]))"))
+    (is (= [0 1 11 3 0
+            0 12 9 9 0
+            1 3 11 2 1]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db))))))
 
 (deftest range-tokens

@@ -466,13 +466,16 @@
           (ns-and-dependents-analysis db (:ns var-definition)))))
 
 (defmethod find-references :keywords
-  [db {:keys [ns name] :as _keyword} include-declaration?]
-  (into []
-        (comp
-          (if include-declaration? xf-analysis->keywords xf-analysis->keyword-usages)
-          (xf-same-fqn ns name)
-          (medley/distinct-by (juxt :uri :name :row :col)))
-        (internal-analysis db)))
+  [db {:keys [ns name] :as keyword-element} include-declaration?]
+  (let [analysis (if (contains? (elem-langs keyword-element) :edn)
+                   (:analysis db)
+                   (internal-analysis db))]
+    (into []
+          (comp
+            (if include-declaration? xf-analysis->keywords xf-analysis->keyword-usages)
+            (xf-same-fqn ns name)
+            (medley/distinct-by (juxt :uri :name :row :col)))
+          analysis)))
 
 (defmethod find-references :local
   [db {:keys [id name uri] :as element} include-declaration?]

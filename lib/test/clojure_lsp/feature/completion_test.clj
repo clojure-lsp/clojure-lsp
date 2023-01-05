@@ -93,6 +93,7 @@
   (testing "complete locals"
     (h/assert-submaps
       [{:label "baz" :kind :variable}
+       {:label "baq" :kind :reference}
        {:label "bar" :kind :function}
        {:label "ba" :kind :property}
        {:label "ba/baff" :kind :variable}
@@ -308,7 +309,7 @@
          {:label "some.foo-ns" :kind :property :detail ":as f"}]
         (f.completion/completion (h/file-uri "file:///c.clj") row col (h/db))))))
 
-(deftest completing-refers
+(deftest completing-inside-refers
   (h/load-code-and-locs
     (h/code "(ns some-ns)"
             "(def foob 1)"
@@ -332,6 +333,21 @@
       (h/assert-submaps
         [{:label "bar" :kind :function}]
         (f.completion/completion (h/file-uri "file:///d.clj") ba-refer-r ba-refer-c (h/db))))))
+
+(deftest completing-refer-var-usages
+  (h/load-code-and-locs
+    (h/code "(ns alpaca.ns)"
+            "(def bazinga 1)"
+            "(def foo 1)"
+            "(defn bazingu [] foo)") (h/file-uri "file:///a.clj"))
+  (let [[[refer-usage-r refer-usage-c]] (h/load-code-and-locs
+                                          (h/code "(ns foo"
+                                                  "  (:require [alpaca.ns :refer [foo bazinga]]))"
+                                                  "(bazing|)") (h/file-uri "file:///b.clj"))]
+    (testing "completing all available refers"
+      (h/assert-submaps
+        [{:label "bazinga" :kind :reference}]
+        (f.completion/completion (h/file-uri "file:///b.clj") refer-usage-r refer-usage-c (h/db))))))
 
 (deftest completing-known-snippets
   (h/load-code-and-locs

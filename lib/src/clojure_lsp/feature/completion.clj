@@ -88,8 +88,11 @@
          (or arglist-strs macro))
     :function
 
-    (#{:var-definitions :var-usages :locals} bucket)
+    (#{:var-definitions :locals} bucket)
     :variable
+
+    (#{:var-usages} bucket)
+    :reference
 
     (#{:local-usages} bucket)
     :value
@@ -194,6 +197,10 @@
                    (identical? :namespace-alias bucket)
                    (some->> element :to name (str "alias to: "))
 
+                   (identical? :var-usages bucket)
+                   ;; it's always a refer
+                   (some->> element :to name (str "refer to: "))
+
                    (identical? :java-class-usages bucket)
                    (:class element)
 
@@ -242,6 +249,12 @@
       (remove #(and on-var-usage? (not= (:ns %) cursor-from)))
       (name-matches-xf matches-fn))))
 
+(defmethod bucket-elems-xf :var-usages
+  [_bucket matches-fn _cursor-element]
+  (comp
+    (filter :refer)
+    (name-matches-xf matches-fn)))
+
 (defmethod bucket-elems-xf :keywords
   [_bucket matches-fn cursor-element]
   (comp
@@ -280,6 +293,7 @@
           [:namespace-definitions
            :namespace-usages
            :var-definitions
+           :var-usages
            :keyword-definitions
            :keyword-usages
            :locals

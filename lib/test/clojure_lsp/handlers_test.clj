@@ -198,7 +198,8 @@
                                                 :position (h/->position bbar-start)
                                                 :new-name "aa/foo"}))]
         (is (= {(h/file-uri "file:///a.clj") [{:new-text "foo" :range (h/->range abar-start abar-stop)}]
-                (h/file-uri "file:///b.clj") [{:new-text "foo" :range (h/->range bbar-start bbar-stop)}]
+                (h/file-uri "file:///b.clj") [{:new-text "aa/foo" :range (h/->range ba1-start bbar-stop)}
+                                              {:new-text "aa" :range (h/->range balias-start balias-stop)}]
                 (h/file-uri "file:///c.clj") [{:new-text "foo" :range (h/->range cbar-start cbar-stop)}]}
                changes))))
     (testing "on ::keyword"

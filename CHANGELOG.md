@@ -10,6 +10,7 @@
   - Only show completion items if no changed code is being processed, avoiding wrong completion items. #1425
   - Improve semantic tokens for defprotocol, definterface coloring as `interface` tokens.
   - Include reffered vars in completion. #1440
+  - Allow rename alias of function calls, renaming properly both function usages and alias definition.
   
 - API/CLI
   - Make diagnostics command print as json or edn. #1419

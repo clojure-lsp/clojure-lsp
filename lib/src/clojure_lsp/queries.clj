@@ -676,6 +676,10 @@
   (find-last (filter #(= alias (:alias %)))
              (get-in db [:analysis uri :namespace-usages])))
 
+(defn find-namespace-alias-by-alias [db uri alias]
+  (find-last (filter #(= alias (:alias %)))
+             (get-in db [:analysis uri :namespace-alias])))
+
 (defn find-element-for-rename [db from-ns from-name]
   (let [xf
         (if from-name

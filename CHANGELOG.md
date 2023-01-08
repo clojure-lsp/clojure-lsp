@@ -4,7 +4,7 @@
 
 - General
   - Bump clj-kondo to `2022.12.11-20221220.093423-5`
-  - Avoid false-positives of unused-public-var for functions used in :gen-class that starts with `-` as convention.
+  - Avoid false-positives of unused-public-var for functions used in :gen-class that starts with `-` as convention. #1443
   
 - Editor
   - Fix add missing import code action when there are multiple options. #1422

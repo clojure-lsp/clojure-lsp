@@ -81,6 +81,11 @@
   (build "cli" "prod-jar-for-native")
   (mv-here "cli/target/clojure-lsp-standalone.jar"))
 
+(defn cli-debug-install
+  "Build `cli` debug jar and install."
+  []
+  (build "cli" "debug-install"))
+
 (defn debug-cli
   "Build the `clojure-lsp[.bat]` cli exec script (suppots `cider-nrepl`/`clj-async-profile`)."
   []

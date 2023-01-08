@@ -86,6 +86,15 @@
   (prod-jar opts)
   (bin {}))
 
+(defn debug-install [opts]
+  (debug-jar opts)
+  (println "Installing to local mvn repo...")
+  (b/install {:basis (b/create-basis (update basis :aliases concat [:debug :test]))
+              :lib clojars-lib
+              :version current-version
+              :jar-file uber-file
+              :class-dir class-dir}))
+
 (defn native-cli [opts]
   (println "Building native image...")
   (if-let [graal-home (System/getenv "GRAALVM_HOME")]

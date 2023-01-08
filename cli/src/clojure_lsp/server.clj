@@ -596,8 +596,7 @@
     (monitor-server-logs (:log-ch server))
     (setup-dev-environment db*)
     (spawn-async-tasks! components)
-    (lsp.server/start server components)
-    server))
+    (lsp.server/start server components)))
 
 (defn run-lsp-io-server! [trace-level]
   (lsp.server/discarding-stdout

@@ -579,27 +579,30 @@
     ;; db/db*, so it can be inspected in the nREPL.
     (alter-var-root #'db/db* (constantly db*))))
 
-(defn run-server! [trace-level]
+(defn start-server! [server]
+  (let [timbre-logger (->TimbreLogger)
+        log-path (logger/setup timbre-logger)
+        db* (atom (assoc db/initial-db :log-path log-path))
+        producer (ClojureLspProducer. server db*)
+        components {:db* db*
+                    :logger timbre-logger
+                    :producer producer
+                    :server server
+                    :current-changes-chan (async/chan 1)
+                    :diagnostics-chan (async/chan 1)
+                    :watched-files-chan (async/chan 1)
+                    :edits-chan (async/chan 1)}]
+    (logger/info "[SERVER]" "Starting server...")
+    (monitor-server-logs (:log-ch server))
+    (setup-dev-environment db*)
+    (spawn-async-tasks! components)
+    (lsp.server/start server components)
+    server))
+
+(defn run-lsp-io-server! [trace-level]
   (lsp.server/discarding-stdout
-    (let [timbre-logger (->TimbreLogger)
-          log-path (logger/setup timbre-logger)
-          db (assoc db/initial-db :log-path log-path)
-          db* (atom db)
-          log-ch (async/chan (async/sliding-buffer 20))
+    (let [log-ch (async/chan (async/sliding-buffer 20))
           server (lsp.io-server/stdio-server {:log-ch log-ch
                                               :trace-ch log-ch
-                                              :trace-level trace-level})
-          producer (ClojureLspProducer. server db*)
-          components {:db* db*
-                      :logger timbre-logger
-                      :producer producer
-                      :server server
-                      :current-changes-chan (async/chan 1)
-                      :diagnostics-chan (async/chan 1)
-                      :watched-files-chan (async/chan 1)
-                      :edits-chan (async/chan 1)}]
-      (logger/info "[SERVER]" "Starting server...")
-      (monitor-server-logs log-ch)
-      (setup-dev-environment db*)
-      (spawn-async-tasks! components)
-      (lsp.server/start server components))))
+                                              :trace-level trace-level})]
+      (start-server! server))))

@@ -14,6 +14,7 @@
   
 - API/CLI
   - Make diagnostics command print as json or edn. #1419
+  - Make possible starting a chan server with clojure-lsp components, useful to other clients extend.
 
 ## 2022.12.09-15.51.10
 

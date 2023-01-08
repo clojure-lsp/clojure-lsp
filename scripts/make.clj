@@ -35,7 +35,7 @@
         files (into ["cli/target"
                      (fs/path "cli" lsp-bin-native)
                      (fs/path "cli" lsp-bin-script)
-                     "cli/clojure-lsp-standalone.jar"
+                     "cli/clojure-lsp-cli-standalone.jar"
                      "lib/clojure-lsp.jar"
                      lsp-bin-native
                      lsp-bin-script
@@ -67,24 +67,23 @@
   (build "lib" "jar")
   (mv-here "lib/target/clojure-lsp.jar"))
 
-(defn cli-jar
-  "Build `cli` jar."
+(defn server-jar
+  "Build `cli` server jar."
   []
-  (build "cli" "prod-jar")
-  (mv-here "cli/target/clojure-lsp-standalone.jar"))
+  (build "cli" "server-jar"))
+
+(defn server-install
+  "Build `cli` server jar and install."
+  []
+  (build "cli" "server-install"))
 
 (defn cli-debug-jar []
   (build "cli" "debug-jar")
   (mv-here "cli/target/clojure-lsp-standalone.jar"))
 
-(defn cli-jar-for-native []
-  (build "cli" "prod-jar-for-native")
+(defn cli-prod-jar []
+  (build "cli" "prod-jar")
   (mv-here "cli/target/clojure-lsp-standalone.jar"))
-
-(defn cli-debug-install
-  "Build `cli` debug jar and install."
-  []
-  (build "cli" "debug-install"))
 
 (defn debug-cli
   "Build the `clojure-lsp[.bat]` cli exec script (suppots `cider-nrepl`/`clj-async-profile`)."

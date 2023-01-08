@@ -71,7 +71,7 @@ jobs:
           echo ${{ needs.release-dev-build.outputs.tag}} > lib/resources/CLOJURE_LSP_VERSION
 
       - name: Generate jar for native
-        run: bb cli-jar-for-native
+        run: bb cli-prod-jar
 
       # Remove after all places are using clojure-lsp-dev-builds
       - name: Upload jar

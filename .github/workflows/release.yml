@@ -61,10 +61,19 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - name: Generate jar for native
-        run: bb cli-jar-for-native
+      - name: Generate server jar
+        run: bb server-jar
 
-      - name: Upload jar
+      - name: Upload server jar
+        uses: actions/upload-artifact@v2
+        with:
+          path: clojure-lsp-server.jar
+          name: clojure-lsp-server.jar
+
+      - name: Generate standalone jar
+        run: bb cli-prod-jar
+
+      - name: Upload standalone jar
         uses: actions/upload-artifact@v2
         with:
           path: clojure-lsp-standalone.jar
@@ -442,12 +451,20 @@ jobs:
 
       - uses: actions/download-artifact@v2
 
-      - name: Upload JVM
+      - name: Upload jar
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp.jar/clojure-lsp.jar
           asset_name: clojure-lsp.jar
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload server jar
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-server.jar/clojure-lsp-server.jar
+          asset_name: clojure-lsp-server.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
 
       - name: Upload standalone JVM

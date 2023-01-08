@@ -13,7 +13,7 @@
 
 (deftest lint-project-public-vars
   (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
-  (h/load-code-and-locs "(ns some-ns) (defn -main [& _args] 1)" (h/file-uri "file:///b.clj"))
+  (h/load-code-and-locs "(ns some-ns (:gen-class)) (defn -main [& _args] 1) (defn -foo [] 1)" (h/file-uri "file:///b.clj"))
   (h/load-code-and-locs (h/code "(ns some-ns (:require [re-frame.core :as r]))"
                                 "(r/reg-event-fx :some/thing (fn []))"
                                 "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///c.cljs"))
@@ -172,6 +172,14 @@
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///d.cljs")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
+    (h/assert-submaps [] @findings))
+  (testing "var with dash and :gen-class on ns is excluded"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///b.clj")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})

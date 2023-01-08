@@ -21,7 +21,7 @@
          server-jar make/server-jar
          server-install make/server-install
          cli-debug-jar make/cli-debug-jar
-         cli-jar-for-native make/cli-jar-for-native
+         cli-prod-jar make/cli-prod-jar
 
          debug-cli make/debug-cli
          prod-cli make/prod-cli

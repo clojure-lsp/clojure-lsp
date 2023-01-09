@@ -5,7 +5,7 @@
 - General
   - Bump clj-kondo to `2022.12.11-20221220.093423-5`
   - Avoid false-positives of unused-public-var for functions used in :gen-class that starts with `-` as convention. #1443
-  - New jar available on releases: `clojure-lsp-server.jar`, an Uberjar not aot-ed containing both clojure-lsp core + server code for other clients usage like `lein-clojure-lsp`.
+  - New jar available on releases: `clojure-lsp-server.jar`, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for `lein-clojure-lsp`. Any lib using `clojure-lsp-standalone.jar` should consider switch to this new jar.
   
 - Editor
   - Fix add missing import code action when there are multiple options. #1422

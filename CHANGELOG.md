@@ -13,6 +13,7 @@
   - Improve semantic tokens for defprotocol, definterface coloring as `interface` tokens.
   - Include reffered vars in completion. #1440
   - Allow rename alias of function calls, renaming properly both function usages and alias definition.
+  - Add support for keyword analysis in edn files, allowing find-references, document highlight and other lsp features to keywords.
   
 - API/CLI
   - Make diagnostics command print as json or edn. #1419

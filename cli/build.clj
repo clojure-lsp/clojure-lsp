@@ -91,12 +91,12 @@
               :class-dir class-dir}))
 
 (defn debug-jar [opts]
-  (standalone-jar (merge opts {:extra-aliases [:debug :test]
-                               :extra-dirs ["dev"]})))
+  (standalone-aot-jar (merge opts {:extra-aliases [:debug :test]
+                                   :extra-dirs ["dev"]})))
 
 (defn debug-cli [opts]
-  (standalone-jar (merge opts {:extra-aliases [:debug :test]
-                               :extra-dirs ["dev"]}))
+  (standalone-aot-jar (merge opts {:extra-aliases [:debug :test]
+                                   :extra-dirs ["dev"]}))
   (bin {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"
                    "-Djdk.attach.allowAttachSelf=true"
                    "-Dclojure.core.async.go-checking=true"]}))

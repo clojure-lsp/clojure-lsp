@@ -2117,7 +2117,7 @@
 <li>Bump clj-kondo to <code>2022.12.11-20221220.093423-5</code></li>
 <li>Avoid false-positives of unused-public-var for functions used in :gen-class that starts with <code>-</code> as convention. #1443</li>
 <li>
-<p>New jar available on releases: <code>clojure-lsp-server.jar</code>, an Uberjar not aot-ed containing both clojure-lsp core + server code for other clients usage like <code>lein-clojure-lsp</code>.</p>
+<p>New jar available on releases: <code>clojure-lsp-server.jar</code>, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for <code>lein-clojure-lsp</code>. Any lib using <code>clojure-lsp-standalone.jar</code> should consider switch to this new jar.</p>
 </li>
 <li>
 <p>Editor</p>

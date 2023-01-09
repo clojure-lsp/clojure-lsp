@@ -13,9 +13,60 @@
       <version>1.11.1</version>
     </dependency>
     <dependency>
+      <groupId>org.benf</groupId>
+      <artifactId>cfr</artifactId>
+      <version>0.152</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.clj-easy</groupId>
+      <artifactId>stub</artifactId>
+      <version>0.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.clojure-lsp</groupId>
+      <artifactId>lsp4clj</artifactId>
+      <version>1.5.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>funcool</groupId>
+          <artifactId>promesa</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.cli</artifactId>
       <version>1.0.214</version>
+    </dependency>
+    <dependency>
+      <groupId>cljfmt</groupId>
+      <artifactId>cljfmt</artifactId>
+      <version>0.9.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>rewrite-cljs</groupId>
+          <artifactId>rewrite-cljs</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.googlecode.java-diff-utils</groupId>
+          <artifactId>diffutils</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>rewrite-clj</groupId>
+      <artifactId>rewrite-clj</artifactId>
+      <version>1.1.45</version>
+    </dependency>
+    <dependency>
+      <groupId>clj-kondo</groupId>
+      <artifactId>clj-kondo</artifactId>
+      <version>2022.12.11-20221220.093423-5</version>
+    </dependency>
+    <dependency>
+      <groupId>com.googlecode.java-diff-utils</groupId>
+      <artifactId>diffutils</artifactId>
+      <version>1.3.0</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>
@@ -28,14 +79,55 @@
       <version>6.0.4</version>
     </dependency>
     <dependency>
+      <groupId>com.cognitect</groupId>
+      <artifactId>transit-clj</artifactId>
+      <version>1.0.329</version>
+    </dependency>
+    <dependency>
+      <groupId>anonimitoraf</groupId>
+      <artifactId>clj-flx</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+    <dependency>
       <groupId>funcool</groupId>
       <artifactId>promesa</artifactId>
       <version>10.0.594</version>
     </dependency>
     <dependency>
+      <groupId>borkdude</groupId>
+      <artifactId>rewrite-edn</artifactId>
+      <version>0.4.5</version>
+      <exclusions>
+        <exclusion>
+          <groupId>rewrite-clj</groupId>
+          <artifactId>rewrite-clj</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>babashka</groupId>
+      <artifactId>fs</artifactId>
+      <version>0.2.12</version>
+    </dependency>
+    <dependency>
       <groupId>nrepl</groupId>
       <artifactId>bencode</artifactId>
       <version>1.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fabiodomingues</groupId>
+      <artifactId>clj-depend</artifactId>
+      <version>0.6.1</version>
+    </dependency>
+    <dependency>
+      <groupId>medley</groupId>
+      <artifactId>medley</artifactId>
+      <version>1.4.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>core.async</artifactId>
+      <version>1.5.648</version>
     </dependency>
   </dependencies>
   <repositories>

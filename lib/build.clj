@@ -14,7 +14,7 @@
   (b/delete {:path "target"}))
 
 (defn pom [opts]
-  (b/write-pom {:target ""
+  (b/write-pom {:class-dir class-dir
                 :lib lib
                 :version current-version
                 :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))

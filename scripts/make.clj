@@ -70,7 +70,8 @@
 (defn server-jar
   "Build `cli` server jar."
   []
-  (build "cli" "server-jar"))
+  (build "cli" "server-jar")
+  (mv-here "cli/target/clojure-lsp-server.jar"))
 
 (defn server-install
   "Build `cli` server jar and install."

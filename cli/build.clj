@@ -5,11 +5,12 @@
    [clojure.string :as string]
    [clojure.tools.build.api :as b]))
 
-(def clojars-standalone-lib 'com.github.clojure-lsp/clojure-lsp-standalone)
-(def clojars-server-lib 'com.github.clojure-lsp/clojure-lsp-server)
+(def standalone-lib 'com.github.clojure-lsp/clojure-lsp-standalone)
+(def server-lib 'com.github.clojure-lsp/clojure-lsp-server)
 (def current-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 (def class-dir "target/classes")
-(def basis {:project "deps.edn"})
+(def basis {:project "deps.edn"
+            :extra "../lib/deps.edn"})
 (def server-file "target/clojure-lsp-server.jar")
 (def standalone-file "target/clojure-lsp-standalone.jar")
 
@@ -17,17 +18,19 @@
   (b/delete {:path "target"}))
 
 (defn pom [opts]
-  (b/write-pom {:target ""
-                :lib (or (:lib opts) clojars-server-lib)
-                :version current-version
-                :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
-                :src-dirs ["src" "../lib/src"]
-                :resource-dirs ["resources" "../lib/resources"]
-                :scm {:tag current-version}}))
+  (let [lib (or (:lib opts) server-lib)]
+    (b/write-pom {:class-dir class-dir
+                  :lib lib
+                  :src-pom "./pom.xml"
+                  :version current-version
+                  :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
+                  :src-dirs ["src" "../lib/src"]
+                  :resource-dirs ["resources" "../lib/resources"]
+                  :scm {:tag current-version}})))
 
 (defn ^:private standalone-jar [opts]
   (clean opts)
-  (pom (assoc opts :lib clojars-standalone-lib))
+  (pom (assoc opts :lib standalone-lib))
   (b/copy-dir {:src-dirs ["src" "../lib/src" "resources" "../lib/resources"]
                :target-dir class-dir})
   (b/uber {:class-dir class-dir
@@ -69,20 +72,20 @@
 
 (defn server-jar [opts]
   (clean opts)
-  (pom (assoc opts :lib clojars-server-lib))
+  (pom (assoc opts :lib server-lib))
+  (b/copy-file {:src (str class-dir "/META-INF/maven/" server-lib "/pom.xml") :target "pom.xml"})
+  (b/copy-file {:src (str class-dir "/META-INF/maven/" server-lib "/pom.properties") :target "pom.properties"})
   (println "Building jar...")
   (b/copy-dir {:src-dirs ["../lib/src" "../lib/resources" "src" "resources"]
                :target-dir class-dir})
-  (b/uber {:class-dir class-dir
-           :uber-file server-file
-           :main 'clojure-lsp.main
-           :basis (b/create-basis basis)}))
+  (b/jar {:class-dir class-dir
+          :jar-file server-file}))
 
 (defn server-install [opts]
   (server-jar opts)
   (println "Installing to local mvn repo...")
   (b/install {:basis (b/create-basis (update basis :aliases concat [:debug :test]))
-              :lib clojars-server-lib
+              :lib server-lib
               :version current-version
               :jar-file server-file
               :class-dir class-dir}))

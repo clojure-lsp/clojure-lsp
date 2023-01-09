@@ -20,7 +20,7 @@ The build may take some minutes and the result will be a `./clojure-lsp` native 
 
 ### Editor/CLI
 
-Run `bb cli-jar` for building the jar to be used with LSP protocol in a editor or CLI.
+Run `bb cli-prod-jar` for building the jar to be used with LSP protocol in a editor or CLI via `bb prod-cli`.
 
 ### JVM API
 

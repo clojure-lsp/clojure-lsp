@@ -15,6 +15,15 @@
       (into [prefix] (string/split ident-conformed #"/" 2))
       [prefix nil ident-conformed])))
 
+(defn ^:private rename-other
+  [replacement db reference]
+  (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
+        ref-doc-uri (:uri reference)
+        version (get-in db [:documents ref-doc-uri :v] 0)]
+    {:range (shared/->range (assoc reference :name-col name-start))
+     :new-text replacement
+     :text-document {:version version :uri ref-doc-uri}}))
+
 (defn ^:private rename-keyword
   [replacement
    replacement-raw
@@ -106,7 +115,7 @@
      :new-text text
      :text-document {:version version :uri ref-doc-uri}}))
 
-(defn ^:private rename-alias [replacement db reference]
+(defn ^:private rename-alias-definition [replacement db reference]
   (let [alias? (= :namespace-alias (:bucket reference))
         keyword? (contains? #{:keyword-definitions :keyword-usages} (:bucket reference))
         ref-doc-uri (:uri reference)
@@ -121,6 +130,30 @@
        :new-text (if alias? replacement (str u-prefix replacement "/" u-name))
        :text-document {:version version :uri ref-doc-uri}})))
 
+(defn ^:private rename-usages-with-alias
+  [{:keys [uri] :as element} replacement replacement-raw db references]
+  (let [new-alias (first (string/split replacement-raw #"/"))
+        old-alias (:alias (first (filter #(and (:alias %)
+                                               (= uri (:uri %))) references)))
+        alias-definition (q/find-namespace-alias-by-alias db uri old-alias)]
+    (conj
+      (mapv (fn [reference]
+              (cond
+                (= element reference)
+                {:range (shared/->range reference)
+                 :new-text replacement-raw
+                 :text-document {:version (get-in db [:documents uri :v] 0) :uri uri}}
+
+                (and (= (:uri reference) uri)
+                     (:alias reference))
+                {:range (shared/->range reference)
+                 :new-text replacement-raw
+                 :text-document {:version (get-in db [:documents (:uri reference) :v] 0) :uri (:uri reference)}}
+
+                :else
+                (rename-other replacement db reference))) references)
+      (rename-alias-definition new-alias db alias-definition))))
+
 (defn ^:private rename-local
   [replacement db reference]
   (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
@@ -134,15 +167,6 @@
       {:range (shared/->range (assoc reference :name-col name-start))
        :new-text replacement
        :text-document {:version version :uri ref-doc-uri}})))
-
-(defn ^:private rename-other
-  [replacement db reference]
-  (let [name-start (- (:name-end-col reference) (count (name (:name reference))))
-        ref-doc-uri (:uri reference)
-        version (get-in db [:documents ref-doc-uri :v] 0)]
-    {:range (shared/->range (assoc reference :name-col name-start))
-     :new-text replacement
-     :text-document {:version version :uri ref-doc-uri}}))
 
 (defn ^:private rename-defrecord
   [replacement db reference]
@@ -168,7 +192,11 @@
   [element definition references replacement replacement-raw db]
   (cond
     (identical? :namespace-alias (:bucket element))
-    (mapv (partial rename-alias replacement db) references)
+    (mapv (partial rename-alias-definition replacement db) references)
+
+    (and (identical? :var-usages (:bucket element))
+         (string/includes? replacement-raw "/"))
+    (rename-usages-with-alias element replacement replacement-raw db references)
 
     (identical? :namespace-definitions (:bucket definition))
     (mapv (partial rename-ns-definition replacement db) references)

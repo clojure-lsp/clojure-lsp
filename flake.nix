@@ -28,7 +28,7 @@
             buildCommand =
               ''
                 mkdir -p target
-                make cli-jar-for-native
+                make cli-prod-jar
                 cp clojure-lsp-standalone.jar target
               '';
             maven-extra = [{

@@ -5,36 +5,40 @@
    [clojure.string :as string]
    [clojure.tools.build.api :as b]))
 
-(def lib 'com.github.clojure-lsp/clojure-lsp)
-(def clojars-lib 'com.github.clojure-lsp/clojure-lsp-standalone)
+(def standalone-lib 'com.github.clojure-lsp/clojure-lsp-standalone)
+(def server-lib 'com.github.clojure-lsp/clojure-lsp-server)
 (def current-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 (def class-dir "target/classes")
-(def basis {:project "deps.edn"})
-(def uber-file (format "target/%s-standalone.jar" (name lib)))
+(def basis {:project "deps.edn"
+            :extra "../lib/deps.edn"})
+(def server-file "target/clojure-lsp-server.jar")
+(def standalone-file "target/clojure-lsp-standalone.jar")
 
 (defn clean [_]
   (b/delete {:path "target"}))
 
 (defn pom [opts]
-  (b/write-pom {:target ""
-                :lib clojars-lib
-                :version current-version
-                :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
-                :src-dirs ["src" "../lib/src"]
-                :resource-dirs ["resources"]
-                :scm {:tag current-version}}))
+  (let [lib (or (:lib opts) server-lib)]
+    (b/write-pom {:class-dir class-dir
+                  :lib lib
+                  :src-pom "./pom.xml"
+                  :version current-version
+                  :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
+                  :src-dirs ["src" "../lib/src"]
+                  :resource-dirs ["resources" "../lib/resources"]
+                  :scm {:tag current-version}})))
 
-(defn ^:private uber [opts]
+(defn ^:private standalone-jar [opts]
   (clean opts)
-  (pom opts)
+  (pom (assoc opts :lib standalone-lib))
   (b/copy-dir {:src-dirs ["src" "../lib/src" "resources" "../lib/resources"]
                :target-dir class-dir})
   (b/uber {:class-dir class-dir
-           :uber-file uber-file
+           :uber-file standalone-file
            :main 'clojure-lsp.main
            :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))}))
 
-(defn ^:private uber-aot [opts]
+(defn ^:private standalone-aot-jar [opts]
   (clean opts)
   (println "Building uberjar...")
   (let [basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
@@ -46,7 +50,7 @@
                     :java-opts ["-Xmx2g" "-server"]
                     :class-dir class-dir})
     (b/uber {:class-dir class-dir
-             :uber-file uber-file
+             :uber-file standalone-file
              :main 'clojure-lsp.main
              :basis basis})))
 
@@ -61,37 +65,55 @@
 
   (let [jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server"])]
     ((requiring-resolve 'deps-bin.impl.bin/build-bin)
-     {:jar uber-file
+     {:jar standalone-file
       :name "clojure-lsp"
       :jvm-opts jvm-opts
       :skip-realign true})))
 
+(defn server-jar [opts]
+  (clean opts)
+  (pom (assoc opts :lib server-lib))
+  (b/copy-file {:src (str class-dir "/META-INF/maven/" server-lib "/pom.xml") :target "pom.xml"})
+  (b/copy-file {:src (str class-dir "/META-INF/maven/" server-lib "/pom.properties") :target "pom.properties"})
+  (println "Building jar...")
+  (b/copy-dir {:src-dirs ["../lib/src" "../lib/resources" "src" "resources"]
+               :target-dir class-dir})
+  (b/jar {:class-dir class-dir
+          :jar-file server-file}))
+
+(defn server-install [opts]
+  (server-jar opts)
+  (println "Installing to local mvn repo...")
+  (b/install {:basis (b/create-basis (update basis :aliases concat [:debug :test]))
+              :lib server-lib
+              :version current-version
+              :jar-file server-file
+              :class-dir class-dir}))
+
 (defn debug-jar [opts]
-  (uber-aot (merge opts {:extra-aliases [:debug :test]
-                         :extra-dirs ["dev"]})))
-
-(def prod-jar uber-aot)
-
-(defn prod-jar-for-native [opts]
-  (uber-aot (merge opts {:extra-aliases [:native]})))
+  (standalone-jar (merge opts {:extra-aliases [:debug :test]
+                               :extra-dirs ["dev"]})))
 
 (defn debug-cli [opts]
-  (uber-aot (merge opts {:extra-aliases [:debug :test]
-                         :extra-dirs ["dev"]}))
+  (standalone-jar (merge opts {:extra-aliases [:debug :test]
+                               :extra-dirs ["dev"]}))
   (bin {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"
                    "-Djdk.attach.allowAttachSelf=true"
                    "-Dclojure.core.async.go-checking=true"]}))
 
+(defn prod-jar [opts]
+  (standalone-aot-jar (merge opts {:extra-aliases [:native]})))
+
 (defn prod-cli [opts]
-  (prod-jar opts)
+  (standalone-aot-jar opts)
   (bin {}))
 
 (defn native-cli [opts]
   (println "Building native image...")
   (if-let [graal-home (System/getenv "GRAALVM_HOME")]
     (let [jar (or (System/getenv "CLOJURE_LSP_JAR")
-                  (do (prod-jar-for-native opts)
-                      uber-file))
+                  (do (prod-jar opts)
+                      standalone-file))
           native-image (if (fs/windows?) "native-image.cmd" "native-image")
           command (->> [(str (io/file graal-home "bin" native-image))
                         "-jar" jar
@@ -115,10 +137,16 @@
     (println "Set GRAALVM_HOME env")))
 
 (defn deploy-clojars [opts]
-  (uber opts)
+  (server-jar opts)
   ((requiring-resolve 'deps-deploy.deps-deploy/deploy)
    (merge {:installer :remote
-           :artifact uber-file
+           :artifact server-file
+           :pom-file "pom.xml"}
+          opts))
+  (standalone-jar opts)
+  ((requiring-resolve 'deps-deploy.deps-deploy/deploy)
+   (merge {:installer :remote
+           :artifact standalone-file
            :pom-file "pom.xml"}
           opts))
   opts)

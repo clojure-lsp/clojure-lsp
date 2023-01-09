@@ -4,15 +4,19 @@
 
 - General
   - Bump clj-kondo to `2022.12.11-20221220.093423-5`
+  - Avoid false-positives of unused-public-var for functions used in :gen-class that starts with `-` as convention. #1443
+  - New jar available on releases: `clojure-lsp-server.jar`, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for `lein-clojure-lsp`. Any lib using `clojure-lsp-standalone.jar` should consider switch to this new jar.
   
 - Editor
   - Fix add missing import code action when there are multiple options. #1422
   - Only show completion items if no changed code is being processed, avoiding wrong completion items. #1425
   - Improve semantic tokens for defprotocol, definterface coloring as `interface` tokens.
   - Include reffered vars in completion. #1440
+  - Allow rename alias of function calls, renaming properly both function usages and alias definition.
   
 - API/CLI
   - Make diagnostics command print as json or edn. #1419
+  - Make possible starting a chan server with clojure-lsp components, useful to other clients extend.
 
 ## 2022.12.09-15.51.10
 

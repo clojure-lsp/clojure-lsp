@@ -1,6 +1,6 @@
 <img src="images/logo-dark.svg" width="180" align="right">
 
-![CI](https://img.shields.io/github/workflow/status/clojure-lsp/clojure-lsp/CI?style=flat-square)
+![CI](https://img.shields.io/github/actions/workflow/status/clojure-lsp/clojure-lsp/ci.yml?style=flat-square&branch=master)
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.clojure-lsp/clojure-lsp.svg)](https://clojars.org/com.github.clojure-lsp/clojure-lsp)
 [![cljdoc](https://cljdoc.org/badge/com.github.clojure-lsp/clojure-lsp)](https://cljdoc.org/d/com.github.clojure-lsp/clojure-lsp)
 [![Slack community](https://img.shields.io/badge/Slack-chat-blue?style=flat-square)](https://clojurians.slack.com/archives/CPABC1H61)

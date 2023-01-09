@@ -201,6 +201,29 @@
                            {:new-text "Bar" :range (h/->range use4-start-pos use4-end-pos)}]}
            result))))
 
+(deftest rename-alias-from-usages
+  (h/reset-components!)
+  (let [[def-start-pos def-end-pos] (h/load-code-and-locs (h/code "(ns some.ns)"
+                                                                  "(defn |foo| [a] 1)"))
+        [other-usage-start-pos other-usage-end-pos] (h/load-code-and-locs
+                                                      (h/code "(ns another.ns (:require [some.ns :as other-alias]))"
+                                                              "other-alias/|foo|") (h/file-uri "file:///b.clj"))
+        [alias-start-pos alias-end-pos
+         usage-1-start-pos usage-1-end-pos
+         usage-2-start-pos usage-2-end-pos] (h/load-code-and-locs
+                                              (h/code "(ns other.ns (:require [some.ns :as |my-alias|]))"
+                                                      "|my-alias/foo|"
+                                                      "(|my-alias/foo| 1)") (h/file-uri "file:///c.clj"))
+        [usage-start-r usage-start-c] usage-2-start-pos
+        result (:changes (f.rename/rename-from-position (h/file-uri "file:///c.clj") "your-alias/bar" usage-start-r usage-start-c (h/db)))]
+    (h/assert-submap
+      {h/default-uri [{:range (h/->range def-start-pos def-end-pos) :new-text "bar"}]
+       (h/file-uri "file:///b.clj") [{:range (h/->range other-usage-start-pos other-usage-end-pos) :new-text "bar"}]
+       (h/file-uri "file:///c.clj") [{:range (h/->range usage-1-start-pos usage-1-end-pos) :new-text "your-alias/bar"}
+                                     {:range (h/->range usage-2-start-pos usage-2-end-pos) :new-text "your-alias/bar"}
+                                     {:range (h/->range alias-start-pos alias-end-pos) :new-text "your-alias"}]}
+      result)))
+
 (deftest prepare-rename
   (testing "rename local var"
     (h/reset-components!)

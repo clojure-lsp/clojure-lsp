@@ -3,10 +3,15 @@
    [clj-kondo.impl.config :as kondo.config]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.logger :as logger]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.core.async :as async]))
+   [clojure.core.async :as async]
+   [clojure.string :as string]
+   [rewrite-clj.zip :as z])
+  (:gen-class))
 
 (set! *warn-on-reflection* true)
 
@@ -52,15 +57,21 @@
                 (format "Unused public var '%s/%s'" (:ns element) (:name element)))
      :type :clojure-lsp/unused-public-var}))
 
-(defn ^:private exclude-public-diagnostic-definition? [kondo-config definition]
+(defn ^:private exclude-public-diagnostic-definition? [db kondo-config definition]
   (let [kondo-config (kondo-config-for-ns kondo-config (:ns definition) (:filename definition))
         excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
         excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
-        fqsn (symbol (-> definition :ns str) (-> definition :name str))]
+        fqsn (symbol (-> definition :ns str) (-> definition :name str))
+        starts-with-dash? (string/starts-with? (:name definition) "-")]
     (or (q/exclude-public-definition? kondo-config definition)
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
         (some #(re-matches (re-pattern (str %)) (str (:defined-by definition))) excluded-defined-by-syms-regex)
-        (:export definition))))
+        (:export definition)
+        (when starts-with-dash?
+          ;; check if if namespace has :gen-class
+          (some-> (parser/zloc-of-file db (:uri definition))
+                  edit/find-namespace
+                  (z/find-next-value z/next :gen-class))))))
 
 (defn ^:private kondo-finding->diagnostic
   [{:keys [type message level row col end-row] :as finding}]
@@ -171,7 +182,7 @@
   (publish-all-diagnostics!* components (map empty-diagnostics-of-uri uris)))
 
 (defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
-  (let [exclude-def? (partial exclude-public-diagnostic-definition? kondo-config)
+  (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
         var-definitions (->> (q/find-all-var-definitions narrowed-db)
                              (remove exclude-def?))
         var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces

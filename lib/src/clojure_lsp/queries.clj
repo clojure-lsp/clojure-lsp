@@ -15,11 +15,14 @@
 
 ;;;; Filter analysis, using dep-graph
 
+(defn external-analysis [{:keys [analysis] :as db}]
+  (medley/remove-keys #(dep-graph/uri-internal? db %) analysis))
+
 (defn internal-analysis [{:keys [analysis] :as db}]
   (medley/filter-keys #(dep-graph/uri-internal? db %) analysis))
 
-(defn external-analysis [{:keys [analysis] :as db}]
-  (medley/remove-keys #(dep-graph/uri-internal? db %) analysis))
+(defn internal-plus-local-analysis [db uri]
+  (assoc (internal-analysis db) uri (get-in db [:analysis uri])))
 
 (defn ^:private uris-analysis [{:keys [analysis]} uris]
   (select-keys analysis uris))
@@ -466,13 +469,16 @@
           (ns-and-dependents-analysis db (:ns var-definition)))))
 
 (defmethod find-references :keywords
-  [db {:keys [ns name] :as _keyword} include-declaration?]
-  (into []
-        (comp
-          (if include-declaration? xf-analysis->keywords xf-analysis->keyword-usages)
-          (xf-same-fqn ns name)
-          (medley/distinct-by (juxt :uri :name :row :col)))
-        (internal-analysis db)))
+  [db {:keys [ns name uri] :as keyword-element} include-declaration?]
+  (let [analysis (if (contains? (elem-langs keyword-element) :edn)
+                   (internal-plus-local-analysis db uri)
+                   (internal-analysis db))]
+    (into []
+          (comp
+            (if include-declaration? xf-analysis->keywords xf-analysis->keyword-usages)
+            (xf-same-fqn ns name)
+            (medley/distinct-by (juxt :uri :name :row :col)))
+          analysis)))
 
 (defmethod find-references :local
   [db {:keys [id name uri] :as element} include-declaration?]

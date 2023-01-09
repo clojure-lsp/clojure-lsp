@@ -21,6 +21,24 @@
     (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
     (is (= 2 (count (q/internal-analysis (h/db)))))))
 
+(deftest internal-plus-local-analysis
+  (testing "when dependency-scheme is zipfile"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "zipfile:///some.jar::some-file.clj"))
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "zipfile:///some.jar::other-file.clj"))
+    (is (= 2 (count (q/internal-plus-local-analysis (h/db) (h/file-uri "file:///a.clj")))))
+    (is (= 3 (count (q/internal-plus-local-analysis (h/db) (h/file-uri "zipfile:///some.jar::some-file.clj"))))))
+  (testing "when dependency-scheme is jar"
+    (swap! (h/db*) shared/deep-merge {:settings {:dependency-scheme "jar"}})
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///a.clj"))
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///b.clj"))
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/some-file.clj"))
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "jar:file:///some.jar!/other-file.clj"))
+    (is (= 2 (count (q/internal-plus-local-analysis (h/db) (h/file-uri "file:///a.clj")))))
+    (is (= 3 (count (q/internal-plus-local-analysis (h/db) (h/file-uri "zipfile:///some.jar::some-file.clj")))))))
+
 (deftest external-analysis
   (testing "when dependency-scheme is zipfile"
     (h/reset-components!)
@@ -491,6 +509,20 @@
       (h/assert-submaps
         '[]
         (q/find-references-from-cursor (h/db) (h/file-uri "file:///b.clj") def-r def-c false)))))
+
+(deftest find-references-in-edn
+  (h/load-code-and-locs (h/code "(ns b)"
+                                "{:a 1}") (h/file-uri "file:///b.clj"))
+  (let [[[kwd-r kwd-c]]
+        (h/load-code-and-locs (h/code "{:a 1"
+                                      " :b {|:a :foo}}") (h/file-uri "file:///a.edn"))]
+
+    (testing "from keyword outside source-path consider source-paths + uri analysis"
+      (h/assert-submaps
+        [{:name "a" :name-row 2 :name-col 2 :name-end-row 2 :name-end-col 4 :bucket :keyword-usages :uri (h/file-uri "file:///b.clj")}
+         {:name "a" :name-row 1 :name-col 2 :name-end-row 1 :name-end-col 4 :bucket :keyword-usages :uri (h/file-uri "file:///a.edn")}
+         {:name "a" :name-row 2 :name-col 6 :name-end-row 2 :name-end-col 8 :bucket :keyword-usages :uri (h/file-uri "file:///a.edn")}]
+        (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.edn") kwd-r kwd-c false)))))
 
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"

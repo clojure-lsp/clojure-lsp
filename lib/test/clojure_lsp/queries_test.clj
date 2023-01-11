@@ -572,6 +572,16 @@
      {:name 'bar :ns 'bar :col 10}
      (q/find-definition-from-cursor db (h/file-uri "file:///a.clj") bar-r bar-c))))
 
+(deftest find-definition-from-cursor-with-symbol-in-edn-file
+  (h/load-code-and-locs "(ns exec-ns) (defn foo [])" (h/file-uri "file:///exec_ns.clj"))
+  (let [code (h/code "{:aliases {:foo {:exec-fn |exec-ns/foo}}}")
+        [[exec-fn-r exec-fn-c]]
+        (h/load-code-and-locs code (h/file-uri "file:///deps.edn"))
+        db (h/db)]
+    (h/assert-submap
+     {:name 'foo :ns 'exec-ns :row 1 :col 27}
+     (q/find-definition-from-cursor db (h/file-uri "file:///deps.edn") exec-fn-r exec-fn-c))))
+
 (deftest find-definition-from-cursor-when-duplicate-from-external-analysis
   (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "zipfile:///some.jar::some-jar.clj")
         _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "file:///a.clj"))

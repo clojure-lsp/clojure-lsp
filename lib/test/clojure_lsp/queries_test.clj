@@ -579,7 +579,7 @@
         (h/load-code-and-locs code (h/file-uri "file:///deps.edn"))
         db (h/db)]
     (h/assert-submap
-     {:name 'foo :ns 'exec-ns :row 1 :col 27}
+     {:name 'foo :ns 'exec-ns :row 1 :col 14}
      (q/find-definition-from-cursor db (h/file-uri "file:///deps.edn") exec-fn-r exec-fn-c))))
 
 (deftest find-definition-from-cursor-when-duplicate-from-external-analysis

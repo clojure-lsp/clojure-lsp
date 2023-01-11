@@ -261,9 +261,19 @@
   [db quoted-symbol]
   (if (:to quoted-symbol)
     (find-definition db (assoc quoted-symbol :bucket :var-usages))
-    (let [sym (:symbol quoted-symbol)]
-      (find-definition db (assoc quoted-symbol :bucket :var-usages
-                                 :to (symbol (namespace sym)))))))
+    (let [sym (:symbol quoted-symbol)
+          lang (:lang quoted-symbol)
+          lang (if (= :edn lang)
+                 ;; when referring to qualified-symbols in edn, pretend it's
+                 ;; referenced from JVM Clojure
+                 :clj
+                 lang)]
+      (find-definition db
+                       (assoc quoted-symbol
+                              :bucket :var-usages
+                              ;; infer namespace from symbol
+                              :to (symbol (namespace sym))
+                              :lang lang)))))
 
 (defmethod find-definition :local-usages
   [db {:keys [id uri] :as _local-usage}]

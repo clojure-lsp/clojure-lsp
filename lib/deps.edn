@@ -9,7 +9,9 @@
         medley/medley {:mvn/version "1.4.0"}
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
         clj-kondo/clj-kondo {:mvn/version "2022.12.11-20230111.135117-16"
-                             #_#_:local/root "../../clj-kondo"}
+                             #_#_:local/root "../../clj-kondo"
+                             :exclude [com.cognitect/transit-clj
+                                       babashka/fs]}
         com.fabiodomingues/clj-depend {:mvn/version "0.6.1"}
         com.cognitect/transit-clj {:mvn/version "1.0.329"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}

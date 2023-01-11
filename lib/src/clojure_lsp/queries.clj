@@ -5,8 +5,7 @@
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
-   [medley.core :as medley]
-   [clojure.string :as str]))
+   [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
 
@@ -537,25 +536,12 @@
   (find-first (xf-under-cursor line column)
               (get-in db [:analysis uri :locals])))
 
-(declare elt db)
-
 (defn find-definition-from-cursor [db uri row col]
   (try
     (when-let [element (find-element-under-cursor db uri row col)]
       (find-definition db element))
     (catch Throwable e
       (logger/error e "can't find definition"))))
-
-(comment
-
-  (def db nil)
-  (def elt nil)
-
-  'clojure.core/inc
-
-  (find-definition db elt)
-
-  )
 
 (defn find-declaration-from-cursor [db uri row col]
   (try

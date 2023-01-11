@@ -156,8 +156,6 @@
     {}
     analysis))
 
-'clojure.core/inc
-
 (defn ^:private normalize
   "Put kondo result in a standard format, with `analysis` normalized and
   `analysis` and `findings` indexed by uri."

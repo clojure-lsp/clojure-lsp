@@ -5,7 +5,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
-   [medley.core :as medley]))
+   [medley.core :as medley]
+   [clojure.string :as str]))
 
 (set! *warn-on-reflection* true)
 
@@ -256,6 +257,16 @@
     ;; Fallback to navigate from clojure to clojurescript vars, see #1403
     (when-not (:fallbacking? var-usage)
       (find-definition db (assoc var-usage :lang :cljs :fallbacking? true)))))
+
+(defmethod find-definition :symbols
+  [db quoted-symbol]
+  (def q quoted-symbol)
+  (if (:to quoted-symbol)
+    (find-definition db (assoc quoted-symbol :bucket :var-usages))
+    (let [sym (:symbol quoted-symbol)]
+      (find-definition db (assoc quoted-symbol :bucket :var-usages
+                                 ;; infer namespace from symbol
+                                 :to (symbol (namespace sym)))))))
 
 (defmethod find-definition :local-usages
   [db {:keys [id uri] :as _local-usage}]
@@ -528,12 +539,25 @@
   (find-first (xf-under-cursor line column)
               (get-in db [:analysis uri :locals])))
 
+(declare elt db)
+
 (defn find-definition-from-cursor [db uri row col]
   (try
     (when-let [element (find-element-under-cursor db uri row col)]
       (find-definition db element))
     (catch Throwable e
       (logger/error e "can't find definition"))))
+
+(comment
+
+  (def db nil)
+  (def elt nil)
+
+  'clojure.core/inc
+
+  (find-definition db elt)
+
+  )
 
 (defn find-declaration-from-cursor [db uri row col]
   (try
@@ -569,7 +593,10 @@
                          'cljs.core/deftype} (:defined-by %))
                       (string/starts-with? (str (:name %)) "->"))))))
 
+'clojure.core/inc
+
 (defn find-var-definitions [db uri include-private?]
+  (def _uri uri)
   (into []
         (xf-var-defs include-private?)
         (get-in db [:analysis uri :var-definitions])))

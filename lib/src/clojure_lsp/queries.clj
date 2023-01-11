@@ -260,12 +260,10 @@
 
 (defmethod find-definition :symbols
   [db quoted-symbol]
-  (def q quoted-symbol)
   (if (:to quoted-symbol)
     (find-definition db (assoc quoted-symbol :bucket :var-usages))
     (let [sym (:symbol quoted-symbol)]
       (find-definition db (assoc quoted-symbol :bucket :var-usages
-                                 ;; infer namespace from symbol
                                  :to (symbol (namespace sym)))))))
 
 (defmethod find-definition :local-usages

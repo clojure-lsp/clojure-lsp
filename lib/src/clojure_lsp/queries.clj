@@ -577,10 +577,7 @@
                          'cljs.core/deftype} (:defined-by %))
                       (string/starts-with? (str (:name %)) "->"))))))
 
-'clojure.core/inc
-
 (defn find-var-definitions [db uri include-private?]
-  (def _uri uri)
   (into []
         (xf-var-defs include-private?)
         (get-in db [:analysis uri :var-definitions])))

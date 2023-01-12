@@ -2116,9 +2116,8 @@
 <li>General</li>
 <li>Bump clj-kondo to <code>2022.12.11-20230111.135117-16</code></li>
 <li>Avoid false-positives of unused-public-var for functions used in :gen-class that starts with <code>-</code> as convention. #1443</li>
-<li>New jar available on releases: <code>clojure-lsp-server.jar</code>, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for <code>lein-clojure-lsp</code>. Any lib using <code>clojure-lsp-standalone.jar</code> should consider switch to this new jar.</li>
 <li>
-<p>Navigation for quoted symbols like <code>'clojure.core/inc</code> and symbols mentioned in <code>.edn</code> files #1446</p>
+<p>New jar available on releases: <code>clojure-lsp-server.jar</code>, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for <code>lein-clojure-lsp</code>. Any lib using <code>clojure-lsp-standalone.jar</code> should consider switch to this new jar.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2128,8 +2127,9 @@
 <li>Improve semantic tokens for defprotocol, definterface coloring as <code>interface</code> tokens.</li>
 <li>Include reffered vars in completion. #1440</li>
 <li>Allow rename alias of function calls, renaming properly both function usages and alias definition.</li>
+<li>Add support for keyword analysis in edn files, allowing find-references, document highlight and other lsp features to keywords.</li>
 <li>
-<p>Add support for keyword analysis in edn files, allowing find-references, document highlight and other lsp features to keywords.</p>
+<p>Navigation for quoted symbols like <code>'clojure.core/inc</code> and symbols mentioned in <code>.edn</code> files #1446</p>
 </li>
 <li>
 <p>API/CLI</p>

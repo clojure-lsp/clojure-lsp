@@ -113,7 +113,7 @@
                                   :alias-end-row :name-end-row
                                   :alias-end-col :name-end-col}))))
 
-    (:locals :local-usages :java-class-usages)
+    (:locals :local-usages :java-class-usages :symbols)
     [(element-with-fallback-name-position element)]
 
     :keywords
@@ -242,7 +242,8 @@
    :instance-invocations true
    :java-class-usages true
    :context [:clojure.test
-             :re-frame.core]})
+             :re-frame.core]
+   :symbols true})
 
 (defn ^:private config-for-paths [paths file-analyzed-fn db]
   (-> {:cache true

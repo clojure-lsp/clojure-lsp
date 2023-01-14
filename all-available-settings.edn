@@ -3,7 +3,7 @@
 {:source-paths #{"src" "test"} ;; auto-resolved for deps.edn, project.clj or bb.edn projects
  :source-aliases #{:dev :test}
  :project-specs [] ;; Check the default at clojure-lsp.classpath/default-project-specs
- :source-paths-ignore-regex ["resources.*" "target.*"]
+ :source-paths-ignore-regex ["target.*"]
  :lint-project-files-after-startup? true
  :notify-references-on-file-change true
  :compute-external-file-changes true

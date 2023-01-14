@@ -113,6 +113,8 @@
 (def windows-os?
   (.contains (System/getProperty "os.name") "Windows"))
 
+(def valid-langs #{:clj :cljs :cljc :edn})
+
 (defn uri->file-type [uri]
   (cond
     (string/ends-with? uri ".cljs") :cljs

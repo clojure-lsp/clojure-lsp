@@ -259,7 +259,9 @@
          seq)
     :else
     (into #{}
-          (remove #(exclude-ns? options %))
+          (comp
+            (filter #(contains? shared/valid-langs (shared/uri->file-type %)))
+            (remove #(exclude-ns? options %)))
           (dep-graph/internal-uris db))))
 
 (defn ^:private analyze-project-and-deps!* [options components]

@@ -128,7 +128,7 @@
 (defn ^:private lint
   ([linter] (lint linter {}))
   ([linter {:keys [dry?]}]
-   (clj! "cli" (cond-> ["-M:run" linter "--ns-exclude-regex" "sample-test.*" "--project-root" "../"]
+   (clj! "cli" (cond-> ["-M:run" linter "--ns-exclude-regex" ".*sample-test.*" "--project-root" "../"]
                  dry? (conj "--dry")))))
 
 (defn lint-clean [] (lint "clean-ns" {:dry? true}))

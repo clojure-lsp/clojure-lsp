@@ -10,7 +10,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def default-source-path-ignore-regexs ["resources.*" "target.*"])
+(def default-source-path-ignore-regexs ["target.*"])
 
 (defn read-edn-file [^java.io.File file]
   (try

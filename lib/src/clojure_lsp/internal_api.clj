@@ -259,9 +259,8 @@
          seq)
     :else
     (into #{}
-          (comp (remove #(exclude-ns? options %))
-                (mapcat #(dep-graph/ns-internal-uris db %)))
-          (dep-graph/internal-ns-names db))))
+          (remove #(exclude-ns? options %))
+          (dep-graph/internal-uris db))))
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)

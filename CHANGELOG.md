@@ -6,6 +6,7 @@
   - Bump clj-kondo to `2022.12.11-20230111.135117-16`
   - Avoid false-positives of unused-public-var for functions used in :gen-class that starts with `-` as convention. #1443
   - New jar available on releases: `clojure-lsp-server.jar`, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for `lein-clojure-lsp`. Any lib using `clojure-lsp-standalone.jar` should consider switch to this new jar.
+  - Change `:source-paths-ignore-regex` default value to `["target.*"]`, removing resource folders. #1452
 
 - Editor
   - Fix add missing import code action when there are multiple options. #1422
@@ -19,6 +20,7 @@
 - API/CLI
   - Make diagnostics command print as json or edn. #1419
   - Make possible starting a chan server with clojure-lsp components, useful to other clients extend.
+  - Consider edn files when linting project, allowing to format edn files. #1452
 
 ## 2022.12.09-15.51.10
 

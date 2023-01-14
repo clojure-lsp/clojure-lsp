@@ -91,7 +91,8 @@
 (def xf-analysis->protocol-impls (xf-analysis->bucket-elems :protocol-impls))
 (def xf-analysis->var-definitions (xf-analysis->bucket-elems :var-definitions))
 (def xf-analysis->var-usages (xf-analysis->bucket-elems :var-usages))
-(def xf-analysis->vars (xf-analysis->buckets-elems :var-definitions :var-usages))
+(def xf-analysis->symbols (xf-analysis->bucket-elems :symbols))
+(def xf-analysis->vars (xf-analysis->buckets-elems :var-definitions :var-usages :symbols))
 
 (defn ^:private safe-equal?
   "Fast equals for string and symbols."
@@ -518,6 +519,39 @@
             (xf-same-fqn protocol-ns method-name :to)
             (medley/distinct-by (juxt :uri :name :row :col)))
           (ns-and-dependents-analysis db protocol-ns))))
+
+(defmethod find-references :symbols
+  [db quoted-symbol include-declaration?]
+  (let [analysis (if (contains? (elem-langs quoted-symbol) :edn)
+                   (internal-plus-local-analysis db (:uri quoted-symbol))
+                   (internal-analysis db))
+        lang (:lang quoted-symbol)
+        lang (if (= :edn lang)
+                     ;; when referring to qualified-symbols in edn, pretend it's
+                     ;; referenced from JVM Clojure
+               :clj
+               lang)
+        name (:name quoted-symbol)
+        original-to (:to quoted-symbol)
+        to (or original-to
+               (symbol (namespace (:symbol quoted-symbol))))]
+    (concat
+      (when include-declaration?
+        [quoted-symbol])
+
+      ;; symbols references
+      (into []
+            (comp
+              xf-analysis->symbols
+              (xf-same-fqn original-to name)
+              (medley/distinct-by (juxt :uri :name :row :col)))
+            analysis)
+
+      ;; var-usages references
+      (find-references db (assoc quoted-symbol
+                                 :bucket :var-usages
+                                 :lang lang
+                                 :to to) include-declaration?))))
 
 (defmethod find-references :default
   [_db element _]

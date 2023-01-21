@@ -32,10 +32,10 @@
   #{:deprecated-var})
 
 (defn ^:private kondo-config-for-ns [kondo-config ns-name filename]
-  (let [ns-group (kondo.config/ns-group kondo-config ns-name filename)
-        config-in-ns (get (:config-in-ns kondo-config) ns-group)
-        kondo-config (if config-in-ns
-                       (kondo.config/merge-config! kondo-config config-in-ns)
+  (let [ns-groups (cons ns-name (kondo.config/ns-groups kondo-config ns-name filename))
+        configs-in-ns (seq (keep #(get (:config-in-ns kondo-config) %) ns-groups))
+        kondo-config (if configs-in-ns
+                       (apply kondo.config/merge-config! kondo-config configs-in-ns)
                        kondo-config)]
     kondo-config))
 

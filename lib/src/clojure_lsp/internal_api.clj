@@ -311,8 +311,8 @@
                 (map (fn [{:keys [message severity range code]}]
                        (cond-> (format "%s:%s:%s: %s: [%s] %s"
                                        file-output
-                                       (-> range :start :line)
-                                       (-> range :start :character)
+                                       (-> range :start :line inc)
+                                       (-> range :start :character inc)
                                        (name (f.diagnostic/severity->level severity))
                                        code
                                        message)

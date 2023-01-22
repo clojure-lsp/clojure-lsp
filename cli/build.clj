@@ -90,6 +90,15 @@
               :jar-file server-file
               :class-dir class-dir}))
 
+(defn standalone-install [opts]
+  (standalone-jar opts)
+  (println "Installing to local mvn repo...")
+  (b/install {:basis (b/create-basis (update basis :aliases concat [:debug :test]))
+              :lib standalone-lib
+              :version current-version
+              :jar-file standalone-file
+              :class-dir class-dir}))
+
 (defn debug-jar [opts]
   (standalone-aot-jar (merge opts {:extra-aliases [:debug :test]
                                    :extra-dirs ["dev"]})))

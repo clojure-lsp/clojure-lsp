@@ -20,6 +20,7 @@
          lib-jar make/lib-jar
          server-jar make/server-jar
          server-install make/server-install
+         standalone-install make/standalone-install
          cli-debug-jar make/cli-debug-jar
          cli-prod-jar make/cli-prod-jar
 

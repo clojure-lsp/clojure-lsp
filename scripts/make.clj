@@ -78,6 +78,11 @@
   []
   (build "cli" "server-install"))
 
+(defn standalone-install
+  "Build `cli` standalone jar and install."
+  []
+  (build "cli" "standalone-install"))
+
 (defn cli-debug-jar []
   (build "cli" "debug-jar")
   (mv-here "cli/target/clojure-lsp-standalone.jar"))

@@ -33,6 +33,7 @@
 
 (defn ^:private resolve-cljfmt-config [db]
   (cljfmt.main/merge-default-options
+    cljfmt.main/default-options
     (resolve-user-cljfmt-config db)))
 
 (def memoize-ttl-threshold-milis 3000)

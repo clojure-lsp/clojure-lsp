@@ -32,7 +32,7 @@
             (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file))))))))
 
 (defn ^:private resolve-cljfmt-config [db]
-  (cljfmt.main/merge-default-options
+  (cljfmt.main/merge-options
     cljfmt.main/default-options
     (resolve-user-cljfmt-config db)))
 

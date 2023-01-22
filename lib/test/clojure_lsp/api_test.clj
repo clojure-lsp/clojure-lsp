@@ -131,7 +131,7 @@
                                      :namespace '[sample-test.api.diagnostics.a]
                                      :raw? true})]
         (is (= 3 (:result-code result)))
-        (is (= (str (h/file-path "src/sample_test/api/diagnostics/a.clj") ":2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var") (apply (:message-fn result) [])))
+        (is (= (str (h/file-path "src/sample_test/api/diagnostics/a.clj") ":3:1: error: [unresolved-symbol] Unresolved symbol: some-unknown-var") (apply (:message-fn result) [])))
         (is (= 1 (count (:diagnostics result))))))
     (testing "unused-public-var custom lint fn returning only info"
       (clean-api-db!)
@@ -139,7 +139,7 @@
                                      :namespace '[sample-test.api.diagnostics.d]
                                      :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= (str (h/file-path "src/sample_test/api/diagnostics/d.clj") ":2:6: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'") (apply (:message-fn result) [])))
+        (is (= (str (h/file-path "src/sample_test/api/diagnostics/d.clj") ":3:7: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'") (apply (:message-fn result) [])))
         (is (= 1 (count (:diagnostics result))))))
     (testing "when namespace does not exists"
       (clean-api-db!)
@@ -156,7 +156,7 @@
                                      :namespace '[sample-test.api.diagnostics.a]
                                      :raw? true})]
         (is (= 3 (:result-code result)))
-        (is (= (format "%s:2:0: error: [unresolved-symbol] Unresolved symbol: some-unknown-var"
+        (is (= (format "%s:3:1: error: [unresolved-symbol] Unresolved symbol: some-unknown-var"
                        (.getCanonicalPath (io/file "../cli/integration-test/sample-test/src/sample_test/api/diagnostics/a.clj")))
                (apply (:message-fn result) [])))
         (is (= 1 (count (:diagnostics result))))))

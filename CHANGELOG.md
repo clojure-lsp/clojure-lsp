@@ -21,6 +21,7 @@
   - Make diagnostics command print as json or edn. #1419
   - Make possible starting a chan server with clojure-lsp components, useful to other clients extend.
   - Consider edn files when linting project, allowing to format edn files. #1452
+  - Report diagnostics lines and columns as 1 based, not 0 like LSP, following clj-kondo standard. #1459
 
 ## 2022.12.09-15.51.10
 

@@ -8,6 +8,7 @@
   - New jar available on releases: `clojure-lsp-server.jar`, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for `lein-clojure-lsp`. Any lib using `clojure-lsp-standalone.jar` should consider switch to this new jar.
   - Change `:source-paths-ignore-regex` default value to `["target.*"]`, removing resource folders. #1452
   - Bump cljfmt to 0.9.2
+  - Bump lsp4clj to 1.7.0
 
 - Editor
   - Fix add missing import code action when there are multiple options. #1422

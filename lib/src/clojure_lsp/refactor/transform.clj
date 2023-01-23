@@ -918,8 +918,8 @@
             (create-test-for-source-path uri function-name-loc chosen-source-path db)
             (logger/error "No response from client on source-path.")))
 
-        ;; No source paths besides current one
-        :else nil))))
+        :else {:error {:message "No source-paths besides current one found"
+                       :code :invalid-params}}))))
 
 (defn suppress-diagnostic [zloc diagnostic-code]
   (let [form-zloc (or (z/up (edit/find-op zloc))

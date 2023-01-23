@@ -17,6 +17,7 @@
   - Allow rename alias of function calls, renaming properly both function usages and alias definition.
   - Add support for keyword analysis in edn files, allowing find-references, document highlight and other lsp features to keywords.
   - find-definition and references for quoted symbols like `'clojure.core/inc` and symbols mentioned in `.edn` files. #1446
+  - Show error messages when can't apply edits after commands. #1448
 
 - API/CLI
   - Make diagnostics command print as json or edn. #1419

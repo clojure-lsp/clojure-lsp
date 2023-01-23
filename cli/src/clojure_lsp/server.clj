@@ -392,13 +392,10 @@
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceFeatures
 
 (defmethod lsp.server/receive-request "workspace/executeCommand" [_ components params]
-  (future
-    (try
-      (handler/execute-command components params)
-      (catch Throwable e
-        (logger/error e)
-        (throw e))))
-  nil)
+  (->> params
+       (handler/execute-command components)
+       (conform-or-log ::coercer/any-or-error)
+       eventually))
 
 (defmethod lsp.server/receive-notification "workspace/didChangeConfiguration" [_ _components params]
   (logger/warn params))

@@ -364,14 +364,17 @@
     (shared/logging-task
       :execute-command
       ;; TODO move components upper to a common place
-      (when-let [{:keys [edit show-document-after-edit]} (refactor components command arguments)]
-        ;; waits for client to apply edit before showing doc/moving cursor
-        (producer/publish-workspace-edit producer edit)
-        (when show-document-after-edit
-          (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
-                                                            shared/full-file-range))
-               (producer/show-document-request producer)))
-        edit))))
+      (when-let [{:keys [edit show-document-after-edit error] :as result} (refactor components command arguments)]
+        (if error
+          result
+          (do
+            ;; waits for client to apply edit before showing doc/moving cursor
+            (producer/publish-workspace-edit producer edit)
+            (when show-document-after-edit
+              (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
+                                                                shared/full-file-range))
+                   (producer/show-document-request producer)))
+            edit))))))
 
 (defn hover [components {:keys [text-document position]}]
   (shared/logging-task

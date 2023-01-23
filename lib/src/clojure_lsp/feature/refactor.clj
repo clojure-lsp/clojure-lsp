@@ -170,9 +170,14 @@
       (:no-op? result)
       nil
 
+      (:error result)
+      result
+
       (and (not loc)
            (not= :clean-ns refactoring))
-      (logger/warn (str "Could not find a form at this location. row " row " col " col " file " uri))
+      (do (logger/warn (str "Could not find a form at this location. row " row " col " col " file " uri))
+          {:error {:message "Could not find a form at this location."
+                   :code :invalid-params}})
 
       (map? result)
       (let [{:keys [changes-by-uri resource-changes show-document-after-edit]} result
@@ -190,7 +195,12 @@
       {:edit (refactor-client-seq-changes uri version result db)}
 
       (empty? result)
-      (logger/warn refactoring "made no changes" (z/string loc))
+      (do (logger/warn refactoring "made no changes" (z/string loc))
+          {:error {:message "Nothing to change."
+                   :code :invalid-request}})
 
       :else
-      (logger/warn (str "Could not apply " refactoring " to form: " (z/string loc))))))
+      (do
+        (logger/warn (str "Could not apply " refactoring " to form: " (z/string loc)))
+        {:error {:message "Could not apply refactor."
+                 :code :invalid-request}}))))

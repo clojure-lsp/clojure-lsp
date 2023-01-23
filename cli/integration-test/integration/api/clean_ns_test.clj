@@ -17,7 +17,7 @@
     (with-open [rdr (lsp/cli! "clean-ns"
                               "--project-root" h/root-project-path
                               "--namespace" "sample-test.api.clean-ns.a")]
-      (is (h/string= "Cleared 1 namespaces\n" (slurp rdr)))
+      (is (h/string= "Cleaned 1 namespaces\n" (slurp rdr)))
       (is (h/string= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text))
   (testing "passing multiple namespaces but only one is cleanable"
@@ -25,7 +25,7 @@
                               "--project-root" h/root-project-path
                               "--namespace" "sample-test.api.clean-ns.b"
                               "--namespace" "sample-test.api.clean-ns.a")]
-      (is (h/string= "Cleared 1 namespaces\n" (slurp rdr)))
+      (is (h/string= "Cleaned 1 namespaces\n" (slurp rdr)))
       (is (h/string= a-expected-text (slurp a-subject-path))))
     (spit a-subject-path a-subject-text))
   (testing "when running with dry"

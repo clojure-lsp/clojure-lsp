@@ -9,6 +9,7 @@
   - Change `:source-paths-ignore-regex` default value to `["target.*"]`, removing resource folders. #1452
   - Bump cljfmt to 0.9.2
   - Bump lsp4clj to 1.7.0
+  - Support `:style/indent` metadata for indentation with cljfmt #1420
 
 - Editor
   - Fix add missing import code action when there are multiple options. #1422

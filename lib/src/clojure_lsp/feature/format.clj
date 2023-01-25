@@ -4,6 +4,7 @@
    [cljfmt.main :as cljfmt.main]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -31,10 +32,77 @@
               (read-string (slurp cljfmt-config-file)))
             (edn/read-string {:readers {'re re-pattern}} (slurp cljfmt-config-file))))))))
 
+(defn ^:private arg-spec->cljfmt-arg [index argspec]
+  (letfn [(depth [x]
+            (cond
+              (vector? x)      (inc (depth (first x)))
+              (or (number? x)
+                  (= :defn x)) 0
+              :else            -1000))]
+    (let [d (depth argspec)]
+      (when-not (neg? d)
+        [:inner d index]))))
+
+(defn ^:private style-indent->cljfmt-spec
+  "Converts Cider's `:style/indent` metadata into a cljfmt `:indents` spec.
+
+  See the details at https://docs.cider.mx/cider/indent_spec.html but a quick sketch follows.
+  - Top-level numbers or keywords are shorthand for [x].
+  - The first element of the list is a number, `:defn` or `:form`.
+    - Numbers give the number of special args (`[:block N]` in cljfmt)
+    - `:defn` means indent like a `defn` (`[:inner 0]` in cljfmt)
+    - `:form` means indent like a normal `(f a b)` form.
+  - Each following value is a nested indent spec for the argument at that position.
+    - cljfmt doesn't support full nesting, but it can approximate with `[:inner depth pos]`.
+    - The final spec applies to all args; this corresponds to an `[:inner depth]` with no index."
+  [spec]
+  (let [[sym & args]        (if (vector? spec)
+                              spec
+                              [spec])
+        sym-spec            (cond
+                              (number? sym) [:block sym]
+                              (= sym :defn) [:inner 0])
+        arg-specs           (keep-indexed arg-spec->cljfmt-arg args)
+        [tk td ti :as tail] (last arg-specs)]
+    (->> (concat (when sym-spec [sym-spec])
+                 (butlast arg-specs)
+                 ;; The last arg spec in :style/indent applies to all remaining args.
+                 ;; So if it generated a [:inner depth index], strip off the index.
+                 ;; But only some args generate arg-specs, and there might be no args at all.
+                 (cond
+                   ;; Last arg generated [:inner depth index], remove the index
+                   (and (= tk :inner)
+                        (= ti (dec (count args)))) [[:inner td]]
+                   ;; Last argspec doesn't match the last arg.
+                   tail [tail]
+                   ;; No argspecs at all.
+                   :else nil))
+         vec
+         not-empty)))
+
+(defn ^:private extract-style-indent-metadata [db]
+  {:indents (into {}
+                  (comp q/xf-analysis->var-definitions
+                        (keep (fn [var-def]
+                                (when-let [indent (some-> var-def
+                                                          :meta
+                                                          :style/indent
+                                                          style-indent->cljfmt-spec)]
+                                  [(if (:macro var-def)
+                                     (:name var-def)
+                                     (symbol (name (:ns   var-def))
+                                             (name (:name var-def))))
+                                   indent]))))
+                  (:analysis db))})
+
 (defn ^:private resolve-cljfmt-config [db]
-  (cljfmt.main/merge-options
-    cljfmt.main/default-options
-    (resolve-user-cljfmt-config db)))
+  (-> cljfmt.main/default-options
+      (cljfmt.main/merge-options (resolve-user-cljfmt-config db))
+      (cljfmt.main/merge-options (extract-style-indent-metadata db))
+      ;; There is a bug in cljfmt where the namespace's aliases are ignored if
+      ;; :alias-map is provided. This avoids the bug in the common case where no
+      ;; :alias-map is needed.
+      (update :alias-map not-empty)))
 
 (def memoize-ttl-threshold-milis 3000)
 

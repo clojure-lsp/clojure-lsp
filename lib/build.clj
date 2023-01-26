@@ -16,10 +16,14 @@
 (defn pom [opts]
   (b/write-pom {:class-dir class-dir
                 :lib lib
+                :src-pom "./pom.xml"
                 :version current-version
                 :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
                 :src-dirs ["src"]
-                :scm {:tag current-version}}))
+                :resource-dirs ["resources"]
+                :scm {:tag current-version}})
+  (b/copy-file {:src (str class-dir "/META-INF/maven/" lib "/pom.xml") :target "pom.xml"})
+  (b/copy-file {:src (str class-dir "/META-INF/maven/" lib "/pom.properties") :target "pom.properties"}))
 
 (defn jar [opts]
   (clean nil)

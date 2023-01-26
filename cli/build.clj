@@ -26,7 +26,9 @@
                   :basis (b/create-basis (update basis :aliases concat (:extra-aliases opts)))
                   :src-dirs ["src" "../lib/src"]
                   :resource-dirs ["resources" "../lib/resources"]
-                  :scm {:tag current-version}})))
+                  :scm {:tag current-version}})
+    (b/copy-file {:src (str class-dir "/META-INF/maven/" lib "/pom.xml") :target "pom.xml"})
+    (b/copy-file {:src (str class-dir "/META-INF/maven/" lib "/pom.properties") :target "pom.properties"})))
 
 (defn ^:private standalone-jar [opts]
   (clean opts)
@@ -73,8 +75,6 @@
 (defn server-jar [opts]
   (clean opts)
   (pom (assoc opts :lib server-lib))
-  (b/copy-file {:src (str class-dir "/META-INF/maven/" server-lib "/pom.xml") :target "pom.xml"})
-  (b/copy-file {:src (str class-dir "/META-INF/maven/" server-lib "/pom.properties") :target "pom.properties"})
   (println "Building jar...")
   (b/copy-dir {:src-dirs ["../lib/src" "../lib/resources" "src" "resources"]
                :target-dir class-dir})

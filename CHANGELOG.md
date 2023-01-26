@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023.01.26-11.08.16
+
 - General
   - Bump clj-kondo to `2023.01.20`
   - Avoid false-positives of unused-public-var for functions used in :gen-class that starts with `-` as convention. #1443

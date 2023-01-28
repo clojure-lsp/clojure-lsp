@@ -18,7 +18,7 @@
         org.benf/cfr {:mvn/version "0.152"}
 
         babashka/fs {:mvn/version "0.2.12"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.7.0"
+        com.github.clojure-lsp/lsp4clj {:mvn/version "1.7.1"
                                         #_#_:local/root "../../lsp4clj"
                                         :exclusions [funcool/promesa]}}
  :paths ["src" "resources"]

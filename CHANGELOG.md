@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix cache issue: wrong external dependencies analysis when running clojure-lsp in editor after running on CLI, affecting navigation. #1473
+
 ## 2023.01.26-11.08.16
 
 - General

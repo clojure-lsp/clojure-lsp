@@ -83,7 +83,7 @@
                      (lsp.depend/db-with-results depend-result))))))
 
 (defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* producer]}]
-  (logger/info "Analyzing classpath for project root" root-path)
+  (logger/info "Analyzing classpath for project root" (str root-path))
   (when classpath
     (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
           external-paths (->> classpath
@@ -141,14 +141,24 @@
                      (= :project-only (:project-analysis-type db-cache)))
         (swap! db* (fn [state-db]
                      (-> state-db
-                         (merge (select-keys db-cache [:classpath :analysis-checksums :project-hash
-                                                       :kondo-config-hash :stubs-generation-namespaces]))
+                         (merge (select-keys db-cache [:classpath
+                                                       :analysis-checksums
+                                                       :project-hash
+                                                       :kondo-config-hash
+                                                       :dependency-scheme
+                                                       :stubs-generation-namespaces]))
                          (lsp.kondo/db-with-analysis {:analysis (:analysis db-cache)
                                                       :external? true}))))))))
 
 (defn ^:private build-db-cache [db]
   (-> db
-      (select-keys [:project-hash :kondo-config-hash :project-analysis-type :classpath :analysis :analysis-checksums])
+      (select-keys [:project-hash
+                    :kondo-config-hash
+                    :dependency-scheme
+                    :project-analysis-type
+                    :classpath
+                    :analysis
+                    :analysis-checksums])
       (merge {:stubs-generation-namespaces (->> db :settings :stubs :generation :namespaces (map str) set)
               :version db/version
               :project-root (str (shared/uri->path (:project-root-uri db)))})))
@@ -196,8 +206,11 @@
     (load-db-cache! root-path db*)
     (let [project-hash (classpath/project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
+          dependency-scheme (:dependency-scheme settings)
+          dependency-scheme-changed? (not= dependency-scheme (:dependency-scheme @db*))
           use-db-analysis? (and (= (:project-hash @db*) project-hash)
-                                (= (:kondo-config-hash @db*) kondo-config-hash))
+                                (= (:kondo-config-hash @db*) kondo-config-hash)
+                                (not dependency-scheme-changed?))
           fast-startup? (or use-db-analysis?
                             (not= :project-and-dependencies (:project-analysis-type @db*)))
           task-list (if fast-startup? fast-tasks slow-tasks)]
@@ -214,6 +227,9 @@
             (swap! db* assoc
                    :project-hash project-hash
                    :kondo-config-hash kondo-config-hash
+                   :analysis-checksums (if dependency-scheme-changed? nil (:analysis-checksums @db*))
+                   :analysis (if dependency-scheme-changed? nil (:analysis @db*))
+                   :dependency-scheme dependency-scheme
                    :classpath classpath
                    :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
 
@@ -235,7 +251,7 @@
                                             force-settings)
                :classpath-settings classpath-settings))
       (publish-task-progress producer (:analyzing-project task-list) progress-token)
-      (logger/info startup-logger-tag "Analyzing source paths for project root" root-path)
+      (logger/info startup-logger-tag "Analyzing source paths for project root" (str root-path))
       (analyze-source-paths! (-> @db* :settings :source-paths)
                              db*
                              (fn [{:keys [total-files files-done]}]

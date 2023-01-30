@@ -2139,8 +2139,9 @@
 <li>New jar available on releases: <code>clojure-lsp-server.jar</code>, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for <code>lein-clojure-lsp</code>. Any lib using <code>clojure-lsp-standalone.jar</code> should consider switch to this new jar.</li>
 <li>Change <code>:source-paths-ignore-regex</code> default value to <code>["target.*"]</code>, removing resource folders. #1452</li>
 <li>Bump cljfmt to 0.9.2</li>
+<li>Bump lsp4clj to 1.7.0</li>
 <li>
-<p>Bump lsp4clj to 1.7.0</p>
+<p>Support <code>:style/indent</code> metadata for indentation with cljfmt #1420</p>
 </li>
 <li>
 <p>Editor</p>
@@ -3392,7 +3393,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 28, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 30, 2023</span>
     
   </small>
 </div>

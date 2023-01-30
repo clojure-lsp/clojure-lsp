@@ -3,9 +3,61 @@
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [are deftest is testing]]))
 
 (h/reset-components-before-test)
+
+(deftest test-style-indent
+  (are [index input expected]
+       (= expected (#'f.format/arg-spec->cljfmt-arg index input))
+    0 [:defn]       [:inner 1 0]
+    0 [[:defn]]     [:inner 2 0]
+    0 [[[:defn]]]   [:inner 3 0]
+    2 [[[[:defn]]]] [:inner 4 2]
+    0 [1]           [:inner 1 0]
+    3 [[4]]         [:inner 2 3]
+    1 [[[2]]]       [:inner 3 1]
+    2 [[[[3]]]]     [:inner 4 2])
+
+  (are [input expected] (= expected (#'f.format/style-indent->cljfmt-spec input))
+    0                      [[:block 0]]
+    1                      [[:block 1]]
+    2                      [[:block 2]]
+    :defn                  [[:inner 0]]
+    :form                  nil
+
+    [0]                    [[:block 0]]
+    [1]                    [[:block 1]]
+    [2]                    [[:block 2]]
+    [:defn]                [[:inner 0]]
+    [:form]                nil
+
+       ;; letfn
+    [1 [[:defn]] :form]    [[:block 1] [:inner 2 0]]
+       ;; defrecord
+    [2 :form :form [1]]    [[:block 2] [:inner 1]])
+
+  (let [macro-styles {'myletfn     [1 [[:defn]] :form]
+                      'mydefrecord [2 :form :form [1]]
+                      'myblock1    1
+                      'mydefn      :defn
+                      'no-style    nil}
+        analysis {"file:///project/a.clj"
+                  {:var-definitions
+                   (for [[sym indent] macro-styles]
+                     {:name  sym
+                      :ns    'ignored.namespace
+                      :macro true
+                      :meta  {:style/indent indent}})}}]
+    (are [sym expected] (= expected (-> {:analysis analysis}
+                                        (#'f.format/extract-style-indent-metadata)
+                                        :indents
+                                        (get sym)))
+      'myletfn     [[:block 1] [:inner 2 0]]
+      'mydefrecord [[:block 2] [:inner 1]]
+      'mydefn      [[:inner 0]]
+      'myblock1    [[:block 1]]
+      'no-style    nil)))
 
 (deftest test-formatting
   (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})

@@ -72,7 +72,7 @@
   (-> db
       (db-with-analysis results)
       (update :findings merge findings)
-      (assoc :kondo-config config)))
+      (shared/assoc-some :kondo-config config)))
 
 (defn ^:private element-with-fallback-name-position [element]
   (assoc element
@@ -247,14 +247,18 @@
    :symbols true})
 
 (defn ^:private config-for-paths [paths file-analyzed-fn db]
-  (-> {:cache true
-       :parallel true
-       :config-dir (some-> db :project-root-uri project-config-dir)
-       :copy-configs (settings/get db [:copy-kondo-configs?] true)
-       :lint [(string/join (System/getProperty "path.separator") paths)]
-       :config {:output {:canonical-paths true}}
-       :file-analyzed-fn file-analyzed-fn}
-      (with-additional-config (settings/all db))))
+  (let [paths-ignore-regex (get-in db [:settings :paths-ignore-regex] [])]
+    (-> {:cache true
+         :parallel true
+         :config-dir (some-> db :project-root-uri project-config-dir)
+         :copy-configs (settings/get db [:copy-kondo-configs?] true)
+         :lint [(->> paths
+                     (remove (fn [path]
+                               (some #(re-matches (re-pattern %) path) paths-ignore-regex)))
+                     (string/join (System/getProperty "path.separator")))]
+         :config {:output {:canonical-paths true}}
+         :file-analyzed-fn file-analyzed-fn}
+        (with-additional-config (settings/all db)))))
 
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
   (-> (config-for-paths paths file-analyzed-fn db)
@@ -357,11 +361,15 @@
 
 (defn run-kondo-on-text! [text uri db*]
   (let [filename (shared/uri->filename uri)
+        paths-ignore-regex (get-in @db* [:settings :paths-ignore-regex] [])
+        lint-filename? (not-any? #(re-matches (re-pattern %) filename) paths-ignore-regex)
         db @db*]
-    (with-in-str text
-                 (-> (config-for-single-file uri db*)
-                     (run-kondo! filename)
-                     (normalize-for-file db filename uri)))))
+    (if lint-filename?
+      (with-in-str text
+                   (-> (config-for-single-file uri db*)
+                       (run-kondo! filename)
+                       (normalize-for-file db filename uri)))
+      {})))
 
 (defn run-kondo-copy-configs! [paths db]
   (-> (config-for-copy-configs paths db)

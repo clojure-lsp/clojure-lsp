@@ -4,6 +4,7 @@
  :source-aliases #{:dev :test}
  :project-specs [] ;; Check the default at clojure-lsp.classpath/default-project-specs
  :source-paths-ignore-regex ["target.*"]
+ :paths-ignore-regex []
  :lint-project-files-after-startup? true
  :notify-references-on-file-change true
  :compute-external-file-changes true

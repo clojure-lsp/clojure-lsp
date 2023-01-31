@@ -1317,6 +1317,11 @@
 <td><code>["target.*"]</code></td>
 </tr>
 <tr>
+<td><code>:analysis-paths-ignore-regex</code></td>
+<td>list of regex to filter paths to be analyzed. Useful for excluding huge files or folders that may affect final analysis size and performance, like huge edn files.</td>
+<td><code>[]</code></td>
+</tr>
+<tr>
 <td><code>:java</code> <code>:download-jdk-source?</code></td>
 <td>Whether to download JDK source from <code>:java :jdk-source-download-uri</code> and cache after startup for JDK classes java support.</td>
 <td><code>false</code></td>
@@ -1614,7 +1619,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 30, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 31, 2023</span>
     
   </small>
 </div>

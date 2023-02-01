@@ -1,5 +1,6 @@
 (ns clojure-lsp.kondo
   (:require
+   [babashka.fs :as fs]
    [clj-kondo.core :as kondo]
    [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
@@ -225,6 +226,10 @@
     (let [db (db-with-analysis db (normalize-for-file kondo-ctx db filename uri))]
       (f.diagnostic/custom-lint-uris! [uri] db kondo-ctx))))
 
+(defn ^:private ignore-path? [db path]
+  (let [paths-ignore-regex (get-in db [:settings :paths-ignore-regex] [])]
+    (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))
+
 (def ^:private config-for-shallow-analysis
   {:arglists true
    :keywords true
@@ -247,18 +252,16 @@
    :symbols true})
 
 (defn ^:private config-for-paths [paths file-analyzed-fn db]
-  (let [paths-ignore-regex (get-in db [:settings :paths-ignore-regex] [])]
-    (-> {:cache true
-         :parallel true
-         :config-dir (some-> db :project-root-uri project-config-dir)
-         :copy-configs (settings/get db [:copy-kondo-configs?] true)
-         :lint [(->> paths
-                     (remove (fn [path]
-                               (some #(re-matches (re-pattern %) path) paths-ignore-regex)))
-                     (string/join (System/getProperty "path.separator")))]
-         :config {:output {:canonical-paths true}}
-         :file-analyzed-fn file-analyzed-fn}
-        (with-additional-config (settings/all db)))))
+  (-> {:cache true
+       :parallel true
+       :config-dir (some-> db :project-root-uri project-config-dir)
+       :copy-configs (settings/get db [:copy-kondo-configs?] true)
+       :lint [(->> paths
+                   (remove (partial ignore-path? db))
+                   (string/join (System/getProperty "path.separator")))]
+       :config {:output {:canonical-paths true}}
+       :file-analyzed-fn file-analyzed-fn}
+      (with-additional-config (settings/all db))))
 
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
   (-> (config-for-paths paths file-analyzed-fn db)
@@ -361,15 +364,14 @@
 
 (defn run-kondo-on-text! [text uri db*]
   (let [filename (shared/uri->filename uri)
-        paths-ignore-regex (get-in @db* [:settings :paths-ignore-regex] [])
-        lint-filename? (not-any? #(re-matches (re-pattern %) filename) paths-ignore-regex)
+        ignore-filename? (ignore-path? @db* filename)
         db @db*]
-    (if lint-filename?
+    (if ignore-filename?
+      {}
       (with-in-str text
                    (-> (config-for-single-file uri db*)
                        (run-kondo! filename)
-                       (normalize-for-file db filename uri)))
-      {})))
+                       (normalize-for-file db filename uri))))))
 
 (defn run-kondo-copy-configs! [paths db]
   (-> (config-for-copy-configs paths db)

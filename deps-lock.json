@@ -74,14 +74,14 @@
       "hash": "sha256-DGkccdKdMtYY8CpQnoxw3608xKVWiOwsZl7Yao5/Jp8="
     },
     {
-      "mvn-path": "babashka/fs/0.2.12/fs-0.2.12.jar",
+      "mvn-path": "babashka/fs/0.2.14/fs-0.2.14.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-54H6KPHJovUeLj9SI6YGVtwDmZcsdajfdCuG6u8nfkc="
+      "hash": "sha256-jjtc2JKtS7+FmXshxrDtdVMaEToOa68bot1OGoyJPGE="
     },
     {
-      "mvn-path": "babashka/fs/0.2.12/fs-0.2.12.pom",
+      "mvn-path": "babashka/fs/0.2.14/fs-0.2.14.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-/wCsLdezFw8C9qPsk96sBUkrWgo48uWOGBgOrKrx2yU="
+      "hash": "sha256-/o21k35neeAvObbm15KjQcetPquWAvcQjw5CE57HRAU="
     },
     {
       "mvn-path": "babashka/process/0.4.16/process-0.4.16.jar",

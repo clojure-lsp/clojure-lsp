@@ -236,7 +236,8 @@
    :protocol-impls true
    :java-class-definitions true
    :var-usages false
-   :var-definitions {:shallow true}})
+   :var-definitions {:shallow true
+                     :meta    [:style/indent]}})
 
 (def ^:private config-for-full-analysis
   {:arglists true

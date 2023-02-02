@@ -36,7 +36,7 @@
                        :exec-fn cognitect.test-runner.api/test}
            :build {:extra-paths ["resources"]
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
-                                                         :tag "v0.9.0"
-                                                         :sha "8c93e0c"}
+                                                         :tag "v0.9.3"
+                                                         :sha "e537cd1"}
                           slipset/deps-deploy {:mvn/version "0.2.0"}}
                    :ns-default build}}}

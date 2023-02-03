@@ -223,6 +223,20 @@
                    (contains? local-def-ids (:id local-usage))))
          (medley/distinct-by :id))))
 
+(defn find-namespace-definitions [db uri]
+  (vec (get-in db [:analysis uri :namespace-definitions])))
+
+(defn find-namespace-definition-by-uri [db uri]
+  (first (find-namespace-definitions db uri)))
+
+(defn find-namespace-usage-by-alias [db uri alias]
+  (find-last (filter #(= alias (:alias %)))
+             (get-in db [:analysis uri :namespace-usages])))
+
+(defn find-namespace-alias-by-alias [db uri alias]
+  (find-last (filter #(= alias (:alias %)))
+             (get-in db [:analysis uri :namespace-alias])))
+
 (defmulti find-definition
   (fn [_db element]
     (:bucket element)))
@@ -256,7 +270,10 @@
           definition)))
     ;; Fallback to navigate from clojure to clojurescript vars, see #1403
     (when-not (:fallbacking? var-usage)
-      (find-definition db (assoc var-usage :lang :cljs :fallbacking? true)))))
+      (find-definition db (assoc var-usage :lang :cljs :fallbacking? true)))
+    ;; If alias exists but not var, go to the ns definition
+    (when-let [alias (:alias var-usage)]
+      (find-definition db (find-namespace-usage-by-alias db (:uri var-usage) alias)))))
 
 (defmethod find-definition :symbols
   [db quoted-symbol]
@@ -723,20 +740,6 @@
           (filter (comp #(identical? :duplicate-require %) :type))
           (map :duplicate-ns))
         (get-in db [:findings uri])))
-
-(defn find-namespace-definitions [db uri]
-  (vec (get-in db [:analysis uri :namespace-definitions])))
-
-(defn find-namespace-definition-by-uri [db uri]
-  (first (find-namespace-definitions db uri)))
-
-(defn find-namespace-usage-by-alias [db uri alias]
-  (find-last (filter #(= alias (:alias %)))
-             (get-in db [:analysis uri :namespace-usages])))
-
-(defn find-namespace-alias-by-alias [db uri alias]
-  (find-last (filter #(= alias (:alias %)))
-             (get-in db [:analysis uri :namespace-alias])))
 
 (defn find-element-for-rename [db from-ns from-name]
   (let [xf

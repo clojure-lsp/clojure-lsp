@@ -202,15 +202,19 @@
   (f.file-management/did-change-watched-files changes components))
 
 (defn completion [{:keys [db*] :as components} {:keys [text-document position]}]
-  (process-after-changes
-    components (:uri text-document)
-    :completion
-    (shared/logging-results
-      (str :completion " %s - total items: %s")
-      count
-      (let [db @db*
-            [row col] (shared/position->row-col position)]
-        (f.completion/completion (:uri text-document) row col db)))))
+  (letfn [(completion-fn []
+            (shared/logging-results
+              (str :completion " %s - total items: %s")
+              count
+              (let [db @db*
+                    [row col] (shared/position->row-col position)]
+                (f.completion/completion (:uri text-document) row col db))))]
+    (if (identical? :slow-but-accurate (get-in @db* [:settings :completion :analysis-type] :fast-but-stale))
+      (process-after-changes
+        components (:uri text-document)
+        :completion
+        (completion-fn))
+      (completion-fn))))
 
 (defn references [{:keys [db* producer]} {:keys [text-document position context]}]
   (shared/logging-task

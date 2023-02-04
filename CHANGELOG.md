@@ -10,6 +10,7 @@
   - Bump lsp4clj fixing progress notifications during initialization for Calva.
   - Allow go to definition of namespace even when the var is not known. Ex: `clojure.string/foo` will go to the definition of `clojure.string`. This is useful for cases where the var was not created yet but user wants to go to the ns to check the available functions or check the correct name of the function.
   - Avoid basing results on old analysis.
+  - Add new setting `:completion :analysis-type` to choose between `:fast-but-stale`(default) or `:slow-but-accurate`, this should define whether completion should wait for changes that may still happening, this by default reverts the behavior introduced after #1425. #1487
 
 ## 2023.01.26-11.08.16
 

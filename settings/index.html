@@ -1272,6 +1272,11 @@
 <td><code>true</code></td>
 </tr>
 <tr>
+<td><code>:completion</code> <code>:analysis-type</code></td>
+<td>The type for analysis to be performed during the completion, accepted values are <code>fast-but-stale</code> which won't wait for remaining analysis to complete to process the completion and <code>slow-but-accurate</code> which will wait for any changes on document to then process the completion items.</td>
+<td><code>:fast-but-stale</code></td>
+</tr>
+<tr>
 <td><code>:completion</code> <code>:additional-edits-warning-text</code></td>
 <td>A warning to show when the completion will perform additional edits, such as requiring a new alias. Appears in the completion items' documentation.</td>
 <td><code>nil</code></td>

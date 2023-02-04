@@ -11,7 +11,6 @@
 (def ^:private db-logger-tag "[DB]")
 
 (def initial-db {:documents {}
-                 :processing-changes #{}
                  :dep-graph {}})
 (defonce db* (atom initial-db))
 

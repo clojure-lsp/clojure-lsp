@@ -9,6 +9,7 @@
   - Fix cache issue: wrong external dependencies analysis when running clojure-lsp in editor after running on CLI, affecting navigation. #1473
   - Bump lsp4clj fixing progress notifications during initialization for Calva.
   - Allow go to definition of namespace even when the var is not known. Ex: `clojure.string/foo` will go to the definition of `clojure.string`. This is useful for cases where the var was not created yet but user wants to go to the ns to check the available functions or check the correct name of the function.
+  - Avoid basing results on old analysis.
 
 ## 2023.01.26-11.08.16
 

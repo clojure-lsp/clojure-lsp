@@ -47,11 +47,23 @@
        (take 20))
   #_{})
 
+(defn ^:private caught-up? [db uri desired-version]
+  (let [analysed-version (get-in db [:documents uri :analyzed-version])]
+    (or
+      ;; The doc was never opened, or was closed. Whatever analysis we have has to be good enough.
+      (not analysed-version)
+      ;; The analysis has caught up.
+      (>= analysed-version desired-version))))
+
 (defn ^:private wait-for-changes [{:keys [db* :lsp4clj.server/req-cancelled?]} uris]
-  (let [delay-start (System/nanoTime)]
+  (let [delay-start (System/nanoTime)
+        db @db*]
     (loop [immediate? true
            backoff backoff-start
-           uris uris]
+           ;; At the time of the request, what was the client looking at?
+           desired-versions (map (fn [uri]
+                                   [uri (get-in db [:documents uri :v] 0)])
+                                 uris)]
       (let [now (System/nanoTime)]
         (cond
           (some-> req-cancelled? deref)
@@ -60,18 +72,23 @@
            :delay/end now}
           (> (quot (- now delay-start) 1000000) 60000) ; one minute timeout
           {:delay/outcome :timed-out
-           :delay/timeout-uris uris}
+           :delay/timeout-uris (map first desired-versions)}
           :else
-          (if-let [processing-uris (seq (filter (:processing-changes @db*) uris))]
-            (do
-              (Thread/sleep backoff)
-              (recur false (min backoff-max (* backoff-mult backoff)) processing-uris))
-            (if immediate?
-              {:delay/outcome :immediate
-               :delay/start delay-start}
-              {:delay/outcome :waited
-               :delay/start delay-start
-               :delay/end now})))))))
+          ;; At the current time, do we have analysis for what the client was looking at?
+          (let [db @db*]
+            (if-let [processing-versions (->> desired-versions
+                                              (remove (fn [[uri desired-version]]
+                                                        (caught-up? db uri desired-version)))
+                                              seq)]
+              (do
+                (Thread/sleep backoff)
+                (recur false (min backoff-max (* backoff-mult backoff)) processing-versions))
+              (if immediate?
+                {:delay/outcome :immediate
+                 :delay/start delay-start}
+                {:delay/outcome :waited
+                 :delay/start delay-start
+                 :delay/end now}))))))))
 
 (defmacro logging-delayed-task [delay-data task-id & body]
   (let [cancelled-msg (str task-id " cancelled - waited %s")

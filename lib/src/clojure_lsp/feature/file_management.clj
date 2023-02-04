@@ -230,6 +230,15 @@
       ;; the full content of the document.
       new-text)))
 
+(defn ^:private bump-version
+  "Advance the analyzed-version, but only if it's newer, in case analysis
+  completes out of order."
+  [old-version new-version]
+  (if (or (not old-version)
+          (< old-version new-version))
+    new-version
+    old-version))
+
 (defn analyze-changes [{:keys [uri text version]} {:keys [producer db*] :as components}]
   (loop [state-db @db*]
     (when (>= version (get-in state-db [:documents uri :v] -1))
@@ -248,7 +257,8 @@
                               (-> state-db
                                   (lsp.kondo/db-with-results kondo-result)
                                   (lsp.depend/db-with-results depend-result)
-                                  (update :processing-changes disj uri)))
+                                  (update-in [:documents uri :analyzed-version]
+                                             bump-version version)))
           (let [db @db*]
             (f.diagnostic/publish-diagnostics! uri components)
             (when (settings/get db [:notify-references-on-file-change] true)
@@ -261,8 +271,7 @@
         final-text (reduce handle-change old-text changes)]
     (swap! db* (fn [state-db] (-> state-db
                                   (assoc-in [:documents uri :v] version)
-                                  (assoc-in [:documents uri :text] final-text)
-                                  (update :processing-changes conj uri))))
+                                  (assoc-in [:documents uri :text] final-text))))
     (async/>!! current-changes-chan {:uri uri
                                      :text final-text
                                      :version version})))

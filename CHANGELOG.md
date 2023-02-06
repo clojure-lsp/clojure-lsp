@@ -12,6 +12,10 @@
   - Avoid basing results on old analysis.
   - Add new setting `:completion :analysis-type` to choose between `:fast-but-stale`(default) or `:slow-but-accurate`, this should define whether completion should wait for changes that may still happening, this by default reverts the behavior introduced after #1425. #1487
 
+- API/CLI
+  - Fix `textDocument/hover` issue when doc metadata isn't a string literal.
+  - Follow references to other vars in doc metadata for use in `textDocument/hover`.
+
 ## 2023.01.26-11.08.16
 
 - General

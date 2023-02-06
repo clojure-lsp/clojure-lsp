@@ -95,12 +95,10 @@
                              (meta (second doc'')))))))
           referenced-var-docs
           (when referenced-var-meta
-            (->> (q/find-element-under-cursor
-                   db uri
-                   (:row referenced-var-meta)
-                   (:col referenced-var-meta))
-                 (q/find-definition db)
-                 :doc))]
+            (:doc (q/find-definition-from-cursor
+                    db uri
+                    (:row referenced-var-meta)
+                    (:col referenced-var-meta))))]
       ;; Recur only when the definition has docs
       (when referenced-var-docs
         (recur db markdown? uri referenced-var-docs (inc cnt))))))

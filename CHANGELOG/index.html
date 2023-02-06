@@ -2139,6 +2139,8 @@
 <li>Allow go to definition of namespace even when the var is not known. Ex: <code>clojure.string/foo</code> will go to the definition of <code>clojure.string</code>. This is useful for cases where the var was not created yet but user wants to go to the ns to check the available functions or check the correct name of the function.</li>
 <li>Avoid basing results on old analysis.</li>
 <li>Add new setting <code>:completion :analysis-type</code> to choose between <code>:fast-but-stale</code>(default) or <code>:slow-but-accurate</code>, this should define whether completion should wait for changes that may still happening, this by default reverts the behavior introduced after #1425. #1487</li>
+<li>Fix <code>textDocument/hover</code> issue when doc metadata isn't a string literal.</li>
+<li>Follow references to other vars in doc metadata for use in <code>textDocument/hover</code>.</li>
 </ul>
 <h2 id="20230126-110816">2023.01.26-11.08.16<a class="headerlink" href="#20230126-110816" title="Permanent link">#</a></h2>
 <ul>
@@ -3402,7 +3404,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 4, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 6, 2023</span>
     
   </small>
 </div>

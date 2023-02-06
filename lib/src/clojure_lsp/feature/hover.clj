@@ -65,6 +65,44 @@
                              (map #(str %))
                              (string/join "\n---\n"))))))
 
+(defn find-docstring
+  "Find the doc string for the hovered symbol.
+
+  If the symbol's docstring is a string literal, we can process it. If it's reaching
+  into the metadata of another var to get that var's docstring (with the idiom
+  `(:doc (meta #'some-var)))`, use `q/find-definition` to retrieve the `:doc` from it
+  and try again.
+
+  Limits recurring with `q/find-definition` to 3 times to avoid potential timeouts."
+  [db markdown? uri doc cnt]
+  (cond
+    (string? doc)
+    (when (seq doc)
+      (if markdown?
+        (docstring->formatted-markdown doc)
+        doc))
+    (< 2 cnt) nil
+    ;; special case for `(:doc (meta #'some-var))`
+    (seq? doc)
+    (let [referenced-var-meta
+          (and (seq? doc)
+               (= :doc (first doc))
+               (let [doc' (fnext doc)]
+                 (and (seq? doc')
+                      (= 'meta (first doc'))
+                      (let [doc'' (fnext doc')]
+                        (and (= 'var (first doc''))
+                             (meta (second doc'')))))))
+          referenced-var-docs
+          (when referenced-var-meta
+            (:doc (q/find-definition-from-cursor
+                    db uri
+                    (:row referenced-var-meta)
+                    (:col referenced-var-meta))))]
+      ;; Recur only when the definition has docs
+      (when referenced-var-docs
+        (recur db markdown? uri referenced-var-docs (inc cnt))))))
+
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc uri arglist-strs] :as _definition}
    db*
@@ -84,10 +122,7 @@
         sym-line (str sym (when signatures
                             (str join-char signatures)))
         markdown? (some #{"markdown"} content-formats)
-        doc-line (when (seq doc)
-                   (if markdown?
-                     (docstring->formatted-markdown doc)
-                     doc))
+        doc-line (find-docstring db markdown? uri doc 0)
         clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)
         ;; TODO Consider using URI for display purposes, especially if we
         ;; support remote LSP connections

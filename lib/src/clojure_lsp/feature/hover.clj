@@ -65,7 +65,15 @@
                              (map #(str %))
                              (string/join "\n---\n"))))))
 
-(defn recurse-doc-line
+(defn find-docstring
+  "Find the doc string for the hovered symbol.
+
+  If the symbol's docstring is a string literal, we can process it. If it's reaching
+  into the metadata of another var to get that var's docstring (with the idiom
+  `(:doc (meta #'some-var)))`, use `q/find-definition` to retrieve the `:doc` from it
+  and try again.
+
+  Limits recurring with `q/find-definition` to 3 times to avoid potential timeouts."
   [db markdown? uri doc cnt]
   (cond
     (string? doc)
@@ -93,6 +101,7 @@
                    (:col referenced-var-meta))
                  (q/find-definition db)
                  :doc))]
+      ;; Recur only when the definition has docs
       (when referenced-var-docs
         (recur db markdown? uri referenced-var-docs (inc cnt))))))
 
@@ -115,7 +124,7 @@
         sym-line (str sym (when signatures
                             (str join-char signatures)))
         markdown? (some #{"markdown"} content-formats)
-        doc-line (recurse-doc-line db markdown? uri doc 0)
+        doc-line (find-docstring db markdown? uri doc 0)
         clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)
         ;; TODO Consider using URI for display purposes, especially if we
         ;; support remote LSP connections

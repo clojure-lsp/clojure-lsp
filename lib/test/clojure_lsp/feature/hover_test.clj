@@ -299,4 +299,42 @@
                    :value "some-a"}
                   "Some cool docstring"
                   (h/file-path "/some_a.clj")]
-                 (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col (h/components))))))))))
+                 (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col (h/components)))))))
+      (testing "recursing to find the docs through metadata"
+        (with-db
+          settings-one-line
+          (let [code (h/code "(ns a)"
+                             "(def ground \"Some cool docs\" 0)"
+                             "(def ^{:doc (:doc (meta #'ground))} story-1 1)"
+                             "(def ^{:doc (:doc (meta #'story-1))} story-2 2)"
+                             "(def ^{:doc (:doc (meta #'story-2))} story-3 3)"
+                             "(def ^{:doc (:doc (meta #'story-3))} story-4 4)"
+                             "s|tory-1"
+                             "s|tory-2"
+                             "s|tory-3"
+                             "s|tory-4")
+                [[story-1-row story-1-col]
+                 [story-2-row story-2-col]
+                 [story-3-row story-3-col]
+                 [story-4-row story-4-col]] (h/load-code-and-locs code)]
+            (testing "Can recurse up to 3 times"
+              (is (= [{:language "clojure"
+                       :value "a/story-1"}
+                      "Some cool docs"
+                      (h/file-path "/a.clj")]
+                     (:contents (hover story-1-row story-1-col))))
+              (is (= [{:language "clojure"
+                       :value "a/story-2"}
+                      "Some cool docs"
+                      (h/file-path "/a.clj")]
+                     (:contents (hover story-2-row story-2-col))))
+              (is (= [{:language "clojure"
+                       :value "a/story-3"}
+                      "Some cool docs"
+                      (h/file-path "/a.clj")]
+                     (:contents (hover story-3-row story-3-col)))))
+            (testing "Returns nil if recursing too much"
+              (is (= [{:language "clojure"
+                       :value "a/story-4"}
+                      (h/file-path "/a.clj")]
+                     (:contents (hover story-4-row story-4-col)))))))))))

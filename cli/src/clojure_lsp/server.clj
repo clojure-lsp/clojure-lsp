@@ -566,12 +566,15 @@
       (apply log-wrapper-fn log-args)
       (recur))))
 
-(defn ^:private setup-dev-environment [db*]
+(defn ^:private setup-dev-environment [db* components]
   ;; We don't have an ENV=development flag, so the next best indication that
   ;; we're in a development environment is whether we're able to start an nREPL.
   (when-let [nrepl-port (nrepl/setup-nrepl)]
     ;; Save the port in the db, so it can be reported in server-info.
     (swap! db* assoc :port nrepl-port)
+    ;; Add components to db* so it's possible to manualy call funcstions
+    ;; which expect specific components
+    (swap! db* assoc-in [:dev :components] components)
     ;; In the development environment, make the db* atom available globally as
     ;; db/db*, so it can be inspected in the nREPL.
     (alter-var-root #'db/db* (constantly db*))))
@@ -591,7 +594,7 @@
                     :edits-chan (async/chan 1)}]
     (logger/info "[SERVER]" "Starting server...")
     (monitor-server-logs (:log-ch server))
-    (setup-dev-environment db*)
+    (setup-dev-environment db* components)
     (spawn-async-tasks! components)
     (lsp.server/start server components)))
 

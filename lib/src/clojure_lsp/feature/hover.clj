@@ -126,7 +126,12 @@
                             (str join-char signatures)))
         markdown? (some #{"markdown"} content-formats)
         doc-line (find-docstring db markdown? uri doc 0)
-        clojuredocs (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)
+        clojuredocs (or (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)
+                        (when (and sym-ns (#{:cljs :cljc} (shared/uri->file-type uri)))
+                          (f.clojuredocs/find-hover-docs-for
+                            sym-name
+                            (string/replace (name sym-ns) "cljs" "clojure")
+                            db*)))
         ;; TODO Consider using URI for display purposes, especially if we
         ;; support remote LSP connections
         filename (shared/uri->filename uri)]

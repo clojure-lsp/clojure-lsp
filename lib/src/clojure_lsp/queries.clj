@@ -83,6 +83,7 @@
 
 (def xf-analysis->java-class-definitions (xf-analysis->bucket-elems :java-class-definitions))
 (def xf-analysis->java-class-usages (xf-analysis->bucket-elems :java-class-usages))
+(def xf-analysis->java-member-definitions (xf-analysis->bucket-elems :java-member-definitions))
 (def xf-analysis->keyword-definitions (xf-analysis->bucket-elems :keyword-definitions))
 (def xf-analysis->keyword-usages (xf-analysis->bucket-elems :keyword-usages))
 (def xf-analysis->keywords (xf-analysis->buckets-elems :keyword-definitions :keyword-usages))

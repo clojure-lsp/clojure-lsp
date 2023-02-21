@@ -505,6 +505,35 @@
       [{:label "SomeClass" :kind :class :detail "foo.SomeClass"}]
       (f.completion/completion (h/file-uri "file:///a.clj") 3 2 (h/db)))))
 
+(deftest completing-java-methods
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "SomeClass.class"))))
+  (let [[[field-r field-c]
+         [method-r method-c]
+         [full-method-r full-method-c]] (h/load-code-and-locs
+                                          (h/code "(ns foo (:import (my_class SomeClass)))"
+                                                  "SomeClass/m|"
+                                                  "(SomeClass/m|)"
+                                                  "(my_class.SomeClass/my|)"
+                                                  ""))]
+
+    (testing "public static methods and fields from simple class name"
+      (h/assert-submaps
+        [{:label "SomeClass/myField2" :kind :field :detail "my_class"}
+         {:label "SomeClass/myMethod2" :kind :method :detail "my_class"}
+         {:label "SomeClass/myMethod3" :kind :method :detail "my_class"}]
+        (f.completion/completion (h/file-uri "file:///a.clj") field-r field-c (h/db)))
+      (h/assert-submaps
+        [{:label "SomeClass/myField2" :kind :field :detail "my_class"}
+         {:label "SomeClass/myMethod2" :kind :method :detail "my_class"}
+         {:label "SomeClass/myMethod3" :kind :method :detail "my_class"}]
+        (f.completion/completion (h/file-uri "file:///a.clj") method-r method-c (h/db))))
+    (testing "public static methods and fields from full class name"
+      (h/assert-submaps
+        [{:label "my_class.SomeClass/myField2" :kind :field :detail "my_class"}
+         {:label "my_class.SomeClass/myMethod2" :kind :method :detail "my_class"}
+         {:label "my_class.SomeClass/myMethod3" :kind :method :detail "my_class"}]
+        (f.completion/completion (h/file-uri "file:///a.clj") full-method-r full-method-c (h/db))))))
+
 (deftest completing-sorting
   (let [[[row col]] (h/load-code-and-locs
                       (h/code "(ns foo)"

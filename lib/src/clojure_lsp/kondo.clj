@@ -122,12 +122,14 @@
          element-with-fallback-name-position
          (assoc :bucket (if (:reg element) :keyword-definitions :keyword-usages)))]
 
-    :java-class-definitions
+    (:java-member-definitions
+     :java-class-definitions)
     [(-> element
          (assoc :name-row 0
                 :name-col 0
                 :name-end-row 0
                 :name-end-col 0))]
+
 
     [element]))
 
@@ -166,7 +168,8 @@
   (let [filename->uri (memoize #(shared/filename->uri % db))
         trade-filename-for-uri (fn [obj]
                                  (-> obj
-                                     (assoc :uri (filename->uri (:filename obj)))
+                                     (assoc :uri (or (:uri obj)
+                                                     (filename->uri (:filename obj))))
                                      (dissoc :filename)))
         with-uris (fn [uris default coll]
                     (merge (zipmap uris (repeat default)) coll))
@@ -235,6 +238,7 @@
    :keywords true
    :protocol-impls true
    :java-class-definitions true
+   :java-member-definitions true
    :var-usages false
    :var-definitions {:shallow true
                      :meta [:arglists :style/indent]}})
@@ -245,6 +249,7 @@
    :keywords true
    :protocol-impls true
    :java-class-definitions true
+   :java-member-definitions true
    :instance-invocations true
    :java-class-usages true
    :context [:clojure.test
@@ -287,7 +292,8 @@
   {:lint paths
    :config-dir (some-> db :project-root-uri project-config-dir)
    :config {:output {:canonical-paths true}
-            :analysis {:java-class-definitions true}}})
+            :analysis {:java-class-definitions true
+                       :java-member-definitions true}}})
 
 (defn ^:private config-for-single-file [uri db*]
   (let [db @db*
@@ -380,7 +386,8 @@
 
 (defn run-kondo-on-jdk-source! [paths db]
   (let [normalization-config {:external? true
-                              :filter-analysis #(select-keys % [:java-class-definitions])}]
+                              :filter-analysis #(select-keys % [:java-class-definitions
+                                                                :java-member-definitions])}]
     (-> (config-for-jdk-source paths db)
         (run-kondo! (str "paths " paths))
         (normalize normalization-config db))))

@@ -37,6 +37,7 @@
    :clojurescript-core
    :java-usages
    :java-class-definitions
+   :java-member-definitions
    :snippet])
 
 (def priority-kw->number
@@ -107,6 +108,16 @@
   ;; TODO maybe move to a common place or make all kondo elements have a
   ;; :name field
   (last (string/split (:class element) #"\.")))
+
+(defn ^:private java-member-flags->kind [{:keys [flags]}]
+  (cond
+    (and (:final flags)
+         (:field flags)
+         ;; TODO improve on clj-kondo
+         (not (:method flags))) :constant
+    (:method flags) :method
+    (:field flags) :field
+    :else :method))
 
 (defn ^:private element->label [{:keys [alias bucket] :as element} cursor-alias priority]
   (cond
@@ -458,8 +469,8 @@
       (into []
             (comp
               q/xf-analysis->java-class-definitions
-              (keep (fn [{:keys [class]}]
-                      (let [class-name* (delay (last (string/split class #"\.")))]
+              (keep (fn [{:keys [class] :as e}]
+                      (let [class-name* (delay (java-element->class-name e))]
                         (cond-> []
 
                           (matches-fn class)
@@ -474,6 +485,29 @@
                                  :kind :class
                                  :priority :java-class-definitions}))))))
             (:analysis db)))))
+
+(defn ^:private with-java-static-member-definition-items [matches-fn class-element cursor-value db]
+  (let [full-package? (string/includes? cursor-value ".")
+        matches-member-fn (if full-package?
+                            (fn [class name] (string/starts-with? (str class "/" name) (str cursor-value)))
+                            (fn [_class name] (matches-fn name)))]
+    (into []
+          (comp
+            q/xf-analysis->java-member-definitions
+            (filter (fn [{:keys [class name]}]
+                      (and (.equals ^String class (:class class-element))
+                           (matches-member-fn class name))))
+            (map (fn [member]
+                   (let [package-and-class (string/split (:class member) #"\.")
+                         package-name (string/join "." (pop package-and-class))
+                         class-name (last package-and-class)]
+                     {:label (if full-package?
+                               (str (:class member) "/" (:name member))
+                               (str class-name "/" (:name member)))
+                      :kind (java-member-flags->kind member)
+                      :detail package-name
+                      :priority :java-member-definitions}))))
+          (:analysis db))))
 
 (defn ^:private remove-first-and-last-char [s]
   (-> (string/join "" (drop-last s))
@@ -568,6 +602,8 @@
                                    (str cursor-value)))
             cursor-full-ns? (when cursor-value-or-ns
                               (contains? (dep-graph/ns-names db) (symbol cursor-value-or-ns)))
+            class-element (when (identical? :java-class-usages (:bucket cursor-element))
+                            cursor-element)
             items (cond
                     inside-refer?
                     (with-refer-elements matches-fn cursor-loc non-local-db resolve-support)
@@ -605,6 +641,10 @@
                       (and simple-cursor?
                            (supports-clj-core? uri))
                       (into (with-java-definition-items matches-fn cursor-value db))
+
+                      (and class-element
+                           (supports-clj-core? uri))
+                      (into (with-java-static-member-definition-items matches-fn class-element cursor-value db))
 
                       (and support-snippets?
                            simple-cursor?)

@@ -75,17 +75,6 @@ You can help us keep going and improving it by **[supporting the project](https:
          Pitch
       </div>
     </td>
-    <td align="center">
-      <div>
-        <a href="https://github.com/180seg">
-          <img src="https://github.com/180seg.png" width="100px;" style="border-radius: 50%;" alt="180seg"/>
-          <br/>
-          <sub><b>180seg</b></sub>
-        </a>
-        <br/>
-         180º Insurance
-      </div>
-    </td>
   </tr>
 </table>
 

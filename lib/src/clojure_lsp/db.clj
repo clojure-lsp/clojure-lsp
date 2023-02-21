@@ -14,7 +14,7 @@
                  :dep-graph {}})
 (defonce db* (atom initial-db))
 
-(def version 7)
+(def version 8)
 
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))

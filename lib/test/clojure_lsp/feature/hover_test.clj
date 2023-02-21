@@ -251,6 +251,17 @@
                                               (h/file-path "/a.clj")
                                               (h/file-uri "file:///a.clj"))])}
                        (:contents (hover bar-row bar-col)))))))))
+      (testing "custom meta arglists"
+        (with-db
+          settings-one-line
+          (let [code (h/code "(ns a)"
+                             "(defn ^{:arglists '([y x] [z w])} foo [x y] x)"
+                             "foo|")
+                [[foo-r foo-c]] (h/load-code-and-locs code)]
+            (is (= [{:language "clojure"
+                     :value "a/foo [y x] [z w]"}
+                    (h/file-path "/a.clj")]
+                   (:contents (hover foo-r foo-c)))))))
       (testing "On function usage corner cases"
         (with-db
           settings-one-line

@@ -237,7 +237,7 @@
    :java-class-definitions true
    :var-usages false
    :var-definitions {:shallow true
-                     :meta    [:style/indent]}})
+                     :meta [:arglists :style/indent]}})
 
 (def ^:private config-for-full-analysis
   {:arglists true
@@ -249,7 +249,7 @@
    :java-class-usages true
    :context [:clojure.test
              :re-frame.core]
-   :var-definitions {:meta [:style/indent]}
+   :var-definitions {:meta [:arglists :style/indent]}
    :symbols true})
 
 (defn ^:private config-for-paths [paths file-analyzed-fn db]

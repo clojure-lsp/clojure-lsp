@@ -104,7 +104,7 @@
         (recur db markdown? uri referenced-var-docs (inc cnt))))))
 
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc uri arglist-strs] :as _definition}
+  [{sym-ns :ns sym-name :name :keys [doc uri arglist-strs meta] :as _definition}
    db*
    {:keys [additional-text-edits?]}]
   (let [db @db*
@@ -114,9 +114,12 @@
         hide-filename? (settings/get db [:hover :hide-file-location?])
         additional-edits-warning-text (settings/get db [:completion :additional-edits-warning-text])
         join-char (if arity-on-same-line? " " "\n")
-        signatures (some->> arglist-strs
-                            (remove nil?)
-                            (string/join join-char))
+        signatures (or (some->> (:arglists meta)
+                                eval
+                                (string/join join-char))
+                       (some->> arglist-strs
+                                (remove nil?)
+                                (string/join join-char)))
         sym (cond->> sym-name
               sym-ns (str sym-ns "/"))
         sym-line (str sym (when signatures

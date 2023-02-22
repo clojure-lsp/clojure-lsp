@@ -15,7 +15,7 @@
   - Fix `textDocument/hover` issue when doc metadata isn't a string literal.
   - Follow references to other vars in doc metadata for use in `textDocument/hover`.
   - Support `:arglists` meta when finding docs of functions via hover feature. #1504
-  - Enhance hover to search clojuredocs on CLJS 
+  - Enhance hover to search clojuredocs on CLJS. #1506
 
 ## 2023.01.26-11.08.16
 

@@ -15,6 +15,7 @@
   - Fix `textDocument/hover` issue when doc metadata isn't a string literal.
   - Follow references to other vars in doc metadata for use in `textDocument/hover`.
   - Support `:arglists` meta when finding docs of functions via hover feature. #1504
+  - Enhance hover to search clojuredocs on CLJS 
 
 ## 2023.01.26-11.08.16
 
@@ -1132,4 +1133,3 @@ Huge refactor https://github.com/clojure-lsp/clojure-lsp/pull/261 which uses clj
 - LSP 3.16: Add support for `codeAction/resolve` improving performance if client supports it
 - Bump extend lib
 - [CI] Remove auto release, next releases should contain more than one PR/fix
-- Enhance hover to search clojuredocs on CLJS 

@@ -1132,3 +1132,4 @@ Huge refactor https://github.com/clojure-lsp/clojure-lsp/pull/261 which uses clj
 - LSP 3.16: Add support for `codeAction/resolve` improving performance if client supports it
 - Bump extend lib
 - [CI] Remove auto release, next releases should contain more than one PR/fix
+- Enhance hover to search clojuredocs on CLJS 

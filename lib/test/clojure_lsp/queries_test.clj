@@ -240,32 +240,62 @@
       (q/find-references-from-cursor db (h/file-uri "file:///a.cljc") alias-r alias-c true))))
 
 (deftest find-references-from-namespace-definition
-  (let [[[ns-def-r ns-def-c]] (h/load-code-and-locs (h/code "(ns |some.cool-ns) (def foo 1)"))
-        _ (h/load-code-and-locs (h/code "(ns |other.cool-ns"
-                                        " (:require [some.cool-ns :as s])) s/foo")
-                                (h/file-uri "file:///b.clj"))
-        _ (h/load-code-and-locs (h/code "(ns |another.cool-ns) :some.cool-ns/bar")
-                                (h/file-uri "file:///c.clj"))
-        common-references [{:uri (h/file-uri "file:///b.clj")
-                            :bucket :namespace-usages
-                            :name 'some.cool-ns
-                            :from 'other.cool-ns}
-                           {:uri (h/file-uri "file:///c.clj")
-                            :bucket :keyword-usages
-                            :from 'another.cool-ns
-                            :name "bar"
-                            :ns 'some.cool-ns}]]
-    (testing "from ns definition"
-      (h/assert-submaps
-        common-references
-        (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.clj") ns-def-r ns-def-c false)))
-    (testing "Including definition"
-      (h/assert-submaps
-        (concat [{:uri (h/file-uri "file:///a.clj")
-                  :name 'some.cool-ns
-                  :bucket :namespace-definitions}]
-                common-references)
-        (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.clj") ns-def-r ns-def-c true)))))
+  (testing "clj"
+    (h/reset-components!)
+    (let [[[ns-def-r ns-def-c]] (h/load-code-and-locs (h/code "(ns |some.cool-ns) (def foo 1)"))
+          _ (h/load-code-and-locs (h/code "(ns |other.cool-ns"
+                                          " (:require [some.cool-ns :as s])) s/foo")
+                                  (h/file-uri "file:///b.clj"))
+          _ (h/load-code-and-locs (h/code "(ns |another.cool-ns) :some.cool-ns/bar")
+                                  (h/file-uri "file:///c.clj"))
+          common-references [{:uri (h/file-uri "file:///b.clj")
+                              :bucket :namespace-usages
+                              :name 'some.cool-ns
+                              :from 'other.cool-ns}
+                             {:uri (h/file-uri "file:///c.clj")
+                              :bucket :keyword-usages
+                              :from 'another.cool-ns
+                              :name "bar"
+                              :ns 'some.cool-ns}]]
+      (testing "from ns definition"
+        (h/assert-submaps
+          common-references
+          (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.clj") ns-def-r ns-def-c false)))
+      (testing "Including definition"
+        (h/assert-submaps
+          (concat [{:uri (h/file-uri "file:///a.clj")
+                    :name 'some.cool-ns
+                    :bucket :namespace-definitions}]
+                  common-references)
+          (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.clj") ns-def-r ns-def-c true)))))
+  (testing "cljc"
+    (h/reset-components!)
+    (let [[[ns-def-r ns-def-c]] (h/load-code-and-locs (h/code "(ns |some.cool-ns) (def foo 1)") (h/file-uri "file:///a.cljc"))
+          _ (h/load-code-and-locs (h/code "(ns |other.cool-ns"
+                                          " (:require [some.cool-ns :as s])) s/foo")
+                                  (h/file-uri "file:///b.cljc"))
+          _ (h/load-code-and-locs (h/code "(ns |another.cool-ns) :some.cool-ns/bar")
+                                  (h/file-uri "file:///c.cljc"))
+          common-references [{:uri (h/file-uri "file:///b.cljc")
+                              :bucket :namespace-usages
+                              :name 'some.cool-ns
+                              :from 'other.cool-ns}
+                             {:uri (h/file-uri "file:///c.cljc")
+                              :bucket :keyword-usages
+                              :from 'another.cool-ns
+                              :name "bar"
+                              :ns 'some.cool-ns}]]
+      (testing "from ns definition"
+        (h/assert-submaps
+          common-references
+          (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.cljc") ns-def-r ns-def-c false)))
+      (testing "Including definition"
+        (h/assert-submaps
+          (concat [{:uri (h/file-uri "file:///a.cljc")
+                    :name 'some.cool-ns
+                    :bucket :namespace-definitions}]
+                  common-references)
+          (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.cljc") ns-def-r ns-def-c true))))))
 
 (deftest find-references-from-namespace-usage
   (let [_ (h/load-code-and-locs (h/code "(ns some.cool-ns) (def foo 1)"))

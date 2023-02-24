@@ -452,7 +452,8 @@
         (into []
               (comp
                 xf-analysis->namespace-usages
-                (xf-same-name name))
+                (xf-same-name name)
+                (medley/distinct-by (juxt :uri :name :row :col)))
               (ns-and-dependents-analysis db name))
         ;; TODO: do we always need these keywords? If not, probably better to
         ;; split this into a fast version that uses ns-and-dependents-analysis,
@@ -461,6 +462,7 @@
               (comp
                 xf-analysis->keywords
                 (xf-same-ns name)
+                (medley/distinct-by (juxt :uri :name :row :col))
                 (remove #(or (:auto-resolved %)
                              (:namespace-from-prefix %))))
               (:analysis db))))))

@@ -102,10 +102,7 @@
                      :new-text replacement-name
                      :text-document {:version version :uri uri}})))))))
 
-(defn ^:private rename-ns-definition
-  [replacement
-   db
-   reference]
+(defn ^:private rename-ns-definition [replacement db reference]
   (let [ref-doc-uri (:uri reference)
         version (get-in db [:documents ref-doc-uri :v] 0)
         text (if (contains? #{:keyword-definitions :keyword-usages} (:bucket reference))

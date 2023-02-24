@@ -5,6 +5,7 @@
 - General
   - Add new setting `:paths-ignore-regex` to allow ignore analyzing/linting specific paths, useful if you have folders or files that are not relevant to be linted and are huge which may affect performance.
   - Bump clj-kondo. Fixes missing lint class constructors, making clojure-lsp show add import code action always.
+  - Fix wrong ns rename for cljc files. #1508
 
 - Editor
   - Fix cache issue: wrong external dependencies analysis when running clojure-lsp in editor after running on CLI, affecting navigation. #1473

@@ -16,6 +16,8 @@
 (def b-subject-text (slurp b-subject-path))
 (def c-expected-path (h/project-path->canon-path "src/sample_test/rename/foo/c.cljc"))
 (def c-expected-text (slurp (h/project-path->canon-path "fixtures/sample_test/api/rename/foo/c.cljc")))
+(def d-subject-path (h/project-path->canon-path "src/sample_test/rename/d.clj"))
+(def d-subject-text (slurp d-subject-path))
 
 (deftest rename
   (testing "passing a valid from and too"
@@ -34,6 +36,7 @@
       (is (h/str-includes? (slurp rdr) "Renamed sample-test.rename.b to sample-test.rename.foo.c\n"))
       (is (= c-expected-text (slurp c-expected-path))))
     (spit b-subject-path b-subject-text)
+    (spit d-subject-path d-subject-text)
     (io/delete-file c-expected-path))
   (testing "dry renaming a namespace"
     (with-open [rdr (lsp/cli! "rename"

@@ -8,3 +8,5 @@
 ::a/click
 
 :sample-test.rename.a/click
+
+(def my-def 1)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023.02.26-23.46.05
+
 - General
   - Add new setting `:paths-ignore-regex` to allow ignore analyzing/linting specific paths, useful if you have folders or files that are not relevant to be linted and are huge which may affect performance.
   - Bump clj-kondo. Fixes missing lint class constructors, making clojure-lsp show add import code action always.

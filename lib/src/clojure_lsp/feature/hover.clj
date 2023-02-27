@@ -103,8 +103,20 @@
       (when referenced-var-docs
         (recur db markdown? uri referenced-var-docs (inc cnt))))))
 
+(defn ^:private hover-signatures
+  [{:keys [meta arglist-strs]}
+   join-char]
+  (or (let [node (some->> (:arglists meta) z/of-node)
+            sexpr (try (z/sexpr node) (catch Exception _ nil))]
+        (if (= 'quote (first sexpr))
+          (string/join join-char (second sexpr))
+          (z/string node)))
+      (some->> arglist-strs
+               (remove nil?)
+               (string/join join-char))))
+
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc uri arglist-strs meta] :as _definition}
+  [{sym-ns :ns sym-name :name :keys [doc uri] :as definition}
    db*
    {:keys [additional-text-edits?]}]
   (let [db @db*
@@ -114,12 +126,7 @@
         hide-filename? (settings/get db [:hover :hide-file-location?])
         additional-edits-warning-text (settings/get db [:completion :additional-edits-warning-text])
         join-char (if arity-on-same-line? " " "\n")
-        signatures (or (some->> (:arglists meta)
-                                eval
-                                (string/join join-char))
-                       (some->> arglist-strs
-                                (remove nil?)
-                                (string/join join-char)))
+        signatures (hover-signatures definition join-char)
         sym (cond->> sym-name
               sym-ns (str sym-ns "/"))
         sym-line (str sym (when signatures

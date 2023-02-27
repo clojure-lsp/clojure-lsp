@@ -4,6 +4,9 @@
 
 ## 2023.02.27-13.12.12
 
+- Editor
+  - Fix exception on hover feature on graal images.
+
 ## 2023.02.26-23.46.05
 
 - General

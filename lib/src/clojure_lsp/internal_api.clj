@@ -453,3 +453,8 @@
 
 (defn dump [options]
   (dump* options (build-components options)))
+
+(defn sleep [ms]
+  (Thread/sleep
+   ;; long cast necessary to avoid reflection in JDK 19
+   (long ms)))

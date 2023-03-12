@@ -4,7 +4,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
-   [clojure.string :as string])
+   [clojure.string :as string]
+   [medley.core :as medley])
   (:import
    (java.util.jar JarFile JarFile$JarFileEntry)))
 
@@ -89,17 +90,26 @@
                      (edn/read-string {:readers {'re re-pattern}}
                                       (slurp (.getInputStream jar config-entry))))))))))
 
-(defn deep-merge-fixing-cljfmt
+(defn deep-merge-considering-settings
+  "Deep merge a with b checking for specific keys related to
+  clojure-lsp settings to avoid wrong duplicated values."
   ([a b]
    (let [deep-merged (shared/deep-merge a b)]
-     (if (-> deep-merged :cljfmt :indents)
+     (cond
+       (-> deep-merged :cljfmt :indents)
        (let [cljfmt-a (-> a :cljfmt :indents)
              cljfmt-b (-> b :cljfmt :indents)]
          (-> deep-merged
              (update-in [:cljfmt :indents] merge cljfmt-a cljfmt-b)))
+
+       (coll? (:project-specs deep-merged))
+       (assoc deep-merged :project-specs
+              (medley/distinct-by :project-path (:project-specs deep-merged)))
+
+       :else
        deep-merged)))
   ([a b & more]
-   (reduce deep-merge-fixing-cljfmt (or a {}) (cons b more))))
+   (reduce deep-merge-considering-settings (or a {}) (cons b more))))
 
 (defn ^:private resolve-from-classpath-config-paths-impl [classpath {:keys [classpath-config-paths]}]
   (when-let [cp-config-paths (and (coll? classpath-config-paths)
@@ -114,7 +124,7 @@
                               flatten
                               (remove nil?)
                               seq)]
-        (reduce deep-merge-fixing-cljfmt configs)))))
+        (reduce deep-merge-considering-settings configs)))))
 
 (defn classpath-config-paths? [{:keys [classpath-config-paths]}]
   (and (coll? classpath-config-paths)

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix classpath issue message to properly ignore or retry after user input. #1500
+
 ## 2023.02.27-13.12.12
 
 - Editor

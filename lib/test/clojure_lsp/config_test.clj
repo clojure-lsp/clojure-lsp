@@ -110,33 +110,49 @@
                                                          {:classpath-config-paths
                                                           [(h/file-path "my/other-lib")]}))))))
 
-(deftest deep-merge-fixing-cljfmt
-  (is (= {} (#'config/deep-merge-fixing-cljfmt {} {})))
-  (is (= {:a 1 :b 2} (#'config/deep-merge-fixing-cljfmt {:a 1} {:b 2})))
-  (is (= {:a {:b 1 :c 2}} (#'config/deep-merge-fixing-cljfmt {:a {:b 1}} {:a {:c 2}})))
-  (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 0]]}}}
-         (#'config/deep-merge-fixing-cljfmt {:a 1 :cljfmt {:indents {'a [[:block 0]]}}}
-                                            {:b 2})))
-  (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 0]]}}}
-         (#'config/deep-merge-fixing-cljfmt {:a 1}
-                                            {:b 2 :cljfmt {:indents {'a [[:block 0]]}}})))
-  (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 1]]}}}
-         (#'config/deep-merge-fixing-cljfmt {:a 1 :cljfmt {:indents {'a [[:block 0]]}}}
-                                            {:b 2 :cljfmt {:indents {'a [[:block 1]]}}})))
-  (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 1]]
-                                       'b [[:inner 0]]}}}
-         (#'config/deep-merge-fixing-cljfmt {:a 1 :cljfmt {:indents {'a [[:block 0]]}}}
-                                            {:b 2 :cljfmt {:indents {'a [[:block 1]]
-                                                                     'b [[:inner 0]]}}})))
-  (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 1]]
-                                       'b [[:inner 0]]}}}
-         (#'config/deep-merge-fixing-cljfmt {:a 1 :cljfmt {:indents {'a [[:block 0]]
-                                                                     'b [[:inner 0]]}}}
-                                            {:b 2 :cljfmt {:indents {'a [[:block 1]]}}})))
-  (is (= {:a 1 :b 3 :cljfmt {:indents {'a [[:block 1]]
-                                       'b [[:inner 0]]
-                                       'c [[:block 1]]}}}
-         (#'config/deep-merge-fixing-cljfmt {:a 1 :cljfmt {:indents {'a [[:block 0]]
-                                                                     'b [[:inner 0]]}}}
-                                            {:b 2 :cljfmt {:indents {'a [[:block 1]]}}}
-                                            {:b 3 :cljfmt {:indents {'c [[:block 1]]}}}))))
+(deftest deep-merge-considering-settings
+  (is (= {} (#'config/deep-merge-considering-settings {} {})))
+  (is (= {:a 1 :b 2} (#'config/deep-merge-considering-settings {:a 1} {:b 2})))
+  (is (= {:a {:b 1 :c 2}} (#'config/deep-merge-considering-settings {:a {:b 1}} {:a {:c 2}})))
+  (testing "cljfmt"
+    (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 0]]}}}
+           (#'config/deep-merge-considering-settings {:a 1 :cljfmt {:indents {'a [[:block 0]]}}}
+                                                     {:b 2})))
+    (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 0]]}}}
+           (#'config/deep-merge-considering-settings {:a 1}
+                                                     {:b 2 :cljfmt {:indents {'a [[:block 0]]}}})))
+    (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 1]]}}}
+           (#'config/deep-merge-considering-settings {:a 1 :cljfmt {:indents {'a [[:block 0]]}}}
+                                                     {:b 2 :cljfmt {:indents {'a [[:block 1]]}}})))
+    (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 1]]
+                                         'b [[:inner 0]]}}}
+           (#'config/deep-merge-considering-settings {:a 1 :cljfmt {:indents {'a [[:block 0]]}}}
+                                                     {:b 2 :cljfmt {:indents {'a [[:block 1]]
+                                                                              'b [[:inner 0]]}}})))
+    (is (= {:a 1 :b 2 :cljfmt {:indents {'a [[:block 1]]
+                                         'b [[:inner 0]]}}}
+           (#'config/deep-merge-considering-settings {:a 1 :cljfmt {:indents {'a [[:block 0]]
+                                                                              'b [[:inner 0]]}}}
+                                                     {:b 2 :cljfmt {:indents {'a [[:block 1]]}}})))
+    (is (= {:a 1 :b 3 :cljfmt {:indents {'a [[:block 1]]
+                                         'b [[:inner 0]]
+                                         'c [[:block 1]]}}}
+           (#'config/deep-merge-considering-settings {:a 1 :cljfmt {:indents {'a [[:block 0]]
+                                                                              'b [[:inner 0]]}}}
+                                                     {:b 2 :cljfmt {:indents {'a [[:block 1]]}}}
+                                                     {:b 3 :cljfmt {:indents {'c [[:block 1]]}}}))))
+  (testing "project-specs"
+    (is (= {:a 1 :b 2 :project-specs [{:project-path "foo"
+                                       :classpath-cmd "baz"}]}
+           (#'config/deep-merge-considering-settings {:a 1 :b 2 :project-specs [{:project-path "foo"
+                                                                                 :classpath-cmd "baz"}]}
+                                                     {:a 1 :b 2 :project-specs [{:project-path "foo"
+                                                                                 :classpath-cmd "bar"}]})))
+    (is (= {:a 1 :b 2 :project-specs [{:project-path "foo"
+                                       :classpath-cmd "baz"}
+                                      {:project-path "bar"
+                                       :classpath-cmd "qux"}]}
+           (#'config/deep-merge-considering-settings {:a 1 :b 2 :project-specs [{:project-path "foo"
+                                                                                 :classpath-cmd "baz"}]}
+                                                     {:a 1 :b 2 :project-specs [{:project-path "bar"
+                                                                                 :classpath-cmd "qux"}]})))))

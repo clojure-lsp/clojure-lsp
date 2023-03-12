@@ -3,7 +3,11 @@
   (:require
    [babashka.deps :as deps]
    [babashka.fs :as fs]
-   [babashka.process :as p]))
+   [babashka.process :as p]
+   [babashka.tasks :refer [clojure]]
+   [clojure.string :as str]))
+
+(set! *warn-on-reflection* true)
 
 (def windows? (#'fs/windows?))
 
@@ -31,7 +35,7 @@
   "Clean all artifacts produced by the various tasks."
   []
   (let [lsp-bin-native (lsp-bin-filename :native)
-        lsp-bin-script  (lsp-bin-filename :script)
+        lsp-bin-script (lsp-bin-filename :script)
         files (into ["cli/target"
                      (fs/path "cli" lsp-bin-native)
                      (fs/path "cli" lsp-bin-script)
@@ -158,3 +162,11 @@
     (fs/copy-tree "images" "docs" {:replace-existing true})
     (p/shell "docker login docker.pkg.github.com")
     (p/shell (str "docker run --rm -it -p 8000:8000 -v " (fs/cwd) ":/docs docker.pkg.github.com/clojure-lsp/docs-image/docs-image"))))
+
+(defn test-reflection []
+  (let [err (:err (clojure
+                    {:dir "cli" :continue true :err :string}
+                    "-M:dev -e" "(require '[clojure-lsp.main])"))]
+    (when-not (str/blank? err)
+      (println err))
+    (assert (not (str/includes? err "Reflection warning")))))

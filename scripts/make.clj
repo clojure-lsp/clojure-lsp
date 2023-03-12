@@ -35,7 +35,7 @@
   "Clean all artifacts produced by the various tasks."
   []
   (let [lsp-bin-native (lsp-bin-filename :native)
-        lsp-bin-script  (lsp-bin-filename :script)
+        lsp-bin-script (lsp-bin-filename :script)
         files (into ["cli/target"
                      (fs/path "cli" lsp-bin-native)
                      (fs/path "cli" lsp-bin-script)
@@ -165,8 +165,8 @@
 
 (defn test-reflection []
   (let [err (:err (clojure
-                   {:dir "cli" :continue true :err :string}
-                   "-M:dev -e" "(require '[clojure-lsp.main])"))]
+                    {:dir "cli" :continue true :err :string}
+                    "-M:dev -e" "(require '[clojure-lsp.main])"))]
     (when-not (str/blank? err)
       (println err))
     (assert (not (str/includes? err "Reflection warning")))))

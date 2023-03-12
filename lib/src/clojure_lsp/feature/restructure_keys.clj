@@ -5,6 +5,8 @@
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
+(set! *warn-on-reflection* true)
+
 (defn ^:private map-to-restructure [zloc uri db]
   (when zloc
     (let [{:keys [row col]} (meta (z/node zloc))

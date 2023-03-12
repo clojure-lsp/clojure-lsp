@@ -28,10 +28,11 @@
          prod-cli make/prod-cli
          native-cli make/native-cli
 
+         test-reflection make/test-reflection
          test-lib make/test-lib
          test-cli make/test-cli
          test {:doc "Run all unit tests."
-               :depends [test-lib test-cli]}
+               :depends [test-reflection test-lib test-cli]}
 
          pod-test make/pod-test
          integration-test make/integration-test

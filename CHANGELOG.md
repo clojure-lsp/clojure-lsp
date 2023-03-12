@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix reflection issue in JDK19 with `Thread/sleep` #1520
+
 - Editor
   - Fix classpath issue message to properly ignore or retry after user input. #1500
 

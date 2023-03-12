@@ -4,6 +4,8 @@
    (java.net URL)
    (javax.net.ssl HttpsURLConnection)))
 
+(set! *warn-on-reflection* true)
+
 (def ^:private connect-timeout-ms 1000)
 (def ^:private read-timeout-ms 30000)
 

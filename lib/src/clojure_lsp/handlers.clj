@@ -81,7 +81,7 @@
                                                         (caught-up? db uri desired-version)))
                                               seq)]
               (do
-                (shared/sleep backoff)
+                (Thread/sleep (long backoff))
                 (recur false (min backoff-max (* backoff-mult backoff)) processing-versions))
               (if immediate?
                 {:delay/outcome :immediate

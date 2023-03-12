@@ -543,8 +543,3 @@
     (let [uri (URI. uri)]
       ;; normalize scheme:/some/path to scheme:///some/path
       (uri-encode (.getScheme uri) (.getPath uri)))))
-
-(defn sleep [ms]
-  (Thread/sleep
-   ;; long cast necessary to avoid reflection in JDK 19
-   (long ms)))

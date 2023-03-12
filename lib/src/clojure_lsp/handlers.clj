@@ -21,7 +21,6 @@
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
-   [clojure-lsp.internal-api :as api]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -82,7 +81,7 @@
                                                         (caught-up? db uri desired-version)))
                                               seq)]
               (do
-                (api/sleep backoff)
+                (shared/sleep backoff)
                 (recur false (min backoff-max (* backoff-mult backoff)) processing-versions))
               (if immediate?
                 {:delay/outcome :immediate

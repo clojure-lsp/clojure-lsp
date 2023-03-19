@@ -33,8 +33,8 @@
 (defmacro after-changes [& body]
   `(p/thread-call (changes-executor) (^:once fn* [] ~@body)))
 
-(def diagnostics-debounce-ms 100)
-(def change-debounce-ms 300)
+(def diagnostics-debounce-ms 25)
+(def change-debounce-ms 50)
 (def watched-files-debounce-ms 1000)
 
 (def known-files-pattern "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}")

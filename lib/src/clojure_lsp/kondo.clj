@@ -142,7 +142,7 @@
        (not derived-location)
        ;; #1510
        (or (not (identical? :var-definitions bucket))
-            name)))
+           name)))
 
 (defn ^:private normalize-analysis [external? analysis]
   (reduce-kv

@@ -131,13 +131,18 @@
 
     [element]))
 
-(defn ^:private valid-element? [{:keys [name-row name-col name-end-row name-end-col derived-name-location derived-location]}]
+(defn ^:private valid-element?
+  [{:keys [name bucket name-row name-col name-end-row name-end-col
+           derived-name-location derived-location]}]
   (and name-row
        name-col
        name-end-row
        name-end-col
        (not derived-name-location)
-       (not derived-location)))
+       (not derived-location)
+       ;; #1510
+       (or (not (identical? :var-definitions bucket))
+            name)))
 
 (defn ^:private normalize-analysis [external? analysis]
   (reduce-kv

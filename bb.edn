@@ -4,7 +4,7 @@
                                       :git/sha "ce060c12a25b552b864dc90f8fb344a2eb91ea9d"}
 
         medley/medley {:mvn/version "1.4.0"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.5.0"
+        com.github.clojure-lsp/lsp4clj {:mvn/version "1.7.3"
                                         #_#_:local/root "../../lsp4clj"}
         org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
                                  :git/sha "951b49b8c173244e66443b8188e3ff928a0a71e7"}}
@@ -28,10 +28,11 @@
          prod-cli make/prod-cli
          native-cli make/native-cli
 
+         test-reflection make/test-reflection
          test-lib make/test-lib
          test-cli make/test-cli
          test {:doc "Run all unit tests."
-               :depends [test-lib test-cli]}
+               :depends [test-reflection test-lib test-cli]}
 
          pod-test make/pod-test
          integration-test make/integration-test

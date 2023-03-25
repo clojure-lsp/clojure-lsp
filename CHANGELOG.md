@@ -10,6 +10,7 @@
 - Editor
   - Fix classpath issue message to properly ignore or retry after user input. #1500
   - Decreate debounce time for calculating changes and diagnostics, improving UX in cost of performance, it doesn't seem to highly affect performance though.
+  - Add new setting to change diagnostics range type. #1530
 
 ## 2023.02.27-13.12.12
 

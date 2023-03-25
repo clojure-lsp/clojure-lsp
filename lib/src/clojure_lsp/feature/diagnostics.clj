@@ -74,10 +74,12 @@
                   (z/find-next-value z/next :gen-class))))))
 
 (defn ^:private kondo-finding->diagnostic
-  [{:keys [type message level row col end-row] :as finding}]
-  (let [expression? (not= row end-row)
+  [range-type
+   {:keys [type message level row col end-row] :as finding}]
+  (let [full-range? (or (not= row end-row)
+                        (not (identical? :full range-type)))
         finding (cond-> (merge {:end-row row :end-col col} finding)
-                  expression? (assoc :end-row row :end-col col))]
+                  full-range? (assoc :end-row row :end-col col))]
     {:range (shared/->range finding)
      :tags (cond-> []
              (diagnostic-types-of-unnecessary-type type) (conj 1)
@@ -107,10 +109,11 @@
       (re-matches (re-pattern ns-exclude-regex-str) (str namespace)))))
 
 (defn ^:private kondo-findings->diagnostics [uri linter db]
-  (when-not (exclude-ns? uri linter db)
-    (->> (get-in db [:findings uri])
-         (filter valid-finding?)
-         (mapv kondo-finding->diagnostic))))
+  (let [range-type (settings/get db [:diagnostics :range-type] :full)]
+    (when-not (exclude-ns? uri linter db)
+      (->> (get-in db [:findings uri])
+           (filter valid-finding?)
+           (mapv (partial kondo-finding->diagnostic range-type))))))
 
 (defn severity->level [severity]
   (case (int severity)
@@ -148,7 +151,7 @@
       []
       (cond-> []
         (not= :off kondo-level)
-        (concat (kondo-findings->diagnostics uri :clj-kondo db))
+        (concat (kondo-findings->diagnostics uri :clj-kondo  db))
 
         (not= :off depend-level)
         (concat (clj-depend-violations->diagnostics uri depend-level db))))))

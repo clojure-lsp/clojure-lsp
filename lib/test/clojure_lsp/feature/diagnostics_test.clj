@@ -217,9 +217,18 @@
                         :severity 2
                         :source "clj-kondo"}]
                       (f.diagnostic/find-diagnostics (h/file-uri "file:///some_ns.clj") (h/db))))
-  (testing "when inside expression?"
+  (testing "when inside a expression and range-type is not specified (:full)"
     (swap! (h/db*) merge {:settings {}})
     (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 23}}
+                        :message "clojure.core/assert is called with 0 args but expects 1 or 2"
+                        :code "invalid-arity"
+                        :tags []
+                        :severity 1
+                        :source "clj-kondo"}]
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///other_ns.clj") (h/db))))
+  (testing "when inside a expression and range-type is simple"
+    (swap! (h/db*) merge {:settings {:diagnostics {:range-type :simple}}})
+    (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 14}}
                         :message "clojure.core/assert is called with 0 args but expects 1 or 2"
                         :code "invalid-arity"
                         :tags []

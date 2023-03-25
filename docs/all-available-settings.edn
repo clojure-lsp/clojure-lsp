@@ -8,6 +8,7 @@
  :lint-project-files-after-startup? true
  :notify-references-on-file-change true
  :compute-external-file-changes true
+ :diagnostics {:range-type :full}
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex ""}

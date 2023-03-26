@@ -188,6 +188,7 @@
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some_ns.clj"))
   (h/load-code-and-locs "(ns other-ns) (assert )" (h/file-uri "file:///other_ns.clj"))
+  (h/load-code-and-locs "(ns other-ns) foo" (h/file-uri "file:///another_ns.clj"))
   (testing "when linter level is :off"
     (swap! (h/db*) shared/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
@@ -226,7 +227,7 @@
                         :severity 1
                         :source "clj-kondo"}]
                       (f.diagnostic/find-diagnostics (h/file-uri "file:///other_ns.clj") (h/db))))
-  (testing "when inside a expression and range-type is simple"
+  (testing "when is a expression and range-type is simple"
     (swap! (h/db*) merge {:settings {:diagnostics {:range-type :simple}}})
     (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 14}}
                         :message "clojure.core/assert is called with 0 args but expects 1 or 2"
@@ -235,6 +236,15 @@
                         :severity 1
                         :source "clj-kondo"}]
                       (f.diagnostic/find-diagnostics (h/file-uri "file:///other_ns.clj") (h/db))))
+  (testing "when is not a expression, range-type is simple"
+    (swap! (h/db*) merge {:settings {:diagnostics {:range-type :simple}}})
+    (h/assert-submaps [{:range {:start {:line 0 :character 14} :end {:line 0 :character 17}}
+                        :message "Unresolved symbol: foo"
+                        :code "unresolved-symbol"
+                        :tags []
+                        :severity 1
+                        :source "clj-kondo"}]
+                      (f.diagnostic/find-diagnostics (h/file-uri "file:///another_ns.clj") (h/db))))
   (testing "when file is external"
     (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some/place.jar:some/file.clj"))
     (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")

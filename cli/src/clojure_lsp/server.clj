@@ -501,12 +501,13 @@
     (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(exit server)))
   {:capabilities (capabilities (settings/all @db*))})
 
-(defmethod lsp.server/receive-notification "initialized" [_ {:keys [server]} _params]
+(defmethod lsp.server/receive-notification "initialized" [_ {:keys [server db*]} _params]
   (logger/info "Initialized!")
-  (->> {:registrations [{:id "id"
-                         :method "workspace/didChangeWatchedFiles"
-                         :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
-       (lsp.server/send-request server "client/registerCapability")))
+  (when (-> @db* :client-capabilities :workspace :did-change-watched-files)
+    (->> {:registrations [{:id "id"
+                           :method "workspace/didChangeWatchedFiles"
+                           :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
+         (lsp.server/send-request server "client/registerCapability"))))
 
 (defmethod lsp.server/receive-request "shutdown" [_ {:keys [db*]} _params]
   (logger/info "Shutting down...")

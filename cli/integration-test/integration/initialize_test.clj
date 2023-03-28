@@ -106,7 +106,8 @@
                        :clojuredocs true}}}
 
       (lsp/request! (fixture/initialize-request (merge fixture/default-init-options
-                                                       {:workDoneToken "integration-test"})))))
+                                                       {:workDoneToken "integration-test"
+                                                        :capabilities {:workspace {:didChangeWatchedFiles {:dynamicRegistration true}}}})))))
 
   (h/assert-submap
     {:token "integration-test"

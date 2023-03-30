@@ -81,5 +81,5 @@ The binaries are available on [Github releases](https://github.com/clojure-lsp/c
 In Github releases you will find a `clojure-lsp` file that runs a embedded jar. This should be removed soon, use GraalVM binaries instead.
 
 - You need `java` on your $PATH.
-- Grab the latest `clojure-lsp` from github [LATEST](https://github.com/snoe/clojure-lsp/releases/latest)
+- Grab the latest `clojure-lsp` from github [LATEST](https://github.com/clojure-lsp/clojure-lsp/releases/latest)
 - Place it in your $PATH with a chmod 755

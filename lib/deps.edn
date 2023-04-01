@@ -13,7 +13,7 @@
                              :exclude [com.cognitect/transit-clj
                                        babashka/fs]}
         com.fabiodomingues/clj-depend {:mvn/version "0.6.1"}
-        com.cognitect/transit-clj {:mvn/version "1.0.329"}
+        com.cognitect/transit-clj {:mvn/version "1.0.333"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
 

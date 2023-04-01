@@ -101,10 +101,14 @@
        (case delay-outcome#
          :cancelled
          (let [~msg-sym (format ~cancelled-msg (shared/format-time-delta-ms (:delay/start delay-data#) (:delay/end delay-data#)))]
-           ~(with-meta `(logger/debug ~msg-sym) (meta &form)))
+           ~(with-meta `(logger/debug ~msg-sym) (meta &form))
+           {:error {:code :request-cancelled
+                    :message "Request cancelled by client."}})
          :timed-out
          (let [~msg-sym (format ~timed-out-msg (first (:delay/timeout-uris delay-data#)))]
-           ~(with-meta `(logger/warn ~msg-sym) (meta &form)))
+           ~(with-meta `(logger/warn ~msg-sym) (meta &form))
+           {:error {:code :request-failed
+                    :message "Timed out waiting for analysis."}})
          (let [result# (do ~@body)
                ~msg-sym (case delay-outcome#
                           :immediate

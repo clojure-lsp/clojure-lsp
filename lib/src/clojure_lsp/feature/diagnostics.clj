@@ -73,13 +73,21 @@
                   edit/find-namespace
                   (z/find-next-value z/next :gen-class))))))
 
+(defn ^:private diagnostics-start-char-coll? [lines* row col]
+  (let [start-char (when-let [^String line (get @lines* (dec row))]
+                     (try (.charAt line (dec col))
+                          (catch StringIndexOutOfBoundsException _ nil)))]
+    (contains? #{\( \[ \{} start-char)))
+
 (defn ^:private kondo-finding->diagnostic
   [range-type
+   lines*
    {:keys [type message level row col end-row] :as finding}]
-  (let [full-range? (or (not= row end-row)
-                        (not (identical? :full range-type)))
+  (let [expression? (not= row end-row)
+        simple-range? (and (not (identical? :full range-type))
+                           (diagnostics-start-char-coll? lines* row col))
         finding (cond-> (merge {:end-row row :end-col col} finding)
-                  full-range? (assoc :end-row row :end-col col))]
+                  (or expression? simple-range?) (assoc :end-row row :end-col col))]
     {:range (shared/->range finding)
      :tags (cond-> []
              (diagnostic-types-of-unnecessary-type type) (conj 1)
@@ -109,11 +117,14 @@
       (re-matches (re-pattern ns-exclude-regex-str) (str namespace)))))
 
 (defn ^:private kondo-findings->diagnostics [uri linter db]
-  (let [range-type (settings/get db [:diagnostics :range-type] :full)]
+  (let [range-type (settings/get db [:diagnostics :range-type] :full)
+        ;; we delay for performance
+        lines* (delay (-> (get-in db [:documents uri :text])
+                          (string/split #"\r?\n")))]
     (when-not (exclude-ns? uri linter db)
       (->> (get-in db [:findings uri])
            (filter valid-finding?)
-           (mapv (partial kondo-finding->diagnostic range-type))))))
+           (mapv (partial kondo-finding->diagnostic range-type lines*))))))
 
 (defn severity->level [severity]
   (case (int severity)

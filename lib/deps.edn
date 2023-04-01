@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure {:mvn/version "1.11.1"}
         rewrite-clj/rewrite-clj {:mvn/version "1.1.47"}
-        borkdude/rewrite-edn {:mvn/version "0.4.5" :exclusions [rewrite-clj/rewrite-clj]}
-        org.clojure/core.async {:mvn/version "1.5.648"}
+        borkdude/rewrite-edn {:mvn/version "0.4.6" :exclusions [rewrite-clj/rewrite-clj]}
+        org.clojure/core.async {:mvn/version "1.6.673"}
         cljfmt/cljfmt {:mvn/version "0.9.2"
                        :exclusions [rewrite-cljs/rewrite-cljs
                                     com.googlecode.java-diff-utils/diffutils]}
@@ -13,7 +13,7 @@
                              :exclude [com.cognitect/transit-clj
                                        babashka/fs]}
         com.fabiodomingues/clj-depend {:mvn/version "0.6.1"}
-        com.cognitect/transit-clj {:mvn/version "1.0.329"}
+        com.cognitect/transit-clj {:mvn/version "1.0.333"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
 
@@ -23,8 +23,8 @@
                                         :exclusions [funcool/promesa]}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.78.1249"}
-                               com.taoensso/timbre {:mvn/version "6.0.4"}}
+                               lambdaisland/kaocha {:mvn/version "1.82.1306"}
+                               com.taoensso/timbre {:mvn/version "6.1.0"}}
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
@@ -38,5 +38,5 @@
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
                                                          :tag "v0.9.4"
                                                          :sha "76b78fe"}
-                          slipset/deps-deploy {:mvn/version "0.2.0"}}
+                          slipset/deps-deploy {:mvn/version "0.2.1"}}
                    :ns-default build}}}

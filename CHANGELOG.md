@@ -12,6 +12,7 @@
   - Decreate debounce time for calculating changes and diagnostics, improving UX in cost of performance, it doesn't seem to highly affect performance though.
   - Add new setting to change diagnostics range type. #1530
   - Spec compliance: avoid registering client capabilities if dynamic registration is not set. #1535
+  - Improve java support: using new `java-member-definitions` analysis, first feature is the allow completion of static members (fields and methods) for java classes. 
 
 ## 2023.02.27-13.12.12
 

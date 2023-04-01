@@ -159,6 +159,11 @@
              (cond-> encode-colons-in-path?
                (string/replace ":" "%3A"))))))
 
+(defn conform-uri-scheme [uri]
+  (if-let [[_ scheme slashes] (re-matches #"([a-z:]+)(/+.*?).*" uri)]
+    (string/replace uri (str scheme slashes) (str scheme "///"))
+    uri))
+
 (defn uri->path ^java.nio.file.Path [uri]
   (-> (conform-uri uri {:upper-case-drive-letter? true})
       URI. Paths/get))

@@ -130,7 +130,6 @@
                 :name-end-row 0
                 :name-end-col 0))]
 
-
     [element]))
 
 (defn ^:private valid-element?
@@ -173,7 +172,7 @@
   (let [filename->uri (memoize #(shared/filename->uri % db))
         trade-filename-for-uri (fn [obj]
                                  (-> obj
-                                     (assoc :uri (or (:uri obj)
+                                     (assoc :uri (or (some-> (:uri obj) shared/conform-uri-scheme)
                                                      (filename->uri (:filename obj))))
                                      (dissoc :filename)))
         with-uris (fn [uris default coll]

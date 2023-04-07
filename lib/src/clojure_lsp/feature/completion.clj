@@ -486,7 +486,7 @@
                                  :priority :java-class-definitions}))))))
             (:analysis db)))))
 
-(defn ^:private with-java-static-member-definition-items [matches-fn class-element cursor-value db]
+(defn ^:private with-java-static-member-definition-items [matches-fn class-name cursor-value db]
   (let [full-package? (string/includes? cursor-value ".")
         matches-member-fn (if full-package?
                             (fn [class name] (string/starts-with? (str class "/" name) (str cursor-value)))
@@ -495,17 +495,22 @@
           (comp
             q/xf-analysis->java-member-definitions
             (filter (fn [{:keys [class name]}]
-                      (and (.equals ^String class (:class class-element))
-                           (matches-member-fn class name))))
-            (map (fn [member]
+                      (and (.equals ^String class-name (last (string/split class #"\.")))
+                           (matches-member-fn class name)
+                           (not (.equals ^String name "<init>")))))
+            (map (fn [{:keys [type parameter-types return-type] :as member}]
                    (let [package-and-class (string/split (:class member) #"\.")
-                         package-name (string/join "." (pop package-and-class))
-                         class-name (last package-and-class)]
+                         class-name (last package-and-class)
+                         parameter-types-str (when parameter-types (string/join ", " parameter-types))]
                      {:label (if full-package?
                                (str (:class member) "/" (:name member))
                                (str class-name "/" (:name member)))
                       :kind (java-member-flags->kind member)
-                      :detail package-name
+                      :detail (cond-> ""
+                                return-type (str return-type " ")
+                                type (str type " ")
+                                parameter-types-str (str "(" parameter-types-str ")")
+                                :always string/trim)
                       :priority :java-member-definitions}))))
           (:analysis db))))
 
@@ -602,8 +607,9 @@
                                    (str cursor-value)))
             cursor-full-ns? (when cursor-value-or-ns
                               (contains? (dep-graph/ns-names db) (symbol cursor-value-or-ns)))
-            class-element (when (identical? :java-class-usages (:bucket cursor-element))
-                            cursor-element)
+            java-class-for-static-member (when (symbol? cursor-value)
+                                           (let [[_ match1 match2] (re-find #"^([A-Z]\w*)/|\.([A-Z]\w*)/" (str cursor-value))]
+                                             (or match1 match2)))
             items (cond
                     inside-refer?
                     (with-refer-elements matches-fn cursor-loc non-local-db resolve-support)
@@ -642,9 +648,9 @@
                            (supports-clj-core? uri))
                       (into (with-java-definition-items matches-fn cursor-value db))
 
-                      (and class-element
+                      (and java-class-for-static-member
                            (supports-clj-core? uri))
-                      (into (with-java-static-member-definition-items matches-fn class-element cursor-value db))
+                      (into (with-java-static-member-definition-items matches-fn java-class-for-static-member cursor-value db))
 
                       (and support-snippets?
                            simple-cursor?)

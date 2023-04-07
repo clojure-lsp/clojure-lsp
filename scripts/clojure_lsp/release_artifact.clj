@@ -2,6 +2,7 @@
   (:require
    [babashka.process :refer [sh]]
    [borkdude.gh-release-artifact :as ghr]
+   [borkdude.gh-release-artifact.internal :as ghr.internal]
    [clojure.string :as str]))
 
 (defn current-branch []
@@ -22,7 +23,7 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn release [& args]
-  (let [latest-dev-tag (:tag_name (first (ghr/list-releases "clojure-lsp" "clojure-lsp-dev-builds")))
+  (let [latest-dev-tag (:tag_name (first (ghr.internal/list-releases "clojure-lsp" "clojure-lsp-dev-builds")))
         prod-release-tag (tag)
         gh-token (System/getenv "GITHUB_TOKEN")
         file (first args)

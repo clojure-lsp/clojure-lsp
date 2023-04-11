@@ -119,8 +119,8 @@
 (defn ^:private kondo-findings->diagnostics [uri linter db]
   (let [range-type (settings/get db [:diagnostics :range-type] :full)
         ;; we delay for performance
-        lines* (delay (-> (get-in db [:documents uri :text])
-                          (string/split #"\r?\n")))]
+        lines* (delay (some-> (get-in db [:documents uri :text])
+                              (string/split #"\r?\n")))]
     (when-not (exclude-ns? uri linter db)
       (->> (get-in db [:findings uri])
            (filter valid-finding?)

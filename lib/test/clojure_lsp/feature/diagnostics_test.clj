@@ -250,7 +250,12 @@
     (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                           :settings {:source-paths ["/project/src"]}})
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///some/place.jar:some/file.clj") (h/db))))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///some/place.jar:some/file.clj") (h/db)))))
+  (testing "when file doesn't exist"
+    (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
+                          :settings {:source-paths ["/project/src"]}})
+    (is (= []
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///file.clj") (h/db))))))
 
 (deftest lint-clj-depend-findings
   (testing "when no clj-depend config is found"

@@ -4,7 +4,7 @@
 
 - General
   - Fix reflection issue in JDK19 with `Thread/sleep` #1520
-  - Bump clj-kondo to `2023.03.17`.
+  - Bump clj-kondo to `2023.03.18-20230413.212037-25`.
   - Ignore vars defined wrongly via config. #1510
 
 - Editor

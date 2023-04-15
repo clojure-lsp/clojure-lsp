@@ -82,7 +82,8 @@
 (defn ^:private kondo-finding->diagnostic
   [range-type
    lines*
-   {:keys [type message level row col end-row] :as finding}]
+   output-langs?
+   {:keys [type message level row col end-row langs] :as finding}]
   (let [expression? (not= row end-row)
         simple-range? (and (not (identical? :full range-type))
                            (diagnostics-start-char-coll? lines* row col))
@@ -92,14 +93,18 @@
      :tags (cond-> []
              (diagnostic-types-of-unnecessary-type type) (conj 1)
              (deprecated-diagnostic-types type) (conj 2))
-     :message message
+     :message (str message
+                   (when (and output-langs?
+                              (seq langs))
+                     (str " [" (string/join ", " (map name langs)) "]")))
      :code (if-let [n (namespace type)]
              (str n "/" (name type))
              (name type))
+     :langs langs
      :severity (case level
-                 :error   1
+                 :error 1
                  :warning 2
-                 :info    3)
+                 :info 3)
      :source (if (identical? :clojure-lsp/unused-public-var type)
                "clojure-lsp"
                "clj-kondo")}))
@@ -120,11 +125,12 @@
   (let [range-type (settings/get db [:diagnostics :range-type] :full)
         ;; we delay for performance
         lines* (delay (some-> (get-in db [:documents uri :text])
-                              (string/split #"\r?\n")))]
+                              (string/split #"\r?\n")))
+        output-langs? (some-> db :kondo-config :output :langs)]
     (when-not (exclude-ns? uri linter db)
       (->> (get-in db [:findings uri])
            (filter valid-finding?)
-           (mapv (partial kondo-finding->diagnostic range-type lines*))))))
+           (mapv #(kondo-finding->diagnostic range-type lines* output-langs? %))))))
 
 (defn severity->level [severity]
   (case (int severity)
@@ -149,9 +155,9 @@
                :message message
                :code "clj-depend"
                :severity (case level
-                           :error   1
+                           :error 1
                            :warning 2
-                           :info    3)
+                           :info 3)
                :source "clj-depend"}))
           (get-in db [:clj-depend-violations (symbol namespace)]))))
 
@@ -162,7 +168,7 @@
       []
       (cond-> []
         (not= :off kondo-level)
-        (concat (kondo-findings->diagnostics uri :clj-kondo  db))
+        (concat (kondo-findings->diagnostics uri :clj-kondo db))
 
         (not= :off depend-level)
         (concat (clj-depend-violations->diagnostics uri depend-level db))))))

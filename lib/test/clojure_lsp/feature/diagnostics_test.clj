@@ -189,6 +189,7 @@
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some_ns.clj"))
   (h/load-code-and-locs "(ns other-ns) (assert )" (h/file-uri "file:///other_ns.clj"))
   (h/load-code-and-locs "(ns other-ns) foo" (h/file-uri "file:///another_ns.clj"))
+  (h/load-code-and-locs "(ns cljc-ns) x (let #?(:clj [x 1] :cljs []))" (h/file-uri "file:///cljc_ns.cljc"))
   (testing "when linter level is :off"
     (swap! (h/db*) shared/deep-merge {:settings {:linters {:clj-kondo {:level :off}}}})
     (is (= []
@@ -255,7 +256,28 @@
     (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                           :settings {:source-paths ["/project/src"]}})
     (is (= []
-           (f.diagnostic/find-diagnostics (h/file-uri "file:///file.clj") (h/db))))))
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///file.clj") (h/db)))))
+  (testing "clj-kondo show langs in cljc file"
+    (swap! (h/db*) merge {:kondo-config {:output {:langs true}
+                                         :linters {:unused-binding {:level :warning}}}})
+    (h/assert-submaps
+      '({:range
+         {:start {:line 0, :character 13}, :end {:line 0, :character 14}},
+         :tags [],
+         :message "Unresolved symbol: x [clj, cljs]",
+         :code "unresolved-symbol",
+         :langs (:clj :cljs),
+         :severity 1,
+         :source "clj-kondo"}
+        {:range
+         {:start {:line 0, :character 29}, :end {:line 0, :character 30}},
+         :tags [1],
+         :message "unused binding x [clj]",
+         :code "unused-binding",
+         :langs (:clj),
+         :severity 2,
+         :source "clj-kondo"})
+      (f.diagnostic/find-diagnostics (h/file-uri "file:///cljc_ns.cljc") (h/db)))))
 
 (deftest lint-clj-depend-findings
   (testing "when no clj-depend config is found"

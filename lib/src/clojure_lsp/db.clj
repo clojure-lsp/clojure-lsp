@@ -93,7 +93,9 @@
   (upsert-cache! global-cache (transit-global-db-file)))
 
 (defn read-global-cache []
-  (read-cache (transit-global-db-file)))
+  (let [global-cache (read-cache (transit-global-db-file))]
+    (when (= version (:version global-cache))
+      global-cache)))
 
 (defn read-and-update-global-cache! [db-change-fn]
   (-> (read-global-cache)

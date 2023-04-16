@@ -259,6 +259,7 @@
         {custom-jdk-source-uri :jdk-source-uri java-home :home-path} (settings/get db [:java])
         local-jdk-source-file* (delay (find-local-jdk-source java-home))
         download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
+        global-db (db/read-global-cache)
         {:keys [result jdk-zip-file download-uri]} (jdk-analysis-decision
                                                      installed-jdk-source-uri
                                                      custom-jdk-source-uri
@@ -290,25 +291,32 @@
       ;; else
       (logger/warn java-logger-tag "Skipping download JDK source, setting `:java :download-jdk-source?` is disabled."))
 
+    ;; keep only java packages
+    (doseq [file-dir (fs/list-dir jdk-dir-file)]
+      (when-not (or (string/starts-with? (str (fs/relativize jdk-dir-file file-dir)) "java")
+                    (= (str file-dir) (str jdk-result-file)))
+        (fs/delete-tree file-dir)))
+
     (cond
       ;; recheck uri is still valid and present
       (not (read-installed-jdk-source-uri jdk-result-file))
       (logger/warn java-logger-tag "JDK source not found, skipping java analysis.")
 
-      (= :jdk-already-installed result)
-      (let [global-db (db/read-global-cache)]
+      (and (= :jdk-already-installed result)
+           global-db)
+      (do
         (swap! db* #(-> %
                         (lsp.kondo/db-with-analysis {:analysis (:analysis global-db)
                                                      :external? true})
                         (update :analysis-checksums merge (:analysis-checksums global-db))))
-        (logger/info java-logger-tag "JDK source cached loaded successfully."))
+        (logger/info java-logger-tag "JDK source analysis cache loaded successfully."))
 
       :else
       (let [java-filenames (jdk-dir->java-filenames jdk-dir-file)
-            global-db (db/read-global-cache)
             {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums java-filenames global-db @db*)]
         (if (seq paths-not-on-checksum)
           (do
+            (logger/info java-logger-tag "Analyzing JDK source via clj-kondo...")
             (analyze-and-cache-jdk-source! paths-not-on-checksum new-checksums db*)
             (logger/info java-logger-tag "JDK source analyzed and cached successfully."))
-          (logger/info java-logger-tag "JDK source cached loaded successfully."))))))
+          (logger/info java-logger-tag "JDK source cache loaded successfully."))))))

@@ -15,6 +15,7 @@
   - Spec compliance: avoid registering client capabilities if dynamic registration is not set. #1535
   - Improve java support: using new `java-member-definitions` analysis, first feature is the allow completion of static members (fields and methods) for java classes.
   - Show edn tree when in edn files via `documentSymbol` feature.
+  - Improve java db cache consistency + analysis performance.
 
 ## 2023.02.27-13.12.12
 

@@ -1,0 +1,32 @@
+name: nix
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**/README.md'
+      - '**/CHANGELOG.md'
+      - 'resources/CLOJURE_LSP_VERSION'
+      - 'docs/**'
+      - 'images/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/bump_deps.yml'
+      - '.github/workflows/bump_downstreams.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/docs.yml'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/nightly.yml'
+
+jobs:
+  nix-flake-test:
+    # Confirms that the clojure lsp flake builds fine.
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v19
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+    - run: nix build
+
+

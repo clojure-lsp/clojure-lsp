@@ -14,4 +14,19 @@
                                 "lib/test"
                                 "cli/test"]
                   :main-opts ["-m" "kaocha.runner"]}
-           :debug {:extra-paths ["cli/dev"]}}}
+           :debug {:extra-paths ["cli/dev"]}
+
+           ;; the below is a copy of bb.edn's deps that must be kept
+           ;; in sync, and is used as temp workaround to inform
+           ;; clj-nix's deps-lock fn about bb deps for building
+           ;; clojure-lsp in flake.nix using babashka.
+           ;;
+           ;; see https://github.com/clojure-lsp/clojure-lsp/issues/1373
+           :nix-flake {:extra-deps {borkdude/gh-release-artifact {:git/url "https://github.com/borkdude/gh-release-artifact"
+                                                                  :git/sha "4a9a74f0e50e897c45df8cc70684360eb30fce80"}
+
+                                    medley/medley {:mvn/version "1.4.0"}
+                                    com.github.clojure-lsp/lsp4clj {:mvn/version "1.7.3"
+                                                                    #_#_:local/root "../../lsp4clj"}
+                                    org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
+                                                             :git/sha "951b49b8c173244e66443b8188e3ff928a0a71e7"}}}}}

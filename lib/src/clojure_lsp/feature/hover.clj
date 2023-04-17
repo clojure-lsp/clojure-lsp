@@ -13,7 +13,8 @@
 (set! *warn-on-reflection* true)
 
 (def line-break "\n\n----\n\n")
-(def opening-code "```clojure\n")
+(def clojure-opening-code "```clojure\n")
+(def java-opening-code "```java\n")
 (def closing-code "\n```")
 
 (defn ^:private drop-whitespace [n s]
@@ -48,7 +49,7 @@
            doc) (conj doc)
       (seq examples) (conj "__Examples:__"
                            (->> examples
-                                (map #(str opening-code % closing-code))
+                                (map #(str clojure-opening-code % closing-code))
                                 (string/join "\n---\n")))
       (seq see-alsos) (conj "__See also:__"
                             (->> see-alsos
@@ -104,7 +105,7 @@
         (recur db markdown? uri referenced-var-docs (inc cnt))))))
 
 (defn ^:private hover-signatures
-  [{:keys [meta arglist-strs]}
+  [{:keys [meta arglist-strs parameters]}
    join-char]
   (or (let [node (some->> (:arglists meta) z/of-node)
             sexpr (try (z/sexpr node) (catch Exception _ nil))]
@@ -113,10 +114,13 @@
           (z/string node)))
       (some->> arglist-strs
                (remove nil?)
-               (string/join join-char))))
+               (string/join join-char))
+      (some->> parameters
+               (string/join ", ")
+               (format "(%s)"))))
 
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc uri] :as definition}
+  [{sym-ns :ns sym-name :name :keys [doc uri return-type bucket] :as definition}
    db*
    {:keys [additional-text-edits?]}]
   (let [db @db*
@@ -127,8 +131,10 @@
         additional-edits-warning-text (settings/get db [:completion :additional-edits-warning-text])
         join-char (if arity-on-same-line? " " "\n")
         signatures (hover-signatures definition join-char)
-        sym (cond->> sym-name
-              sym-ns (str sym-ns "/"))
+        sym (cond-> ""
+              return-type (str return-type " ")
+              sym-ns (str sym-ns "/")
+              sym-name (str sym-name))
         sym-line (str sym (when signatures
                             (str join-char signatures)))
         markdown? (some #{"markdown"} content-formats)
@@ -144,7 +150,10 @@
         filename (shared/uri->filename uri)]
     (if markdown?
       {:kind "markdown"
-       :value (cond-> (str opening-code sym-line closing-code)
+       :value (cond-> (str (if (#{:java-member-definitions
+                                  :java-class-definitions} bucket)
+                             java-opening-code
+                             clojure-opening-code) sym-line closing-code)
                 (and additional-text-edits? additional-edits-warning-text)
                 , (str "\n\n" additional-edits-warning-text)
                 clojuredocs

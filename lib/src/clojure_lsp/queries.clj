@@ -325,8 +325,17 @@
 
 (defmethod find-definition :java-class-usages
   [db java-class-usage]
-  (let [full-class-name (:class java-class-usage)]
-    (or (->> (:analysis db)
+  (let [full-class-name (:class java-class-usage)
+        method-name (:method-name java-class-usage)]
+    (or (when method-name
+          (->> (:analysis db)
+               (into []
+                     (comp
+                       xf-analysis->java-member-definitions
+                       (filter #(and (safe-equal? full-class-name (:class %))
+                                     (safe-equal? method-name (:name %))))))
+               first))
+        (->> (:analysis db)
              (into []
                    (comp
                      xf-analysis->java-class-definitions

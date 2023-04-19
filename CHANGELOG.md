@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023.04.19-12.43.29
+
 - General
   - Fix reflection issue in JDK19 with `Thread/sleep` #1520
   - Bump clj-kondo to `2023.04.15-20230418.173453-3`, fixing analysis inconsistencies with `schema.core`

@@ -4,7 +4,7 @@
 
 - General
   - Fix reflection issue in JDK19 with `Thread/sleep` #1520
-  - Bump clj-kondo to `2023.04.14`, fixing analysis inconsistencies with `schema.core`
+  - Bump clj-kondo to `2023.04.15-20230418.173453-3`, fixing analysis inconsistencies with `schema.core`
   - Ignore vars defined wrongly via config. #1510
   - Add support for `:output {:langs true}` in clj-kondo config to show `.cljc` language contexts
 

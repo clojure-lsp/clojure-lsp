@@ -34,8 +34,8 @@
     :keyword-usages :field
     :null))
 
-(defn element->name [{elem-name :name :keys [dispatch-val-str]}]
-  (cond-> (name elem-name)
+(defn element->name [{elem-name :name symbol :symbol :keys [dispatch-val-str]}]
+  (cond-> (or (some-> symbol str) (name elem-name))
     dispatch-val-str (str " " dispatch-val-str)))
 
 (defn ^:private element->document-symbol [e]
@@ -60,11 +60,13 @@
         (rest coll)
         (cons (first coll) (lazy-seq (remove-first item-to-remove (rest coll))))))))
 
-(defn ^:private edn->element-tree [m keyword-elements]
+(defn ^:private edn->element-tree [m keyword-elements symbol-elements]
   (sort-by symbol-order
            (reduce
              (fn [acc [k v]]
-               (let [element (first (filter #(= (:name %) (name k)) keyword-elements))
+               (let [element (if (keyword? k)
+                               (first (filter #(= (:name %) (name k)) keyword-elements))
+                               (first (filter #(= (:symbol %) k) symbol-elements)))
                      document-symbol (element->document-symbol element)
                      kind (cond
                             (string? v) :string
@@ -77,7 +79,10 @@
                  (if (map? v)
                    (conj acc (assoc document-symbol
                                     :children
-                                    (edn->element-tree v (remove-first element keyword-elements))))
+                                    (edn->element-tree
+                                      v
+                                      (remove-first element keyword-elements)
+                                      (remove-first element symbol-elements))))
                    (conj acc document-symbol))))
              []
              m)))
@@ -87,7 +92,8 @@
     (if (identical? :edn (shared/uri->file-type uri))
       (-> (parser/zloc-of-file db uri)
           z/sexpr
-          (edn->element-tree (get-in db [:analysis uri :keyword-usages])))
+          (edn->element-tree (get-in db [:analysis uri :keyword-usages])
+                             (get-in db [:analysis uri :symbols])))
       [{:name (or (some-> namespace-definition :name name)
                   ;; TODO Consider using URI for display purposes, especially if
                   ;; we support remote LSP connections

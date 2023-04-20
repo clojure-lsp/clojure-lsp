@@ -16,7 +16,7 @@
                (h/file-uri "file:///a.edn")))))
     (testing "nested maps"
       (h/load-code-and-locs
-        (h/code "{:a 1 :b {:c {:d :bla} :e \"foo\"} :f [1]}")
+        (h/code "{:a 1 :b {:c {:d :bla} :e \"foo\"} :f [1] :g {some/thing {:version 1} other/thing [{}]}}")
         (h/file-uri "file:///a.edn"))
       (is (= [{:name "a"
                :kind :struct
@@ -49,7 +49,39 @@
                :kind :array
                :range {:start {:line 0 :character 33} :end {:line 0 :character 35}}
                :selection-range {:start {:line 0 :character 33} :end {:line 0 :character 35}}
-               :tags []}]
+               :tags []}
+              {:name "g"
+               :kind :struct
+               :range
+               {:start {:line 0 :character 40} :end {:line 0 :character 42}}
+               :selection-range
+               {:start {:line 0 :character 40} :end {:line 0 :character 42}}
+               :tags []
+               :children
+               [{:name "some/thing"
+                 :kind :struct
+                 :range
+                 {:start {:line 0 :character 44} :end {:line 0 :character 54}}
+                 :selection-range
+                 {:start {:line 0 :character 44} :end {:line 0 :character 54}}
+                 :tags []
+                 :children
+                 [{:name "version"
+                   :kind :struct
+                   :range
+                   {:start {:line 0 :character 56}
+                    :end {:line 0 :character 64}}
+                   :selection-range
+                   {:start {:line 0 :character 56}
+                    :end {:line 0 :character 64}}
+                   :tags []}]}
+                {:name "other/thing"
+                 :kind :array
+                 :range
+                 {:start {:line 0 :character 68} :end {:line 0 :character 79}}
+                 :selection-range
+                 {:start {:line 0 :character 68} :end {:line 0 :character 79}}
+                 :tags []}]}]
              (f.document-symbol/document-symbols
                (h/db)
                (h/file-uri "file:///a.edn")))))))

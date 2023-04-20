@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix edn tree to consider symbols. #1556
+
 ## 2023.04.19-12.43.29
 
 - General

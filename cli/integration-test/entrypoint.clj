@@ -73,7 +73,7 @@
 
   (let [timeout-minutes (if (re-find #"(?i)win|mac" (System/getProperty "os.name"))
                           20 ;; win and mac ci runs take longer
-                          10)
+                          12)
         test-results (timeout (* timeout-minutes 60 1000)
                               #(with-log-tail-report
                                  (apply t/run-tests namespaces)))]

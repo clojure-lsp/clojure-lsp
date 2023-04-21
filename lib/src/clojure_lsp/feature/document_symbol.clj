@@ -61,10 +61,15 @@
         (cons (first coll) (lazy-seq (remove-first item-to-remove (rest coll))))))))
 
 (defn ^:private edn->element-tree [m keyword-elements symbol-elements]
-  (sort-by symbol-order
-           (reduce
-             (fn [acc [k v]]
-               (let [element (if (keyword? k)
+  ;; TODO use tail recur for better performance
+  (when (coll? m)
+    (->> m
+         (reduce
+           (fn [acc entry]
+             (if (map? entry)
+               (concat acc (edn->element-tree entry keyword-elements symbol-elements))
+               (let [[k v] entry
+                     element (if (keyword? k)
                                (first (filter #(= (:name %) (name k)) keyword-elements))
                                (first (filter #(= (:symbol %) k) symbol-elements)))
                      document-symbol (element->document-symbol element)
@@ -76,24 +81,41 @@
                             (set? v) :array
                             :else :struct)
                      document-symbol (assoc document-symbol :kind kind)]
-                 (if (map? v)
-                   (conj acc (assoc document-symbol
-                                    :children
-                                    (edn->element-tree
-                                      v
-                                      (remove-first element keyword-elements)
-                                      (remove-first element symbol-elements))))
-                   (conj acc document-symbol))))
-             []
-             m)))
+                 (conj acc
+                       (cond
+                         (map? v)
+                         (assoc document-symbol
+                                :children
+                                (edn->element-tree
+                                  v
+                                  (remove-first element keyword-elements)
+                                  (remove-first element symbol-elements)))
+
+                         (coll? v)
+                         (shared/assoc-some
+                           document-symbol
+                           :children
+                           (->> v
+                                (keep
+                                  #(edn->element-tree
+                                     %
+                                     (remove-first element keyword-elements)
+                                     (remove-first element symbol-elements)))
+                                flatten
+                                seq))
+
+                         :else
+                         document-symbol)))))
+           [])
+         (sort-by symbol-order))))
 
 (defn document-symbols [db uri]
-  (let [namespace-definition (q/find-namespace-definition-by-uri db uri)]
-    (if (identical? :edn (shared/uri->file-type uri))
-      (-> (parser/zloc-of-file db uri)
-          z/sexpr
-          (edn->element-tree (get-in db [:analysis uri :keyword-usages])
-                             (get-in db [:analysis uri :symbols])))
+  (if (identical? :edn (shared/uri->file-type uri))
+    (-> (parser/zloc-of-file db uri)
+        z/sexpr
+        (edn->element-tree (get-in db [:analysis uri :keyword-usages])
+                           (get-in db [:analysis uri :symbols])))
+    (when-let [namespace-definition (q/find-namespace-definition-by-uri db uri)]
       [{:name (or (some-> namespace-definition :name name)
                   ;; TODO Consider using URI for display purposes, especially if
                   ;; we support remote LSP connections

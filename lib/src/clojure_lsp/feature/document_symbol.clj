@@ -66,18 +66,29 @@
     (->> m
          (reduce
            (fn [acc entry]
-             (if (map? entry)
+             (cond
+               (map? entry)
                (concat acc (edn->element-tree entry keyword-elements symbol-elements))
-               (let [[k v] entry
-                     element (if (keyword? k)
-                               (first (filter #(= (:name %) (name k)) keyword-elements))
-                               (first (filter #(= (:symbol %) k) symbol-elements)))
+
+               (or (not (coll? entry))
+                   (< (count entry) 2))
+               acc
+
+               :else
+               (let [[k v] (vec entry)
+                     element (or (if (keyword? k)
+                                   (first (filter #(= (:name %) (name k)) keyword-elements))
+                                   (first (filter #(= (:symbol %) k) symbol-elements)))
+                                 ;; fallback to dumb element
+                                 {:symbol (or (some-> k str) "nil") :row 0 :col 0 :end-row 0 :end-col 0})
                      document-symbol (element->document-symbol element)
                      kind (cond
                             (string? v) :string
                             (keyword? v) :field
                             (boolean? v) :boolean
+                            (number? v) :number
                             (vector? v) :array
+                            (list? v) :array
                             (set? v) :array
                             :else :struct)
                      document-symbol (assoc document-symbol :kind kind)]

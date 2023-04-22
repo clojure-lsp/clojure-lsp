@@ -24,7 +24,8 @@
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.82.1306"}
-                               com.taoensso/timbre {:mvn/version "6.0.4"}}
+                               com.taoensso/timbre {:mvn/version "6.0.4"}
+                               org.clojure/test.check {:mvn/version "1.1.1"}}
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}

@@ -5,6 +5,9 @@
 - Editor
   - Fix edn tree to consider symbols. #1556
   - Fix edn tree to consider vector root nodes. #1557
+  
+- API/CLI
+  - Avoid enabling unecessary analysis features for API/CLI lint, improving memory usage.
 
 ## 2023.04.19-12.43.29
 

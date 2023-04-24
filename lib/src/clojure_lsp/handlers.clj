@@ -148,7 +148,7 @@
    work-done-token]
   (shared/logging-task
     :initialize
-    (swap! db* assoc :project-analysis-type :project-and-dependencies)
+    (swap! db* assoc :project-analysis-type :project-and-full-dependencies)
     (if project-root-uri
       (do
         (startup/initialize-project

@@ -189,11 +189,18 @@
     (catch Exception e
       (throw (ex-info "Error during project analysis" {:message e})))))
 
-(defn ^:private setup-project-and-deps-analysis! [options {:keys [db*] :as components}]
+(defn ^:private setup-project-and-full-deps-analysis! [options {:keys [db*] :as components}]
   (let [db @db*]
     (when (or (not (:analysis db))
-              (not= :project-and-dependencies (:project-analysis-type db)))
-      (swap! db* assoc :project-analysis-type :project-and-dependencies)
+              (not= :project-and-full-dependencies (:project-analysis-type db)))
+      (swap! db* assoc :project-analysis-type :project-and-full-dependencies)
+      (analyze! options components))))
+
+(defn ^:private setup-project-and-clojure-only-deps-analysis! [options {:keys [db*] :as components}]
+  (let [db @db*]
+    (when (or (not (:analysis db))
+              (not= :project-and-clojure-only-dependencies (:project-analysis-type db)))
+      (swap! db* assoc :project-analysis-type :project-and-clojure-only-dependencies)
       (analyze! options components))))
 
 (defn ^:private setup-project-only-analysis! [options {:keys [db*] :as components}]
@@ -203,7 +210,7 @@
 
 (defn ^:private dynamic-setup-project-analysis! [options components]
   (case (get-in options [:analysis :type] :project-only)
-    :project-and-dependencies (setup-project-and-deps-analysis! options components)
+    :project-and-full-dependencies (setup-project-and-full-deps-analysis! options components)
     :project-only (setup-project-only-analysis! options components)))
 
 (defn ^:private open-file! [uri components]
@@ -266,7 +273,7 @@
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)
-  (setup-project-and-deps-analysis! options components))
+  (setup-project-and-full-deps-analysis! options components))
 
 (defn ^:private analyze-project-only!* [options components]
   (setup-api! components)
@@ -322,7 +329,7 @@
 
 (defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
-  (setup-project-and-deps-analysis! options components)
+  (setup-project-and-clojure-only-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
   (let [db @db*
         diags-by-uri (->> (options->uris options db)

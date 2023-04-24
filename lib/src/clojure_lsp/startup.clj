@@ -134,11 +134,17 @@
         (logger/info startup-logger-tag "Removing outdated cached lsp db...")
         (db/remove-db! db)))))
 
+(defn ^:private consider-local-db-cache? [db db-cache]
+  (or (= :project-and-full-dependencies (:project-analysis-type db-cache))
+      (and (= :project-and-clojure-only-dependencies (:project-analysis-type db-cache))
+           (or (= :project-and-clojure-only-dependencies (:project-analysis-type db))
+               (= :project-only (:project-analysis-type db))))
+      (= :project-only (:project-analysis-type db))))
+
 (defn ^:private load-db-cache! [root-path db*]
   (let [db @db*]
     (when-let [db-cache (db/read-local-cache root-path db)]
-      (when-not (and (= :project-and-dependencies (:project-analysis-type db))
-                     (= :project-only (:project-analysis-type db-cache)))
+      (when (consider-local-db-cache? db db-cache)
         (swap! db* (fn [state-db]
                      (-> state-db
                          (merge (select-keys db-cache [:classpath
@@ -212,7 +218,7 @@
                                 (= (:kondo-config-hash @db*) kondo-config-hash)
                                 (not dependency-scheme-changed?))
           fast-startup? (or use-db-analysis?
-                            (not= :project-and-dependencies (:project-analysis-type @db*)))
+                            (= :project-only (:project-analysis-type @db*)))
           task-list (if fast-startup? fast-tasks slow-tasks)]
       (if use-db-analysis?
         (let [classpath (:classpath @db*)]
@@ -235,7 +241,8 @@
 
             (publish-task-progress producer (:copying-kondo slow-tasks) progress-token)
             (copy-configs-from-classpath! classpath settings @db*)
-            (when (= :project-and-dependencies (:project-analysis-type @db*))
+            (when (contains? #{:project-and-full-dependencies
+                               :project-and-clojure-only-dependencies} (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
             (logger/info "Caching db for next startup...")

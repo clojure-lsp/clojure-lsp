@@ -279,9 +279,12 @@
       (assoc-in [:config :analysis] config-for-full-analysis)))
 
 (defn ^:private config-for-external-paths [paths db file-analyzed-fn]
-  (-> (config-for-paths paths file-analyzed-fn db)
-      (assoc :skip-lint true)
-      (assoc-in [:config :analysis] config-for-shallow-analysis)))
+  (let [full-analysis? (= :project-and-full-dependencies (:project-analysis-type db))]
+    (-> (config-for-paths paths file-analyzed-fn db)
+        (assoc :skip-lint true)
+        (assoc-in [:config :analysis] config-for-shallow-analysis)
+        (shared/assoc-in-some [:config :analysis :java-member-definitions] full-analysis?)
+        (shared/assoc-in-some [:config :analysis :java-class-definitions] full-analysis?))))
 
 (defn ^:private config-for-copy-configs [paths db]
   {:cache true

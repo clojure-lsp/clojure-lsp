@@ -338,6 +338,6 @@
       (let [{:keys [result result-code]}
             (ignoring-prints
               (api/dump {:project-root (io/file "../cli/integration-test/sample-test")
-                         :analysis {:type :project-and-dependencies}}))]
+                         :analysis {:type :project-and-full-dependencies}}))]
         (is result)
         (is (= 0 result-code))))))

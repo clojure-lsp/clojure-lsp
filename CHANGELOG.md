@@ -5,6 +5,7 @@
 - Editor
   - Fix edn tree to consider symbols. #1556
   - Fix edn tree to consider vector root nodes. #1557
+  - Fix edn tree to handle invalid edn code and not throw exceptions while typing code.
   
 - API/CLI
   - Avoid enabling unecessary analysis features for API/CLI lint, improving memory usage.

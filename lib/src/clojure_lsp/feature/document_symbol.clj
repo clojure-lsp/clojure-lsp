@@ -2,8 +2,7 @@
   (:require
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]
-   [rewrite-clj.zip :as z]))
+   [clojure-lsp.shared :as shared]))
 
 (set! *warn-on-reflection* true)
 
@@ -122,10 +121,13 @@
 
 (defn document-symbols [db uri]
   (if (identical? :edn (shared/uri->file-type uri))
-    (-> (parser/zloc-of-file db uri)
-        z/sexpr
-        (edn->element-tree (get-in db [:analysis uri :keyword-usages])
-                           (get-in db [:analysis uri :symbols])))
+    (try
+      (some-> (parser/safe-zloc-of-file db uri)
+              parser/safe-zloc-sexpr
+              (edn->element-tree (get-in db [:analysis uri :keyword-usages])
+                                 (get-in db [:analysis uri :symbols])))
+      (catch Exception e
+        (println e)))
     (when-let [namespace-definition (q/find-namespace-definition-by-uri db uri)]
       [{:name (or (some-> namespace-definition :name name)
                   ;; TODO Consider using URI for display purposes, especially if

@@ -117,6 +117,16 @@
     (catch Exception _e
       (logger/warn "It was not possible to parse file. Probably not valid clojure code."))))
 
+(defn safe-zloc-sexpr
+  "Parse sexpr handling not valid codes that are zlocs
+   but not sexpr-able like `[{:}]`"
+  [zloc]
+  (when (z/sexpr-able? zloc)
+    (try
+      (z/sexpr zloc)
+      (catch IllegalArgumentException _
+        nil))))
+
 (defn to-pos [zloc row col]
   (edit/find-at-pos zloc row col))
 

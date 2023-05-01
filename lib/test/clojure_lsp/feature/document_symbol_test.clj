@@ -155,6 +155,14 @@
              (f.document-symbol/document-symbols
                (h/db)
                (h/file-uri "file:///a.edn")))))
+    (testing "invalid code being typed"
+      (h/load-code-and-locs
+        (h/code "[{:}]")
+        (h/file-uri "file:///a.edn"))
+      (is (= nil
+             (f.document-symbol/document-symbols
+               (h/db)
+               (h/file-uri "file:///a.edn")))))
     (testing "nested vectors"
       (h/load-code-and-locs
         (h/code "{:a [[:inner 2]]}")

@@ -41,7 +41,7 @@
              (or (f.clauses/z-leftmost? var-usage-loc)
                  (let [left-loc (f.clauses/z-left var-usage-loc)] ;; except for `(partial f ...)` which we can sometimes handle.
                    (and (f.clauses/z-leftmost? left-loc)
-                        (= 'partial (z-safe-sexpr left-loc))))))
+                        (= 'partial (parser/safe-zloc-sexpr left-loc))))))
       (let [arg-loc (->> (f.clauses/z-right var-usage-loc)
                          (iterate f.clauses/z-right)
                          (take-while identity)

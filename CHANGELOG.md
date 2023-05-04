@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-kondo to `2023.04.15-20230503.152749-8`
+
 - Editor
   - Fix edn tree to consider symbols. #1556
   - Fix edn tree to consider vector root nodes. #1557

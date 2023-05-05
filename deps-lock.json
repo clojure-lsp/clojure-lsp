@@ -223,14 +223,16 @@
       "hash": "sha256-4MoY394FmlFXLiwtetWjDmEbh1NGFv1wRPZx33qbtlg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2023.04.14/clj-kondo-2023.04.14.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2023.04.15-SNAPSHOT/clj-kondo-2023.04.15-20230503.152749-8.jar",
+      "snapshot": "clj-kondo-2023.04.15-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-MlP6+Bu2HCn3FlwmatPdhB37ueaNrfWbFX/Yn5x1FCk="
+      "hash": "sha256-k85B5hq+jkV/1hMzAQjaggHuVUhvKNWSqomSoXnL+LM="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2023.04.14/clj-kondo-2023.04.14.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2023.04.15-SNAPSHOT/clj-kondo-2023.04.15-20230503.152749-8.pom",
+      "snapshot": "clj-kondo-2023.04.15-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-Hz6J2HZUus2D4fELGfwUZajsDTC/8xx1fOShTPOMgsI="
+      "hash": "sha256-lpwDbdoNVs4nNSCoivgFq6Sxh3wHiAg35S7dgL8C6y4="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -2126,6 +2128,16 @@
       "mvn-path": "org/clojure/spec.alpha/0.3.218/spec.alpha-0.3.218.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-bY3hTDrIdXYMX/kJVi/5hzB3AxxquTnxyxOeFp/pB1g="
+    },
+    {
+      "mvn-path": "org/clojure/test.check/1.1.1/test.check-1.1.1.jar",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-lFEYFjssNVpfq5bJ69AShxUlVbsulkH1zZ7Qf+S8UHg="
+    },
+    {
+      "mvn-path": "org/clojure/test.check/1.1.1/test.check-1.1.1.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-lqAC7Edw1pxWlVEJykIewELOc0+jdnf6rgvi8708xxc="
     },
     {
       "mvn-path": "org/clojure/tools.analyzer.jvm/1.2.2/tools.analyzer.jvm-1.2.2.jar",

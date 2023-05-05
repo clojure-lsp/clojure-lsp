@@ -32,5 +32,3 @@ jobs:
         name: clojure-lsp
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: nix build
-
-

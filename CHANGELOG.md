@@ -2,11 +2,13 @@
 
 ## Unreleased
 
+- General
+  - Update flake.nix to build with babashka. #1373
+
 ## 2023.05.04-19.38.01
 
 - General
   - Bump clj-kondo to `2023.04.15-20230503.152749-8`
-  - Update flake.nix to build with babashka. #1373
 
 - Editor
   - Fix edn tree to consider symbols. #1556

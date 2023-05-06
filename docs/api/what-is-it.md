@@ -19,4 +19,4 @@ It has its own API containing the main features that can be used as:
 
 clojure-lsp will check for `.lsp/config.edn` in the project or home dir, but it's possible to force override the settings via the `:settings` option of the API or `--settings` option of the CLI.
 
-For all available settings, check the [settings documentation](settings.md).
+For all available settings, check the [settings documentation](/settings).

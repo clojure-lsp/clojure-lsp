@@ -5,11 +5,16 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     clj-nix = {
-      url = "github:jlesquembre/clj-nix?ref=0.2.0";
+      url = "github:jlesquembre/clj-nix?ref=0.3.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # workaround for bb support in buildCommand
+    cljtools = {type = "file";
+                url = "https://download.clojure.org/install/clojure-tools-1.11.1.1257.zip";
+                flake = false;
+               };
   };
-  outputs = { self, nixpkgs, flake-utils, clj-nix }:
+  outputs = { self, nixpkgs, flake-utils, clj-nix, cljtools }:
 
     flake-utils.lib.eachDefaultSystem (system:
       let
@@ -24,13 +29,20 @@
             projectSrc = ./.;
             name = "com.github.clojure-lsp/clojure-lsp";
             main-ns = "clojure-lsp.main";
+            buildInputs = [pkgs.babashka pkgs.unzip];
+
             jdkRunner = pkgs.jdk17_headless;
             buildCommand =
               ''
+                mkdir -p /build/.deps.clj/1.11.1.1257
+                unzip ${cljtools} -d /build/.deps.clj/1.11.1.1257
+
                 mkdir -p target
-                make cli-prod-jar
+                bb cli-prod-jar
                 cp clojure-lsp-standalone.jar target
               '';
+            doCheck = true;
+            checkPhase = "bb test";
             maven-extra = [{
               content =
                 ''

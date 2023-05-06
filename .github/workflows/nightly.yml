@@ -16,6 +16,7 @@ on:
       - '.github/workflows/bump_downstreams.yml'
       - '.github/workflows/ci.yml'
       - '.github/workflows/docs.yml'
+      - '.github/workflows/nix.yml'
       - '.github/workflows/release.yml'
 
 jobs:

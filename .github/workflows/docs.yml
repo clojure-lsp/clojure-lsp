@@ -10,6 +10,7 @@ on:
       - '.github/workflows/bump_deps.yml'
       - '.github/workflows/bump_downstreams.yml'
       - '.github/workflows/ci.yml'
+      - '.github/workflows/nix.yml'
       - '.github/workflows/release.yml'
 
 jobs:

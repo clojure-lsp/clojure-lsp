@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Update flake.nix to build with babashka. #1373
+
 ## 2023.05.04-19.38.01
 
 - General

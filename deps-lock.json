@@ -98,14 +98,14 @@
       "hash": "sha256-173SAxxCPrqbACHFuCwJwneW1m2fPZFNNemkiT9VfPk="
     },
     {
-      "mvn-path": "babashka/process/0.4.16/process-0.4.16.jar",
+      "mvn-path": "babashka/process/0.5.18/process-0.5.18.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-tjf2dKOvaLnfbVZhc1CiBvZTiTiO2FQ9h122thL4Uno="
+      "hash": "sha256-Ks8rTUlnY2njQeCrSxaSfSSvuTVTeqXYUahJeMsByLo="
     },
     {
-      "mvn-path": "babashka/process/0.4.16/process-0.4.16.pom",
+      "mvn-path": "babashka/process/0.5.18/process-0.5.18.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-roypsD6aZWNhJICYMm3fJf9U1FSQ9wwIvxgM8r8NtCI="
+      "hash": "sha256-mcGwRMQGDvRApUxGsZ4QXJc/1A5th5++thDvfgJsyy4="
     },
     {
       "mvn-path": "borkdude/dynaload/0.3.5/dynaload-0.3.5.jar",

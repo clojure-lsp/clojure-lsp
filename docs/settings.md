@@ -122,7 +122,7 @@ Supported project types at the moment are:
 - `shadow-cljs`: If a `shadow-cljs.edn` is found at the project root, clojure-lsp will run `npx shadow-cljs classpath`.
 - `babashka`: If a `bb.edn` is found at the project root, clojure-lsp will run `bb print-deps --format classpath`.
 
-Note that it's possible to have more and one project type at the same time e.g. deps + babashka, clojure-lsp will merge the classpath and everything should works fine.
+Note that it's possible to have more than one project type at the same time e.g. deps + babashka, clojure-lsp will merge the classpath and everything should work fine.
 
 Make sure to have these programs available on the `PATH` environment variable used by your editor, otherwise clojure-lsp will warn about a classpath scan fail, causing a lot of features to not work properly.
 

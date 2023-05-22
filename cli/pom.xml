@@ -91,7 +91,7 @@
     <dependency>
       <groupId>funcool</groupId>
       <artifactId>promesa</artifactId>
-      <version>10.0.594</version>
+      <version>11.0.671</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>

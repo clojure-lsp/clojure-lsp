@@ -4,6 +4,7 @@
 
 - General
   - Update flake.nix to build with babashka. #1373
+  - Bump clj-kondo to `2023.05.19-20230522.085211-4`.
 
 ## 2023.05.04-19.38.01
 

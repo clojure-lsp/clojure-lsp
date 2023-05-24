@@ -83,31 +83,34 @@
   [range-type
    lines*
    output-langs?
-   {:keys [type message level row col end-row langs] :as finding}]
+   {:keys [type message level row col end-row langs refers] :as finding}]
   (let [expression? (not= row end-row)
         simple-range? (and (not (identical? :full range-type))
                            (diagnostics-start-char-coll? lines* row col))
         finding (cond-> (merge {:end-row row :end-col col} finding)
                   (or expression? simple-range?) (assoc :end-row row :end-col col))]
-    {:range (shared/->range finding)
-     :tags (cond-> []
-             (diagnostic-types-of-unnecessary-type type) (conj 1)
-             (deprecated-diagnostic-types type) (conj 2))
-     :message (str message
-                   (when (and output-langs?
-                              (seq langs))
-                     (str " [" (string/join ", " (map name langs)) "]")))
-     :code (if-let [n (namespace type)]
-             (str n "/" (name type))
-             (name type))
-     :langs langs
-     :severity (case level
-                 :error 1
-                 :warning 2
-                 :info 3)
-     :source (if (identical? :clojure-lsp/unused-public-var type)
-               "clojure-lsp"
-               "clj-kondo")}))
+    (shared/assoc-some
+      {:range (shared/->range finding)
+       :tags (cond-> []
+               (diagnostic-types-of-unnecessary-type type) (conj 1)
+               (deprecated-diagnostic-types type) (conj 2))
+       :message (str message
+                     (when (and output-langs?
+                                (seq langs))
+                       (str " [" (string/join ", " (map name langs)) "]")))
+       :code (if-let [n (namespace type)]
+               (str n "/" (name type))
+               (name type))
+       :langs langs
+       :severity (case level
+                   :error 1
+                   :warning 2
+                   :info 3)
+       :source (if (identical? :clojure-lsp/unused-public-var type)
+                 "clojure-lsp"
+                 "clj-kondo")}
+      :data (when refers
+              {:refers refers}))))
 
 (defn ^:private valid-finding? [{:keys [row col level] :as finding}]
   (when (not= level :off)

@@ -8,6 +8,7 @@
    [clojure-lsp.feature.drag-param :as f.drag-param]
    [clojure-lsp.feature.inline-symbol :as f.inline-symbol]
    [clojure-lsp.feature.move-form :as f.move-form]
+   [clojure-lsp.feature.replace-refer-all :as f.replace-refer-all]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
    [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
@@ -150,6 +151,12 @@
 
 (defmethod refactor :cycle-keyword-auto-resolve  [{:keys [loc uri db components]}]
   (f.cycle-keyword/cycle-keyword-auto-resolve loc uri db components))
+
+(defmethod refactor :replace-refer-all-with-refer  [{:keys [loc args]}]
+  (apply f.replace-refer-all/replace-with-refers loc args))
+
+(defmethod refactor :replace-refer-all-with-alias  [{:keys [loc uri db]}]
+  (f.replace-refer-all/replace-with-alias loc uri db))
 
 (def available-refactors
   (->> refactor

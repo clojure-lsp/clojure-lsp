@@ -747,3 +747,30 @@
                           []
                           {:workspace {:workspace-edit true}}
                           (h/db)))))
+
+(deftest replace-refer-all-actions
+  (let [[[row col]] (h/load-code-and-locs (h/code "(ns foo (:require [my-ns :refer |:all]))"))]
+    (h/assert-contains-submaps
+      [{:title "Replace ':refer :all' with ':refer [foo bar]'"
+        :kind :quick-fix
+        :is-preferred true
+        :command
+        {:title "Replace ':refer :all' with ':refer [foo bar]'"
+         :command "replace-refer-all-with-refer"
+         :arguments ["file:///a.clj" (dec row) (dec col) ["foo" "bar"]]}}
+       {:title "Replace ':refer :all' with alias"
+        :kind :quick-fix
+        :command
+        {:title "Replace ':refer :all' with alias"
+         :command "replace-refer-all-with-alias"
+         :arguments ["file:///a.clj" (dec row) (dec col)]}}]
+      (f.code-actions/all (zloc-of h/default-uri)
+                          h/default-uri
+                          row
+                          col
+                          [{:code    "refer-all"
+                            :message "Use alias or :refer"
+                            :data {:refers ["foo" "bar"]}
+                            :range   {:start {:line (dec row) :character (dec col)}}}]
+                          {:workspace {:workspace-edit true}}
+                          (h/db)))))

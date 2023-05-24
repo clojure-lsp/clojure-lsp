@@ -277,3 +277,6 @@
 (defn loc-encapsulates-usage?
   [loc usage]
   (in-range? (meta (z/node loc)) (range-from-usage-name usage)))
+
+(defn z-replace-preserving-meta [zloc replacement]
+  (z/replace zloc (with-meta replacement (meta (z/node zloc)))))

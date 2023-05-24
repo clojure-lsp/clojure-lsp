@@ -793,6 +793,11 @@
     (filter #(contains? namespaces (:to %)))
     (remove var-usage-from-own-definition?)))
 
+(defn find-local-var-usages-to-namespace [db uri namespace]
+  (into []
+        (filter #(= namespace (:to %)))
+        (get-in db [:analysis uri :var-usages])))
+
 (def xf-all-keyword-usages xf-analysis->keyword-usages)
 
 (defn find-keyword-usages-by-keyword [db uri kwd-ns kwd-name]

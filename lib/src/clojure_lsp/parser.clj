@@ -44,9 +44,6 @@
 (defn z-of-string* [s]
   (some-> s p/parse-string-all (z/of-node* {})))
 
-(defn ^:private z-replace-preserving-meta [zloc replacement]
-  (z/replace zloc (with-meta replacement (meta (z/node zloc)))))
-
 (defn ^:private handle-end-slash-code [text exception]
   (when-let [[_ token] (->> exception
                             Throwable->map
@@ -59,7 +56,7 @@
               z-of-string*
               (z/edit->
                 (z/find-value z/next (symbol temporary-value))
-                (z-replace-preserving-meta (n/token-node (symbol real-value))))))))
+                (edit/z-replace-preserving-meta (n/token-node (symbol real-value))))))))
 
 (defn ^:private handle-single-colon-code [text exception]
   (let [cause (->> exception Throwable->map :cause)]
@@ -72,7 +69,7 @@
                 z-of-string*
                 (z/edit->
                   (z/find-value z/next (symbol temporary-value))
-                  (z-replace-preserving-meta (n/token-node (symbol real-value)))))))))
+                  (edit/z-replace-preserving-meta (n/token-node (symbol real-value)))))))))
 
 (defn ^:private handle-keyword-with-end-slash-code [text exception]
   (when-let [[_ token] (->> exception
@@ -88,10 +85,10 @@
         (if (z/find-value replaced-node z/next (keyword temporary-value))
           (z/edit-> replaced-node
                     (z/find-value z/next (keyword temporary-value))
-                    (z-replace-preserving-meta (n/keyword-node (keyword real-value))))
+                    (edit/z-replace-preserving-meta (n/keyword-node (keyword real-value))))
           (z/edit-> replaced-node
                     (z/find-token z/next #(= (str "::" temporary-value) (z/string %)))
-                    (z-replace-preserving-meta (n/keyword-node (keyword (str ":" real-value))))))))))
+                    (edit/z-replace-preserving-meta (n/keyword-node (keyword (str ":" real-value))))))))))
 
 (defn ^:private zloc-of-string [text]
   (try

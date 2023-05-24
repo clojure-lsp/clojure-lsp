@@ -27,13 +27,33 @@
 (defn ^:private resolvable-diagnostics [diagnostics root-zloc]
   (when root-zloc
     (->> diagnostics
-         (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "unresolved-var"})
+         (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "unresolved-var" "refer-all"})
          (keep (fn [{{position :start} :range :as diagnostic}]
                  (let [[row col] (shared/position->row-col position)]
                    (when-let [zloc (parser/to-pos root-zloc row col)]
                      (assoc diagnostic
                             :zloc     zloc
                             :position position))))))))
+
+(defn ^:private replace-refer-all-actions [uri diagnostics]
+  (->> diagnostics
+       (map (fn [{:keys [data]
+                  {{:keys [line character]} :start} :range}]
+              (let [refers (:refers data)
+                    refer-msg (format "Replace ':refer :all' with ':refer %s'" (mapv symbol refers))
+                    alias-msg "Replace ':refer :all' with alias"]
+                [{:title refer-msg
+                  :kind :quick-fix
+                  :is-preferred true
+                  :command {:title refer-msg
+                            :command "replace-refer-all-with-refer"
+                            :arguments [uri line character refers]}}
+                 {:title alias-msg
+                  :kind :quick-fix
+                  :command {:title alias-msg
+                            :command "replace-refer-all-with-alias"
+                            :arguments [uri line character]}}])))
+       flatten))
 
 (defn ^:private find-require-suggestions [uri db {:keys [position zloc]}]
   (->> (f.add-missing-libspec/find-require-suggestions zloc uri db)
@@ -365,6 +385,7 @@
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
+        resolvable-refer-all-diagnostics (diagnostics-with-code #{"refer-all"} resolvable-diagnostics)
         missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics db))
         require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
@@ -383,6 +404,9 @@
         can-add-let? (or (z/skip-whitespace z/right zloc)
                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
     (cond-> []
+      (seq resolvable-refer-all-diagnostics)
+      (into (replace-refer-all-actions uri resolvable-refer-all-diagnostics))
+
       (seq @missing-imports*)
       (into (missing-import-actions uri @missing-imports*))
 

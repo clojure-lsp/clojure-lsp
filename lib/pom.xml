@@ -87,7 +87,7 @@
     <dependency>
       <groupId>babashka</groupId>
       <artifactId>fs</artifactId>
-      <version>0.3.17</version>
+      <version>0.4.19</version>
     </dependency>
     <dependency>
       <groupId>com.fabiodomingues</groupId>

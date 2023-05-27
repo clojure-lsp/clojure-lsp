@@ -51,6 +51,8 @@
                                             "move-form"
                                             "move-to-let"
                                             "promote-fn"
+                                            "replace-refer-all-with-alias"
+                                            "replace-refer-all-with-refer"
                                             "resolve-macro-as"
                                             "restructure-keys"
                                             "sort-clauses"

@@ -4,7 +4,7 @@
 
 - General
   - Update flake.nix to build with babashka. #1373
-  - Bump clj-kondo to `2023.05.19-20230522.085211-4`.
+  - Bump clj-kondo to `2023.05.26`.
   
 - Editor
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575

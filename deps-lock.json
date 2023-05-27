@@ -223,16 +223,14 @@
       "hash": "sha256-4MoY394FmlFXLiwtetWjDmEbh1NGFv1wRPZx33qbtlg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2023.04.15-SNAPSHOT/clj-kondo-2023.04.15-20230503.152749-8.jar",
-      "snapshot": "clj-kondo-2023.04.15-SNAPSHOT.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2023.05.26/clj-kondo-2023.05.26.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-k85B5hq+jkV/1hMzAQjaggHuVUhvKNWSqomSoXnL+LM="
+      "hash": "sha256-OER5g0+JsaSMqRqmzPKRzctIAkAuKSlrh/Gj9vWNmBg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2023.04.15-SNAPSHOT/clj-kondo-2023.04.15-20230503.152749-8.pom",
-      "snapshot": "clj-kondo-2023.04.15-SNAPSHOT.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2023.05.26/clj-kondo-2023.05.26.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-lpwDbdoNVs4nNSCoivgFq6Sxh3wHiAg35S7dgL8C6y4="
+      "hash": "sha256-udi1SYXmf5O6S5ST55zy8X8vNFmp0yQYrIl9yCZYycM="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -668,6 +666,21 @@
       "mvn-path": "com/github/ericdallo/deps-bin/0.2.0/deps-bin-0.2.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-u05bmwYHWDWZ1wL67McT+OO7tLnaXv6Rn2/GoE1vc+g="
+    },
+    {
+      "mvn-path": "com/github/javaparser/javaparser-core/3.25.3/javaparser-core-3.25.3.jar",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-cyS8GIINrX6QVvIDWvO1QF1uJKikaamF2arETxVSLCc="
+    },
+    {
+      "mvn-path": "com/github/javaparser/javaparser-core/3.25.3/javaparser-core-3.25.3.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-voG6k47T5cn++AvoGGujIVasrEFzlLDnnLV9HBDP38E="
+    },
+    {
+      "mvn-path": "com/github/javaparser/javaparser-parent/3.25.3/javaparser-parent-3.25.3.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-yB0GMY015M7t4C7OhSwmNGx8rNahF5ixMBgmexyxLdw="
     },
     {
       "mvn-path": "com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar",

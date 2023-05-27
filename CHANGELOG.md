@@ -8,6 +8,7 @@
   
 - Editor
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575
+  - Enhance java support for hover and completion of static class members.
 
 ## 2023.05.04-19.38.01
 

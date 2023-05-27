@@ -206,7 +206,7 @@
 
     (and (identical? :var-definitions (:bucket definition))
          (contains? '#{clojure.core/defrecord cljs.core/defrecord}
-                    (:defined-by definition)))
+                    (q/safe-defined-by definition)))
     (->> references
          (remove #(and (identical? :var-definitions (:bucket %))
                        (or (string/starts-with? (str (:name %)) "->")

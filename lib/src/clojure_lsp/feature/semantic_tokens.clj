@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
+   [clojure-lsp.queries :as q]
    [clojure.string :as string])
   (:import
    [clojure.lang PersistentVector]))
@@ -87,19 +88,20 @@
     [(element->absolute-token element :class)]))
 
 (defn ^:private var-definition-element->absolute-tokens
-  [{:keys [defined-by protocol-ns] :as element}]
-  (cond
+  [{:keys [protocol-ns] :as element}]
+  (let [defined-by (q/safe-defined-by element)]
+    (cond
 
-    (and (not protocol-ns)
-         (contains? #{'clojure.core/defprotocol
-                      'clojure.core/definterface} defined-by))
-    [(element->absolute-token element :interface [])]
+      (and (not protocol-ns)
+           (contains? #{'clojure.core/defprotocol
+                        'clojure.core/definterface} defined-by))
+      [(element->absolute-token element :interface [])]
 
-    defined-by
-    [(element->absolute-token element :function [:definition])]
+      defined-by
+      [(element->absolute-token element :function [:definition])]
 
-    :else
-    nil))
+      :else
+      nil)))
 
 (defn ^:private var-usage-element->absolute-tokens
   [{:keys [name alias macro name-col to] :as element}]

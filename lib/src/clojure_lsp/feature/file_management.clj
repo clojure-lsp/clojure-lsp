@@ -69,7 +69,7 @@
   "Attributes of a var definition that, if they change, merit re-linting files
   that use the var. This isn't the full list of attributets copied by kondo from
   defs to usages, but it includes the attributes we care about."
-  (juxt :ns :name :private :fixed-arities :defined-by))
+  (juxt :ns :name :private :fixed-arities :defined-by :defined-by->lint-as))
 
 (defn reference-uris [uri db-before db-after]
   (let [old-local-buckets (get-in db-before [:analysis uri])

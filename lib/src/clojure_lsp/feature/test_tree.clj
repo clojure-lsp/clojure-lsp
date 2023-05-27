@@ -38,7 +38,7 @@
         local-buckets (get-in db [:analysis uri])
         deftests (into []
                        (filter #(contains? '#{clojure.test/deftest cljs.test/deftest}
-                                           (:defined-by %)))
+                                           (q/safe-defined-by %)))
                        (:var-definitions local-buckets))
         testings (into []
                        (filter #(and (= 'testing (:name %))

@@ -13,6 +13,9 @@
   (or (some-> element :lang list set)
       (shared/uri->available-langs (:uri element))))
 
+(defn safe-defined-by [element]
+  (or (:defined-by->lint-as element) (:defined-by element)))
+
 ;;;; Filter analysis, using dep-graph
 
 (defn external-analysis [{:keys [analysis] :as db}]
@@ -127,15 +130,16 @@
   (or (find-last xf (internal-analysis db))
       (find-last xf (external-analysis db))))
 
-(defn var-definition-names [{:keys [defined-by name]}]
-  (case defined-by
-    (clojure.core/defrecord
-     cljs.core/defrecord)
-    , #{name (symbol (str "->" name)) (symbol (str "map->" name))}
-    (clojure.core/deftype
-     cljs.core/deftype)
-    , #{name (symbol (str "->" name))}
-    , #{name}))
+(defn var-definition-names [{:keys [name] :as element}]
+  (let [defined-by (safe-defined-by element)]
+    (case defined-by
+      (clojure.core/defrecord
+       cljs.core/defrecord)
+      , #{name (symbol (str "->" name)) (symbol (str "map->" name))}
+      (clojure.core/deftype
+       cljs.core/deftype)
+      , #{name (symbol (str "->" name))}
+      , #{name})))
 
 (def kw-signature (juxt :ns :name))
 (def var-usage-signature (juxt :to :name))
@@ -308,8 +312,8 @@
       keyword-usage))
 
 (defmethod find-definition :var-definitions
-  [db {:keys [defined-by imported-ns] :as var-definition}]
-  (if (safe-equal? 'potemkin/import-vars defined-by)
+  [db {:keys [imported-ns] :as var-definition}]
+  (if (safe-equal? 'potemkin/import-vars (safe-defined-by var-definition))
     (find-definition db (assoc var-definition
                                :bucket :var-usages
                                :to imported-ns))
@@ -391,7 +395,7 @@
   (if-let [xf (cond
                 ;; protocol method definition
                 (and ('#{clojure.core/defprotocol
-                         clojure.core/definterface} (:defined-by var-definition))
+                         clojure.core/definterface} (safe-defined-by var-definition))
                      (:protocol-name var-definition))
                 (comp xf-analysis->protocol-impls
                       (xf-same-fqn (:ns var-definition) (:name var-definition)
@@ -399,12 +403,12 @@
 
                 ;; protocol name definition
                 ('#{clojure.core/defprotocol
-                    clojure.core/definterface} (:defined-by var-definition))
+                    clojure.core/definterface} (safe-defined-by var-definition))
                 (comp xf-analysis->var-usages
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to))
 
                 ;; defmulti definition
-                (= 'clojure.core/defmulti (:defined-by var-definition))
+                (= 'clojure.core/defmulti (safe-defined-by var-definition))
                 (comp xf-analysis->var-usages
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to)
                       (filter :defmethod))
@@ -643,11 +647,11 @@
                  (not (get % :private))))
     (medley/distinct-by (juxt :ns :name :row :col))
     (remove #(or (and (#{'clojure.core/defrecord
-                         'cljs.core/defrecord} (:defined-by %))
+                         'cljs.core/defrecord} (safe-defined-by %))
                       (or (string/starts-with? (str (:name %)) "->")
                           (string/starts-with? (str (:name %)) "map->")))
                  (and (#{'clojure.core/deftype
-                         'cljs.core/deftype} (:defined-by %))
+                         'cljs.core/deftype} (safe-defined-by %))
                       (string/starts-with? (str (:name %)) "->"))))))
 
 (defn find-var-definitions [db uri include-private?]
@@ -783,7 +787,7 @@
     (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
                    (if keyword-definition?
                      (:reg definition)
-                     (:defined-by definition)))
+                     (safe-defined-by definition)))
         (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
                    (if keyword-definition?
                      ;; FIXME: this creates a qualified symbol, but the set is

@@ -21,9 +21,9 @@
     :var-definitions (cond
                        (or (:fixed-arities el) (:varargs-min-arity el) (:macro el))
                        #_=> :function
-                       (some->> el :defined-by defines-interface?)
+                       (some->> el q/safe-defined-by defines-interface?)
                        #_=> :interface
-                       (some->> el :defined-by defines-class?)
+                       (some->> el q/safe-defined-by defines-class?)
                        #_=> :class
                        :else
                        #_=> :variable)

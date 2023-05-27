@@ -268,6 +268,20 @@
                                      {:range (h/->range alias-start-pos alias-end-pos) :new-text "your-alias"}]}
       result)))
 
+(deftest rename-destructuring-or
+  (h/reset-components!)
+  (let [[key-start-pos key-end-pos
+         or-start-pos or-end-pos
+         usage-start-pos usage-end-pos] (h/load-code-and-locs (h/code "(let [{:keys [|foo|] :or {|foo| 42}} {:foo 0}]"
+                                                                      "  (inc |foo|))"))
+        [usage-start-r usage-end-c] usage-start-pos
+        result (:changes (f.rename/rename-from-position h/default-uri "bar" usage-start-r usage-end-c (h/db)))]
+    (h/assert-submap
+      {h/default-uri [{:range (h/->range key-start-pos key-end-pos) :new-text "bar"}
+                      {:range (h/->range or-start-pos or-end-pos) :new-text "bar"}
+                      {:range (h/->range usage-start-pos usage-end-pos) :new-text "bar"}]}
+      result)))
+
 (deftest prepare-rename
   (testing "rename local var"
     (h/reset-components!)

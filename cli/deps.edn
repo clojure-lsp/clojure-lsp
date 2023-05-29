@@ -30,7 +30,7 @@
            :debug {:extra-paths ["dev"]
                    :extra-deps {cider/cider-nrepl {:mvn/version "0.30.0"}
                                 com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.3"}
-                                com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.2.2"}
+                                com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.3.0"}
                                 criterium/criterium {:mvn/version "0.4.6"}
                                 nrepl/nrepl {:mvn/version "1.0.0"}}
                    :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}

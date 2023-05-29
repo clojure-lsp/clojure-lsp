@@ -1,6 +1,5 @@
 (ns clojure-lsp.kondo
   (:require
-   [babashka.fs :as fs]
    [clj-kondo.core :as kondo]
    [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
@@ -233,10 +232,6 @@
     (let [db (db-with-analysis db (normalize-for-file kondo-ctx db filename uri))]
       (f.diagnostic/custom-lint-uris! [uri] db kondo-ctx))))
 
-(defn ^:private ignore-path? [db path]
-  (let [paths-ignore-regex (get-in db [:settings :paths-ignore-regex] [])]
-    (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))
-
 (def ^:private config-for-shallow-analysis
   {:arglists true
    :keywords true
@@ -267,7 +262,7 @@
        :config-dir (some-> db :project-root-uri project-config-dir)
        :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lint [(->> paths
-                   (remove (partial ignore-path? db))
+                   (remove (partial shared/ignore-path? db))
                    (string/join (System/getProperty "path.separator")))]
        :config {:output {:canonical-paths true}}
        :file-analyzed-fn file-analyzed-fn}
@@ -378,7 +373,7 @@
 
 (defn run-kondo-on-text! [text uri db*]
   (let [filename (shared/uri->filename uri)
-        ignore-filename? (ignore-path? @db* filename)
+        ignore-filename? (shared/ignore-path? @db* filename)
         db @db*]
     (if ignore-filename?
       {}

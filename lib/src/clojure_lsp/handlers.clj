@@ -136,6 +136,15 @@
     `(process-after-all-changes ~components [~uri] ~task ~@body)
     (meta &form)))
 
+(defn ^:private skip-feature-for-uri? [feature uri {:keys [db*]}]
+  (cond
+    (shared/ignore-path? @db* (shared/uri->filename uri))
+    (do
+      (logger/info feature "- skipped")
+      true)
+
+    :else false))
+
 (defn ^:private element->location [db producer element]
   {:uri (f.java-interop/uri->translated-uri (:uri element) db producer)
    :range (shared/->range element)})
@@ -206,19 +215,20 @@
   (f.file-management/did-change-watched-files changes components))
 
 (defn completion [{:keys [db*] :as components} {:keys [text-document position]}]
-  (letfn [(completion-fn []
-            (shared/logging-results
-              (str :completion " %s - total items: %s")
-              count
-              (let [db @db*
-                    [row col] (shared/position->row-col position)]
-                (f.completion/completion (:uri text-document) row col db))))]
-    (if (identical? :slow-but-accurate (get-in @db* [:settings :completion :analysis-type] :fast-but-stale))
-      (process-after-changes
-        components (:uri text-document)
-        :completion
-        (completion-fn))
-      (completion-fn))))
+  (when-not (skip-feature-for-uri? :completion (:uri text-document) components)
+    (letfn [(completion-fn []
+              (shared/logging-results
+                (str :completion " %s - total items: %s")
+                count
+                (let [db @db*
+                      [row col] (shared/position->row-col position)]
+                  (f.completion/completion (:uri text-document) row col db))))]
+      (if (identical? :slow-but-accurate (get-in @db* [:settings :completion :analysis-type] :fast-but-stale))
+        (process-after-changes
+          components (:uri text-document)
+          :completion
+          (completion-fn))
+        (completion-fn)))))
 
 (defn references [{:keys [db* producer]} {:keys [text-document position context]}]
   (shared/logging-task
@@ -278,17 +288,18 @@
       (f.document-symbol/document-symbols db (:uri text-document)))))
 
 (defn document-highlight [{:keys [db*] :as components} {:keys [text-document position]}]
-  (process-after-changes
-    components (:uri text-document)
-    :document-highlight
-    (let [db @db*
-          [row col] (shared/position->row-col position)
-          uri (:uri text-document)
-          local-db (update db :analysis select-keys [uri])
-          references (q/find-references-from-cursor local-db uri row col true)]
-      (mapv (fn [reference]
-              {:range (shared/->range reference)})
-            references))))
+  (when-not (skip-feature-for-uri? :document-highlight (:uri text-document) components)
+    (process-after-changes
+      components (:uri text-document)
+      :document-highlight
+      (let [db @db*
+            [row col] (shared/position->row-col position)
+            uri (:uri text-document)
+            local-db (update db :analysis select-keys [uri])
+            references (q/find-references-from-cursor local-db uri row col true)]
+        (mapv (fn [reference]
+                {:range (shared/->range reference)})
+              references)))))
 
 (defn workspace-symbols [{:keys [db*]} {:keys [query]}]
   (shared/logging-task
@@ -402,10 +413,11 @@
             edit))))))
 
 (defn hover [components {:keys [text-document position]}]
-  (shared/logging-task
-    :hover
-    (let [[row col] (shared/position->row-col position)]
-      (f.hover/hover (:uri text-document) row col components))))
+  (when-not (skip-feature-for-uri? :hover (:uri text-document) components)
+    (shared/logging-task
+      :hover
+      (let [[row col] (shared/position->row-col position)]
+        (f.hover/hover (:uri text-document) row col components)))))
 
 (defn signature-help [components {:keys [text-document position _context]}]
   (shared/logging-task
@@ -414,22 +426,24 @@
       (f.signature-help/signature-help (:uri text-document) row col components))))
 
 (defn formatting [components {:keys [text-document]}]
-  (shared/logging-task
-    :formatting
-    (f.format/formatting (:uri text-document) components)))
+  (when-not (skip-feature-for-uri? :formatting (:uri text-document) components)
+    (shared/logging-task
+      :formatting
+      (f.format/formatting (:uri text-document) components))))
 
 (defn range-formatting [{:keys [db*] :as components} {:keys [text-document range]}]
-  (process-after-changes
-    components (:uri text-document)
-    :range-formatting
-    (let [db @db*
-          [row col] (shared/position->row-col (:start range))
-          [end-row end-col] (shared/position->row-col (:end range))
-          format-pos {:row row
-                      :col col
-                      :end-row end-row
-                      :end-col end-col}]
-      (f.format/range-formatting (:uri text-document) format-pos db))))
+  (when-not (skip-feature-for-uri? :range-formatting (:uri text-document) components)
+    (process-after-changes
+      components (:uri text-document)
+      :range-formatting
+      (let [db @db*
+            [row col] (shared/position->row-col (:start range))
+            [end-row end-col] (shared/position->row-col (:end range))
+            format-pos {:row row
+                        :col col
+                        :end-row end-row
+                        :end-col end-col}]
+        (f.format/range-formatting (:uri text-document) format-pos db)))))
 
 (defn dependency-contents [{:keys [db* producer]} {:keys [uri]}]
   (shared/logging-task
@@ -438,22 +452,24 @@
 
 (defn code-actions
   [{:keys [db*] :as components} {:keys [range context text-document]}]
-  (process-after-changes
-    components (:uri text-document)
-    :code-actions
-    (let [db @db*
-          diagnostics (-> context :diagnostics)
-          [row col] (shared/position->row-col (:start range))
-          root-zloc (parser/safe-zloc-of-file db (:uri text-document))
-          client-capabilities (get db :client-capabilities)]
-      (f.code-actions/all root-zloc (:uri text-document) row col diagnostics client-capabilities db))))
+  (when-not (skip-feature-for-uri? :code-actions (:uri text-document) components)
+    (process-after-changes
+      components (:uri text-document)
+      :code-actions
+      (let [db @db*
+            diagnostics (-> context :diagnostics)
+            [row col] (shared/position->row-col (:start range))
+            root-zloc (parser/safe-zloc-of-file db (:uri text-document))
+            client-capabilities (get db :client-capabilities)]
+        (f.code-actions/all root-zloc (:uri text-document) row col diagnostics client-capabilities db)))))
 
 (defn code-lens
   [{:keys [db*] :as components} {:keys [text-document]}]
-  (process-after-changes
-    components (:uri text-document)
-    :code-lens
-    (f.code-lens/reference-code-lens (:uri text-document) @db*)))
+  (when-not (skip-feature-for-uri? :code-lens (:uri text-document) components)
+    (process-after-changes
+      components (:uri text-document)
+      :code-lens
+      (f.code-lens/reference-code-lens (:uri text-document) @db*))))
 
 (defn code-lens-resolve
   [{:keys [db*]} {[uri row col] :data range :range}]
@@ -463,26 +479,28 @@
 
 (defn semantic-tokens-full
   [{:keys [db*] :as components} {:keys [text-document]}]
-  (process-after-changes
-    components (:uri text-document)
-    :semantic-tokens-full
-    (let [data (f.semantic-tokens/full-tokens (:uri text-document) @db*)]
-      {:data data})))
+  (when-not (skip-feature-for-uri? :semantic-tokens-full (:uri text-document) components)
+    (process-after-changes
+      components (:uri text-document)
+      :semantic-tokens-full
+      (let [data (f.semantic-tokens/full-tokens (:uri text-document) @db*)]
+        {:data data}))))
 
 (defn semantic-tokens-range
   [{:keys [db*] :as components} {:keys [text-document] {:keys [start end]} :range}]
-  (process-after-changes
-    components (:uri text-document)
-    :semantic-tokens-range
-    (let [db @db*
-          [row col] (shared/position->row-col start)
-          [end-row end-col] (shared/position->row-col end)
-          range {:name-row row
-                 :name-col col
-                 :name-end-row end-row
-                 :name-end-col end-col}
-          data (f.semantic-tokens/range-tokens (:uri text-document) range db)]
-      {:data data})))
+  (when-not (skip-feature-for-uri? :semantic-tokens-range (:uri text-document) components)
+    (process-after-changes
+      components (:uri text-document)
+      :semantic-tokens-range
+      (let [db @db*
+            [row col] (shared/position->row-col start)
+            [end-row end-col] (shared/position->row-col end)
+            range {:name-row row
+                   :name-col col
+                   :name-end-row end-row
+                   :name-end-col end-col}
+            data (f.semantic-tokens/range-tokens (:uri text-document) range db)]
+        {:data data}))))
 
 (defn prepare-call-hierarchy
   [{:keys [db*]} {:keys [text-document position]}]

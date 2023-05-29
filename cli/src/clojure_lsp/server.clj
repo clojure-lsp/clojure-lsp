@@ -191,7 +191,7 @@
 
 (defmethod lsp.server/receive-request "clojure/cursorInfo/raw" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/cursor-info-raw components)
        eventually))
 
@@ -231,14 +231,14 @@
 
 (defmethod lsp.server/receive-request "textDocument/references" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/references components)
        (conform-or-log ::coercer/locations-or-error)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/completion" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/completion components)
        (conform-or-log ::coercer/completion-items-or-error)
        eventually))
@@ -252,56 +252,56 @@
 
 (defmethod lsp.server/receive-request "textDocument/prepareRename" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/prepare-rename components)
        (conform-or-log ::coercer/prepare-rename-or-error)
        after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/rename" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/rename components)
        (conform-or-log ::coercer/workspace-edit-or-error)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/hover" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/hover components)
        (conform-or-log ::coercer/hover-or-error)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/signatureHelp" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/signature-help components)
        (conform-or-log ::coercer/signature-help-or-error)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/formatting" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/formatting components)
        (conform-or-log ::coercer/edits-or-error)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/rangeFormatting" [_this components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/range-formatting components)
        (conform-or-log ::coercer/edits-or-error)
        after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/codeAction" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/code-actions components)
        (conform-or-log ::coercer/code-actions-or-error)
        after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/codeLens" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/code-lens components)
        (conform-or-log ::coercer/code-lenses-or-error)
        after-changes))
@@ -314,56 +314,56 @@
 
 (defmethod lsp.server/receive-request "textDocument/definition" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/definition components)
        (conform-or-log ::coercer/location-or-error)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/declaration" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/declaration components)
        (conform-or-log ::coercer/location-or-error)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/implementation" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/implementation components)
        (conform-or-log ::coercer/locations-or-error)
        eventually))
 
 (defmethod lsp.server/receive-request "textDocument/documentSymbol" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/document-symbol components)
        (conform-or-log ::coercer/document-symbols-or-error)
        after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/documentHighlight" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/document-highlight components)
        (conform-or-log ::coercer/document-highlights-or-error)
        after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/full" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/semantic-tokens-full components)
        (conform-or-log ::coercer/semantic-tokens-or-error)
        after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/semanticTokens/range" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/semantic-tokens-range components)
        (conform-or-log ::coercer/semantic-tokens-or-error)
        after-changes))
 
 (defmethod lsp.server/receive-request "textDocument/prepareCallHierarchy" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/prepare-call-hierarchy components)
        (conform-or-log ::coercer/call-hierarchy-items-or-error)
        eventually))
@@ -382,7 +382,7 @@
 
 (defmethod lsp.server/receive-request "textDocument/linkedEditingRange" [_ components params]
   (->> params
-       (normalize-doc-uri)
+       normalize-doc-uri
        (handler/linked-editing-ranges components)
        (conform-or-log ::coercer/linked-editing-ranges-or-error)
        eventually))

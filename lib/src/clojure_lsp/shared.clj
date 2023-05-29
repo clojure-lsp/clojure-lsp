@@ -548,3 +548,7 @@
     (let [uri (URI. uri)]
       ;; normalize scheme:/some/path to scheme:///some/path
       (uri-encode (.getScheme uri) (.getPath uri)))))
+
+(defn ignore-path? [db path]
+  (let [paths-ignore-regex (get-in db [:settings :paths-ignore-regex] [])]
+    (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))

@@ -230,14 +230,6 @@
           (completion-fn))
         (completion-fn)))))
 
-(defn references [{:keys [db* producer]} {:keys [text-document position context]}]
-  (shared/logging-task
-    :references
-    (let [db @db*
-          [row col] (shared/position->row-col position)]
-      (mapv #(element->location db producer %1)
-            (q/find-references-from-cursor db (:uri text-document) row col (:include-declaration context))))))
-
 (defn completion-resolve-item [{:keys [db*]} item]
   (shared/logging-task
     :resolve-completion-item
@@ -280,12 +272,21 @@
       (mapv #(element->location db producer %)
             (q/find-implementations-from-cursor db (:uri text-document) row col)))))
 
+(defn references [{:keys [db* producer]} {:keys [text-document position context]}]
+  (shared/logging-task
+    :references
+    (let [db @db*
+          [row col] (shared/position->row-col position)]
+      (mapv #(element->location db producer %1)
+            (q/find-references-from-cursor db (:uri text-document) row col (:include-declaration context))))))
+
 (defn document-symbol [{:keys [db*] :as components} {:keys [text-document]}]
-  (process-after-changes
-    components (:uri text-document)
-    :document-symbol
-    (let [db @db*]
-      (f.document-symbol/document-symbols db (:uri text-document)))))
+  (when-not (skip-feature-for-uri? :hover (:uri text-document) components)
+    (process-after-changes
+      components (:uri text-document)
+      :document-symbol
+      (let [db @db*]
+        (f.document-symbol/document-symbols db (:uri text-document))))))
 
 (defn document-highlight [{:keys [db*] :as components} {:keys [text-document position]}]
   (when-not (skip-feature-for-uri? :document-highlight (:uri text-document) components)

@@ -698,3 +698,31 @@
     (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File/of \"foo\")"))))
   (testing "when usage is invalid"
     (is (nil? (find-missing-imports "(ns a) |;; comment")))))
+
+(deftest add-require-suggestion-test-js-lib
+  (h/load-code-and-locs (h/code "(ns b (:require [\"@mui/material/Grid$default\" :as Grid]))") "file:///b.clj")
+
+  ;; OK, correct value here
+  (is (= [{:ns "@mui/material/Grid$default" :alias "Grid" :count 1}]
+         (find-require-suggestions "|Grid")))
+
+  (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
+                                        "|Grid")
+                                ;; FIXME: Invalid symbol if the correct value is used here
+                                ; (add-require-suggestion "@mui/material/Grid$default" "Grid" nil)
+                                (add-require-suggestion "material/Grid$default" "Grid" nil)
+                                )]
+    (is (= (h/code "(ns foo.bar "
+                   "  (:require"
+                   ; "   [\"@mui/material/Grid$default\" :as Grid]))"
+                   "   [material/Grid$default :as Grid]))"
+                   )
+           (z/root-string (:loc ns-edit))))
+    ;; FIXME: This incorrectly presumes the name refers into value inside the alias
+    ;; but we want to use the alias directly
+    (is (= (h/code "Grid/Grid")
+           ;; (h/code "Grid")
+           (z/string (:loc form-edit))))))
+
+(comment
+  (clojure.test/run-test add-require-suggestion-test-js-lib))

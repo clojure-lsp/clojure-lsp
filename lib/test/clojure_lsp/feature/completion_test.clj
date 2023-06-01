@@ -636,3 +636,44 @@
          {:label "force" :kind :function :detail "clojure.core/force" :score 6}
          {:label "format" :kind :function :detail "clojure.core/format" :score 6}]
         (f.completion/completion (h/file-uri "file:///a.clj") row col (h/db))))))
+
+(deftest resolve-item-test-js-libs
+  (swap! (h/db*) merge {:settings {:completion {:additional-edits-warning-text "* includes additional edits"}}})
+  (h/load-code-and-locs "(ns a (:require [\"@mui/material/Grid$default\" :as Grid]))")
+  (testing "When element needs an alias"
+    (let [[[row col]] (h/load-code-and-locs "(ns aaa) Grid|" (h/file-uri "file:///aaa.clj"))]
+      (is (= [{:label "Grid"
+               :kind :property
+               :detail "alias to: @mui/material/Grid$default"
+               :additional-text-edits [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
+                                        :new-text (h/code "(ns aaa "
+                                                          "  (:require"
+                                                          ;; FIXME: Why does this include "@mui" part?
+                                                          ;; Is it because additional-text-edits is added directy vs. through resolveItem?
+                                                          ;; Still wont work as it isn't a string.
+                                                          ;; "    [\"@mui/material/Grid$default\" :as Grid]))"
+                                                          "    [@mui/material/Grid$default :as Grid]))"
+                                                          )}]}]
+             (f.completion/completion (h/file-uri "file:///aaa.clj") row col (h/db)))))
+
+    (h/assert-submap {:label "Grid"
+                      :kind :property
+                      :additional-text-edits [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
+                                               :new-text (h/code "(ns aaa "
+                                                                 "  (:require"
+                                                                 ;; FIXME:
+                                                                 "    [material/Grid$default :as Grid]))"
+                                                                 ; "    [\"@mui/material/Grid$default\" :as Grid]))"
+                                                                 )}]}
+                     (f.completion/resolve-item {:label "Grid"
+                                                 :kind :property
+                                                 :data {:unresolved [["alias"
+                                                                      {;; FIXME:
+                                                                       ; :ns-to-add "@mui/material/Grid$default"
+                                                                       :ns-to-add "material/Grid$default"
+                                                                       :alias-to-add "Grid"
+                                                                       :uri (h/file-uri "file:///aaa.clj")}]]}}
+                                                (h/db*)))))
+
+(comment
+  (clojure.test/run-test resolve-item-test-js-libs))

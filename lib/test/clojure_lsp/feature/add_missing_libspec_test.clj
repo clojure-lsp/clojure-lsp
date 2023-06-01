@@ -521,7 +521,7 @@
   (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db) {}))
 
 (deftest add-require-suggestion-test
-  (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
+  (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])") "file:///clojure/string.clj")
   (testing "alias"
     (testing "on empty ns"
       (is (= (h/code "(ns foo.bar "

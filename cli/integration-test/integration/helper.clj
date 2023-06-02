@@ -85,8 +85,8 @@
   "Like `clojure.string/includes?` applied to S and SUBSTR, but treats
   any line endings as equal."
   [s substr]
-  (let [s (-> (string/split-lines s) (string/join "\n"))
-        substr (-> (string/split-lines substr) (string/join "\n"))]
+  (let [s (->> (string/split-lines s) (string/join "\n"))
+        substr (->> (string/split-lines substr) (string/join "\n"))]
     (string/includes? s substr)))
 
 (defn newlines->system

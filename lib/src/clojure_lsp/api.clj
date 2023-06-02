@@ -246,6 +246,50 @@
     options
     (internal-api/rename! options)))
 
+(defn references
+  "Find all references of an symbol across the project and dependencies.
+  The symbol can be a full qualified symbol or a namespace only.
+
+  **Options**
+  All options besides `:from` and `:to` below are optional, using its default if not provided.
+
+  `:project-root` a java.io.File representing the project root.
+
+  `:analysis` a map with options on how clojure-lsp should analyze the project, available values are:
+    `:type` keyword values: `project-only`, `project-and-clojure-only-dependencies`, `project-and-full-dependencies`. Default to `project-and-full-dependencies`.
+
+  `:from` the full qualified symbol to find references. e.g. 'my-project.foo/my-var
+
+  `settings` map of settings following https://clojure-lsp.io/settings/
+
+  **Output**
+
+  `result-code` an integer representing whether the action was successful, 0 means ok, 1 means error
+
+  `message-fn` a function of no arity to be called if want the result as a stringfied version.
+
+  `:result`
+    `:references` a coll of all reference elements found for the `:from` symbol.
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/references {:from 'my-project.some/foo})
+  => {:result {:references [{:name ... :uri ...}]}
+      :result-code 0}
+  ```"
+  [{:keys [project-root settings from] :as options}]
+  {:pre [(or (nil? project-root)
+             (and (instance? File project-root)
+                  (.exists ^File project-root)))
+         (or (nil? settings)
+             (map? settings))
+         (symbol? from)
+         (qualified-symbol? from)]}
+  (safe-process-message
+    options
+    (internal-api/references options)))
+
 (defn dump
   "Dump all project known data including classpath, source-paths, dep-graph
   and clj-kondo analysis data.
@@ -255,7 +299,7 @@
   `:project-root` a java.io.File representing the project root.
 
   `:analysis` a map with options on how clojure-lsp should analyze the project, available values are:
-    `:type` keyword values: `project-only` or `project-and-dependencies`. Default to `project-only`.
+    `:type` keyword values: `project-only`, `project-and-clojure-only-dependencies`, `project-and-full-dependencies`. Default to `project-only`.
 
   `:output` a map with options on how the result should be printed, available values are:
     `:format` a keyword specifying in which format the data should be returned, defaults to `:edn`.

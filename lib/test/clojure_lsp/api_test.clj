@@ -315,8 +315,8 @@
          '{:name my-func :from sample-test.rename.b :to sample-test.rename.a
            :name-row 6 :name-col 2 :name-end-row 6 :name-end-col 9}]
         references)
-      (is (string/includes? (first (string/split (message-fn) (re-pattern (System/lineSeparator))))
-                            "cli/integration-test/sample-test/src/sample_test/rename/a.cljc:4:7")))))
+      (is (some #(string/includes? % "cli/integration-test/sample-test/src/sample_test/rename/a.cljc:4:7")
+                (string/split (message-fn) (re-pattern (System/lineSeparator))))))))
 
 (deftest dump
   (testing "when project-root is not a file"

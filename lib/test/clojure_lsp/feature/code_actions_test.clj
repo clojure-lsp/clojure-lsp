@@ -757,20 +757,20 @@
         :command
         {:title "Replace ':refer :all' with ':refer [foo bar]'"
          :command "replace-refer-all-with-refer"
-         :arguments ["file:///a.clj" (dec row) (dec col) ["foo" "bar"]]}}
+         :arguments [(h/file-uri "file:///a.clj") (dec row) (dec col) ["foo" "bar"]]}}
        {:title "Replace ':refer :all' with alias"
         :kind :quick-fix
         :command
         {:title "Replace ':refer :all' with alias"
          :command "replace-refer-all-with-alias"
-         :arguments ["file:///a.clj" (dec row) (dec col)]}}]
+         :arguments [(h/file-uri "file:///a.clj") (dec row) (dec col)]}}]
       (f.code-actions/all (zloc-of h/default-uri)
                           h/default-uri
                           row
                           col
-                          [{:code    "refer-all"
+                          [{:code "refer-all"
                             :message "Use alias or :refer"
                             :data {:refers ["foo" "bar"]}
-                            :range   {:start {:line (dec row) :character (dec col)}}}]
+                            :range {:start {:line (dec row) :character (dec col)}}}]
                           {:workspace {:workspace-edit true}}
                           (h/db)))))

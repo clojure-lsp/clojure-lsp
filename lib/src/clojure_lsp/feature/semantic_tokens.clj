@@ -104,7 +104,7 @@
       nil)))
 
 (defn ^:private var-usage-element->absolute-tokens
-  [{:keys [name alias macro name-col to] :as element}]
+  [{:keys [name alias macro name-col to full-qualified-simbol?] :as element}]
   (let [name-str ^String (str name)]
     (cond
       (and macro
@@ -121,8 +121,9 @@
          (element->absolute-token slash-pos :event)
          (element->absolute-token name-pos :macro)])
 
-      alias
-      (let [slash (+ name-col (count (str alias)))
+      (or alias
+          full-qualified-simbol?)
+      (let [slash (+ name-col (count (str (or alias to))))
             slash-pos (assoc element :name-col slash :name-end-col (inc slash))
             alias-pos (assoc element :name-end-col slash)
             name-pos (assoc element :name-col (inc slash))]
@@ -166,7 +167,7 @@
        (keep
          (fn [{:keys [bucket] :as element}]
            (cond
-             (identical?  :var-usages bucket)
+             (identical? :var-usages bucket)
              (var-usage-element->absolute-tokens element)
 
              (identical? :var-definitions bucket)

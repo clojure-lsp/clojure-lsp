@@ -197,6 +197,22 @@
     (is (= [0 1 11 3 0
             0 12 9 9 0
             1 3 11 2 1]
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
+
+  (testing "full.qualified/namespace"
+    (h/load-code-and-locs (code "(ns some.ns"
+                                "    (:require [clojure.string :as string]))"
+                                "(clojure.string/blank str-test)"
+                                "(string/blank? str-test)"))
+    (is (= [0 4 7 0 0
+            1 5 8 4 0
+            0 25 3 4 0
+            1 1 14 1 0
+            0 14 1 8 0
+            0 1 5 2 0
+            1 1 6 1 0
+            0 6 1 8 0
+            0 1 6 2 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db))))))
 
 (deftest range-tokens

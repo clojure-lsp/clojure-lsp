@@ -757,7 +757,7 @@
           (map :duplicate-ns))
         (get-in db [:findings uri])))
 
-(defn find-element-for-rename [db from-ns from-name]
+(defn find-element-from-sym [db from-ns from-name]
   (let [xf
         (if from-name
           (comp

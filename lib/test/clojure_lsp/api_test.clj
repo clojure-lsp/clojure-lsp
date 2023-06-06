@@ -248,7 +248,7 @@
     (is (thrown? AssertionError
                  (api/rename! {:project-root (io/file "../cli/integration-test/sample-test/bla")}))))
   (testing "when project-root is a valid file"
-    (testing "foo option assertions"
+    (testing "from option assertions"
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "../cli/integration-test/sample-test")
                                                 :raw?         true})))
       (is (thrown? AssertionError (api/rename! {:project-root (io/file "../cli/integration-test/sample-test")
@@ -280,6 +280,43 @@
                                          :to           'sample-test.rename.b
                                          :dry?         true
                                          :raw?         true}))))))
+
+(deftest references
+  (testing "when project-root is not a file"
+    (is (thrown? AssertionError
+                 (api/references {:project-root "../cli/integration-test/sample-test"}))))
+  (testing "when project-root is not a existent file"
+    (is (thrown? AssertionError
+                 (api/references {:project-root (io/file "../cli/integration-test/sample-test/bla")}))))
+  (testing "when project-root is a valid file"
+    (testing "symbol option assertions"
+      (is (thrown? AssertionError (api/references {:project-root (io/file "../cli/integration-test/sample-test")
+                                                   :from "foo"})))
+      (is (thrown? AssertionError (api/references {:project-root (io/file "../cli/integration-test/sample-test")
+                                                   :from 'foo})))))
+  (testing "finding all references"
+    (clean-api-db!)
+    (let [{:keys [result-code message-fn references]}
+          (api/references {:project-root (io/file "../cli/integration-test/sample-test")
+                           :raw? true
+                           :from 'sample-test.rename.a/my-func})]
+      (is (= 0 result-code))
+      (h/assert-contains-submaps
+        ['{:name my-func :ns sample-test.rename.a
+           :name-row 4 :name-col 7 :name-end-row 4 :name-end-col 14}
+         '{:name my-func :from sample-test.rename.a :to sample-test.rename.a
+           :name-row 7 :name-col 2 :name-end-row 7 :name-end-col 9}
+         '{:name my-func :from sample-test.rename.a :to sample-test.rename.a
+           :name-row 9 :name-col 2 :name-end-row 9 :name-end-col 9}
+         '{:name my-func :from sample-test.rename.b :to sample-test.rename.a
+           :name-row 2 :name-col 49 :name-end-row 2 :name-end-col 56}
+         '{:name my-func :from sample-test.rename.b :to sample-test.rename.a
+           :name-row 4 :name-col 2 :name-end-row 4 :name-end-col 11}
+         '{:name my-func :from sample-test.rename.b :to sample-test.rename.a
+           :name-row 6 :name-col 2 :name-end-row 6 :name-end-col 9}]
+        references)
+      (is (some #(string/includes? % "cli/integration-test/sample-test/src/sample_test/rename/a.cljc:4:7")
+                (string/split (message-fn) (re-pattern (System/lineSeparator))))))))
 
 (deftest dump
   (testing "when project-root is not a file"

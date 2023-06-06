@@ -208,8 +208,8 @@
     (swap! db* assoc :project-analysis-type :project-only)
     (analyze! options components)))
 
-(defn ^:private dynamic-setup-project-analysis! [options components]
-  (case (get-in options [:analysis :type] :project-only)
+(defn ^:private dynamic-setup-project-analysis! [options default-analysis-type components]
+  (case (get-in options [:analysis :type] default-analysis-type)
     :project-and-full-dependencies (setup-project-and-full-deps-analysis! options components)
     :project-only (setup-project-only-analysis! options components)))
 
@@ -389,7 +389,7 @@
         from-ns (if ns-only?
                   from
                   (symbol (namespace from)))]
-    (if-let [{:keys [uri name-row name-col]} (q/find-element-for-rename db from-ns from-name)]
+    (if-let [{:keys [uri name-row name-col]} (q/find-element-from-sym db from-ns from-name)]
       (let [{:keys [error document-changes]} (-> uri
                                                  (open-file! components)
                                                  (f.rename/rename-from-position (str to) name-row name-col db))]
@@ -411,6 +411,28 @@
           {:result-code 1 :message-fn (constantly (format "Could not rename %s to %s. %s" from to (-> error :message)))}))
       {:result-code 1 :message-fn (constantly (format "Symbol %s not found in project" from))})))
 
+(defn ^:private element->string
+  [{:keys [uri name-row name-col]}]
+  (str uri ":" name-row ":" name-col))
+
+(defn ^:private references* [{:keys [from] :as options} {:keys [db*] :as components}]
+  (setup-api! components)
+  (dynamic-setup-project-analysis! options :project-and-full-dependencies components)
+  (let [db @db*
+        ns-only? (simple-symbol? from)
+        from-name (when-not ns-only? (symbol (name from)))
+        from-ns (if ns-only?
+                  from
+                  (symbol (namespace from)))]
+    (if-let [element (q/find-element-from-sym db from-ns from-name)]
+      (let [references (q/find-references db element true)]
+        {:result-code 0
+         :message-fn (fn [] (->> references
+                                 (map element->string)
+                                 (string/join (System/lineSeparator))))
+         :references references})
+      {:result-code 1 :message-fn (constantly (format "Symbol %s not found in project" from))})))
+
 (defn ^:private db->dump-data [db filter-keys]
   (as-> db $
     (select-keys $ [:classpath :analysis :dep-graph :findings :settings])
@@ -426,7 +448,7 @@
 
 (defn ^:private dump* [{{:keys [format filter-keys] :or {format :edn}} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
-  (dynamic-setup-project-analysis! options components)
+  (dynamic-setup-project-analysis! options :project-only components)
   (let [db @db*
         dump-data (db->dump-data db filter-keys)]
     (case format
@@ -457,6 +479,9 @@
 
 (defn rename! [options]
   (rename!* options (build-components options)))
+
+(defn references [options]
+  (references* options (build-components options)))
 
 (defn dump [options]
   (dump* options (build-components options)))

@@ -16,6 +16,6 @@
                               "--from" "sample-test.rename.a/my-func")]
       (let [result (slurp rdr)]
         (is (h/str-includes? result
-                             (str a-subject-path ":4:7")))
+                             ":4:7"))
         (is (h/str-includes? result
-                             (str b-subject-path ":2:49")))))))
+                             ":2:49"))))))

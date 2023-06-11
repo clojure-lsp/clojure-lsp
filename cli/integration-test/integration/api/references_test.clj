@@ -6,9 +6,6 @@
 
 (lsp/clean-after-test)
 
-(def a-subject-path (h/project-path->canon-path "src/sample_test/rename/a.cljc"))
-(def b-subject-path (h/project-path->canon-path "src/sample_test/rename/b.cljc"))
-
 (deftest references
   (testing "finding all references of a full qualified symbol"
     (with-open [rdr (lsp/cli! "references"

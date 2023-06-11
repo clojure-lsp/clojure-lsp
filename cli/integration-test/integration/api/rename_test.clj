@@ -45,4 +45,8 @@
                               "--to" "sample-test.rename.foo.c"
                               "--dry"
                               "--raw")]
-      (is (h/str-includes? (slurp rdr) "rename from src/sample_test/rename/b.cljc\nrename to src/sample_test/rename/foo/c.cljc\n")))))
+      (is (h/str-includes? (slurp rdr) (str "rename from "
+                                            (h/file-path "src/sample_test/rename/b.cljc")
+                                            (System/lineSeparator)
+                                            "rename to "
+                                            (h/file-path "src/sample_test/rename/foo/c.cljc")))))))

@@ -37,22 +37,23 @@
 
 (defn ^:private replace-refer-all-actions [uri diagnostics]
   (->> diagnostics
-       (map (fn [{:keys [data]
-                  {{:keys [line character]} :start} :range}]
-              (let [refers (:refers data)
-                    refer-msg (format "Replace ':refer :all' with ':refer %s'" (mapv symbol refers))
-                    alias-msg "Replace ':refer :all' with alias"]
-                [{:title refer-msg
-                  :kind :quick-fix
-                  :is-preferred true
-                  :command {:title refer-msg
-                            :command "replace-refer-all-with-refer"
-                            :arguments [uri line character refers]}}
-                 {:title alias-msg
-                  :kind :quick-fix
-                  :command {:title alias-msg
-                            :command "replace-refer-all-with-alias"
-                            :arguments [uri line character]}}])))
+       (keep (fn [{:keys [data]
+                   {{:keys [line character]} :start} :range}]
+               (when-let [refers (seq (:refers data))]
+                 (let [refer-msg (format "Replace ':refer :all' with ':refer %s'" (mapv symbol refers))
+                       alias-msg "Replace ':refer :all' with alias"]
+                   [{:title refer-msg
+                     :kind :quick-fix
+                     :is-preferred true
+                     :command {:title refer-msg
+                               :command "replace-refer-all-with-refer"
+                               :arguments [uri line character refers]}}
+                    {:title alias-msg
+                     :kind :quick-fix
+                     :command {:title alias-msg
+                               :command "replace-refer-all-with-alias"
+                               :arguments [uri line character]}}]))))
+       (remove nil?)
        flatten))
 
 (defn ^:private find-require-suggestions [uri db {:keys [position zloc]}]

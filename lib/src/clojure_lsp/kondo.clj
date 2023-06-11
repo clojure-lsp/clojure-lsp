@@ -139,8 +139,8 @@
 
     :var-usages
     [(cond-> element
-       (and (full-qualified-namespace? element)
-            (not (:alias element)))
+       (and (not (:alias element))
+            (full-qualified-namespace? element))
        (assoc :full-qualified-simbol? true))]
 
     [element]))

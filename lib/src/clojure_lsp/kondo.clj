@@ -81,6 +81,14 @@
          :name-end-row (or (:name-end-row element) (:end-row element))
          :name-end-col (or (:name-end-col element) (:end-col element))))
 
+(defn ^:private full-qualified-namespace?
+  [element]
+  (when (and (:name-col element)
+             (:name-end-col element))
+    (let [element-full-name (str (:to element) "/" (:name element))
+          element-length (- (:name-end-col element) (:name-col element))]
+      (= (count element-full-name) element-length))))
+
 ;;;; Normalization
 
 ;; The analysis we get back from clj-kondo is indexed by bucket
@@ -128,6 +136,12 @@
                 :name-col 0
                 :name-end-row 0
                 :name-end-col 0))]
+
+    :var-usages
+    [(cond-> element
+       (and (full-qualified-namespace? element)
+            (not (:alias element)))
+       (assoc :full-qualified-simbol? true))]
 
     [element]))
 

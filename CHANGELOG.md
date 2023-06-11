@@ -10,6 +10,7 @@
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575
   - Enhance java support for hover and completion of static class members.
   - Improve `:paths-ignore-regex` to ignore features avoiding impact in huge files that are intented to be excluded.
+  - Fixed semantic-tokens for full qualified namespace
   
 - API/CLI
   - New feature: Find all references via API and CLI. #1572

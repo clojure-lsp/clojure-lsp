@@ -4,7 +4,8 @@
 
 - General
   - Update flake.nix to build with babashka. #1373
-  - Bump clj-kondo to `2023.06.02-20230531.221642-1`.
+  - Bump clj-kondo to `2023.06.02-20230612.113558-5`.
+  - Improve support for ClojureDart `.cljd` files. #1589
   
 - Editor
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575

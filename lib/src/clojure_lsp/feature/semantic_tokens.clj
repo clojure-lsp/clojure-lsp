@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.queries :as q]
    [clojure.string :as string])
   (:import
@@ -150,7 +151,9 @@
              alias)
          (not namespace-from-prefix))
     (let [slash (+ (if alias 2 1) name-col (count (str (or alias ns))))
-          ns-pos (assoc element :name-end-col slash)
+          ns-pos (-> element
+                     (assoc :name-end-col slash)
+                     (assoc :name-col (+ (if alias 2 1) (:name-col element))))
           slash-pos (assoc element :name-col slash :name-end-col (inc slash))
           name-pos (assoc element :name-col (inc slash))]
       [(element->absolute-token ns-pos :type)
@@ -158,7 +161,12 @@
        (element->absolute-token name-pos :keyword)])
 
     :else
-    [(element->absolute-token element :keyword)]))
+    (as-> element $
+          (assoc $ :name-col (if (and ns
+                                      (not namespace-from-prefix))
+                               (+ name-col 2)
+                               (inc name-col)))
+          [(element->absolute-token $ :keyword)])))
 
 (defn ^:private elements->absolute-tokens
   [elements]
@@ -166,6 +174,9 @@
        (sort-by (juxt :name-row :name-col))
        (keep
          (fn [{:keys [bucket] :as element}]
+           (when (= (:name-row element) 176)
+             (logger/info element))
+
            (cond
              (identical? :var-usages bucket)
              (var-usage-element->absolute-tokens element)

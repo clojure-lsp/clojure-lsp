@@ -1,5 +1,6 @@
 (ns clojure-lsp.logger)
 
+(def teste :foo)
 (defprotocol ILogger
   (setup [this])
 

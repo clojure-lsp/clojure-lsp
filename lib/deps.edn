@@ -23,7 +23,7 @@
                                         :exclusions [funcool/promesa]}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.83.1314"}
+                               lambdaisland/kaocha {:mvn/version "1.85.1342"}
                                com.taoensso/timbre {:mvn/version "6.0.4"}
                                org.clojure/test.check {:mvn/version "1.1.1"}}
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]

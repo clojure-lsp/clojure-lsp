@@ -24,21 +24,21 @@
    :folder 19 :enummember 20 :constant 21 :struct 22 :event 23 :operator 24 :typeparameter 25})
 
 (def priority-order
-  [:kw-arg
-   :locals
-   :simple-cursor
-   :alias-keyword
-   :keyword
-   :refer
-   :required-alias
-   :unrequired-alias
-   :ns-definition
-   :clojure-core
-   :clojurescript-core
-   :java-usages
-   :java-class-definitions
+  [:snippet
    :java-member-definitions
-   :snippet])
+   :java-class-definitions
+   :java-usages
+   :clojurescript-core
+   :clojure-core
+   :ns-definition
+   :unrequired-alias
+   :required-alias
+   :refer
+   :keyword
+   :alias-keyword
+   :simple-cursor
+   :locals
+   :kw-arg])
 
 (def priority-kw->number
   (reduce (fn [m priority]
@@ -548,8 +548,12 @@
 (defn ^:private sorting-and-distincting-items [items]
   (->> items
        (medley/distinct-by (juxt :label :kind :detail))
-       (sort-by (juxt #(get priority-kw->number (:priority %) 0) :label :detail))
-       (mapv #(dissoc % :priority))
+       (mapv #(-> %
+                  (assoc :score (get priority-kw->number (:priority %) 0))
+                  (dissoc :priority)))
+       ;; sorts-by :score :label :detail but :score is from biggest to smallest
+       (sort #(compare [(:score %2) (:label %1) (:detail %1)]
+                       [(:score %1) (:label %2) (:detail %2)]))
        not-empty))
 
 (defn completion [uri row col db]

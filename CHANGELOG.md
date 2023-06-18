@@ -12,6 +12,7 @@
   - Enhance java support for hover and completion of static class members.
   - Improve `:paths-ignore-regex` to ignore features avoiding impact in huge files that are intented to be excluded.
   - Fixed semantic-tokens for full qualified namespace
+  - Add `score` to completion items for a better completion client sorting. #1595
   
 - API/CLI
   - New feature: Find all references via API and CLI. #1572

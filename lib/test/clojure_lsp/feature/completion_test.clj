@@ -543,11 +543,11 @@
                               " fo|)"))]
     (testing "items are sorted properly"
       (h/assert-submaps
-        [{:label "foob", :kind :variable}
-         {:label "foo", :kind :module}
-         {:label "foo", :kind :variable}
-         {:label ":foo", :kind :keyword, :detail ""}
-         {:label "for", :kind :function, :detail "clojure.core/for"}
-         {:label "force", :kind :function, :detail "clojure.core/force"}
-         {:label "format", :kind :function, :detail "clojure.core/format"}]
+        [{:label "foob" :kind :variable :score 14}
+         {:label "foo" :kind :module :score 13}
+         {:label "foo" :kind :variable :score 13}
+         {:label ":foo" :kind :keyword :detail "" :score 11}
+         {:label "for" :kind :function :detail "clojure.core/for" :score 6}
+         {:label "force" :kind :function :detail "clojure.core/force" :score 6}
+         {:label "format" :kind :function :detail "clojure.core/format" :score 6}]
         (f.completion/completion (h/file-uri "file:///a.clj") row col (h/db))))))

@@ -30,6 +30,7 @@
         [{:label "definterface"
           :kind 3
           :detail "clojure.core/definterface"
+          :score 6
           :data {:unresolved [["documentation" {:uri "file:///clojure.core.clj"
                                                 :name "definterface"
                                                 :ns "clojure.core"}]]}}]

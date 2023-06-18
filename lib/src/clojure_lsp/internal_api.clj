@@ -163,10 +163,11 @@
       (shared/filename->uri db)))
 
 (defn ^:private setup-api! [{:keys [producer db* diagnostics-chan]}]
-  (swap! db* assoc :api? true)
-  (go-loop []
-    (producer/publish-diagnostic producer (<! diagnostics-chan))
-    (recur)))
+  (when-not (:analysis @db*)
+    (swap! db* assoc :api? true)
+    (go-loop []
+      (producer/publish-diagnostic producer (<! diagnostics-chan))
+      (recur))))
 
 (defn ^:private analyze!
   [{:keys [project-root settings log-path]}

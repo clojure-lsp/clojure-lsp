@@ -246,7 +246,12 @@
     (let [db (db-with-analysis db (normalize-for-file kondo-ctx db filename uri))]
       (f.diagnostic/custom-lint-uris! [uri] db kondo-ctx))))
 
-(def ^:private config-for-shallow-analysis
+(defn ^:private var-definition-metas [db]
+  (let [metas (get-in (:kondo-config db) [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})]
+    (cond-> [:arglists :style/indent]
+      (seq metas) (concat metas))))
+
+(defn ^:private config-for-shallow-analysis [db]
   {:arglists true
    :keywords true
    :protocol-impls true
@@ -254,9 +259,9 @@
    :java-member-definitions true
    :var-usages false
    :var-definitions {:shallow true
-                     :meta [:arglists :style/indent]}})
+                     :meta (var-definition-metas db)}})
 
-(def ^:private config-for-full-analysis
+(defn ^:private config-for-full-analysis [db]
   {:arglists true
    :locals true
    :keywords true
@@ -267,7 +272,7 @@
    :java-class-usages true
    :context [:clojure.test
              :re-frame.core]
-   :var-definitions {:meta [:arglists :style/indent]}
+   :var-definitions {:meta (var-definition-metas db)}
    :symbols true})
 
 (defn ^:private config-for-paths [paths file-analyzed-fn db]
@@ -285,13 +290,13 @@
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
   (-> (config-for-paths paths file-analyzed-fn db)
       (assoc :custom-lint-fn custom-lint-fn)
-      (assoc-in [:config :analysis] config-for-full-analysis)))
+      (assoc-in [:config :analysis] (config-for-full-analysis db))))
 
 (defn ^:private config-for-external-paths [paths db file-analyzed-fn]
   (let [full-analysis? (= :project-and-full-dependencies (:project-analysis-type db))]
     (-> (config-for-paths paths file-analyzed-fn db)
         (assoc :skip-lint true)
-        (assoc-in [:config :analysis] config-for-shallow-analysis)
+        (assoc-in [:config :analysis] (config-for-shallow-analysis db))
         (shared/assoc-in-some [:config :analysis :java-member-definitions] full-analysis?)
         (shared/assoc-in-some [:config :analysis :java-class-definitions] full-analysis?))))
 
@@ -323,7 +328,7 @@
          :config-dir (some-> db :project-root-uri project-config-dir)
          :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
-                  :analysis config-for-full-analysis}}
+                  :analysis (config-for-full-analysis db)}}
         (shared/assoc-in-some [:lang] (when (not= :unknown lang)
                                         lang))
         (with-additional-config (settings/all db)))))

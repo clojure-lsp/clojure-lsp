@@ -109,13 +109,14 @@
         (System/gc))
       (swap! db* assoc :full-scan-analysis-startup true))))
 
-(defn ^:private copy-configs-from-classpath! [classpath settings db]
+(defn ^:private copy-configs-from-classpath! [classpath settings db*]
   (when (get settings :copy-kondo-configs? true)
     (logger/info "Copying kondo configs from classpath to project if any...")
     (when classpath
-      (shared/logging-time
-        "Copied kondo configs, took %s secs."
-        (lsp.kondo/run-kondo-copy-configs! classpath db)))))
+      (when-let [{:keys [config]} (shared/logging-time
+                                    "Copied kondo configs, took %s secs."
+                                    (lsp.kondo/run-kondo-copy-configs! classpath @db*))]
+        (swap! db* shared/assoc-some :kondo-config config)))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
@@ -226,7 +227,7 @@
           (swap! db* assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
           (publish-task-progress producer (:copying-kondo fast-tasks) progress-token)
-          (copy-configs-from-classpath! classpath settings @db*))
+          (copy-configs-from-classpath! classpath settings db*))
         (do
           (publish-task-progress producer (:discovering-classpath slow-tasks) progress-token)
           (when-let [classpath (classpath/scan-classpath! components)]
@@ -240,7 +241,7 @@
                    :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
 
             (publish-task-progress producer (:copying-kondo slow-tasks) progress-token)
-            (copy-configs-from-classpath! classpath settings @db*)
+            (copy-configs-from-classpath! classpath settings db*)
             (when (contains? #{:project-and-full-dependencies
                                :project-and-clojure-only-dependencies} (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)

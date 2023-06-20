@@ -61,11 +61,13 @@
   (let [kondo-config (kondo-config-for-ns kondo-config (:ns definition) (:filename definition))
         excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
         excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
+        excluded-metas (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})
         fqsn (symbol (-> definition :ns str) (-> definition :name str))
         starts-with-dash? (string/starts-with? (:name definition) "-")]
     (or (q/exclude-public-definition? kondo-config definition)
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
         (some #(re-matches (re-pattern (str %)) (str (q/safe-defined-by definition))) excluded-defined-by-syms-regex)
+        (some #(-> definition :meta % boolean) excluded-metas)
         (:export definition)
         (when starts-with-dash?
           ;; check if if namespace has :gen-class

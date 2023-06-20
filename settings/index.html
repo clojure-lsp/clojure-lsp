@@ -1478,7 +1478,10 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <ul>
 <li><code>:level</code> with available values: <code>:info</code>, <code>:warning</code>, <code>:error</code> or <code>:off</code> with default value of <code>:info</code>.</li>
 <li><code>:exclude</code> a whole namespace with <code>#{my-ns}</code> or a specific var <code>#{my-ns/foo}</code>.</li>
+<li><code>:exclude-regex</code> same as above but with support for regex, like <code>#{"my-ns/f.*"}</code>.</li>
 <li><code>:exclude-when-defined-by</code> excludes this linter when your var is defined by a macro for example, like <code>#{my-ns/deftest}</code>.</li>
+<li><code>:exclude-when-defined-by-regex</code> same as above but with support for regex, like <code>#{"my-ns/.*"}</code>.</li>
+<li><code>:exclude-when-contains-meta</code> excludes this linter when your var has any of these metas, like <code>#{:my-meta}</code>.</li>
 </ul>
 <p>Example:</p>
 <p><code>.clj-kondo/config.edn</code>
@@ -1489,7 +1492,8 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
                                                       <span class="nv">my-func</span><span class="p">}</span>
                                            <span class="ss">:exclude-regex</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;my-integration-tests.*&quot;</span><span class="p">}</span>
                                            <span class="ss">:exclude-when-defined-by</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/defflow</span><span class="p">}</span>
-                                           <span class="ss">:exclude-when-defined-by-regex</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;my.custom/macro-.*&quot;</span><span class="p">}}}}</span>
+                                           <span class="ss">:exclude-when-defined-by-regex</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;my.custom/macro-.*&quot;</span><span class="p">}</span>
+                                           <span class="ss">:exclude-when-contains-meta</span> <span class="o">#</span><span class="p">{</span><span class="ss">:my-cool-meta</span><span class="p">}}}}</span>
 </code></pre></div></p>
 <h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
 <p>clojure-lsp uses <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> when any clj-depend config is found either on clojure-lsp config or as a <code>.clj-depend/config.edn</code> file.</p>
@@ -1629,7 +1633,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 18, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 20, 2023</span>
     
   </small>
 </div>

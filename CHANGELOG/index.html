@@ -2187,8 +2187,9 @@
 <li>Update flake.nix to build with babashka. #1373</li>
 <li>Bump clj-kondo to <code>2023.06.02-20230612.113558-5</code>.</li>
 <li>Improve support for ClojureDart <code>.cljd</code> files. #1589</li>
+<li>Slightly reduce OutOfMemory exceptions that may happen with the JVM version.</li>
 <li>
-<p>Slightly reduce OutOfMemory exceptions that may happen with the JVM version.</p>
+<p>Support ignore unused-public-vars via <code>:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta</code> clj-kondo setting.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -3532,7 +3533,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 18, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 20, 2023</span>
     
   </small>
 </div>

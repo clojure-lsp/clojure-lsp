@@ -35,6 +35,7 @@
    :required-alias
    :refer
    :keyword
+   :keyword-same-ns
    :alias-keyword
    :simple-cursor
    :locals
@@ -215,6 +216,9 @@
                    (identical? :java-class-usages bucket)
                    (:class element)
 
+                   (contains? #{:keyword-usages :keyword-definitions} bucket)
+                   ""
+
                    :else
                    (string/join
                      "\n"
@@ -305,8 +309,6 @@
            :namespace-usages
            :var-definitions
            :var-usages
-           :keyword-definitions
-           :keyword-usages
            :locals
            :java-class-usages])))
 
@@ -429,6 +431,24 @@
                               (string/starts-with? (:name %) name))))
             (map #(element->completion-item % alias :alias-keyword resolve-support)))
           (:analysis non-local-db))))
+
+(defn ^:private with-elements-from-keyword
+  [cursor-element matches-fn simple-cursor? caller-var-definition db resolve-support]
+  (cond-> []
+    :always
+    (into (comp
+            q/xf-analysis->keywords
+            (bucket-elems-xf :keyword-usages matches-fn cursor-element)
+            (if simple-cursor?
+              (filter #(= (:from cursor-element) (:from %)))
+              identity)
+            (map #(element->completion-item % nil (if (= (:from cursor-element) (:from %))
+                                                    :keyword-same-ns
+                                                    :keyword) resolve-support)))
+          (:analysis db))
+
+    (:arglist-kws caller-var-definition)
+    (into (with-definition-kws-args-element-items matches-fn caller-var-definition resolve-support))))
 
 (defn ^:private with-core-items [matches-fn {:keys [uri ns-name symbols priority]} resolve-support]
   (keep (fn [{:keys [name kind]}]
@@ -589,12 +609,13 @@
                              ""))
             cursor-op (some-> cursor-loc edit/find-op)
             function-call? (= (str cursor-value) (some-> cursor-op z/string))
-            keyword-value? (keyword? cursor-value)
-            aliased-keyword-value? (when (and keyword-value?
-                                              (qualified-keyword? cursor-value))
-                                     (or (string/starts-with? (namespace cursor-value) ":")
-                                         (and (string/starts-with? (namespace cursor-value) "??_")
-                                              (string/ends-with? (namespace cursor-value) "_??"))))
+            keyword-value? (or (keyword? cursor-value)
+                               (= ":" (str cursor-value)))
+            aliased-keyword-value? (and keyword-value?
+                                        (qualified-keyword? cursor-value)
+                                        (or (string/starts-with? (namespace cursor-value) ":")
+                                            (and (string/starts-with? (namespace cursor-value) "??_")
+                                                 (string/ends-with? (namespace cursor-value) "_??"))))
             matches-fn (partial matches-cursor? cursor-value)
             {caller-usage-row :row caller-usage-col :col} (some-> cursor-op z/node meta)
             caller-var-definition (when (and caller-usage-row caller-usage-col)
@@ -627,6 +648,9 @@
                     aliased-keyword-value?
                     (with-elements-from-aliased-keyword cursor-loc cursor-element local-buckets non-local-db resolve-support)
 
+                    keyword-value?
+                    (with-elements-from-keyword cursor-element matches-fn simple-cursor? caller-var-definition db resolve-support)
+
                     :else
                     (cond-> []
                       cursor-full-ns?
@@ -636,13 +660,9 @@
                            (not keyword-value?))
                       (into (with-elements-from-alias cursor-loc cursor-value-or-ns cursor-value local-buckets matches-fn db uri resolve-support))
 
-                      (or simple-cursor?
-                          keyword-value?)
+                      simple-cursor?
                       (-> (into (with-local-items matches-fn uri cursor-element local-buckets row col resolve-support))
                           (into (with-clojure-core-items matches-fn resolve-support)))
-
-                      (:arglist-kws caller-var-definition)
-                      (into (with-definition-kws-args-element-items matches-fn caller-var-definition resolve-support))
 
                       (and simple-cursor?
                            (supports-cljs? uri))

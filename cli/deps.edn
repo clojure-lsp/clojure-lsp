@@ -28,7 +28,7 @@
            :run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-paths ["dev"]
-                   :extra-deps {cider/cider-nrepl {:mvn/version "0.30.0"}
+                   :extra-deps {cider/cider-nrepl {:mvn/version "0.31.0"}
                                 com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.3"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.2.2"}
                                 criterium/criterium {:mvn/version "0.4.6"}

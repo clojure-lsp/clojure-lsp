@@ -2188,8 +2188,9 @@
 <li>Bump clj-kondo to <code>2023.06.02-20230621.091643-10</code>.</li>
 <li>Improve support for ClojureDart <code>.cljd</code> files. #1589</li>
 <li>Slightly reduce OutOfMemory exceptions that may happen with the JVM version.</li>
+<li>Support ignore unused-public-vars via <code>:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta</code> clj-kondo setting.</li>
 <li>
-<p>Support ignore unused-public-vars via <code>:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta</code> clj-kondo setting.</p>
+<p>Fix restructure-keys when map has an <code>:or</code>. #1583</p>
 </li>
 <li>
 <p>Editor</p>

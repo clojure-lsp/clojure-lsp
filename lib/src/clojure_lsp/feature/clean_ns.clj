@@ -428,7 +428,7 @@
   (let [settings (settings/all db)
         safe-loc (or zloc (parser/zloc-of-file db uri))
         ns-loc (edit/find-namespace safe-loc)]
-    (when ns-loc
+    (if ns-loc
       (let [ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             unused-aliases* (future (q/find-unused-aliases db uri))
             unused-refers* (future (q/find-unused-refers db uri))
@@ -448,4 +448,5 @@
                            (clean-imports clean-ctx settings)
                            (sort-ns-children settings))]
         [{:range (meta (z/node result-loc))
-          :loc result-loc}]))))
+          :loc result-loc}])
+      {:no-op? true})))

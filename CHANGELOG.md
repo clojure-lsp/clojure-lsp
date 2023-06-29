@@ -16,6 +16,7 @@
   - Fixed semantic-tokens for full qualified namespace
   - Add `score` to completion items for a better completion client sorting. #1595
   - Revamp keyword completion. #1599
+  - Avoid LSP errors when cleaning a file without namespaces. #1603
   
 - API/CLI
   - New feature: Find all references via API and CLI. #1572

@@ -18,7 +18,7 @@
 (defn clj-kondo-version []
   (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
-(def clj-kondo-analysis-batch-size 150)
+(def clj-kondo-analysis-batch-size 120)
 
 (defn ^:private project-config-dir [project-root-uri]
   ;; TODO: might be better to use clj-kondo.impl.core/config-dir, but it's not

@@ -8,6 +8,7 @@
   - Improve support for ClojureDart `.cljd` files. #1589
   - Slightly reduce OutOfMemory exceptions that may happen with the JVM version.
   - Support ignore unused-public-vars via `:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta` clj-kondo setting.
+  - Fix restructure-keys when map has an `:or`. #1583
   
 - Editor
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575

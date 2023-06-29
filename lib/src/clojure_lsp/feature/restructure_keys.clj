@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.shared :as shared]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
@@ -60,13 +61,18 @@
     (when (keyword? key-sexpr)
       (name key-sexpr))))
 
-(defn ^:private reference-elems [local-node db uri]
+(defn ^:private reference-elems [local-node db uri or-map-pos]
   (let [local-meta (meta local-node)
         elem (q/find-local-under-cursor db uri (:row local-meta) (:col local-meta))]
-    (q/find-references db elem false)))
+    (cond->> (q/find-references db elem false)
+      or-map-pos (remove #(shared/inside? % {:name-row (:row or-map-pos)
+                                             :name-col (:col or-map-pos)
+                                             :name-end-row (:end-row or-map-pos)
+                                             :name-end-col (:end-col or-map-pos)})))))
 
 (defn ^:private restructure-data [key-loc val-loc
                                   db uri
+                                  or-map-pos
                                   {:keys [map-ns map-auto-resolved?]}]
   (let [key-sexpr (z/sexpr key-loc)]
     (cond
@@ -122,12 +128,12 @@
              (map (fn [local-node]
                     {:restructure? true
                      :replace-with (replace-with local-node)
-                     :reference-elems (reference-elems local-node db uri)}))))
+                     :reference-elems (reference-elems local-node db uri or-map-pos)}))))
       ;; {a :a}
       (symbol? key-sexpr)
       [{:restructure? true
         :replace-with (z/node val-loc)
-        :reference-elems (reference-elems (z/node key-loc) db uri)}]
+        :reference-elems (reference-elems (z/node key-loc) db uri or-map-pos)}]
       ;; {{:keys [a1]} :a}
       :else
       [{:restructure? false
@@ -169,23 +175,25 @@
     (let [map-entry-locs (->> map-loc
                               z-children-seq
                               (partition 2))
-          provided-as (->> map-entry-locs
-                           (filter (fn [[key-loc _]] (= "as" (loc-kw-name key-loc))))
-                           (map (fn [[_ val-loc]]
-                                  (z/sexpr val-loc)))
-                           first)
-          element-name (or provided-as (unshadowed-element-name db uri replace-loc))
-          default-values (->> map-entry-locs
+          as-loc (some->> map-entry-locs
+                          (filter (fn [[key-loc _]] (= "as" (loc-kw-name key-loc))))
+                          first
+                          second)
+          or-map-loc (some->> map-entry-locs
                               (filter (fn [[key-loc _]] (= "or" (loc-kw-name key-loc))))
-                              (map (fn [[_ val-loc]]
-                                     (z/sexpr val-loc)))
-                              first)
+                              first
+                              second)
+          provided-as (some-> as-loc z/sexpr)
+          element-name (or provided-as (unshadowed-element-name db uri replace-loc))
+          default-values (some-> or-map-loc z/sexpr)
+          or-map-pos (some-> or-map-loc z/node meta)
           restructure-data (->> map-entry-locs
                                 (remove (fn [[key-loc _]]
                                           (contains? #{"as" "or"} (loc-kw-name key-loc))))
                                 (mapcat (fn [[key-loc val-loc]]
                                           (restructure-data key-loc val-loc
                                                             db uri
+                                                            or-map-pos
                                                             restructure-config))))
           restructurable-data (filter :restructure? restructure-data)
           unrestructurable-data (remove :restructure? restructure-data)]

@@ -11,6 +11,7 @@
   - Fix restructure-keys when map has an `:or`. #1583
   - Bump lsp4clj to `1.8.0`.
   - Add post startup tasks progress feedbacks, like "Generating stubs", "Analyzing JDK source" and "Fetching Clojars".
+  - Bump cljfmt to `0.10.6`. #1605
   
 - Editor
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575

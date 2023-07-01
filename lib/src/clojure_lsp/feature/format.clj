@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.format
   (:require
+   [cljfmt.config :as cljfmt.config]
    [cljfmt.core :as cljfmt]
-   [cljfmt.main :as cljfmt.main]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
@@ -96,9 +96,9 @@
                   (:analysis db))})
 
 (defn ^:private resolve-cljfmt-config [db]
-  (-> cljfmt.main/default-options
-      (cljfmt.main/merge-options (resolve-user-cljfmt-config db))
-      (cljfmt.main/merge-options (extract-style-indent-metadata db))
+  (-> cljfmt.config/default-config
+      (cljfmt.config/merge-configs (resolve-user-cljfmt-config db))
+      (cljfmt.config/merge-configs (extract-style-indent-metadata db))
       ;; There is a bug in cljfmt where the namespace's aliases are ignored if
       ;; :alias-map is provided. This avoids the bug in the common case where no
       ;; :alias-map is needed.

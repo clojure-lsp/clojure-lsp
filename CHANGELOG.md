@@ -4,7 +4,7 @@
 
 - General
   - Update flake.nix to build with babashka. #1373
-  - Bump clj-kondo to `2023.06.02-20230621.091643-10`.
+  - Bump clj-kondo to `2023.06.02-20230630.144012-16`.
   - Improve support for ClojureDart `.cljd` files. #1589
   - Slightly reduce OutOfMemory exceptions that may happen with the JVM version.
   - Support ignore unused-public-vars via `:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta` clj-kondo setting.

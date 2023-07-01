@@ -25,7 +25,7 @@
     <dependency>
       <groupId>com.github.clojure-lsp</groupId>
       <artifactId>lsp4clj</artifactId>
-      <version>1.7.3</version>
+      <version>1.8.0</version>
       <exclusions>
         <exclusion>
           <groupId>funcool</groupId>

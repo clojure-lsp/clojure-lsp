@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2023.05.04-19.38.01</version>
+  <version>2023.07.01-22.35.41</version>
   <name>clojure-lsp-server</name>
   <dependencies>
     <dependency>
@@ -25,7 +25,7 @@
     <dependency>
       <groupId>com.github.clojure-lsp</groupId>
       <artifactId>lsp4clj</artifactId>
-      <version>1.7.3</version>
+      <version>1.8.0</version>
       <exclusions>
         <exclusion>
           <groupId>funcool</groupId>
@@ -39,9 +39,19 @@
       <version>1.0.214</version>
     </dependency>
     <dependency>
-      <groupId>cljfmt</groupId>
+      <groupId>rewrite-clj</groupId>
+      <artifactId>rewrite-clj</artifactId>
+      <version>1.1.47</version>
+    </dependency>
+    <dependency>
+      <groupId>clj-kondo</groupId>
+      <artifactId>clj-kondo</artifactId>
+      <version>2023.06.02-20230630.144012-16</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.weavejester</groupId>
       <artifactId>cljfmt</artifactId>
-      <version>0.9.2</version>
+      <version>0.10.6</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-cljs</groupId>
@@ -52,16 +62,6 @@
           <artifactId>diffutils</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>rewrite-clj</groupId>
-      <artifactId>rewrite-clj</artifactId>
-      <version>1.1.47</version>
-    </dependency>
-    <dependency>
-      <groupId>clj-kondo</groupId>
-      <artifactId>clj-kondo</artifactId>
-      <version>2023.04.15-20230503.152749-8</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>
@@ -151,6 +151,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2023.05.04-19.38.01</tag>
+    <tag>2023.07.01-22.35.41</tag>
   </scm>
 </project>

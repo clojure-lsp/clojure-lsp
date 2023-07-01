@@ -33,36 +33,35 @@
 
 (def fast-tasks
   (init-tasks
-    [{:task/start-percent   0, :task/title "clojure-lsp",             :task/id :start}
-     {:task/start-percent   5, :task/title "Finding kondo config",    :task/id :finding-kondo}
-     {:task/start-percent  10, :task/title "Finding cache",           :task/id :finding-cache}
-     {:task/start-percent  15, :task/title "Copying kondo configs",   :task/id :copying-kondo}
-     {:task/start-percent  15, :task/title "Resolving config paths",  :task/id :resolving-config}
-     {:task/start-percent  20, :task/title "Analyzing project files", :task/id :analyzing-project}
-     {:task/start-percent 100, :task/title "Project analyzed",        :task/id :done}]))
+    [{:task/start-percent 0, :task/title "clojure-lsp", :task/id :start}
+     {:task/start-percent 5, :task/title "Finding kondo config", :task/id :finding-kondo}
+     {:task/start-percent 10, :task/title "Finding cache", :task/id :finding-cache}
+     {:task/start-percent 15, :task/title "Copying kondo configs", :task/id :copying-kondo}
+     {:task/start-percent 15, :task/title "Resolving config paths", :task/id :resolving-config}
+     {:task/start-percent 20, :task/title "Analyzing project files", :task/id :analyzing-project}
+     {:task/start-percent 99, :task/title "Project analyzed", :task/id :done}]))
 
 (def slow-tasks
   (init-tasks
-    [{:task/start-percent   0, :task/title "clojure-lsp",                  :task/id :start}
-     {:task/start-percent   5, :task/title "Finding kondo config",         :task/id :finding-kondo}
-     {:task/start-percent  10, :task/title "Finding cache",                :task/id :finding-cache}
-     {:task/start-percent  15, :task/title "Discovering classpath",        :task/id :discovering-classpath}
-     {:task/start-percent  20, :task/title "Copying kondo configs",        :task/id :copying-kondo}
-     {:task/start-percent  25, :task/title "Analyzing external classpath", :task/id :analyzing-deps}
-     {:task/start-percent  45, :task/title "Resolving config paths",       :task/id :resolving-config}
-     {:task/start-percent  50, :task/title "Analyzing project files",      :task/id :analyzing-project}
-     {:task/start-percent 100, :task/title "Project analyzed",             :task/id :done}]))
+    [{:task/start-percent 0, :task/title "clojure-lsp", :task/id :start}
+     {:task/start-percent 5, :task/title "Finding kondo config", :task/id :finding-kondo}
+     {:task/start-percent 10, :task/title "Finding cache", :task/id :finding-cache}
+     {:task/start-percent 15, :task/title "Discovering classpath", :task/id :discovering-classpath}
+     {:task/start-percent 20, :task/title "Copying kondo configs", :task/id :copying-kondo}
+     {:task/start-percent 25, :task/title "Analyzing external classpath", :task/id :analyzing-deps}
+     {:task/start-percent 45, :task/title "Resolving config paths", :task/id :resolving-config}
+     {:task/start-percent 50, :task/title "Analyzing project files", :task/id :analyzing-project}
+     {:task/start-percent 99, :task/title "Project analyzed", :task/id :done}]))
 
-(defn batched-task [{:keys [:task/start-percent :task/end-percent] :as task} batch-idx batch-count]
+(defn batched-task [{:task/keys [start-percent end-percent] :as task} batch-idx batch-count]
   (assoc task
          :task/start-percent (lerp start-percent end-percent (/ (dec batch-idx) batch-count))
          :task/end-percent (lerp start-percent end-percent (/ batch-idx batch-count))))
 
-(defn partial-task [{:keys [:task/start-percent :task/end-percent] :as task} subtask-idx subtask-count]
-  (assoc task
-         :task/current-percent (lerp start-percent end-percent (/ subtask-idx subtask-count))))
+(defn partial-task [{:task/keys [start-percent end-percent] :as task} subtask-idx subtask-count]
+  (assoc task :task/current-percent (lerp start-percent end-percent (/ subtask-idx subtask-count))))
 
-(defn publish-task-progress [producer {:keys [:task/title :task/current-percent :task/start-percent]} progress-token]
+(defn publish-task-progress [producer {:task/keys [title current-percent start-percent]} progress-token]
   (when progress-token
     (producer/publish-progress producer (or current-percent start-percent) title progress-token)))
 

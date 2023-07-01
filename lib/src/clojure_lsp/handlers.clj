@@ -149,6 +149,12 @@
   {:uri (f.java-interop/uri->translated-uri (:uri element) db producer)
    :range (shared/->range element)})
 
+(def post-startup-tasks
+  {:refresh-clojuredocs #:task{:title "Fechting Clojuredocs"}
+   :generate-stubs #:task{:title "Generating stubs"}
+   :analyze-jdk-source #:task{:title "Analyzing JDK source"}
+   :done #:task{:title "Done" :current-percent 100}})
+
 (defn initialize
   [{:keys [db* producer] :as components}
    project-root-uri
@@ -171,17 +177,19 @@
               internal-uris (dep-graph/internal-uris db)]
           (when (settings/get db [:lint-project-files-after-startup?] true)
             (f.diagnostic/publish-all-diagnostics! internal-uris components))
-          (async/go
-            (f.clojuredocs/refresh-cache! db*))
-          (async/go
+          (async/thread
+            (startup/publish-task-progress producer (:refresh-clojuredocs post-startup-tasks) work-done-token)
+            (f.clojuredocs/refresh-cache! db*)
             (let [settings (:settings db)]
               (when (stubs/check-stubs? settings)
-                (stubs/generate-and-analyze-stubs! settings db*))))
+                (startup/publish-task-progress producer (:generate-stubs post-startup-tasks) work-done-token)
+                (stubs/generate-and-analyze-stubs! settings db*)))
+            (when (settings/get db [:java] true)
+              (startup/publish-task-progress producer (:analyze-jdk-source post-startup-tasks) work-done-token)
+              (f.java-interop/retrieve-jdk-source-and-analyze! db*))
+            (startup/publish-task-progress producer (:done post-startup-tasks) work-done-token))
           (logger/info startup/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
-          (producer/refresh-test-tree producer internal-uris)
-          (when (settings/get db [:java] true)
-            (async/go
-              (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
+          (producer/refresh-test-tree producer internal-uris)))
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
 
 (defn did-open [{:keys [producer] :as components} {:keys [text-document]}]

@@ -9,6 +9,8 @@
   - Slightly reduce OutOfMemory exceptions that may happen with the JVM version.
   - Support ignore unused-public-vars via `:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta` clj-kondo setting.
   - Fix restructure-keys when map has an `:or`. #1583
+  - Bump lsp4clj to `1.8.0`.
+  - Add post startup tasks progress feedbacks, like "Generating stubs", "Analyzing JDK source" and "Fetching Clojars".
   
 - Editor
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575

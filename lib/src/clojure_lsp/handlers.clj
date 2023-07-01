@@ -174,19 +174,19 @@
           work-done-token
           components)
         (let [db @db*
-              internal-uris (dep-graph/internal-uris db)]
+              internal-uris (dep-graph/internal-uris db)
+              settings (settings/all db)]
           (when (settings/get db [:lint-project-files-after-startup?] true)
             (f.diagnostic/publish-all-diagnostics! internal-uris components))
           (async/thread
             (startup/publish-task-progress producer (:refresh-clojuredocs post-startup-tasks) work-done-token)
             (f.clojuredocs/refresh-cache! db*)
-            (let [settings (:settings db)]
-              (when (stubs/check-stubs? settings)
-                (startup/publish-task-progress producer (:generate-stubs post-startup-tasks) work-done-token)
-                (stubs/generate-and-analyze-stubs! settings db*)))
             (when (settings/get db [:java] true)
               (startup/publish-task-progress producer (:analyze-jdk-source post-startup-tasks) work-done-token)
               (f.java-interop/retrieve-jdk-source-and-analyze! db*))
+            (when (stubs/check-stubs? settings)
+              (startup/publish-task-progress producer (:generate-stubs post-startup-tasks) work-done-token)
+              (stubs/generate-and-analyze-stubs! settings db*))
             (startup/publish-task-progress producer (:done post-startup-tasks) work-done-token))
           (logger/info startup/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
           (producer/refresh-test-tree producer internal-uris)))

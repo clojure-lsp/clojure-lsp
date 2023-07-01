@@ -2189,8 +2189,10 @@
 <li>Improve support for ClojureDart <code>.cljd</code> files. #1589</li>
 <li>Slightly reduce OutOfMemory exceptions that may happen with the JVM version.</li>
 <li>Support ignore unused-public-vars via <code>:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta</code> clj-kondo setting.</li>
+<li>Fix restructure-keys when map has an <code>:or</code>. #1583</li>
+<li>Bump lsp4clj to <code>1.8.0</code>.</li>
 <li>
-<p>Fix restructure-keys when map has an <code>:or</code>. #1583</p>
+<p>Add post startup tasks progress feedbacks, like "Generating stubs", "Analyzing JDK source" and "Fetching Clojars".</p>
 </li>
 <li>
 <p>Editor</p>
@@ -3536,7 +3538,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 29, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">July 1, 2023</span>
     
   </small>
 </div>

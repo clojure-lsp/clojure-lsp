@@ -245,16 +245,6 @@
       "hash": "sha256-knxhrJGUOQV9pZI1VN5z4l7kDevziXylJ+thvCzn+T4="
     },
     {
-      "mvn-path": "cljfmt/cljfmt/0.9.2/cljfmt-0.9.2.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-xCOR8I9qinOZawCURW2nzBv4ExgJV3T4qHJc/N7GU5w="
-    },
-    {
-      "mvn-path": "cljfmt/cljfmt/0.9.2/cljfmt-0.9.2.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-9LHhUYEbaM2dGVyLctyNpJGVlHMvf2x9cMclLZC0eNg="
-    },
-    {
       "mvn-path": "com/amazonaws/aws-java-sdk-bom/1.12.49/aws-java-sdk-bom-1.12.49.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-vek22GzzFKzZeJAIvriEof15CSPYKxaeMh/us2OZY5Y="
@@ -650,14 +640,14 @@
       "hash": "sha256-4LypffdwI9ZRgGAAeLJGJYwiLhUDJ64urPOynp9cIu4="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.7.3/lsp4clj-1.7.3.jar",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.8.0/lsp4clj-1.8.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-/LaEcgDDGYhNndvjvk5Oa2xJ082P2pnfV7oZWygDmh8="
+      "hash": "sha256-koXWsXsYfSMgn+TRCzpNJcFni9ph/0867WWVT9wa71g="
     },
     {
-      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.7.3/lsp4clj-1.7.3.pom",
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.8.0/lsp4clj-1.8.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-bozCZuOaB/DuHc+4RzGMSss2n6x0ilpOzelfnyNPCr0="
+      "hash": "sha256-oEMhNC9OZKhx0XQR36RgQdE5MeNThH/tBVFAbH18FEI="
     },
     {
       "mvn-path": "com/github/ericdallo/deps-bin/0.2.0/deps-bin-0.2.0.jar",
@@ -963,6 +953,16 @@
       "mvn-path": "de/ubercode/clostache/clostache/1.4.0/clostache-1.4.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-Xe66kz8gwkNNCBozUpigMJuTl2+p1ZQc+QwEgldebZA="
+    },
+    {
+      "mvn-path": "dev/weavejester/cljfmt/0.10.6/cljfmt-0.10.6.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-7/bJIiXywoVvBNZDPN3xgPz6M6w96l4h+IIf0GGDWlo="
+    },
+    {
+      "mvn-path": "dev/weavejester/cljfmt/0.10.6/cljfmt-0.10.6.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-hT1PFZHijDgIIS+ukcz2qDkjsZ3Gg7vEvGd0mUBkD48="
     },
     {
       "mvn-path": "expound/expound/0.9.0/expound-0.9.0.jar",
@@ -2203,6 +2203,16 @@
       "mvn-path": "org/clojure/tools.cli/1.0.214/tools.cli-1.0.214.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-ulk+rq6K6NhkVBgYjY1707XNndYKY5w04fBuGyqDpIQ="
+    },
+    {
+      "mvn-path": "org/clojure/tools.cli/1.0.219/tools.cli-1.0.219.jar",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-lGADrC8iiODAxYhhYk3z75gRHJ6Id+tAHKUozDd/l6k="
+    },
+    {
+      "mvn-path": "org/clojure/tools.cli/1.0.219/tools.cli-1.0.219.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-v9jf44Bp4mJIzqRyQ9+Zvv/0mjGGzDyk1fNTefp9u3M="
     },
     {
       "mvn-path": "org/clojure/tools.deps.alpha/0.12.1109/tools.deps.alpha-0.12.1109.jar",

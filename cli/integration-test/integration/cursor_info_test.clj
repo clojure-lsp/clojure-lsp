@@ -25,12 +25,13 @@
       (is (= "locals" definition-bucket))))
 
   (testing "cursor info on definition"
-    (let [first-element (-> (fixture/cursor-info-raw-request "cursor_info/a.clj" 2 8)
-                            (lsp/request!)
-                            (get-in [:elements 0]))
+    (let [response (-> (fixture/cursor-info-raw-request "cursor_info/a.clj" 2 8)
+                       (lsp/request!))
+          first-element (get-in response [:elements 0])
           element (:element first-element)
           definition (:definition first-element)]
-      (is (not (nil? first-element)))
+      (is (some? (get response :node)))
+      (is (some? first-element))
       (is (= (:uri element) (:uri definition)))
       (is (= (:name-row element) (:name-row definition)))
       (is (= (:name-col element) (:name-col definition))))))

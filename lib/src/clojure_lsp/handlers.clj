@@ -28,7 +28,8 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.startup :as startup]
    [clojure.core.async :as async]
-   [clojure.pprint :as pprint]))
+   [clojure.pprint :as pprint]
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
@@ -345,8 +346,16 @@
 
 (defn ^:private cursor-info [{:keys [db*]} [uri line character]]
   (let [db @db*
-        elements (q/find-all-elements-under-cursor db uri (inc line) (inc character))]
+        row (inc line)
+        col (inc character)
+        elements (q/find-all-elements-under-cursor db uri row col)
+        node (some-> (parser/safe-zloc-of-file db uri)
+                     (parser/to-pos row col)
+                     z/node)]
     (shared/assoc-some {}
+                       :node (if-let [children (:children node)]
+                               (-> node (dissoc :children) (assoc :children-count (count children)))
+                               node)
                        :elements (mapv (fn [e]
                                          (shared/assoc-some
                                            {:element e}

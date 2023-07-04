@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
-   [clojure-lsp.logger :as logger]
    [clojure-lsp.queries :as q]
    [clojure.string :as string])
   (:import
@@ -174,9 +173,6 @@
        (sort-by (juxt :name-row :name-col))
        (keep
          (fn [{:keys [bucket] :as element}]
-           (when (= (:name-row element) 176)
-             (logger/info element))
-
            (cond
              (identical? :var-usages bucket)
              (var-usage-element->absolute-tokens element)

@@ -440,6 +440,31 @@
     []
     (f.completion/completion (h/file-uri "file:///a.clj") 1 4 (h/db))))
 
+(deftest completing-namespaced-keywords
+  (let [_ (h/load-code-and-locs (h/code "(ns a)"
+                                        ":foo/bar"
+                                        ":foo/baq"
+                                        ":bar"
+                                        ":foob"))
+        [[foo-r foo-c]
+         [bar-r bar-c]] (h/load-code-and-locs (h/code "(ns b)"
+                                                      ":foo/bax"
+                                                      ":ba"
+                                                      ":foo/b|"
+                                                      ":b|"
+                                                      ":foob/bol") (h/file-uri "file:///b.clj"))]
+
+    (testing "namespaced keywords are available everywhere"
+      (h/assert-submaps
+        [{:label ":foo/bax" :kind :keyword}
+         {:label ":foo/baq" :kind :keyword}
+         {:label ":foo/bar" :kind :keyword}]
+        (f.completion/completion (h/file-uri "file:///b.clj") foo-r foo-c (h/db))))
+    (testing "simple keywords are available only for the current ns"
+      (h/assert-submaps
+        [{:label ":ba" :kind :keyword}]
+        (f.completion/completion (h/file-uri "file:///b.clj") bar-r bar-c (h/db))))))
+
 (deftest completing-aliased-keywords
   (h/load-code-and-locs
     (h/code "(ns some.alpaca (:require [clojure.spec.alpha :as s]))"
@@ -482,9 +507,7 @@
   (h/assert-submaps
     [{:label ":bar" :kind :keyword}
      {:label ":baz" :kind :keyword}
-     {:label ":foo" :kind :keyword}
-     {:label ":as" :kind :keyword}
-     {:label ":require" :kind :keyword}]
+     {:label ":foo" :kind :keyword}]
     (f.completion/completion (h/file-uri "file:///some/b.clj") 2 13 (h/db)))
   (h/assert-submaps
     [{:label ":bar" :kind :keyword}
@@ -543,11 +566,10 @@
                               " fo|)"))]
     (testing "items are sorted properly"
       (h/assert-submaps
-        [{:label "foob", :kind :variable}
-         {:label "foo", :kind :module}
-         {:label "foo", :kind :variable}
-         {:label ":foo", :kind :keyword, :detail ""}
-         {:label "for", :kind :function, :detail "clojure.core/for"}
-         {:label "force", :kind :function, :detail "clojure.core/force"}
-         {:label "format", :kind :function, :detail "clojure.core/format"}]
+        [{:label "foob" :kind :variable :score 15}
+         {:label "foo" :kind :module :score 14}
+         {:label "foo" :kind :variable :score 14}
+         {:label "for" :kind :function :detail "clojure.core/for" :score 6}
+         {:label "force" :kind :function :detail "clojure.core/force" :score 6}
+         {:label "format" :kind :function :detail "clojure.core/format" :score 6}]
         (f.completion/completion (h/file-uri "file:///a.clj") row col (h/db))))))

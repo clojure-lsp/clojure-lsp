@@ -175,17 +175,14 @@
                                  "  [{element :top-a}]"
                                  "  (let [|{:keys [b]} :top-b]"
                                  "    b (:a element)))")))
-  ;; TODO
-  ;; Not working after kondo bump where now we have :or analysis including new locals
-  ;; we should drop the :or references but how?
-  #_(testing "uses :or for default values"
-      (assert-restructures (h/code "(defn foo [element] (get element :a 1))")
-                           (h/code "(defn foo [|{:keys [a] :or {a 1}}] a)"))
+  (testing "uses :or for default values"
+    (assert-restructures (h/code "(defn foo [element] (get element :a 1))")
+                         (h/code "(defn foo [|{:keys [a] :or {a 1}}] a)"))
 
-      (assert-restructures (h/code "(defn foo [element] (get element :prefix/a 1))")
-                           (h/code "(defn foo [|#:prefix{:keys [a] :or {a 1}}] a)"))
-      (assert-restructures (h/code "(defn foo [element] (get element ::a 1))")
-                           (h/code "(defn foo [|#::{:keys [a] :or {a 1}}] a)")))
+    (assert-restructures (h/code "(defn foo [element] (get element :prefix/a 1))")
+                         (h/code "(defn foo [|#:prefix{:keys [a] :or {a 1}}] a)"))
+    (assert-restructures (h/code "(defn foo [element] (get element ::a 1))")
+                         (h/code "(defn foo [|#::{:keys [a] :or {a 1}}] a)")))
   (testing "of named keys that resolve to symbols"
     (assert-restructures (h/code "(defn foo [element] (:a element))")
                          (h/code "(defn foo [|{a :a}] a)")))
@@ -198,8 +195,8 @@
                          (h/code "(defn foo [|{[a] :a :keys [b]}] (+ a b))"))
     (assert-restructures (h/code "(defn foo [#:prefix{[a] :a :as element}] (+ a (:prefix/b element)))")
                          (h/code "(defn foo [|#:prefix{[a] :a :keys [b]}] (+ a b))"))
-    #_(assert-restructures (h/code "(defn foo [{[b] :b :or {b 2} :as element}] (+ (get element :a 1) b))")
-                           (h/code "(defn foo [|{:keys [a], [b] :b, :or {a 1 b 2}}] (+ a b))")))
+    (assert-restructures (h/code "(defn foo [{[b] :b :or {b 2} :as element}] (+ (get element :a 1) b))")
+                         (h/code "(defn foo [|{:keys [a], [b] :b, :or {a 1 b 2}}] (+ a b))")))
   (testing "of pathological maps"
     ;; This map establishes a local inside of it, so our heuristics suggest it
     ;; should be restructurable. Rather than make the heuristics smarter to

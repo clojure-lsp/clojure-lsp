@@ -49,6 +49,10 @@
 (defn ^:private upsert-cache! [cache cache-file]
   (try
     (shared/logging-time
+      "Manual GC before upsert db took %s"
+      ;; Reduce a little bit Out of memory exceptions when writing the cache for huge caches.
+      (System/gc))
+    (shared/logging-time
       (str db-logger-tag " Upserting transit analysis to " cache-file " cache took %s")
       (with-open [;; first we write to a baos as a workaround for transit-clj #43
                   bos (java.io.ByteArrayOutputStream. 1024)

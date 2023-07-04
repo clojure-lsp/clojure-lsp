@@ -33,36 +33,35 @@
 
 (def fast-tasks
   (init-tasks
-    [{:task/start-percent   0, :task/title "clojure-lsp",             :task/id :start}
-     {:task/start-percent   5, :task/title "Finding kondo config",    :task/id :finding-kondo}
-     {:task/start-percent  10, :task/title "Finding cache",           :task/id :finding-cache}
-     {:task/start-percent  15, :task/title "Copying kondo configs",   :task/id :copying-kondo}
-     {:task/start-percent  15, :task/title "Resolving config paths",  :task/id :resolving-config}
-     {:task/start-percent  20, :task/title "Analyzing project files", :task/id :analyzing-project}
-     {:task/start-percent 100, :task/title "Project analyzed",        :task/id :done}]))
+    [{:task/start-percent 0, :task/title "clojure-lsp", :task/id :start}
+     {:task/start-percent 5, :task/title "Finding kondo config", :task/id :finding-kondo}
+     {:task/start-percent 10, :task/title "Finding cache", :task/id :finding-cache}
+     {:task/start-percent 15, :task/title "Copying kondo configs", :task/id :copying-kondo}
+     {:task/start-percent 15, :task/title "Resolving config paths", :task/id :resolving-config}
+     {:task/start-percent 20, :task/title "Analyzing project files", :task/id :analyzing-project}
+     {:task/start-percent 99, :task/title "Project analyzed", :task/id :done}]))
 
 (def slow-tasks
   (init-tasks
-    [{:task/start-percent   0, :task/title "clojure-lsp",                  :task/id :start}
-     {:task/start-percent   5, :task/title "Finding kondo config",         :task/id :finding-kondo}
-     {:task/start-percent  10, :task/title "Finding cache",                :task/id :finding-cache}
-     {:task/start-percent  15, :task/title "Discovering classpath",        :task/id :discovering-classpath}
-     {:task/start-percent  20, :task/title "Copying kondo configs",        :task/id :copying-kondo}
-     {:task/start-percent  25, :task/title "Analyzing external classpath", :task/id :analyzing-deps}
-     {:task/start-percent  45, :task/title "Resolving config paths",       :task/id :resolving-config}
-     {:task/start-percent  50, :task/title "Analyzing project files",      :task/id :analyzing-project}
-     {:task/start-percent 100, :task/title "Project analyzed",             :task/id :done}]))
+    [{:task/start-percent 0, :task/title "clojure-lsp", :task/id :start}
+     {:task/start-percent 5, :task/title "Finding kondo config", :task/id :finding-kondo}
+     {:task/start-percent 10, :task/title "Finding cache", :task/id :finding-cache}
+     {:task/start-percent 15, :task/title "Discovering classpath", :task/id :discovering-classpath}
+     {:task/start-percent 20, :task/title "Copying kondo configs", :task/id :copying-kondo}
+     {:task/start-percent 25, :task/title "Analyzing external classpath", :task/id :analyzing-deps}
+     {:task/start-percent 45, :task/title "Resolving config paths", :task/id :resolving-config}
+     {:task/start-percent 50, :task/title "Analyzing project files", :task/id :analyzing-project}
+     {:task/start-percent 99, :task/title "Project analyzed", :task/id :done}]))
 
-(defn batched-task [{:keys [:task/start-percent :task/end-percent] :as task} batch-idx batch-count]
+(defn batched-task [{:task/keys [start-percent end-percent] :as task} batch-idx batch-count]
   (assoc task
          :task/start-percent (lerp start-percent end-percent (/ (dec batch-idx) batch-count))
          :task/end-percent (lerp start-percent end-percent (/ batch-idx batch-count))))
 
-(defn partial-task [{:keys [:task/start-percent :task/end-percent] :as task} subtask-idx subtask-count]
-  (assoc task
-         :task/current-percent (lerp start-percent end-percent (/ subtask-idx subtask-count))))
+(defn partial-task [{:task/keys [start-percent end-percent] :as task} subtask-idx subtask-count]
+  (assoc task :task/current-percent (lerp start-percent end-percent (/ subtask-idx subtask-count))))
 
-(defn publish-task-progress [producer {:keys [:task/title :task/current-percent :task/start-percent]} progress-token]
+(defn publish-task-progress [producer {:task/keys [title current-percent start-percent]} progress-token]
   (when progress-token
     (producer/publish-progress producer (or current-percent start-percent) title progress-token)))
 
@@ -109,13 +108,14 @@
         (System/gc))
       (swap! db* assoc :full-scan-analysis-startup true))))
 
-(defn ^:private copy-configs-from-classpath! [classpath settings db]
+(defn ^:private copy-configs-from-classpath! [classpath settings db*]
   (when (get settings :copy-kondo-configs? true)
     (logger/info "Copying kondo configs from classpath to project if any...")
     (when classpath
-      (shared/logging-time
-        "Copied kondo configs, took %s secs."
-        (lsp.kondo/run-kondo-copy-configs! classpath db)))))
+      (when-let [{:keys [config]} (shared/logging-time
+                                    "Copied kondo configs, took %s secs."
+                                    (lsp.kondo/run-kondo-copy-configs! classpath @db*))]
+        (swap! db* shared/assoc-some :kondo-config config)))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
@@ -226,7 +226,7 @@
           (swap! db* assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
           (publish-task-progress producer (:copying-kondo fast-tasks) progress-token)
-          (copy-configs-from-classpath! classpath settings @db*))
+          (copy-configs-from-classpath! classpath settings db*))
         (do
           (publish-task-progress producer (:discovering-classpath slow-tasks) progress-token)
           (when-let [classpath (classpath/scan-classpath! components)]
@@ -240,7 +240,7 @@
                    :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
 
             (publish-task-progress producer (:copying-kondo slow-tasks) progress-token)
-            (copy-configs-from-classpath! classpath settings @db*)
+            (copy-configs-from-classpath! classpath settings db*)
             (when (contains? #{:project-and-full-dependencies
                                :project-and-clojure-only-dependencies} (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)

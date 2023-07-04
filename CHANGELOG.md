@@ -3,15 +3,29 @@
 ## Unreleased
 
 - General
+  - Add rewrite-clj node to cursor-info.
+
+## 2023.07.01-22.35.41
+
+- General
   - Update flake.nix to build with babashka. #1373
-  - Bump clj-kondo to `2023.06.02-20230612.113558-5`.
+  - Bump clj-kondo to `2023.06.02-20230630.144012-16`.
   - Improve support for ClojureDart `.cljd` files. #1589
+  - Slightly reduce OutOfMemory exceptions that may happen with the JVM version.
+  - Support ignore unused-public-vars via `:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta` clj-kondo setting.
+  - Fix restructure-keys when map has an `:or`. #1583
+  - Bump lsp4clj to `1.8.0`.
+  - Add post startup tasks progress feedbacks, like "Generating stubs", "Analyzing JDK source" and "Fetching Clojars".
+  - Bump cljfmt to `0.10.6`. #1605
   
 - Editor
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575
   - Enhance java support for hover and completion of static class members.
   - Improve `:paths-ignore-regex` to ignore features avoiding impact in huge files that are intented to be excluded.
   - Fixed semantic-tokens for full qualified namespace
+  - Add `score` to completion items for a better completion client sorting. #1595
+  - Revamp keyword completion. #1599
+  - Avoid LSP errors when cleaning a file without namespaces. #1603
   
 - API/CLI
   - New feature: Find all references via API and CLI. #1572

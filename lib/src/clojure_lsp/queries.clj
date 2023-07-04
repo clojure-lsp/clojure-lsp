@@ -14,7 +14,8 @@
       (shared/uri->available-langs (:uri element))))
 
 (defn safe-defined-by [element]
-  (or (:defined-by->lint-as element) (:defined-by element)))
+  (or (:defined-by element)
+      (:defined-by->lint-as element)))
 
 ;;;; Filter analysis, using dep-graph
 

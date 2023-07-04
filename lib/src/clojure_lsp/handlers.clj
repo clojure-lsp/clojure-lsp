@@ -28,7 +28,8 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.startup :as startup]
    [clojure.core.async :as async]
-   [clojure.pprint :as pprint]))
+   [clojure.pprint :as pprint]
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
@@ -149,6 +150,12 @@
   {:uri (f.java-interop/uri->translated-uri (:uri element) db producer)
    :range (shared/->range element)})
 
+(def post-startup-tasks
+  {:refresh-clojuredocs #:task{:title "Fechting Clojuredocs"}
+   :generate-stubs #:task{:title "Generating stubs"}
+   :analyze-jdk-source #:task{:title "Analyzing JDK source"}
+   :done #:task{:title "Done" :current-percent 100}})
+
 (defn initialize
   [{:keys [db* producer] :as components}
    project-root-uri
@@ -168,20 +175,22 @@
           work-done-token
           components)
         (let [db @db*
-              internal-uris (dep-graph/internal-uris db)]
+              internal-uris (dep-graph/internal-uris db)
+              settings (settings/all db)]
           (when (settings/get db [:lint-project-files-after-startup?] true)
             (f.diagnostic/publish-all-diagnostics! internal-uris components))
-          (async/go
-            (f.clojuredocs/refresh-cache! db*))
-          (async/go
-            (let [settings (:settings db)]
-              (when (stubs/check-stubs? settings)
-                (stubs/generate-and-analyze-stubs! settings db*))))
+          (async/thread
+            (startup/publish-task-progress producer (:refresh-clojuredocs post-startup-tasks) work-done-token)
+            (f.clojuredocs/refresh-cache! db*)
+            (when (settings/get db [:java] true)
+              (startup/publish-task-progress producer (:analyze-jdk-source post-startup-tasks) work-done-token)
+              (f.java-interop/retrieve-jdk-source-and-analyze! db*))
+            (when (stubs/check-stubs? settings)
+              (startup/publish-task-progress producer (:generate-stubs post-startup-tasks) work-done-token)
+              (stubs/generate-and-analyze-stubs! settings db*))
+            (startup/publish-task-progress producer (:done post-startup-tasks) work-done-token))
           (logger/info startup/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
-          (producer/refresh-test-tree producer internal-uris)
-          (when (settings/get db [:java] true)
-            (async/go
-              (f.java-interop/retrieve-jdk-source-and-analyze! db*)))))
+          (producer/refresh-test-tree producer internal-uris)))
       (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
 
 (defn did-open [{:keys [producer] :as components} {:keys [text-document]}]
@@ -337,8 +346,16 @@
 
 (defn ^:private cursor-info [{:keys [db*]} [uri line character]]
   (let [db @db*
-        elements (q/find-all-elements-under-cursor db uri (inc line) (inc character))]
+        row (inc line)
+        col (inc character)
+        elements (q/find-all-elements-under-cursor db uri row col)
+        node (some-> (parser/safe-zloc-of-file db uri)
+                     (parser/to-pos row col)
+                     z/node)]
     (shared/assoc-some {}
+                       :node (if-let [children (:children node)]
+                               (-> node (dissoc :children) (assoc :children-count (count children)))
+                               node)
                        :elements (mapv (fn [e]
                                          (shared/assoc-some
                                            {:element e}

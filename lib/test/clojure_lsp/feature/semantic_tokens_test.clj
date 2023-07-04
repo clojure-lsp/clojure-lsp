@@ -67,10 +67,10 @@
             "bla"
             "(comment)"))
     (is (= [0 4 7 0 0
-            1 3 8 4 0
-            0 18 3 4 0
-            0 6 6 4 0
-            0 8 3 2 0
+            1 4 7 4 0
+            0 18 2 4 0
+            0 6 5 4 0
+            0 7 3 2 0
             2 1 3 3 0
             0 4 3 2 1
             1 0 3 2 0
@@ -85,9 +85,9 @@
       (code "(ns some.ns (:require [clojure.test :refer [deftest]]))"
             "(deftest some-test 1)"))
     (is (= [0 4 7 0 0
-            0 9 8 4 0
-            0 23 6 4 0
-            0 8 7 3 0
+            0 10 7 4 0
+            0 23 5 4 0
+            0 7 7 3 0
             1 1 7 3 0
             0 8 9 2 1]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
@@ -112,8 +112,8 @@
     (h/load-code-and-locs (code "(ns some.ns (:require [foo.bar :as fb]))"
                                 "fb/some-foo-bar"))
     (is (= [0 4 7 0 0
-            0 9 8 4 0
-            0 18 3 4 0
+            0 10 7 4 0
+            0 18 2 4 0
             1 0 2 1 0
             0 2 1 8 0
             0 1 12 2 0]
@@ -122,8 +122,8 @@
     (h/load-code-and-locs (code "(ns some.ns (:require [clojure.test :as test]))"
                                 "test/deftest"))
     (is (= [0 4 7 0 0
-            0 9 8 4 0
-            0 23 3 4 0
+            0 10 7 4 0
+            0 23 2 4 0
             1 0 4 1 0
             0 4 1 8 0
             0 1 7 3 0]
@@ -157,27 +157,32 @@
                                 "#:some.ns{:foo 1 :bar/foo 2}"
                                 "::foo/something"))
     (is (= [0 4 7 0 0
-            0 9 8 4 0
-            0 14 3 4 0
-            1 0 4 4 0
-            1 0 8 1 0
-            0 8 1 8 0
+            0 10 7 4 0
+            0 14 2 4 0
+
+            1 1 3 4 0
+
+            1 1 7 1 0
+            0 7 1 8 0
             0 1 3 4 0
-            1 0 5 4 0
-            1 10 4 4 0
-            0 7 4 1 0
-            0 4 1 8 0
+
+            1 2 3 4 0
+
+            1 11 3 4 0
+            0 7 3 1 0
+            0 3 1 8 0
             0 1 3 4 0
-            1 0 5 1 0
-            0 5 1 8 0
+
+            1 2 3 1 0
+            0 3 1 8 0
             0 1 9 4 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
   (testing "locals destructuring for variable tokens"
     (h/load-code-and-locs (code "(fn [{:keys [foo bar]}])"))
     (is (= [0 1 2 3 0
-            0 5 5 4 0
-            0 0 5 4 0
-            0 7 3 6 0
+            0 6 4 4 0
+            0 0 4 4 0
+            0 6 3 6 0
             0 4 3 6 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
   (testing "defrecord/deftype"
@@ -205,8 +210,8 @@
                                 "(clojure.string/blank str-test)"
                                 "(string/blank? str-test)"))
     (is (= [0 4 7 0 0
-            1 5 8 4 0
-            0 25 3 4 0
+            1 6 7 4 0
+            0 25 2 4 0
             1 1 14 1 0
             0 14 1 8 0
             0 1 5 2 0

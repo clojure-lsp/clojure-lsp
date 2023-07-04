@@ -150,7 +150,9 @@
              alias)
          (not namespace-from-prefix))
     (let [slash (+ (if alias 2 1) name-col (count (str (or alias ns))))
-          ns-pos (assoc element :name-end-col slash)
+          ns-pos (-> element
+                     (assoc :name-end-col slash)
+                     (assoc :name-col (+ (if alias 2 1) (:name-col element))))
           slash-pos (assoc element :name-col slash :name-end-col (inc slash))
           name-pos (assoc element :name-col (inc slash))]
       [(element->absolute-token ns-pos :type)
@@ -158,7 +160,12 @@
        (element->absolute-token name-pos :keyword)])
 
     :else
-    [(element->absolute-token element :keyword)]))
+    (as-> element $
+      (assoc $ :name-col (if (and ns
+                                  (not namespace-from-prefix))
+                           (+ name-col 2)
+                           (inc name-col)))
+      [(element->absolute-token $ :keyword)])))
 
 (defn ^:private elements->absolute-tokens
   [elements]

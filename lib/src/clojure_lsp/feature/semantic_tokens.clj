@@ -162,11 +162,11 @@
 
     :else
     (as-> element $
-          (assoc $ :name-col (if (and ns
-                                      (not namespace-from-prefix))
-                               (+ name-col 2)
-                               (inc name-col)))
-          [(element->absolute-token $ :keyword)])))
+      (assoc $ :name-col (if (and ns
+                                  (not namespace-from-prefix))
+                           (+ name-col 2)
+                           (inc name-col)))
+      [(element->absolute-token $ :keyword)])))
 
 (defn ^:private elements->absolute-tokens
   [elements]

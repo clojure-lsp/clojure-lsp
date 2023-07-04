@@ -4,7 +4,7 @@
 
 - General
   - Add rewrite-clj node to cursor-info.
-  - Fixing semantic-tokens, collons not managed by lsp anymore.
+  - Fixing semantic-tokens, collons not managed by lsp anymore. #1234
 
 ## 2023.07.01-22.35.41
 

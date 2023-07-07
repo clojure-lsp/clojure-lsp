@@ -5,6 +5,7 @@ on:
       - master
     paths:
       - "**/deps.edn"
+      - "**/bb.edn"
 
 jobs:
   update-lock:
@@ -16,7 +17,7 @@ jobs:
       - uses: cachix/install-nix-action@v17
 
       - name: Update deps-lock
-        run: "nix run github:jlesquembre/clj-nix?ref=0.2.0#deps-lock"
+        run: "nix develop --command deps-lock-update"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4.0.3

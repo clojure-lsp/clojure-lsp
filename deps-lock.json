@@ -203,16 +203,6 @@
       "hash": "sha256-63Enn5Ak0AUpOBdVZKScWG8P/QAnWaVNPmIPS891Leo="
     },
     {
-      "mvn-path": "cider/cider-nrepl/0.30.0/cider-nrepl-0.30.0.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-1II+rLGpnsUAgOzkZ/h/qe/iD2hLXuesOgb9GdjM7wc="
-    },
-    {
-      "mvn-path": "cider/cider-nrepl/0.30.0/cider-nrepl-0.30.0.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-KeGadyR0AdZfzoVdaANenTD7sn+fxOS+Wg4S4P21XoI="
-    },
-    {
       "mvn-path": "clj-commons/pomegranate/1.2.1/pomegranate-1.2.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-A36zRGyfeOzpT7y4FeJrmn7zEgKT9qKaQWl4yeAqsPM="
@@ -303,26 +293,6 @@
       "mvn-path": "com/amazonaws/jmespath-java/1.12.49/jmespath-java-1.12.49.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-K3q8dApBM5bzLK6nQPIYevjHqnKDN+E7THIyf0bhD3o="
-    },
-    {
-      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/1.0.3/clj-async-profiler-1.0.3.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-QdFiP4ck2fUUwC5XXvUjZ8PSP+9RGsBIlPz6ndG1o/c="
-    },
-    {
-      "mvn-path": "com/clojure-goes-fast/clj-async-profiler/1.0.3/clj-async-profiler-1.0.3.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-dxa5i4dimtU9V+KGd1w8z/WX+ucUAIaS1H0TImbGxKk="
-    },
-    {
-      "mvn-path": "com/clojure-goes-fast/clj-memory-meter/0.2.2/clj-memory-meter-0.2.2.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-zsfGWhYAzp/ZHY2102q5w//nTe2yjEPSnQzF7CvnKCw="
-    },
-    {
-      "mvn-path": "com/clojure-goes-fast/clj-memory-meter/0.2.2/clj-memory-meter-0.2.2.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-ssa8Kz4LB8FoZsw9XKaiF61nOkXlIShSIMeM4me0N+I="
     },
     {
       "mvn-path": "com/cognitect/aws/api/0.8.612/api-0.8.612.jar",
@@ -935,16 +905,6 @@
       "hash": "sha256-yRq1qlcNhvb9B8wVjsa8LFAIBAKXLukXn+JBAHOfuyA="
     },
     {
-      "mvn-path": "criterium/criterium/0.4.6/criterium-0.4.6.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-r14UbxCZd9XNA1vAzjlOySebIySQBp8ErsaO5Mi8FY4="
-    },
-    {
-      "mvn-path": "criterium/criterium/0.4.6/criterium-0.4.6.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-Lb9Ysv6gyT1w02RS6Rf+soFUNpnPGzs+IrGl6cpol0k="
-    },
-    {
       "mvn-path": "de/ubercode/clostache/clostache/1.4.0/clostache-1.4.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-KdHna+zYBX5ZBbVahZYPxVeVfme/yjgOxxv59Ok/61M="
@@ -1273,16 +1233,6 @@
       "mvn-path": "nrepl/bencode/1.1.0/bencode-1.1.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-o3pFBButfzw3yua864SedMbz58atvnYFR5VghPuua3I="
-    },
-    {
-      "mvn-path": "nrepl/nrepl/1.0.0/nrepl-1.0.0.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-owuXNP8uY582Xw11U7SHcwbypUPPAh4pnRW/HqvWpbs="
-    },
-    {
-      "mvn-path": "nrepl/nrepl/1.0.0/nrepl-1.0.0.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-dHN5LZGfjodYUES5nySqLqFVNCBgRI2opHhGvkXz2nI="
     },
     {
       "mvn-path": "org/apache/activemq/artemis-commons/1.4.0/artemis-commons-1.4.0.jar",

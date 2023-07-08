@@ -6,6 +6,7 @@
   - Add rewrite-clj node to cursor-info.
   - Fixing semantic-tokens, collons not managed by lsp anymore. #1550
   - Fix `:paths-ignore-regex` setting to consider settings reload.
+  - Bump clj-kondo to `2023.06.02-20230708.222554-17`. #1624
 
 - Editor
   - Avoid returning all known keywords on empty keywords completion for performance reasons.

@@ -5,75 +5,58 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     clj-nix = {
-      url = "github:jlesquembre/clj-nix?ref=0.3.0";
+      url = "github:jlesquembre/clj-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # workaround for bb support in buildCommand
-    cljtools = {type = "file";
-                url = "https://download.clojure.org/install/clojure-tools-1.11.1.1257.zip";
-                flake = false;
-               };
   };
-  outputs = { self, nixpkgs, flake-utils, clj-nix, cljtools }:
+  outputs = { self, nixpkgs, flake-utils, clj-nix }:
 
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        cljpkgs = clj-nix.packages."${system}";
-      in
-      {
-        packages = rec {
-          default = clojure-lsp;
+    flake-utils.lib.eachDefaultSystem
+      (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          cljpkgs = clj-nix.packages."${system}";
+        in
+        {
+          packages = rec {
+            default = clojure-lsp;
 
-          clojure-lsp-jdk = cljpkgs.mkCljBin {
-            projectSrc = ./.;
-            name = "com.github.clojure-lsp/clojure-lsp";
-            main-ns = "clojure-lsp.main";
-            buildInputs = [pkgs.babashka pkgs.unzip];
+            clojure-lsp-jdk = cljpkgs.mkCljBin {
+              projectSrc = ./.;
+              name = "com.github.clojure-lsp/clojure-lsp";
+              main-ns = "clojure-lsp.main";
+              buildInputs = [ pkgs.babashka pkgs.unzip ];
 
-            jdkRunner = pkgs.jdk17_headless;
-            buildCommand =
-              ''
-                mkdir -p /build/.deps.clj/1.11.1.1257
-                unzip ${cljtools} -d /build/.deps.clj/1.11.1.1257
-
-                mkdir -p target
-                bb cli-prod-jar
-                cp clojure-lsp-standalone.jar target
-              '';
-            doCheck = true;
-            checkPhase = "bb test";
-            maven-extra = [{
-              content =
+              jdkRunner = pkgs.jdk17_headless;
+              buildCommand =
                 ''
-                  <?xml version="1.0" encoding="UTF-8"?>
-                  <metadata modelVersion="1.1.0">
-                    <groupId>com.google.code.gson</groupId>
-                    <artifactId>gson</artifactId>
-                    <versioning>
-                      <latest>2.9.0</latest>
-                      <release>2.9.0</release>
-                      <versions>
-                        <version>2.8.9</version>
-                        <version>2.9.0</version>
-                      </versions>
-                      <lastUpdated>19700101000000</lastUpdated>
-                    </versioning>
-                  </metadata>
+                  bb cli-prod-jar
+                  export jarPath=clojure-lsp-standalone.jar
                 '';
-              path = "com/google/code/gson/gson/maven-metadata-central.xml";
-            }];
+              doCheck = true;
+              checkPhase = "bb test";
+            };
+
+            clojure-lsp = cljpkgs.mkGraalBin {
+              cljDrv = self.packages."${system}".clojure-lsp-jdk;
+            };
+
           };
-
-          clojure-lsp = cljpkgs.mkGraalBin {
-            cljDrv = self.packages."${system}".clojure-lsp-jdk;
-          };
-
-        };
-      }) // {
-        overlays.default = (final: prev: {
-          clojure-lsp = self.packages.${final.system}.default;
-        });
-      };
-
+          devShells.default =
+            let
+              deps-lock-update = pkgs.writeShellApplication {
+                name = "deps-lock-update";
+                runtimeInputs = [ cljpkgs.deps-lock ];
+                text = "deps-lock --bb --alias-exclude debug";
+              };
+            in
+            pkgs.mkShell
+              {
+                packages = [ deps-lock-update ];
+              };
+        }) // {
+      overlays.default = (final: prev: {
+        clojure-lsp = self.packages.${final.system}.default;
+      });
+    };
 }

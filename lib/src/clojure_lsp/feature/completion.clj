@@ -434,21 +434,19 @@
 
 (defn ^:private with-elements-from-keyword
   [cursor-element matches-fn simple-cursor? caller-var-definition db resolve-support]
-  (cond-> []
-    :always
-    (into (comp
-            q/xf-analysis->keywords
-            (bucket-elems-xf :keyword-usages matches-fn cursor-element)
-            (if simple-cursor?
-              (filter #(= (:from cursor-element) (:from %)))
-              identity)
-            (map #(element->completion-item % nil (if (= (:from cursor-element) (:from %))
-                                                    :keyword-same-ns
-                                                    :keyword) resolve-support)))
-          (:analysis db))
-
-    (:arglist-kws caller-var-definition)
-    (into (with-definition-kws-args-element-items matches-fn caller-var-definition resolve-support))))
+  (if (:arglist-kws caller-var-definition)
+    (with-definition-kws-args-element-items matches-fn caller-var-definition resolve-support)
+    (into [] (comp
+               q/xf-analysis->keywords
+               (bucket-elems-xf :keyword-usages matches-fn cursor-element)
+               (if simple-cursor?
+                 (filter #(and (:from cursor-element)
+                               (= (:from cursor-element) (:from %))))
+                 identity)
+               (map #(element->completion-item % nil (if (= (:from cursor-element) (:from %))
+                                                       :keyword-same-ns
+                                                       :keyword) resolve-support)))
+          (:analysis db))))
 
 (defn ^:private with-core-items [matches-fn {:keys [uri ns-name symbols priority]} resolve-support]
   (keep (fn [{:keys [name kind]}]

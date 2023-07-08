@@ -102,6 +102,9 @@
          (-> deep-merged
              (update-in [:cljfmt :indents] merge cljfmt-a cljfmt-b)))
 
+       (seq (:paths-ignore-regex deep-merged))
+       (update deep-merged :paths-ignore-regex distinct)
+
        (coll? (:project-specs deep-merged))
        (assoc deep-merged :project-specs
               (medley/distinct-by :project-path (:project-specs deep-merged)))

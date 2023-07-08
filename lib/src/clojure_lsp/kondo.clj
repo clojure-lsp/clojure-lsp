@@ -281,7 +281,7 @@
        :config-dir (some-> db :project-root-uri project-config-dir)
        :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lint [(->> paths
-                   (remove (partial shared/ignore-path? db))
+                   (remove (partial shared/ignore-path? (settings/all db)))
                    (string/join (System/getProperty "path.separator")))]
        :config {:output {:canonical-paths true}}
        :file-analyzed-fn file-analyzed-fn}
@@ -350,10 +350,14 @@
                  (config-for-external-paths paths db file-analyzed-fn)
                  (config-for-internal-paths paths db
                                             #(custom-lint-project! @db* % normalization-config)
-                                            file-analyzed-fn))]
+                                            file-analyzed-fn))
+        empty-findings (->> paths
+                         (filter (partial shared/ignore-path? (settings/all db)))
+                         (reduce (fn [findings path] (assoc findings (shared/filename->uri path db) [])) {}))]
     (-> config
         (run-kondo! (str "paths " (string/join ", " paths)))
-        (normalize normalization-config db))))
+        (normalize normalization-config db)
+        (update :findings merge empty-findings))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
@@ -392,10 +396,10 @@
 
 (defn run-kondo-on-text! [text uri db*]
   (let [filename (shared/uri->filename uri)
-        ignore-filename? (shared/ignore-path? @db* filename)
+        ignore-filename? (shared/ignore-path? (settings/all @db*) filename)
         db @db*]
     (if ignore-filename?
-      {}
+      {:findings {uri []}}
       (with-in-str text
                    (-> (config-for-single-file uri db*)
                        (run-kondo! filename)

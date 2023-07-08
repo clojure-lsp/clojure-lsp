@@ -5,6 +5,7 @@
 - General
   - Add rewrite-clj node to cursor-info.
   - Fixing semantic-tokens, collons not managed by lsp anymore. #1550
+  - Fix `:paths-ignore-regex` setting to consider settings reload.
 
 ## 2023.07.01-22.35.41
 

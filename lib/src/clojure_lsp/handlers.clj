@@ -139,7 +139,7 @@
 
 (defn ^:private skip-feature-for-uri? [feature uri {:keys [db*]}]
   (cond
-    (shared/ignore-path? @db* (shared/uri->filename uri))
+    (shared/ignore-path? (settings/all @db*) (shared/uri->filename uri))
     (do
       (logger/info feature "- skipped")
       true)

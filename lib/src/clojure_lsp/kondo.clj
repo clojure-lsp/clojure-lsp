@@ -352,8 +352,8 @@
                                             #(custom-lint-project! @db* % normalization-config)
                                             file-analyzed-fn))
         empty-findings (->> paths
-                         (filter (partial shared/ignore-path? (settings/all db)))
-                         (reduce (fn [findings path] (assoc findings (shared/filename->uri path db) [])) {}))]
+                            (filter (partial shared/ignore-path? (settings/all db)))
+                            (reduce (fn [findings path] (assoc findings (shared/filename->uri path db) [])) {}))]
     (-> config
         (run-kondo! (str "paths " (string/join ", " paths)))
         (normalize normalization-config db)

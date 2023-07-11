@@ -2,8 +2,7 @@
   (:require
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]
-   [clojure.set :as set]))
+   [clojure-lsp.shared :as shared]))
 
 (set! *warn-on-reflection* true)
 

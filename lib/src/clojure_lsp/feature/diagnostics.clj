@@ -66,7 +66,11 @@
         starts-with-dash? (string/starts-with? (:name definition) "-")]
     (or (q/exclude-public-definition? kondo-config definition)
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
-        (some #(re-matches (re-pattern (str %)) (str (q/safe-defined-by definition))) excluded-defined-by-syms-regex)
+        (some (fn [exclude]
+                (some #(re-matches (re-pattern (str exclude))
+                                   (str %))
+                      (q/defined-bys definition)))
+              excluded-defined-by-syms-regex)
         (some #(-> definition :meta % boolean) excluded-metas)
         (:export definition)
         (when starts-with-dash?

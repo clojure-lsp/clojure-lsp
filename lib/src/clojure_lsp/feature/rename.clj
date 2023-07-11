@@ -205,8 +205,8 @@
     (mapv (partial rename-local replacement db) references)
 
     (and (identical? :var-definitions (:bucket definition))
-         (contains? '#{clojure.core/defrecord cljs.core/defrecord}
-                    (q/safe-defined-by definition)))
+         (some '#{clojure.core/defrecord cljs.core/defrecord}
+               (q/defined-bys definition)))
     (->> references
          (remove #(and (identical? :var-definitions (:bucket %))
                        (or (string/starts-with? (str (:name %)) "->")

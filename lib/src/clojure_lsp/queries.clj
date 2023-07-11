@@ -13,9 +13,9 @@
   (or (some-> element :lang list set)
       (shared/uri->available-langs (:uri element))))
 
-(defn safe-defined-by [element]
-  (or (:defined-by->lint-as element)
-      (:defined-by element)))
+(defn defined-bys [element]
+  (set [(:defined-by->lint-as element)
+        (:defined-by element)]))
 
 ;;;; Filter analysis, using dep-graph
 
@@ -132,15 +132,18 @@
       (find-last xf (external-analysis db))))
 
 (defn var-definition-names [{:keys [name] :as element}]
-  (let [defined-by (safe-defined-by element)]
-    (case defined-by
-      (clojure.core/defrecord
-       cljs.core/defrecord)
-      , #{name (symbol (str "->" name)) (symbol (str "map->" name))}
-      (clojure.core/deftype
-       cljs.core/deftype)
-      , #{name (symbol (str "->" name))}
-      , #{name})))
+  (let [defined-bys (defined-bys element)]
+    (cond
+      (some '#{clojure.core/defrecord
+               cljs.core/defrecord} defined-bys)
+      #{name (symbol (str "->" name)) (symbol (str "map->" name))}
+
+      (some '#{clojure.core/deftype
+               cljs.core/deftype} defined-bys)
+      #{name (symbol (str "->" name))}
+
+      :else
+      #{name})))
 
 (def kw-signature (juxt :ns :name))
 (def var-usage-signature (juxt :to :name))
@@ -314,7 +317,7 @@
 
 (defmethod find-definition :var-definitions
   [db {:keys [imported-ns] :as var-definition}]
-  (if (safe-equal? 'potemkin/import-vars (safe-defined-by var-definition))
+  (if (some #(safe-equal? 'potemkin/import-vars %) (defined-bys var-definition))
     (find-definition db (assoc var-definition
                                :bucket :var-usages
                                :to imported-ns))
@@ -395,21 +398,21 @@
   [db var-definition]
   (if-let [xf (cond
                 ;; protocol method definition
-                (and ('#{clojure.core/defprotocol
-                         clojure.core/definterface} (safe-defined-by var-definition))
+                (and (some '#{clojure.core/defprotocol
+                              clojure.core/definterface} (defined-bys var-definition))
                      (:protocol-name var-definition))
                 (comp xf-analysis->protocol-impls
                       (xf-same-fqn (:ns var-definition) (:name var-definition)
                                    :protocol-ns :method-name))
 
                 ;; protocol name definition
-                ('#{clojure.core/defprotocol
-                    clojure.core/definterface} (safe-defined-by var-definition))
+                (some '#{clojure.core/defprotocol
+                         clojure.core/definterface} (defined-bys var-definition))
                 (comp xf-analysis->var-usages
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to))
 
                 ;; defmulti definition
-                (= 'clojure.core/defmulti (safe-defined-by var-definition))
+                (some #(safe-equal? 'clojure.core/defmulti %) (defined-bys var-definition))
                 (comp xf-analysis->var-usages
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to)
                       (filter :defmethod))
@@ -647,12 +650,12 @@
     (filter #(or include-private?
                  (not (get % :private))))
     (medley/distinct-by (juxt :ns :name :row :col))
-    (remove #(or (and (#{'clojure.core/defrecord
-                         'cljs.core/defrecord} (safe-defined-by %))
+    (remove #(or (and (some #{'clojure.core/defrecord
+                              'cljs.core/defrecord} (defined-bys %))
                       (or (string/starts-with? (str (:name %)) "->")
                           (string/starts-with? (str (:name %)) "map->")))
-                 (and (#{'clojure.core/deftype
-                         'cljs.core/deftype} (safe-defined-by %))
+                 (and (some #{'clojure.core/deftype
+                              'cljs.core/deftype} (defined-bys %))
                       (string/starts-with? (str (:name %)) "->"))))))
 
 (defn find-var-definitions [db uri include-private?]
@@ -784,11 +787,11 @@
         excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
         excluded-ns-or-var (set (filter simple-ident? excluded-syms))
         keyword-definition? (identical? :keyword-definitions (:bucket definition))
-        fqsn (symbol (-> definition :ns str) (-> definition :name str))]
-    (or (contains? (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)
-                   (if keyword-definition?
-                     (:reg definition)
-                     (safe-defined-by definition)))
+        fqsn (symbol (-> definition :ns str) (-> definition :name str))
+        default-excludes (set/union default-public-vars-defined-by-to-exclude excluded-defined-by-syms)]
+    (or (if keyword-definition?
+          (contains? default-excludes (:reg definition))
+          (some default-excludes (defined-bys definition)))
         (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
                    (if keyword-definition?
                      ;; FIXME: this creates a qualified symbol, but the set is

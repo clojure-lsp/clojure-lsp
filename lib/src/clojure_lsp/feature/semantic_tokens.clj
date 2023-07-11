@@ -89,15 +89,15 @@
 
 (defn ^:private var-definition-element->absolute-tokens
   [{:keys [protocol-ns] :as element}]
-  (let [defined-by (q/safe-defined-by element)]
+  (let [defined-bys (q/defined-bys element)]
     (cond
 
       (and (not protocol-ns)
-           (contains? #{'clojure.core/defprotocol
-                        'clojure.core/definterface} defined-by))
+           (some #{'clojure.core/defprotocol
+                   'clojure.core/definterface} defined-bys))
       [(element->absolute-token element :interface [])]
 
-      defined-by
+      (seq defined-bys)
       [(element->absolute-token element :function [:definition])]
 
       :else

@@ -37,8 +37,8 @@
   (let [ns-element (q/find-namespace-definition-by-uri db uri)
         local-buckets (get-in db [:analysis uri])
         deftests (into []
-                       (filter #(contains? '#{clojure.test/deftest cljs.test/deftest}
-                                           (q/safe-defined-by %)))
+                       (filter #(some '#{clojure.test/deftest cljs.test/deftest}
+                                      (q/defined-bys %)))
                        (:var-definitions local-buckets))
         testings (into []
                        (filter #(and (= 'testing (:name %))

@@ -2,7 +2,8 @@
   (:require
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]))
+   [clojure-lsp.shared :as shared]
+   [clojure.set :as set]))
 
 (set! *warn-on-reflection* true)
 
@@ -21,9 +22,9 @@
     :var-definitions (cond
                        (or (:fixed-arities el) (:varargs-min-arity el) (:macro el))
                        #_=> :function
-                       (some->> el q/safe-defined-by defines-interface?)
+                       (some->> el q/defined-bys (some defines-interface?))
                        #_=> :interface
-                       (some->> el q/safe-defined-by defines-class?)
+                       (some->> el q/defined-bys (some defines-class?))
                        #_=> :class
                        :else
                        #_=> :variable)

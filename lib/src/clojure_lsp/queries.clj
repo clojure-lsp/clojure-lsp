@@ -835,3 +835,11 @@
           (filter #(and (:import %)
                         (safe-equal? class-name (:class %)))))
         (:analysis db)))
+
+(defn find-all-project-namespace-definitions [db namespace]
+  (into []
+        (comp
+          xf-analysis->namespace-definitions
+          (xf-same-name namespace)
+          (medley/distinct-by :uri))
+        (internal-analysis (db-with-ns-analysis db namespace))))

@@ -162,6 +162,18 @@
       {:error {:code :invalid-params
                :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
       (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
+  (testing "when namespace is defined in multiple files"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge
+           {:project-root-uri (h/file-uri "file:///my-project")
+            :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
+            :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
+    (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/test/foo/bar_baz.clj"))
+    (h/assert-submap
+      {:error {:code :invalid-params
+               :message "Can't rename namespace, namespace is defined in multiple files."}}
+      (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
   (testing "when source-paths are valid and client capabilities has document-changes"
     (h/reset-components!)
     (swap! (h/db*) shared/deep-merge
@@ -314,6 +326,19 @@
         {:error {:code :invalid-params
                  :message "Can't rename namespace, client does not support file renames."}}
         (f.rename/prepare-rename h/default-uri row col (h/db)))))
+  (testing "when namespace is defined in multiple files"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge
+           {:project-root-uri (h/file-uri "file:///")
+            :settings {:source-paths #{(h/file-path "/src") (h/file-path "/test")}}
+            :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///src/foo/bar_baz.clj"))
+    (let [test-uri (h/file-uri "file:///test/foo/bar_baz.clj")
+          [[row col]] (h/load-code-and-locs "(ns |foo.bar-baz)" test-uri)]
+      (h/assert-submap
+        {:error {:code :invalid-params
+                 :message "Can't rename namespace, namespace is defined in multiple files."}}
+        (f.rename/prepare-rename test-uri row col (h/db)))))
   (testing "when client has document-changes capability but no valid source-paths"
     (h/reset-components!)
     (swap! (h/db*) shared/deep-merge

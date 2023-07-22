@@ -8,6 +8,7 @@
   - Fix `:paths-ignore-regex` setting to consider settings reload.
   - Bump clj-kondo to `2023.07.14-20230717.090255-3`. #1624
   - Fix inconsistencies with `:defined-by->lint-as`.
+  - Improve memory usage during cache save, avoiding "Out of memory" exceptions.
 
 - Editor
   - Avoid returning all known keywords on empty keywords completion for performance reasons.

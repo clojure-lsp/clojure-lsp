@@ -46,6 +46,13 @@
 (defn remove-db! [db]
   (io/delete-file (transit-local-db-file db)))
 
+(defn ^:private no-flush-output-stream [^java.io.OutputStream os]
+  (proxy [java.io.BufferedOutputStream] [os]
+    (flush [])
+    (close []
+      (.flush os)
+      (.close os))))
+
 (defn ^:private upsert-cache! [cache cache-file]
   (try
     (shared/logging-time
@@ -54,13 +61,11 @@
       (System/gc))
     (shared/logging-time
       (str db-logger-tag " Upserting transit analysis to " cache-file " cache took %s")
-      (with-open [;; first we write to a baos as a workaround for transit-clj #43
-                  bos (java.io.ByteArrayOutputStream. 1024)
-                  os (io/output-stream bos)]
+      (io/make-parents cache-file)
+      ;; https://github.com/cognitect/transit-clj/issues/43
+      (with-open [os (no-flush-output-stream (io/output-stream cache-file))]
         (let [writer (transit/writer os :json)]
-          (io/make-parents cache-file)
-          (transit/write writer cache)
-          (io/copy (.toByteArray bos) cache-file))))
+          (transit/write writer cache))))
     (catch Throwable e
       (logger/error db-logger-tag "Could not upsert db cache" e))))
 

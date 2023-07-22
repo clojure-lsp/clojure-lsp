@@ -6,7 +6,7 @@
   - Add rewrite-clj node to cursor-info.
   - Fixing semantic-tokens, collons not managed by lsp anymore. #1550
   - Fix `:paths-ignore-regex` setting to consider settings reload.
-  - Bump clj-kondo to `2023.06.02-20230711.092045-18`. #1624
+  - Bump clj-kondo to `2023.07.14-20230717.090255-3`. #1624
   - Fix inconsistencies with `:defined-by->lint-as`.
 
 - Editor

@@ -4,7 +4,9 @@
    [clojure-lsp.logger :as logger]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
-   [cognitect.transit :as transit]))
+   [cognitect.transit :as transit])
+  (:import
+   [java.io OutputStream]))
 
 (set! *warn-on-reflection* true)
 
@@ -46,7 +48,7 @@
 (defn remove-db! [db]
   (io/delete-file (transit-local-db-file db)))
 
-(defn ^:private no-flush-output-stream [^java.io.OutputStream os]
+(defn ^:private no-flush-output-stream [^OutputStream os]
   (proxy [java.io.BufferedOutputStream] [os]
     (flush [])
     (close []
@@ -63,7 +65,7 @@
       (str db-logger-tag " Upserting transit analysis to " cache-file " cache took %s")
       (io/make-parents cache-file)
       ;; https://github.com/cognitect/transit-clj/issues/43
-      (with-open [os (no-flush-output-stream (io/output-stream cache-file))]
+      (with-open [os ^OutputStream (no-flush-output-stream (io/output-stream cache-file))]
         (let [writer (transit/writer os :json)]
           (transit/write writer cache))))
     (catch Throwable e

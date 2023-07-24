@@ -1189,3 +1189,13 @@
       (q/find-local-usages-under-form (h/db) (h/file-uri "file:///a.clj")
                                       {:row start-r, :col start-c
                                        :end-row end-r, :end-col end-c}))))
+
+(deftest find-all-project-namespace-definitions
+  (h/load-code-and-locs "(ns a)" (h/file-uri "file:///src/a.cljc"))
+  (h/load-code-and-locs "(ns a)" (h/file-uri "file:///test/a.clj"))
+  (h/load-code-and-locs "(ns b)" (h/file-uri "file:///test/b.clj"))
+
+  (h/assert-submaps
+    [{:uri "file:///src/a.cljc"}
+     {:uri "file:///test/a.clj"}]
+    (q/find-all-project-namespace-definitions (h/db) 'a)))

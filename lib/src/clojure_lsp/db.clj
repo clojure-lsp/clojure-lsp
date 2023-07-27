@@ -52,8 +52,9 @@
   (proxy [java.io.BufferedOutputStream] [os]
     (flush [])
     (close []
-      (proxy-super flush)
-      (proxy-super close))))
+      (let [^java.io.BufferedOutputStream this this]
+        (proxy-super flush)
+        (proxy-super close)))))
 
 (defn ^:private upsert-cache! [cache cache-file]
   (try

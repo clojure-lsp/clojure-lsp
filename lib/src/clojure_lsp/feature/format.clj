@@ -97,8 +97,8 @@
 
 (defn ^:private resolve-cljfmt-config [db]
   (-> cljfmt.config/default-config
-      (cljfmt.config/merge-configs (resolve-user-cljfmt-config db))
       (cljfmt.config/merge-configs (extract-style-indent-metadata db))
+      (cljfmt.config/merge-configs (resolve-user-cljfmt-config db))
       ;; There is a bug in cljfmt where the namespace's aliases are ignored if
       ;; :alias-map is provided. This avoids the bug in the common case where no
       ;; :alias-map is needed.

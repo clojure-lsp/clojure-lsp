@@ -249,8 +249,8 @@
             (upsert-db-cache! @db*))))
       (publish-task-progress producer (:resolving-config task-list) progress-token)
       (when-let [classpath-settings (and (config/classpath-config-paths? settings)
-                                         (:classpath @db*)
-                                         (config/resolve-from-classpath-config-paths (:classpath @db*) settings))]
+                                         (some-> (:classpath @db*)
+                                                 (config/resolve-from-classpath-config-paths settings)))]
         (swap! db* assoc
                :settings (shared/deep-merge (:settings @db*)
                                             classpath-settings

@@ -95,10 +95,18 @@
                                    indent]))))
                   (:analysis db))})
 
+(defn ^:private merge-configs
+  "Merge two or more cljfmt configuration maps together."
+  ([a b]
+   (-> (merge a b)
+       (assoc :indents (merge (:indents a {}) (:indents b)))))
+  ([a b & more]
+   (reduce merge-configs (merge-configs a b) more)))
+
 (defn ^:private resolve-cljfmt-config [db]
   (-> cljfmt.config/default-config
-      (cljfmt.config/merge-configs (extract-style-indent-metadata db))
-      (cljfmt.config/merge-configs (resolve-user-cljfmt-config db))
+      (merge-configs (extract-style-indent-metadata db))
+      (merge-configs (resolve-user-cljfmt-config db))
       ;; There is a bug in cljfmt where the namespace's aliases are ignored if
       ;; :alias-map is provided. This avoids the bug in the common case where no
       ;; :alias-map is needed.

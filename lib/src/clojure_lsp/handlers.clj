@@ -151,7 +151,7 @@
    :range (shared/->range element)})
 
 (def post-startup-tasks
-  {:refresh-clojuredocs #:task{:title "Fechting Clojuredocs"}
+  {:refresh-clojuredocs #:task{:title "Fetching Clojuredocs"}
    :generate-stubs #:task{:title "Generating stubs"}
    :analyze-jdk-source #:task{:title "Analyzing JDK source"}
    :done #:task{:title "Done" :current-percent 100}})

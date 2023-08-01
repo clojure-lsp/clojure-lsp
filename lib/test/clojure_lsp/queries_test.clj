@@ -1196,6 +1196,6 @@
   (h/load-code-and-locs "(ns b)" (h/file-uri "file:///test/b.clj"))
 
   (h/assert-submaps
-    [{:uri "file:///src/a.cljc"}
-     {:uri "file:///test/a.clj"}]
+    [{:uri (h/file-uri "file:///src/a.cljc")}
+     {:uri (h/file-uri "file:///test/a.clj")}]
     (q/find-all-project-namespace-definitions (h/db) 'a)))

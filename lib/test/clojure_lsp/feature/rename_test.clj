@@ -333,12 +333,20 @@
             :settings {:source-paths #{(h/file-path "/src") (h/file-path "/test")}}
             :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///src/foo/bar_baz.clj"))
+    (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///src/foo/bar.clj"))
     (let [test-uri (h/file-uri "file:///test/foo/bar_baz.clj")
-          [[row col]] (h/load-code-and-locs "(ns |foo.bar-baz)" test-uri)]
+          [ns-start
+           alias-start alias-end] (h/load-code-and-locs "(ns |foo.bar-baz (:require [foo.bar :as |b|]))" test-uri)
+          [ns-row ns-col] ns-start
+          [alias-row alias-col] alias-start]
       (h/assert-submap
         {:error {:code :invalid-params
                  :message "Can't rename namespace, namespace is defined in multiple files."}}
-        (f.rename/prepare-rename test-uri row col (h/db)))))
+        (f.rename/prepare-rename test-uri ns-row ns-col (h/db)))
+      (testing "renaming alias is not affected"
+        (h/assert-submap
+          (h/->range alias-start alias-end)
+          (f.rename/prepare-rename test-uri alias-row alias-col (h/db))))))
   (testing "when client has document-changes capability but no valid source-paths"
     (h/reset-components!)
     (swap! (h/db*) shared/deep-merge

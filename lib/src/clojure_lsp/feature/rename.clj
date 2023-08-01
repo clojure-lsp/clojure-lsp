@@ -240,6 +240,7 @@
                :message "Can't rename namespace, client does not support file renames."}}
 
       (and (= :namespace-definitions (:bucket definition))
+           (not= :namespace-alias (:bucket element))
            (not= 1 (count (q/find-all-project-namespace-definitions db (:name definition)))))
       {:error {:code :invalid-params
                :message "Can't rename namespace, namespace is defined in multiple files."}}

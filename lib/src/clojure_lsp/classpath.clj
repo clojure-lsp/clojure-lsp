@@ -158,9 +158,20 @@
            (string/join ",")
            (conj ["with-profile"])))
 
+(defn ^:private kw->str
+  "Given a keyword, returns a string with the ':' omitted, nil if `kw` is not a keyword."
+  [kw]
+  (cond
+    (qualified-keyword? kw)
+    (str (namespace kw) "/" (name kw))
+    (keyword? kw)
+    (name kw)
+    :else
+    nil))
+
 (defn ^:private deps-source-aliases [source-aliases]
   (some->> source-aliases
-           (map name)
+           (map kw->str)
            seq
            (string/join ":")
            (str "-A:")

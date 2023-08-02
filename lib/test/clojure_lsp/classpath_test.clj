@@ -38,6 +38,19 @@
              {:project-path "bb.edn"
               :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
             (classpath/default-project-specs #{:something}))))
+    (testing "single source-alias (namespaced)"
+      (is (h/assert-contains-submaps
+            [{:project-path "project.clj"
+              :classpath-cmd ["lein" "with-profile" "+something" "classpath"]}
+             {:project-path "deps.edn"
+              :classpath-cmd ["clojure" "-A:ns/something" "-Spath"]}
+             {:project-path "build.boot"
+              :classpath-cmd ["boot" "show" "--fake-classpath"]}
+             {:project-path "shadow-cljs.edn"
+              :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
+             {:project-path "bb.edn"
+              :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
+            (classpath/default-project-specs #{:ns/something}))))
     (testing "multiple source-aliases"
       (is (h/assert-contains-submaps
             [{:project-path "project.clj"
@@ -50,7 +63,20 @@
               :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
              {:project-path "bb.edn"
               :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
-            (classpath/default-project-specs #{:something :otherthing}))))))
+            (classpath/default-project-specs #{:something :otherthing}))))
+    (testing "multiple source-aliases (namespaced)"
+      (is (h/assert-contains-submaps
+            [{:project-path "project.clj"
+              :classpath-cmd ["lein" "with-profile" "+something,+otherthing" "classpath"]}
+             {:project-path "deps.edn"
+              :classpath-cmd ["clojure" "-A:ns/something:ns/otherthing" "-Spath"]}
+             {:project-path "build.boot"
+              :classpath-cmd ["boot" "show" "--fake-classpath"]}
+             {:project-path "shadow-cljs.edn"
+              :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
+             {:project-path "bb.edn"
+              :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
+            (classpath/default-project-specs #{:ns/something :ns/otherthing}))))))
 
 (defn make-components
   "Create a PROJECT-FILENAME file at DIR and return a clojure-lsp

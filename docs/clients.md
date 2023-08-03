@@ -132,7 +132,7 @@ Clojure LSP can be installed by first installing the [LSP plugin](https://packag
 
 ## Intellij
 
-Install the [LSP Support plugin](https://github.com/gtache/intellij-lsp) and configure it to launch clojure-lsp for Clojure/Script files:
+Install the [LSP Support plugin](https://github.com/ballerina-platform/lsp4intellij) and configure it to launch clojure-lsp for Clojure/Script files:
 
 1. Go to Preferences / Languages & Frameworks / Language Server Protocol / Server Definitions. Select *Raw command*.
 2. In the *Extension* field enter `clj;cljs;cljc;edn`.

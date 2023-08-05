@@ -136,8 +136,8 @@
 
 (defn ^:private consider-local-db-cache? [db db-cache]
   (or (= :project-and-full-dependencies (:project-analysis-type db-cache))
-      (and (= :project-and-clojure-only-dependencies (:project-analysis-type db-cache))
-           (or (= :project-and-clojure-only-dependencies (:project-analysis-type db))
+      (and (= :project-and-shallow-analysis (:project-analysis-type db-cache))
+           (or (= :project-and-shallow-analysis (:project-analysis-type db))
                (= :project-only (:project-analysis-type db))))
       (= :project-only (:project-analysis-type db))))
 
@@ -242,7 +242,7 @@
             (publish-task-progress producer (:copying-kondo slow-tasks) progress-token)
             (copy-configs-from-classpath! classpath settings db*)
             (when (contains? #{:project-and-full-dependencies
-                               :project-and-clojure-only-dependencies} (:project-analysis-type @db*))
+                               :project-and-shallow-analysis} (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
             (logger/info "Caching db for next startup...")

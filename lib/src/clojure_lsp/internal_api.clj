@@ -200,8 +200,8 @@
 (defn ^:private setup-project-and-clojure-only-deps-analysis! [options {:keys [db*] :as components}]
   (let [db @db*]
     (when (or (not (:analysis db))
-              (not= :project-and-clojure-only-dependencies (:project-analysis-type db)))
-      (swap! db* assoc :project-analysis-type :project-and-clojure-only-dependencies)
+              (not= :project-and-shallow-analysis (:project-analysis-type db)))
+      (swap! db* assoc :project-analysis-type :project-and-shallow-analysis)
       (analyze! options components))))
 
 (defn ^:private setup-project-only-analysis! [options {:keys [db*] :as components}]

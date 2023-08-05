@@ -288,17 +288,30 @@
       (with-additional-config (settings/all db))))
 
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
-  (-> (config-for-paths paths file-analyzed-fn db)
-      (assoc :custom-lint-fn custom-lint-fn)
-      (assoc-in [:config :analysis] (config-for-full-analysis db))))
+  (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))]
+    (-> (config-for-paths paths file-analyzed-fn db)
+        (assoc :custom-lint-fn custom-lint-fn)
+        (assoc-in [:config :analysis] (config-for-full-analysis db))
+        (assoc-in [:config :analysis :keywords] full-analysis?)
+        (assoc-in [:config :analysis :locals] full-analysis?)
+        (assoc-in [:config :analysis :symbols] full-analysis?)
+        (assoc-in [:config :analysis :arglists] full-analysis?)
+        (assoc-in [:config :analysis :instance-invocations] full-analysis?)
+        (assoc-in [:config :analysis :protocol-impls] full-analysis?)
+        (assoc-in [:config :analysis :java-class-usages] full-analysis?)
+        (assoc-in [:config :analysis :java-member-definitions] full-analysis?)
+        (assoc-in [:config :analysis :java-class-definitions] full-analysis?))))
 
 (defn ^:private config-for-external-paths [paths db file-analyzed-fn]
-  (let [full-analysis? (= :project-and-full-dependencies (:project-analysis-type db))]
+  (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))]
     (-> (config-for-paths paths file-analyzed-fn db)
         (assoc :skip-lint true)
         (assoc-in [:config :analysis] (config-for-shallow-analysis db))
-        (shared/assoc-in-some [:config :analysis :java-member-definitions] full-analysis?)
-        (shared/assoc-in-some [:config :analysis :java-class-definitions] full-analysis?))))
+        (assoc-in [:config :analysis :keywords] full-analysis?)
+        (assoc-in [:config :analysis :arglists] full-analysis?)
+        (assoc-in [:config :analysis :protocol-impls] full-analysis?)
+        (assoc-in [:config :analysis :java-member-definitions] full-analysis?)
+        (assoc-in [:config :analysis :java-class-definitions] full-analysis?))))
 
 (defn ^:private config-for-copy-configs [paths db]
   {:cache true

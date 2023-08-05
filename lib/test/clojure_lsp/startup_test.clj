@@ -10,13 +10,13 @@
            {:project-analysis-type session-analysis-type}
            {:project-analysis-type cache-analysis-type}))
     :project-and-full-dependencies :project-and-full-dependencies true
-    :project-and-full-dependencies :project-and-clojure-only-dependencies false
+    :project-and-full-dependencies :project-and-shallow-analysis false
     :project-and-full-dependencies :project-only false
 
-    :project-and-clojure-only-dependencies :project-and-full-dependencies true
-    :project-and-clojure-only-dependencies :project-and-clojure-only-dependencies true
-    :project-and-clojure-only-dependencies :project-only false
+    :project-and-shallow-analysis :project-and-full-dependencies true
+    :project-and-shallow-analysis :project-and-shallow-analysis true
+    :project-and-shallow-analysis :project-only false
 
     :project-only :project-and-full-dependencies true
-    :project-only :project-and-clojure-only-dependencies true
+    :project-only :project-and-shallow-analysis true
     :project-only :project-only true))

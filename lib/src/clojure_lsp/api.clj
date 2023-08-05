@@ -256,7 +256,7 @@
   `:project-root` a java.io.File representing the project root.
 
   `:analysis` a map with options on how clojure-lsp should analyze the project, available values are:
-    `:type` keyword values: `project-only`, `project-and-clojure-only-dependencies`, `project-and-full-dependencies`. Default to `project-and-full-dependencies`.
+    `:type` keyword values: `project-only`, `project-and-shallow-analysis`, `project-and-full-dependencies`. Default to `project-and-full-dependencies`.
 
   `:from` the full qualified symbol to find references. e.g. 'my-project.foo/my-var
 
@@ -299,7 +299,7 @@
   `:project-root` a java.io.File representing the project root.
 
   `:analysis` a map with options on how clojure-lsp should analyze the project, available values are:
-    `:type` keyword values: `project-only`, `project-and-clojure-only-dependencies`, `project-and-full-dependencies`. Default to `project-only`.
+    `:type` keyword values: `project-only`, `project-and-shallow-analysis`, `project-and-full-dependencies`. Default to `project-only`.
 
   `:output` a map with options on how the result should be printed, available values are:
     `:format` a keyword specifying in which format the data should be returned, defaults to `:edn`.

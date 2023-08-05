@@ -16,6 +16,9 @@
 
 - Editor
   - Avoid returning all known keywords on empty keywords completion for performance reasons.
+  
+- API/CLI
+  - Improve mem/cpu usage using less analysis for tasks.
 
 ## 2023.07.01-22.35.41
 

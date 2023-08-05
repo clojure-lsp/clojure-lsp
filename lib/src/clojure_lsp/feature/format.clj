@@ -99,7 +99,8 @@
   "Merge two or more cljfmt configuration maps together."
   ([a b]
    (-> (merge a b)
-       (assoc :indents (merge (:indents a {}) (:indents b)))))
+       (assoc :indents (merge (:indents a {}) (:indents b)))
+       (assoc :extra-indents (merge (:extra-indents a {}) (:extra-indents b)))))
   ([a b & more]
    (reduce merge-configs (merge-configs a b) more)))
 

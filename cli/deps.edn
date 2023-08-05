@@ -39,4 +39,4 @@
                                "-Dborkdude.dynaload.aot=true"
                                "-Dclojure.compiler.direct-linking=true"
                                "-Dclojure.spec.skip-macros=true"]
-                    :extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}}}
+                    :extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}}}}}

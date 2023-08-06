@@ -620,6 +620,16 @@
       "hash": "sha256-oEMhNC9OZKhx0XQR36RgQdE5MeNThH/tBVFAbH18FEI="
     },
     {
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.8.1/lsp4clj-1.8.1.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-N1xaRDBEK2bxF7uY1Hg8zZOEZiKOUrvazYouXivqhe0="
+    },
+    {
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.8.1/lsp4clj-1.8.1.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-DvD16lO00owD1Z0VUyB/5PVnevF7Vb8n18QTUBZvnOI="
+    },
+    {
       "mvn-path": "com/github/ericdallo/deps-bin/0.2.0/deps-bin-0.2.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-Jhx5WCQ4KVyJqMDOYJj7us65JFSymhUUlZWD6A+3xZY="
@@ -915,14 +925,14 @@
       "hash": "sha256-Xe66kz8gwkNNCBozUpigMJuTl2+p1ZQc+QwEgldebZA="
     },
     {
-      "mvn-path": "dev/weavejester/cljfmt/0.11.1/cljfmt-0.11.1.jar",
+      "mvn-path": "dev/weavejester/cljfmt/0.11.2/cljfmt-0.11.2.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-M8Y5Y740SAcjiDEV2Wz1z88eg/eSGuYFBTMkbReMJnc="
+      "hash": "sha256-M+i453CwbbNF1TB9PN1hfTIMtRLz68IYyEbMZIe6PjM="
     },
     {
-      "mvn-path": "dev/weavejester/cljfmt/0.11.1/cljfmt-0.11.1.pom",
+      "mvn-path": "dev/weavejester/cljfmt/0.11.2/cljfmt-0.11.2.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-tRdj7sFRxZLdKcKu1v+1MJI3oK29r/bl2a8lyjhKf0g="
+      "hash": "sha256-1LKnT5ZvmViuxF9wUI3sqY2HP/t9cNLxQp9KMp0kutw="
     },
     {
       "mvn-path": "expound/expound/0.9.0/expound-0.9.0.jar",
@@ -953,6 +963,16 @@
       "mvn-path": "funcool/octet/1.1.2/octet-1.1.2.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-P2Di1pJQOTGtfSkAWkscgWtE/s59hS5qGPijHF5zcgo="
+    },
+    {
+      "mvn-path": "funcool/promesa/10.0.571/promesa-10.0.571.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-bM9muxji1qIZnYs0WL0vItEh0jnG4nN/h2qI73A5nkM="
+    },
+    {
+      "mvn-path": "funcool/promesa/10.0.571/promesa-10.0.571.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-PMvwkr02MypHBFNQ+aJCY1Vq77K+draIwOBaedXJX8I="
     },
     {
       "mvn-path": "funcool/promesa/10.0.594/promesa-10.0.594.jar",

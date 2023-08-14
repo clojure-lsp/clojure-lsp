@@ -18,7 +18,7 @@
     
     
       
-        <title>Clients - Clojure LSP</title>
+        <title>Clients (Editors) - Clojure LSP</title>
       
     
     
@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#clients" class="md-skip">
+        <a href="#clients-editors" class="md-skip">
           Skip to content
         </a>
       
@@ -99,7 +99,7 @@
         <div class="md-header-nav__topic">
           <span class="md-ellipsis">
             
-              Clients
+              Clients (Editors)
             
           </span>
         </div>
@@ -357,12 +357,12 @@
     
     
       <label class="md-nav__link md-nav__link--active" for="__toc">
-        Clients
+        Clients (Editors)
         <span class="md-nav__icon md-icon"></span>
       </label>
     
     <a href="./" class="md-nav__link md-nav__link--active">
-      Clients
+      Clients (Editors)
     </a>
     
       
@@ -413,15 +413,35 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sublime-text" class="md-nav__link">
-    Sublime Text
+  <a href="#intellij" class="md-nav__link">
+    Intellij
   </a>
+  
+    <nav class="md-nav" aria-label="Intellij">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clojure-lsp-intellij-recommended" class="md-nav__link">
+    clojure-lsp-intellij (recommended)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generic-lsp4intellij" class="md-nav__link">
+    Generic lsp4intellij
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#intellij" class="md-nav__link">
-    Intellij
+  <a href="#sublime-text" class="md-nav__link">
+    Sublime Text
   </a>
   
 </li>
@@ -722,15 +742,35 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sublime-text" class="md-nav__link">
-    Sublime Text
+  <a href="#intellij" class="md-nav__link">
+    Intellij
   </a>
+  
+    <nav class="md-nav" aria-label="Intellij">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clojure-lsp-intellij-recommended" class="md-nav__link">
+    clojure-lsp-intellij (recommended)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generic-lsp4intellij" class="md-nav__link">
+    Generic lsp4intellij
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#intellij" class="md-nav__link">
-    Intellij
+  <a href="#sublime-text" class="md-nav__link">
+    Sublime Text
   </a>
   
 </li>
@@ -766,7 +806,7 @@
                   </a>
                 
                 
-                <h1 id="clients">Clients<a class="headerlink" href="#clients" title="Permanent link">#</a></h1>
+                <h1 id="clients-editors">Clients (Editors)<a class="headerlink" href="#clients-editors" title="Permanent link">#</a></h1>
 <p>Clients are either editors with built in LSP support like Oni or nvim, or an appropriate plugin.
 <strong>Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.</strong></p>
 <p>In general, make sure to configure the client to use stdio and a server launch command like <code>['/usr/local/bin/clojure-lsp']</code>.
@@ -855,10 +895,10 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 <p>An very detailed document about how configure Nvim as Clojure IDE using fennel, clojure-lsp and conjure.<br />
 <a href="https://github.com/rafaeldelboni/nvim-fennel-lsp-conjure-as-clojure-ide">nvim-fennel-lsp-conjure-as-clojure-ide</a></p>
 <hr />
-<h2 id="sublime-text">Sublime Text<a class="headerlink" href="#sublime-text" title="Permanent link">#</a></h2>
-<p>Clojure LSP can be installed by first installing the <a href="https://packagecontrol.io/packages/LSP">LSP plugin</a> which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions <a href="https://lsp.sublimetext.io/language_servers/#clojure">here</a> to download Clojure LSP and how to configure it in Sublime Text.</p>
-<hr />
 <h2 id="intellij">Intellij<a class="headerlink" href="#intellij" title="Permanent link">#</a></h2>
+<h3 id="clojure-lsp-intellij-recommended">clojure-lsp-intellij (recommended)<a class="headerlink" href="#clojure-lsp-intellij-recommended" title="Permanent link">#</a></h3>
+<p>The <a href="https://github.com/clojure-lsp/clojure-lsp-intellij">clojure-lsp-intellij</a> is a free open source Intellij plugin that has clojure-lsp built-in and has exclusive support from clojure-lsp maintainers with features that other generic LSP plugins does not support.</p>
+<h3 id="generic-lsp4intellij">Generic lsp4intellij<a class="headerlink" href="#generic-lsp4intellij" title="Permanent link">#</a></h3>
 <p>Install the <a href="https://github.com/ballerina-platform/lsp4intellij">LSP Support plugin</a> and configure it to launch clojure-lsp for Clojure/Script files:</p>
 <ol>
 <li>Go to Preferences / Languages &amp; Frameworks / Language Server Protocol / Server Definitions. Select <em>Raw command</em>.</li>
@@ -866,6 +906,9 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 <li>In the <em>Command</em> field enter the path to the executable, for instance <code>/usr/local/bin/clojure-lsp</code>.</li>
 </ol>
 <p>BEWARE: The LSP Support plugin has short timeouts and will kill clojure-lsp silently if it exceeds the limit. It is highly recommended that you increase the <em>Init</em> timeout from 10000 (10s) to e.g. 300000 (5 min). The first scan can easily take over a minute on a bigger project. See Preferences / Languages &amp; Frameworks / Language Server Protocol / Timeouts. If the plugin's icon in the status bar (a circle) turns red, it means starting clojure-lsp failed. Click on it and select <em>Show timeouts</em> - any limits that were exceeded will be in red.</p>
+<hr />
+<h2 id="sublime-text">Sublime Text<a class="headerlink" href="#sublime-text" title="Permanent link">#</a></h2>
+<p>Clojure LSP can be installed by first installing the <a href="https://packagecontrol.io/packages/LSP">LSP plugin</a> which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions <a href="https://lsp.sublimetext.io/language_servers/#clojure">here</a> to download Clojure LSP and how to configure it in Sublime Text.</p>
 <hr />
 <h2 id="oni">Oni<a class="headerlink" href="#oni" title="Permanent link">#</a></h2>
 <p>Seems to work reasonably well but couldn't get rename to work reliably https://github.com/onivim/oni</p>
@@ -880,7 +923,7 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 6, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 14, 2023</span>
     
   </small>
 </div>

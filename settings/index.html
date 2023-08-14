@@ -1471,7 +1471,7 @@ linter enabled via `ale` will only conflict with the built-in clj-kondo bundled 
 <p>For more information about all clj-kondo available configurations,
 check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
 <h5 id="custom-clj-kondo-linters">Custom clj-kondo linters<a class="headerlink" href="#custom-clj-kondo-linters" title="Permanent link">#</a></h5>
-<p>Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (<code>&lt;project&gt;/.clj-kondo/config.edn</code>), below are the custom linters used:</p>
+<p>Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (<code>&lt;project&gt;/.clj-kondo/config.edn</code>). Note that configuring these custom linters via clj-kondo's <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#metadata-config">ns metadata config</a> is <em>not</em> supported. Below are the custom linters used:</p>
 <h6 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h6>
 <p>A custom linter that reports public functions/vars not used over the project.</p>
 <p>It has the possible key/values:</p>

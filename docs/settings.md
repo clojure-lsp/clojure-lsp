@@ -185,7 +185,7 @@ check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kon
 
 ##### Custom clj-kondo linters
 
-Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (`<project>/.clj-kondo/config.edn`), below are the custom linters used:
+Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (`<project>/.clj-kondo/config.edn`). Note that configuring these custom linters via clj-kondo's [ns metadata config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#metadata-config) is *not* supported. Below are the custom linters used:
 
 ###### clojure-lsp/unused-public-var
 

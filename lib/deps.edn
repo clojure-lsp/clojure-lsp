@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure {:mvn/version "1.11.1"}
         rewrite-clj/rewrite-clj {:mvn/version "1.1.47"}
         borkdude/rewrite-edn {:mvn/version "0.4.6" :exclusions [rewrite-clj/rewrite-clj]}
-        org.clojure/core.async {:mvn/version "1.6.673"}
+        org.clojure/core.async {:mvn/version "1.6.681"}
         dev.weavejester/cljfmt {:mvn/version "0.11.2"
                                 :exclusions [rewrite-cljs/rewrite-cljs
                                              com.googlecode.java-diff-utils/diffutils]}

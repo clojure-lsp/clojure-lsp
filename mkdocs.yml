@@ -9,7 +9,7 @@ nav:
   - Home:
     - Overview: README.md
     - Settings: settings.md
-    - Clients: clients.md
+    - Clients (Editors): clients.md
     - Building: building.md
     - Development: development.md
     - Troubleshooting: troubleshooting.md

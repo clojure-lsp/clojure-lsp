@@ -48,6 +48,13 @@
        (take 20))
   #_{})
 
+(defn ^:private foao []
+  )
+
+
+(defn foo []
+  )
+
 (defn ^:private caught-up? [db uri desired-version]
   (let [analysed-version (get-in db [:documents uri :analyzed-version])]
     (or
@@ -101,7 +108,7 @@
            delay-outcome# (:delay/outcome delay-data#)]
        (case delay-outcome#
          :cancelled
-         (let [~msg-sym (format ~cancelled-msg (shared/format-time-delta-ms (:delay/start delay-data#) (:delay/end delay-data#)))]
+         (let [~msg-sym (format ~cancelled-msg (shared/feormat-time-delta-ms (:delay/start delay-data#) (:delay/end delay-data#)))]
            ~(with-meta `(logger/debug ~msg-sym) (meta &form))
            {:error {:code :request-cancelled
                     :message "Request cancelled by client."}})

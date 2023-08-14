@@ -1,4 +1,4 @@
-# Clients
+# Clients (Editors)
 
 Clients are either editors with built in LSP support like Oni or nvim, or an appropriate plugin.
 **Clients are responsible for launching the server, the server is a subprocess of your editor not a daemon.**
@@ -124,13 +124,13 @@ An very detailed document about how configure Nvim as Clojure IDE using fennel, 
 
 ---
 
-## Sublime Text
-
-Clojure LSP can be installed by first installing the [LSP plugin](https://packagecontrol.io/packages/LSP) which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions [here](https://lsp.sublimetext.io/language_servers/#clojure) to download Clojure LSP and how to configure it in Sublime Text.
-
----
-
 ## Intellij
+
+### clojure-lsp-intellij (recommended)
+
+The [clojure-lsp-intellij](https://github.com/clojure-lsp/clojure-lsp-intellij) is a free open source Intellij plugin that has clojure-lsp built-in and has exclusive support from clojure-lsp maintainers with features that other generic LSP plugins does not support.
+
+### Generic lsp4intellij
 
 Install the [LSP Support plugin](https://github.com/ballerina-platform/lsp4intellij) and configure it to launch clojure-lsp for Clojure/Script files:
 
@@ -139,6 +139,12 @@ Install the [LSP Support plugin](https://github.com/ballerina-platform/lsp4intel
 3. In the *Command* field enter the path to the executable, for instance `/usr/local/bin/clojure-lsp`.
 
 BEWARE: The LSP Support plugin has short timeouts and will kill clojure-lsp silently if it exceeds the limit. It is highly recommended that you increase the *Init* timeout from 10000 (10s) to e.g. 300000 (5 min). The first scan can easily take over a minute on a bigger project. See Preferences / Languages & Frameworks / Language Server Protocol / Timeouts. If the plugin's icon in the status bar (a circle) turns red, it means starting clojure-lsp failed. Click on it and select *Show timeouts* - any limits that were exceeded will be in red.
+
+---
+
+## Sublime Text
+
+Clojure LSP can be installed by first installing the [LSP plugin](https://packagecontrol.io/packages/LSP) which brings Language Server Protocol support to Sublime Text editor and then following the set-up instructions [here](https://lsp.sublimetext.io/language_servers/#clojure) to download Clojure LSP and how to configure it in Sublime Text.
 
 ---
 

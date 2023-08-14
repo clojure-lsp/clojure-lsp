@@ -185,8 +185,8 @@
   (let [filename->uri (memoize #(shared/filename->uri % db))
         trade-filename-for-uri (fn [obj]
                                  (-> obj
-                                     (assoc :uri (or (some-> (:uri obj) shared/conform-uri-scheme)
-                                                     (filename->uri (:filename obj))))
+                                     (assoc :uri (or (some-> (:filename obj) filename->uri)
+                                                     (some-> (:uri obj) shared/conform-uri-scheme)))
                                      (dissoc :filename)))
         with-uris (fn [uris default coll]
                     (merge (zipmap uris (repeat default)) coll))

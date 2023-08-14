@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix `:dependency-scheme` setting for .java files from jars #1653
+
 ## 2023.08.06-00.28.06
 
 - General

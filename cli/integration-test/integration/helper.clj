@@ -147,3 +147,6 @@
 
 (defn code [& strings]
   (string/join \newline strings))
+
+(def maven-repository-uri
+  (file->uri (io/file (System/getProperty "user.home") ".m2" "repository")))

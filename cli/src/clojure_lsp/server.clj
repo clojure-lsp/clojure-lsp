@@ -399,7 +399,7 @@
 
 (defmethod lsp.server/receive-notification "workspace/didChangeConfiguration" [components params]
   (->> params
-       (handler/change-server-settings components)
+       (handler/did-change-configuration components)
        (conform-or-log ::coercer/change-configration-of-error)
        eventually))
 

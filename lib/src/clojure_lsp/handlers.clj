@@ -555,8 +555,8 @@
     :will-rename-files
     (f.file-management/will-rename-files files @db*)))
 
-(defn change-server-settings
-  [settings {:keys [db*]}]
+(defn did-change-configuration
+  [{:keys [db*]} settings]
   (shared/logging-task
-    :change-server-setings
+    :did-change-configuration
     (settings/set-all db* settings)))

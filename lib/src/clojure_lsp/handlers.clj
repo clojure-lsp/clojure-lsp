@@ -554,3 +554,9 @@
     components (map :old-uri files)
     :will-rename-files
     (f.file-management/will-rename-files files @db*)))
+
+(defn change-server-settings
+  [settings {:keys [db*]}]
+  (shared/logging-task
+    :change-server-setings
+    (settings/set-all db* settings)))

@@ -1,6 +1,6 @@
 # Settings
 
-`clojure-lsp` settings are picked up only on server start and can be configured in 4 ways:
+`clojure-lsp` settings are picked up only on server start (but they can be [changed](#changing-settings) on runtime) and can be configured in 4 ways:
 
 - [Project configuration](#project)
 - [Global configuration](#global)
@@ -398,3 +398,8 @@ Or to use manual generated stubs:
 ```
 
 clojure-lsp will generate no stubs with that, but analyze that folder and consider it as manual generated stubs.
+
+
+### Changing settings
+
+`clojure-lsp` supports `workspace/didChangeConfiguration` commands to change the server settings while it is running, everything inside the `:settings` map can be changed, but not outside it (the project root for example).

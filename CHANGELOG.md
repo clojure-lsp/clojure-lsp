@@ -16,6 +16,7 @@
   - Fix user formatting setting being override by :style/indent metadata in macros.
   - Bump cljfmt to `0.11.2`. #1634
   - Bump lsp4clj to `1.8.1`.
+  - Added functionality to `workspace/didChangeConfiguration` so it changes configuration on runtime.
 
 - Editor
   - Avoid returning all known keywords on empty keywords completion for performance reasons.

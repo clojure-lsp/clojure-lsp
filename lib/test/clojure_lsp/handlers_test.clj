@@ -405,7 +405,7 @@
     (let [create-ns-changes (f.file-management/create-ns-changes (h/file-uri (str project-uri "/src/models/my_model.clj"))
                                                                  dummy-empty-file
                                                                  (h/db))]
-      ;;Verify if create-ns-changes returns nil because settings are set to not add ns to new files
+      ;; Check if create-ns-changes returns nil because settings are set to not add ns to new files
       (is (nil? create-ns-changes)))
 
     ;; Set settings that do add ns to new files
@@ -416,12 +416,13 @@
     (let [create-ns-changes (f.file-management/create-ns-changes (h/file-uri (str project-uri "/src/models/my_model.clj"))
                                                                  dummy-empty-file
                                                                  (h/db))]
-      ;;Verify if create-ns-changes returns nil because settings are set to not add ns to new files
+      ;; Check if create-ns-changes is not null
       (is (not (nil? create-ns-changes)))
 
+      ;; Check if the ns was added on the file
       (is (= "(ns models.my-model)"
              (-> create-ns-changes
                  :changes
-                 (get (str project-uri "/src/models/my_model.clj"))
+                 (get (h/file-uri (str project-uri "/src/models/my_model.clj")))
                  first
                  :new-text))))))

@@ -40,6 +40,8 @@
   (testing "Windows URIs"
     (is (= (when h/windows? "C:\\c.clj")
            (when h/windows? (shared/uri->filename "file:/c:/c.clj"))))
+    (is (= (when h/windows? "C:\\Users\\FirstName LastName\\c.clj")
+           (when h/windows? (shared/uri->filename "file:/c:/Users/FirstName%20LastName/c.clj"))))
     (is (= (when h/windows? "C:\\c.clj")
            (when h/windows? (shared/uri->filename "file:///c:/c.clj"))))))
 

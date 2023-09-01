@@ -625,6 +625,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#changing-settings" class="md-nav__link">
+    Changing settings
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1150,6 +1157,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#changing-settings" class="md-nav__link">
+    Changing settings
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1173,7 +1187,7 @@
                 
                 
                 <h1 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h1>
-<p><code>clojure-lsp</code> settings are picked up only on server start and can be configured in 4 ways:</p>
+<p><code>clojure-lsp</code> settings are picked up only on server start (but they can be <a href="#changing-settings">changed</a> on runtime) and can be configured in 4 ways:</p>
 <ul>
 <li><a href="#project">Project configuration</a></li>
 <li><a href="#global">Global configuration</a></li>
@@ -1625,6 +1639,8 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:stubs</span> <span class="p">{</span><span class="ss">:extra-dirs</span> <span class="p">[</span><span class="s">&quot;.my-stubs&quot;</span><span class="p">]}}</span>
 </code></pre></div>
 <p>clojure-lsp will generate no stubs with that, but analyze that folder and consider it as manual generated stubs.</p>
+<h3 id="changing-settings">Changing settings<a class="headerlink" href="#changing-settings" title="Permanent link">#</a></h3>
+<p><code>clojure-lsp</code> supports <code>workspace/didChangeConfiguration</code> commands to change the server settings while it is running, everything inside the <code>:settings</code> map can be changed, but not outside it (the project root for example).</p>
                 
                   
                     
@@ -1633,7 +1649,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 29, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 1, 2023</span>
     
   </small>
 </div>

@@ -397,8 +397,11 @@
        (conform-or-log ::coercer/any-or-error)
        eventually))
 
-(defmethod lsp.server/receive-notification "workspace/didChangeConfiguration" [_ _components params]
-  (logger/warn params))
+(defmethod lsp.server/receive-notification "workspace/didChangeConfiguration" [components params]
+  (->> params
+       (handler/did-change-configuration components)
+       (conform-or-log ::coercer/change-configration-of-error)
+       eventually))
 
 (defmethod lsp.server/receive-notification "workspace/didChangeWatchedFiles" [_ components params]
   (->> (medley/update-existing params

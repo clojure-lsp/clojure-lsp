@@ -285,3 +285,8 @@
 
 (defn edits-as-strings [edits]
   (mapv (comp z/string :loc) edits))
+
+(defn load-project
+  [project-root-uri source-paths]
+  (swap! (db*) assoc :project-root-uri project-root-uri)
+  (swap! (db*) assoc-in [:settings :source-paths] source-paths))

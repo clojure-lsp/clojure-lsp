@@ -11,7 +11,7 @@
 
 (def dummy-empty-file "")
 (def project-uri (h/file-uri "file:///user/project"))
-(def project-source-paths #{(h/file-uri "/user/project/src")})
+(def project-source-paths #{(h/file-path "/user/project/src")})
 
 (h/reset-components-before-test)
 

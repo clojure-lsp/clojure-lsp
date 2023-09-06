@@ -292,6 +292,9 @@
       [{:range (meta (z/node (or loc zloc)))
         :loc   loc}])))
 
+(defn multi-arity-fn-definition? [zloc]
+  (= :vector (-> zloc z/leftmost z/tag)))
+
 (defn expand-let
   "Expand the scope of the next let up the tree."
   ([zloc uri db]
@@ -308,6 +311,7 @@
            [{:range (meta (z/node parent-let-loc))
              :loc (edit/join-let let-loc)}]
            (when (and (or expand-to-top? (not (edit/top? parent-loc)))
+                      (or expand-to-top? (not (multi-arity-fn-definition? let-loc)))
                       (in-scope-of-definition? parent-loc (widest-scoped-local let-loc uri db)))
              (let [{:keys [col] :as parent-meta} (meta (z/node parent-loc))
                    result-loc (-> let-loc

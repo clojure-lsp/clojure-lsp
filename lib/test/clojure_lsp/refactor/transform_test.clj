@@ -166,6 +166,17 @@
   (is (= (h/code "(do (let [a x]"
                  "      a))")
          (move-to-let "(do |x)" 'a)))
+  (is (= (h/code "(defn foo ([] (let [a 0]"
+                 "               (+ a 3))) ([x] (reduce + x)))")
+         (move-to-let "(defn foo ([] (+ |0 3)) ([x] (reduce + x)))" 'a)))
+  (is (= (h/code "(defn foo ([] (+ 0 3)) ([x] (let [a 3]"
+                 "                             (reduce + a))))")
+         (move-to-let "(defn foo ([] (+ 0 3)) ([x] (reduce + |3)))" 'a)))
+
+  (is (= (h/code "(defn foo (let [a 0]"
+                 "           (+ a 3)))")
+         (move-to-let "(defn foo (+ |0 3))" 'a)))
+
   (is (nil? (-> (h/code "(let [a 1]"
                         "  (+ a"
                         "     2"
@@ -221,8 +232,10 @@
     (is (nil? (introduce-let (h/code "(inc 1)" "(inc 2)" "|;; comment" "") 'b))))
   (is (nil? (transform/introduce-let nil 'b))))
 
-(defn- expand-let [code]
-  (h/first-edit-as-root-string (transform/expand-let (h/load-code-and-zloc code) "file:///a.clj" (h/db))))
+(defn- expand-let
+  ([code] (expand-let code true))
+  ([code expand-to-top?]
+   (h/first-edit-as-root-string (transform/expand-let (h/load-code-and-zloc code) expand-to-top? "file:///a.clj" (h/db)))))
 
 (deftest expand-let-test
   (testing "simple"
@@ -257,7 +270,14 @@
   (testing "within coll"
     (is (= (h/code "(do (let [f 1]"
                    "     [f]))")
-           (expand-let "(do [(let [f 1] |f)])")))))
+           (expand-let "(do [(let [f 1] |f)])"))))
+  (testing "multi-arity fn"
+    (testing "expanding to top"
+      (is (= (h/code "(defn foo (let [a 1]"
+                     "           ([bar] a 2)))")
+             (expand-let "(defn foo ([bar] (|let [a 1] a 2)))"))))
+    (testing "not expanding to top"
+      (is (nil? (expand-let "(defn foo ([bar] (|let [a 1] a 2)))" false))))))
 
 (deftest unwind-thread-test
   (testing "from thread position"

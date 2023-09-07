@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-kondo to `2023.09.07`.
+
 ## 2023.08.06-00.28.06
 
 - General

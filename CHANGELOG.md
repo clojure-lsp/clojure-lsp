@@ -4,8 +4,6 @@
 - General
   - Bump clj-kondo to `2023.09.07`. 
   - Fix move-to-let/expand-let bug for multi-arity functions #1283
-
-- General
   - Fix `:dependency-scheme` setting for .java files from jars #1653
 
 ## 2023.08.06-00.28.06

@@ -206,7 +206,8 @@
   [^String uri]
   (if (string/starts-with? uri "jar:")
     (let [conn (jar-uri-string->jar-url-connection uri)
-          jar-file (uri-obj->filepath ^URI (.toURI ^URL (.getJarFileURL conn)))]
+          url ^URL (.getJarFileURL conn)
+          jar-file (uri-obj->filepath ^URI (new URI (.getProtocol url) (.getHost url) (.getPath url) (.getQuery url) nil))]
       (str jar-file ":" (.getEntryName conn)))
 
     (if-let [[_ uri-jar-path nested-file] (and (string/starts-with? uri "file:")

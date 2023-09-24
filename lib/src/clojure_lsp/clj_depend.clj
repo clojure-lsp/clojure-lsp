@@ -3,18 +3,10 @@
    [clj-depend.api :as clj-depend]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.edn :as edn]
    [clojure.java.io :as io]
    [medley.core :as medley]))
 
 (set! *warn-on-reflection* true)
-
-(defn resolve-user-clj-depend-config [project-root db]
-  (let [clj-depend-config-file (io/file project-root ".clj-depend" "config.edn")]
-    (medley/deep-merge
-      (settings/get db [:clj-depend] {})
-      (when (shared/file-exists? clj-depend-config-file)
-        (edn/read-string {} (slurp clj-depend-config-file))))))
 
 (defn relative-project-source-paths
   [project-root db]
@@ -27,10 +19,15 @@
     config
     (assoc config :source-paths source-paths)))
 
+(defn ^:private configured?
+  [config project-root]
+  (or (seq config)
+      (clj-depend/configured? (io/file project-root))))
+
 (defn analyze-uri! [uri db]
   (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]
-    (let [config (resolve-user-clj-depend-config project-root db)]
-      (when (seq config)
+    (let [config (settings/get db [:clj-depend] {})]
+      (when (configured? config project-root)
         ;; NOTE probably can't use dep-graph to find nses of uri, because
         ;; dep-graph won't exist until after kondo analysis is done, which is
         ;; run in parallel to clj-depend.
@@ -44,8 +41,8 @@
 
 (defn analyze-paths! [paths db]
   (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]
-    (let [config (resolve-user-clj-depend-config project-root db)]
-      (when (seq config)
+    (let [config (settings/get db [:clj-depend] {})]
+      (when (configured? config project-root)
         (-> (clj-depend/analyze {:project-root (io/file project-root)
                                  :config (config-with-source-paths config (relative-project-source-paths project-root db))
                                  :files (set (map io/file paths))})

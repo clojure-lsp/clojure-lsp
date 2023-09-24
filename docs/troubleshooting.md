@@ -5,7 +5,7 @@
 clojure-lsp logs most of what is doing to a file which location could be found:
 
 - on `:log-path` if specified in your clojure-lsp config, for example: `{:log-path "/tmp/clojure-lsp.out"}`
-- Auto generated every server start on `/tmp/clojure-lsp.<TIMESTAMP>.out`
+- Auto generated every server start on `/tmp/clojure-lsp.<TIMESTAMP>.out` or `/var/folders/...` for MacOS.
 
 <details>
 <summary><b>Emacs users</b></summary>

@@ -280,15 +280,34 @@
       (f.diagnostic/find-diagnostics (h/file-uri "file:///cljc_ns.cljc") (h/db)))))
 
 (deftest lint-clj-depend-findings
-  (testing "when no clj-depend config is found"
+  (testing "when clj-depend is not configured even through the clojure-lsp config"
     (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
                                       :settings {:source-paths ["/project/src"]}})
-
-    (with-redefs [clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
+    (with-redefs [clj-depend/configured? (constantly false)
+                  clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
       (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
       (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
+
     (is (= []
            (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") (h/db)))))
+
+  (testing "when clj-depend is configured even without clojure-lsp configuration"
+    (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
+                                      :settings {:source-paths ["/project/src"]}})
+    (with-redefs [clj-depend/configured? (constantly true)
+                  clj-depend/analyze (constantly {:violations [{:namespace 'bar :message "Foo issue"}]})]
+      (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
+      (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
+
+    (is (= [{:range
+             {:start {:line 0 :character 4} :end {:line 0 :character 7}}
+             :tags []
+             :message "Foo issue"
+             :code "clj-depend"
+             :severity 3
+             :source "clj-depend"}]
+           (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") (h/db)))))
+
   (testing "when clj-depend config is found but linter level is :off"
     (swap! (h/db*) shared/deep-merge {:settings {:source-paths ["/project/src"]
                                                  :clj-depend {:layers {:foo {:defined-by ".*foo.*"
@@ -296,11 +315,14 @@
                                                                        :bar {:defined-by ".*bar.*"
                                                                              :accessed-by-layers #{:baz}}}}
                                                  :linters {:clj-depend {:level :off}}}})
-    (with-redefs [clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
+    (with-redefs [clj-depend/configured? (constantly false)
+                  clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
       (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
       (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
+
     (is (= []
            (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") (h/db)))))
+
   (testing "when clj-depend config is found and a violation is present"
     (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
                                       :settings {:linters {:clj-depend {:level :info}}
@@ -309,10 +331,11 @@
                                                                              :accessed-by-layers #{}}
                                                                        :bar {:defined-by ".*bar.*"
                                                                              :accessed-by-layers #{:baz}}}}}})
-
-    (with-redefs [clj-depend/analyze (constantly {:violations [{:namespace 'bar :message "Foo issue"}]})]
+    (with-redefs [clj-depend/configured? (constantly false)
+                  clj-depend/analyze (constantly {:violations [{:namespace 'bar :message "Foo issue"}]})]
       (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
       (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
+
     (is (= [{:range
              {:start {:line 0 :character 4} :end {:line 0 :character 7}}
              :tags []

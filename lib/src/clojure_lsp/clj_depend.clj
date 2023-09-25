@@ -19,10 +19,16 @@
     config
     (assoc config :source-paths source-paths)))
 
+(defn ^:private configured?*
+  [project-root]
+  (try
+    (clj-depend/configured? (io/file project-root))
+    (catch AssertionError _ false)))
+
 (defn ^:private configured?
   [config project-root]
   (or (seq config)
-      (clj-depend/configured? (io/file project-root))))
+      (configured?* (io/file project-root))))
 
 (defn analyze-uri! [uri db]
   (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]

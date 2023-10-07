@@ -6,7 +6,7 @@ Every release, the native binaries (Windows, Linux and MacOS) are compiled with 
 
 To build a native image with GraalVM:
 
-- Install the GraalVM 22.3.0 for Java 11 and set the `GRAALVM_HOME` to the installation dir. 
+- Install the GraalVM 21 and set the `GRAALVM_HOME` to the installation dir. 
 - Install `native-image` with `$GRAALVM_HOME/bin/gu install native-image`. 
 - Run from `clojure-lsp` project root `bb native-cli`.
 

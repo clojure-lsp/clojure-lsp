@@ -131,19 +131,26 @@
                         "--verbose"
                         "--no-fallback"
                         "--native-image-info"
+                        "-march=compatibility"
+                        "-O1"
+                        ;; "--pgo=graalvm/default.iprof"
                         (or (System/getenv "CLOJURE_LSP_XMX")
                             "-J-Xmx8g")
                         (when (= "true" (System/getenv "CLOJURE_LSP_STATIC"))
                           ["--static"
                            (if (= "true" (System/getenv "CLOJURE_LSP_MUSL"))
                              ["--libc=musl" "-H:CCompilerOption=-Wl,-z,stack-size=2097152"]
-                             ["-H:+StaticExecutableWithDynamicLibC"])])]
+                             ["-H:+StaticExecutableWithDynamicLibC"])])
+                        (:extra-args opts)]
                        (flatten)
                        (remove nil?))
           {:keys [exit]} (b/process {:command-args command})]
       (when-not (= 0 exit)
         (System/exit exit)))
     (println "Set GRAALVM_HOME env")))
+
+(defn native-cli-pgo-instrument [opts]
+  (native-cli (merge opts {:extra-args ["--pgo-instrument"]})))
 
 (defn deploy-clojars [opts]
   (server-jar opts)

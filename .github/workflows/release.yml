@@ -106,15 +106,13 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - name: Install GraalVM
-        uses: DeLaGuardo/setup-graalvm@master
+      - uses: graalvm/setup-graalvm@v1
         with:
-          graalvm: 22.3.0
-          java: java11
-
-      - name: Install native-image component
-        run: |
-          gu install native-image
+          java-version: '21'
+          distribution: 'graalvm'
+          components: 'native-image'
+          native-image-musl: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Linux native image
         env:
@@ -166,8 +164,8 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: '22.3.0'
-          java-version: '11'
+          java-version: '21'
+          distribution: 'graalvm'
           components: 'native-image'
           native-image-musl: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -216,11 +214,11 @@ jobs:
           setup: |
             mkdir -p "${PWD}/artifacts"
             mv clojure-lsp-standalone.jar "${PWD}/artifacts/"
-            wget -q https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.3.0/graalvm-ce-java11-linux-aarch64-22.3.0.tar.gz
-            tar -xzf graalvm-ce-java11-linux-aarch64-22.3.0.tar.gz
-            mv graalvm-ce-java11-22.3.0 graalvm-ce-java11
+            wget -q https://download.oracle.com/graalvm/21/archive/graalvm-jdk-21_linux-aarch64_bin.tar.gz
+            tar -xzf graalvm-jdk-21_linux-aarch64_bin.tar.gz
+            mv graalvm-jdk-21* graalvm-ce
           dockerRunArgs: |
-            --volume "${PWD}/graalvm-ce-java11:/graalvm-ce-java11"
+            --volume "${PWD}/graalvm-ce:/graalvm-ce"
             --volume "${PWD}/artifacts:/artifacts"
             --memory "8g"
           install: |
@@ -232,9 +230,9 @@ jobs:
             curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | bash
           run: |
             mv /artifacts/clojure-lsp-standalone.jar .
-            export PATH=/graalvm-ce-java11/bin:$PATH
-            export JAVA_HOME=/graalvm-ce-java11
-            export GRAALVM_HOME=/graalvm-ce-java11
+            export PATH=/graalvm-ce/bin:$PATH
+            export JAVA_HOME=/graalvm-ce
+            export GRAALVM_HOME=/graalvm-ce
             export CLOJURE_LSP_XMX="-J-Xmx8g"
             gu install native-image
             bb native-cli
@@ -252,7 +250,7 @@ jobs:
             mkdir -p "${PWD}/artifacts"
             cp clojure-lsp "${PWD}/artifacts/clojure-lsp"
           dockerRunArgs: |
-            --volume "${PWD}/graalvm-ce-java11:/graalvm-ce-java11"
+            --volume "${PWD}/graalvm-ce:/graalvm-ce"
             --volume "${PWD}/artifacts:/artifacts"
             --memory "8g"
           install: |
@@ -297,15 +295,13 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - name: Install GraalVM
-        uses: DeLaGuardo/setup-graalvm@master
+      - uses: graalvm/setup-graalvm@v1
         with:
-          graalvm: 22.3.0
-          java: java11
-
-      - name: Install native-image component
-        run: |
-          gu install native-image
+          java-version: '21'
+          distribution: 'graalvm'
+          components: 'native-image'
+          native-image-musl: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build MacOS native image
         env:

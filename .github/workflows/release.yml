@@ -214,9 +214,9 @@ jobs:
             mv clojure-lsp-standalone.jar "${PWD}/artifacts/"
             wget -q https://download.oracle.com/graalvm/21/archive/graalvm-jdk-21_linux-aarch64_bin.tar.gz
             tar -xzf graalvm-jdk-21_linux-aarch64_bin.tar.gz
-            mv graalvm-jdk-21* graalvm-ce
+            mv graalvm-jdk-21* graalvm
           dockerRunArgs: |
-            --volume "${PWD}/graalvm-ce:/graalvm-ce"
+            --volume "${PWD}/graalvm:/graalvm"
             --volume "${PWD}/artifacts:/artifacts"
             --memory "8g"
           install: |
@@ -228,9 +228,9 @@ jobs:
             curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | bash
           run: |
             mv /artifacts/clojure-lsp-standalone.jar .
-            export PATH=/graalvm-ce/bin:$PATH
-            export JAVA_HOME=/graalvm-ce
-            export GRAALVM_HOME=/graalvm-ce
+            export PATH=/graalvm/bin:$PATH
+            export JAVA_HOME=/graalvm
+            export GRAALVM_HOME=/graalvm
             export CLOJURE_LSP_XMX="-J-Xmx8g"
             gu install native-image
             bb native-cli
@@ -248,7 +248,7 @@ jobs:
             mkdir -p "${PWD}/artifacts"
             cp clojure-lsp "${PWD}/artifacts/clojure-lsp"
           dockerRunArgs: |
-            --volume "${PWD}/graalvm-ce:/graalvm-ce"
+            --volume "${PWD}/graalvm:/graalvm"
             --volume "${PWD}/artifacts:/artifacts"
             --memory "8g"
           install: |

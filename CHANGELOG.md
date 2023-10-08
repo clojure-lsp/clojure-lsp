@@ -9,6 +9,15 @@
   - Bump graalvm to 21.
   - Improve overall performance using GraalVM 21 PGO (Profile-Guided Optimizations).
 
+- Editor
+  - New paredit refactorings:
+    - `forward-slurp`
+    - `forward-barf`
+    - `backward-slurp`
+    - `backward-barf`
+    - `raise`
+    - `kill`
+
 ## 2023.08.06-00.28.06
 
 - General

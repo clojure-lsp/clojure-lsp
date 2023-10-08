@@ -446,6 +446,8 @@ Arguments:
 | fb       | forward-barf                 | Paredit: forward barf                     | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
 | bs       | backward-slurp               | Paredit: backward slurp                   | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
 | bb       | backward-barf                | Paredit: backward barf                    | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
+| rs       | raise-sexp                   | Paredit: Raise sexp                       | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
+| ks       | kill-sexp                    | Paredit: Kill sexp                        | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
 
 
 ## Dev

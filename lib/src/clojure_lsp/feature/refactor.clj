@@ -171,10 +171,10 @@
 (defmethod refactor :backward-barf  [{:keys [loc]}]
   (f.paredit/backward-barf loc))
 
-(defmethod refactor :raise  [{:keys [loc]}]
+(defmethod refactor :raise-sexp  [{:keys [loc]}]
   (f.paredit/raise loc))
 
-(defmethod refactor :kill  [{:keys [loc]}]
+(defmethod refactor :kill-sexp  [{:keys [loc]}]
   (f.paredit/kill loc))
 
 (def available-refactors

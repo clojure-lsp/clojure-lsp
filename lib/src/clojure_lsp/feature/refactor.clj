@@ -8,6 +8,7 @@
    [clojure-lsp.feature.drag-param :as f.drag-param]
    [clojure-lsp.feature.inline-symbol :as f.inline-symbol]
    [clojure-lsp.feature.move-form :as f.move-form]
+   [clojure-lsp.feature.paredit :as f.paredit]
    [clojure-lsp.feature.replace-refer-all :as f.replace-refer-all]
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
    [clojure-lsp.feature.restructure-keys :as f.restructure-keys]
@@ -157,6 +158,24 @@
 
 (defmethod refactor :replace-refer-all-with-alias  [{:keys [loc uri db]}]
   (f.replace-refer-all/replace-with-alias loc uri db))
+
+(defmethod refactor :forward-slurp  [{:keys [loc]}]
+  (f.paredit/forward-slurp loc))
+
+(defmethod refactor :forward-barf  [{:keys [loc]}]
+  (f.paredit/forward-barf loc))
+
+(defmethod refactor :backward-slurp  [{:keys [loc]}]
+  (f.paredit/backward-slurp loc))
+
+(defmethod refactor :backward-barf  [{:keys [loc]}]
+  (f.paredit/backward-barf loc))
+
+(defmethod refactor :raise-sexp  [{:keys [loc]}]
+  (f.paredit/raise loc))
+
+(defmethod refactor :kill-sexp  [{:keys [loc]}]
+  (f.paredit/kill loc))
 
 (def available-refactors
   (->> refactor

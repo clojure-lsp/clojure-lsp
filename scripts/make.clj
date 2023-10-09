@@ -113,6 +113,12 @@
   (build "cli" "native-cli")
   (mv-here (fs/path "cli" (lsp-bin-filename :native))))
 
+(defn native-cli-pgo-instrument
+  "For pgo profiles instumentation for improve native-image performance."
+  []
+  (build "cli" "native-cli-pgo-instrument")
+  (mv-here (fs/path "cli" (lsp-bin-filename :native))))
+
 (defn test-lib "Run all unit tests in lib/." [] (unit-test "lib"))
 
 (defn test-cli "Run all unit tests in cli/." [] (unit-test "cli"))

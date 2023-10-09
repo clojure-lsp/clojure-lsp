@@ -369,7 +369,7 @@ When a find-definition of a java class is triggered, clojure-lsp checks the foll
   - If `:java :decompile-jar-as-project?` is enabled, clojure-lsp decompiles the whole jar at the global cache folder (`~/.cache/clojure-lsp/java`)
   - If `:java :decompile-jar-as-project?` is disabled, clojure-lsp decompiles the class file at the local cache folder (`.lsp/.cache/java`)
 - If the java class is from JDK (e.g. `java.util.UUID`), clojure-lsp tries a few things to be able to sucessfully find the definition, following this waterfall decision:
-    - Most JRE installations contains the java source code in a `src.zip`, clojure-lsp tries to find it via `:java :home-path` setting if provided, `JAVA_HOME` env var or `java` command on `PATH`, if found clojure-lsp extracts to its global cache config (XDG_CONFIG or `~/.config/clojure-lsp`) to be used in other projects.
+    - Most JRE installations contains the java source code in a `src.zip`, clojure-lsp tries to find it via `:java :home-path` setting if provided, `JAVA_HOME` env var or `java` command on `PATH`, if found clojure-lsp extracts to its global cache dir ($XDG_CACHE or `~/.cache/clojure-lsp`) to be used in other projects.
     - If `src.zip` is not found or user specified a custom `:java :jdk-source-uri`, clojure-lsp tries to download the source from that uri, only if `:java :download-jdk-source?` is enabled, disabled by default, extracting to the global cache dir later.
 
 ### Stub generation

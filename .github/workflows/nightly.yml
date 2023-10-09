@@ -114,15 +114,12 @@ jobs:
           cli: '1.10.3.1013'
           bb: '0.9.161'
 
-      - name: Install GraalVM
-        uses: DeLaGuardo/setup-graalvm@master
+      - uses: graalvm/setup-graalvm@v1
         with:
-          graalvm: 22.3.0
-          java: java11
-
-      - name: Install native-image component
-        run: |
-          gu install native-image
+          java-version: '21'
+          distribution: 'graalvm'
+          native-image-musl: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Linux native image
         env:
@@ -176,9 +173,8 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: '22.3.0'
-          java-version: '11'
-          components: 'native-image'
+          java-version: '21'
+          distribution: 'graalvm'
           native-image-musl: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -234,15 +230,12 @@ jobs:
           cli: '1.10.3.1013'
           bb: '0.9.161'
 
-      - name: Install GraalVM
-        uses: DeLaGuardo/setup-graalvm@master
+      - uses: graalvm/setup-graalvm@v1
         with:
-          graalvm: 22.3.0
-          java: java11
-
-      - name: Install native-image component
-        run: |
-          gu install native-image
+          java-version: '21'
+          distribution: 'graalvm'
+          native-image-musl: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build MacOS native image
         env:

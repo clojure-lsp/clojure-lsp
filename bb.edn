@@ -27,6 +27,7 @@
          debug-cli make/debug-cli
          prod-cli make/prod-cli
          native-cli make/native-cli
+         native-cli-pgo-instrument make/native-cli-pgo-instrument
 
          test-reflection make/test-reflection
          test-lib make/test-lib

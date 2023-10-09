@@ -1614,7 +1614,7 @@ Note: package imports with only one class will keep indentation: Ex: <code>[java
 <li>If <code>:java :decompile-jar-as-project?</code> is enabled, clojure-lsp decompiles the whole jar at the global cache folder (<code>~/.cache/clojure-lsp/java</code>)</li>
 <li>If <code>:java :decompile-jar-as-project?</code> is disabled, clojure-lsp decompiles the class file at the local cache folder (<code>.lsp/.cache/java</code>)</li>
 <li>If the java class is from JDK (e.g. <code>java.util.UUID</code>), clojure-lsp tries a few things to be able to sucessfully find the definition, following this waterfall decision:<ul>
-<li>Most JRE installations contains the java source code in a <code>src.zip</code>, clojure-lsp tries to find it via <code>:java :home-path</code> setting if provided, <code>JAVA_HOME</code> env var or <code>java</code> command on <code>PATH</code>, if found clojure-lsp extracts to its global cache config (XDG_CONFIG or <code>~/.config/clojure-lsp</code>) to be used in other projects.</li>
+<li>Most JRE installations contains the java source code in a <code>src.zip</code>, clojure-lsp tries to find it via <code>:java :home-path</code> setting if provided, <code>JAVA_HOME</code> env var or <code>java</code> command on <code>PATH</code>, if found clojure-lsp extracts to its global cache dir ($XDG_CACHE or <code>~/.cache/clojure-lsp</code>) to be used in other projects.</li>
 <li>If <code>src.zip</code> is not found or user specified a custom <code>:java :jdk-source-uri</code>, clojure-lsp tries to download the source from that uri, only if <code>:java :download-jdk-source?</code> is enabled, disabled by default, extracting to the global cache dir later.</li>
 </ul>
 </li>
@@ -1649,7 +1649,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 8, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 9, 2023</span>
     
   </small>
 </div>

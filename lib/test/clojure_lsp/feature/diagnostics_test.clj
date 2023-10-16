@@ -284,7 +284,7 @@
     (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
                                       :settings {:source-paths ["/project/src"]}})
     (with-redefs [clj-depend/configured? (constantly false)
-                  clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
+                  clj-depend/analyze (constantly {:violations [{:namespace 'bar :message "Foo issue"}]})]
       (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
       (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
 
@@ -316,7 +316,7 @@
                                                                              :accessed-by-layers #{:baz}}}}
                                                  :linters {:clj-depend {:level :off}}}})
     (with-redefs [clj-depend/configured? (constantly false)
-                  clj-depend/analyze (constantly {:violations [{:namespace 'bar :violation "Foo issue"}]})]
+                  clj-depend/analyze (constantly {:violations [{:namespace 'bar :message "Foo issue"}]})]
       (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))
       (h/load-code-and-locs "(ns bar (:require [foo :as f])) f/a" (h/file-uri "file:///project/src/bar.clj")))
 

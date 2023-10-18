@@ -1,6 +1,7 @@
 (ns clojure-lsp.clj-depend
   (:require
    [clj-depend.api :as clj-depend]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
@@ -23,12 +24,14 @@
   [project-root]
   (try
     (clj-depend/configured? (io/file project-root))
-    (catch AssertionError _ false)))
+    (catch AssertionError e
+      (logger/error e "Error checking if clj-depend is configured on" project-root)
+      false)))
 
 (defn ^:private configured?
   [config project-root]
   (or (seq config)
-      (configured?* (io/file project-root))))
+      (configured?* project-root)))
 
 (defn analyze-uri! [uri db]
   (when-let [project-root (some-> db :project-root-uri shared/uri->filename)]

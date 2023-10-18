@@ -117,6 +117,6 @@
         :severity 3
         :code "clj-depend"
         :source "clj-depend"
-        :message "\"sample-test.diagnostics.depend.b\" should not depends on \"sample-test.diagnostics.depend.a\""
+        :message "\"sample-test.diagnostics.depend.b\" should not depend on \"sample-test.diagnostics.depend.a\" (layer \":b\" on \":a\")"
         :tags []}]
       (lsp/client-awaits-server-diagnostics "diagnostics/depend/b.clj"))))

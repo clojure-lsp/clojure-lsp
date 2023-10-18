@@ -293,7 +293,7 @@
 
   (testing "when clj-depend is configured even without clojure-lsp configuration"
     (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")
-                                      :settings {:source-paths ["/project/src"]}})
+                                      :settings {:source-paths [(h/file-path "/project/src")]}})
     (with-redefs [clj-depend/configured? (constantly true)
                   clj-depend/analyze (constantly {:violations [{:namespace 'bar :message "Foo issue"}]})]
       (h/load-code-and-locs "(ns foo) (def a 1)" (h/file-uri "file:///project/src/foo.clj"))

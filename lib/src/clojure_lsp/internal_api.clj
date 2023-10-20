@@ -197,6 +197,9 @@
       (swap! db* assoc :project-analysis-type :project-and-full-dependencies)
       (analyze! options components))))
 
+(defn ^:private setup-custom-linters-params! [{:keys [custom-linters-params] :as options} {:keys [db*]}]
+  (swap! db* assoc :custom-linters-params custom-linters-params))
+
 (defn ^:private setup-project-and-clojure-only-deps-analysis! [options {:keys [db*] :as components}]
   (let [db @db*]
     (when (or (not (:analysis db))
@@ -330,6 +333,7 @@
 
 (defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
+  (setup-custom-linters-params! options components)
   (setup-project-and-clojure-only-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
   (let [db @db*

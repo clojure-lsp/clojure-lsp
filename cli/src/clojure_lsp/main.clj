@@ -103,6 +103,11 @@
     :id :analysis
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
                "Invalid --analysis EDN"]
+    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
+   [nil "--custom-linters-params PARAMS" "Optional PARAMS as edn to use for custom linters."
+    :id :custom-linters-params
+    :validate [#(try (edn/read-string %) true (catch Exception _ false))
+               "Invalid --custom-linters-params EDN"]
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]])
 
 (defn ^:private error-msg [errors]

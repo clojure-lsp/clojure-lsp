@@ -17,7 +17,7 @@
       (let [[row col] a-start
             result (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":b" row col (h/db))]
         (is (= {:error {:code :invalid-params
-                        :message "Can't rename, only namespaced keywords can be renamed."}}
+                        :message "Can't rename - only namespaced keywords can be renamed."}}
                result))))
 
     (testing "should rename local in destructure but not keywords"
@@ -149,7 +149,7 @@
     (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
     (h/assert-submap
       {:error {:code :invalid-params
-               :message "Can't rename namespace, client does not support file renames."}}
+               :message "Can't rename - client does not support file renames."}}
       (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
   (testing "when client has document-changes capability but no valid source-paths"
     (h/reset-components!)
@@ -160,7 +160,7 @@
     (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
     (h/assert-submap
       {:error {:code :invalid-params
-               :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
+               :message "Can't rename - invalid source-paths. Are project :source-paths configured correctly?"}}
       (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
   (testing "when namespace is defined in multiple files"
     (h/reset-components!)
@@ -172,7 +172,7 @@
     (h/load-code-and-locs "(ns foo.bar-baz)" (h/file-uri "file:///my-project/test/foo/bar_baz.clj"))
     (h/assert-submap
       {:error {:code :invalid-params
-               :message "Can't rename namespace, namespace is defined in multiple files."}}
+               :message "Can't rename - namespace is defined in multiple files."}}
       (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
   (testing "when source-paths are valid and client capabilities has document-changes"
     (h/reset-components!)
@@ -306,14 +306,14 @@
     (let [[[row col]] (h/load-code-and-locs "|[]")
           result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:error {:code :invalid-params
-                      :message "Can't rename, no element found."}}
+                      :message "Can't rename - no element found."}}
              result))))
   (testing "should not rename plain keywords"
     (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "|:a")
           result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:error {:code :invalid-params
-                      :message "Can't rename, only namespaced keywords can be renamed."}}
+                      :message "Can't rename - only namespaced keywords can be renamed."}}
              result))))
   (testing "when client has valid source-paths but no document-changes capability"
     (h/reset-components!)
@@ -324,7 +324,7 @@
     (let [[[row col]] (h/load-code-and-locs "(ns |foo.bar-baz)")]
       (h/assert-submap
         {:error {:code :invalid-params
-                 :message "Can't rename namespace, client does not support file renames."}}
+                 :message "Can't rename - client does not support file renames."}}
         (f.rename/prepare-rename h/default-uri row col (h/db)))))
   (testing "when namespace is defined in multiple files"
     (h/reset-components!)
@@ -341,7 +341,7 @@
           [alias-row alias-col] alias-start]
       (h/assert-submap
         {:error {:code :invalid-params
-                 :message "Can't rename namespace, namespace is defined in multiple files."}}
+                 :message "Can't rename - namespace is defined in multiple files."}}
         (f.rename/prepare-rename test-uri ns-row ns-col (h/db)))
       (testing "renaming alias is not affected"
         (h/assert-submap
@@ -356,5 +356,5 @@
     (let [[[row col]] (h/load-code-and-locs "(ns |foo.bar-baz)")]
       (h/assert-submap
         {:error {:code :invalid-params
-                 :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
+                 :message "Can't rename - invalid source-paths. Are project :source-paths configured correctly?"}}
         (f.rename/prepare-rename h/default-uri row col (h/db))))))

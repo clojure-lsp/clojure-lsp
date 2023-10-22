@@ -18,6 +18,7 @@
     - `backward-barf`
     - `raise`
     - `kill`
+  - Improve rename to avoid internal errors and show proper error messages.
 
 ## 2023.08.06-00.28.06
 

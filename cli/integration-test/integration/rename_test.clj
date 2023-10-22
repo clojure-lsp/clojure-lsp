@@ -190,7 +190,7 @@
   (lsp/notify! (fixture/did-open-source-path-notification "rename/single_b.clj"))
 
   (h/assert-submap
-    {:error {:code -32602, :message "Can't rename, no element found."}}
+    {:error {:code -32602, :message "Can't rename - no element found."}}
     (lsp/request! (fixture/prepare-rename-request "rename/a.cljc" 12 6)))
   (h/assert-submap
     {:start {:line 12, :character 14}, :end {:line 12, :character 21}}

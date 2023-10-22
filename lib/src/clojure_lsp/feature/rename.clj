@@ -221,34 +221,39 @@
         definition (q/find-definition db element)
         client-capabilities (:client-capabilities db)
         source-paths (settings/get db [:source-paths])
-        source-path (shared/uri->source-path (:uri definition) source-paths)]
+        source-path (some-> (:uri definition)
+                            (shared/uri->source-path source-paths))]
     (cond
+      (not definition)
+      {:error {:message "Can't rename - no definition found."
+               :code :invalid-params}}
+
       (empty? references)
-      {:error {:message "Can't rename, no other references found."
+      {:error {:message "Can't rename - no other references found."
                :code :invalid-params}}
 
       (and (= :namespace-definitions (:bucket definition))
            (not= :namespace-alias (:bucket element))
            (not source-path))
       {:error {:code :invalid-params
-               :message "Can't rename namespace, invalid source-paths. Are project :source-paths configured correctly?"}}
+               :message "Can't rename - invalid source-paths. Are project :source-paths configured correctly?"}}
 
       (and (= :namespace-definitions (:bucket definition))
            (not= :namespace-alias (:bucket element))
            (not (get-in client-capabilities [:workspace :workspace-edit :document-changes])))
       {:error {:code :invalid-params
-               :message "Can't rename namespace, client does not support file renames."}}
+               :message "Can't rename - client does not support file renames."}}
 
       (and (= :namespace-definitions (:bucket definition))
            (not= :namespace-alias (:bucket element))
            (not= 1 (count (q/find-all-project-namespace-definitions db (:name definition)))))
       {:error {:code :invalid-params
-               :message "Can't rename namespace, namespace is defined in multiple files."}}
+               :message "Can't rename - namespace is defined in multiple files."}}
 
       (and (contains? #{:keyword-definitions :keyword-usages} (:bucket definition))
            (not (:ns definition)))
       {:error {:code :invalid-params
-               :message "Can't rename, only namespaced keywords can be renamed."}}
+               :message "Can't rename - only namespaced keywords can be renamed."}}
 
       :else
       {:result :success
@@ -258,7 +263,7 @@
 
 (def ^:private error-no-element
   {:error {:code :invalid-params
-           :message "Can't rename, no element found."}})
+           :message "Can't rename - no element found."}})
 
 (defn prepare-rename
   [uri row col db]

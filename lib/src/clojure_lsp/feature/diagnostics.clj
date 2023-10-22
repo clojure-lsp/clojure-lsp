@@ -63,8 +63,11 @@
         excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
         excluded-metas (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})
         fqsn (symbol (-> definition :ns str) (-> definition :name str))
-        starts-with-dash? (string/starts-with? (:name definition) "-")]
-    (or (q/exclude-public-definition? kondo-config definition)
+        starts-with-dash? (string/starts-with? (:name definition) "-")
+        inside-comment? (some #(and (= 'comment (:name %))
+                                    (= 'clojure.core (:ns %))) (:callstack definition))]
+    (or inside-comment?
+        (q/exclude-public-definition? kondo-config definition)
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
         (some (fn [exclude]
                 (some #(re-matches (re-pattern (str exclude))

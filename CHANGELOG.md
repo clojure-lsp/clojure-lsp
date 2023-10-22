@@ -18,7 +18,8 @@
     - `backward-barf`
     - `raise`
     - `kill`
-  - Improve rename to avoid internal errors and show proper error messages.
+  - Improve rename to avoid internal errors and show proper error messages. #1691
+  - Exclude unused-public-vars when inside a comment block.
 
 ## 2023.08.06-00.28.06
 

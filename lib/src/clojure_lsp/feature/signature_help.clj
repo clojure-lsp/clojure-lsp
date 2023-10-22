@@ -11,15 +11,6 @@
   (:import
    [clojure.lang PersistentVector]))
 
-(defprotocol Buggable
-  (-fail [with-tpyo]))
-
-(extend-protocol Buggable
-  nil
-  (-fail [with-tpyo] true))
-
-(-fail nil)
-
 (set! *warn-on-reflection* true)
 
 (defn ^:private function-loc->arglist-nodes [zloc]

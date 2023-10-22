@@ -18,6 +18,7 @@
                                 "(r/reg-event-fx :some/thing (fn []))"
                                 "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///c.cljs"))
   (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///d.cljs"))
+  (h/load-code-and-locs "(ns some-ns) (def foo 1) (comment (def bar 2))" (h/file-uri "file:///e.clj"))
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
@@ -142,6 +143,18 @@
        :config {}})
     (h/assert-submaps
       []
+      @findings))
+  (testing "excluding when inside comment block"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///e.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
+    (h/assert-submaps
+      [{:type :clojure-lsp/unused-public-var
+        :uri (h/file-uri "file:///e.clj")
+        :message "Unused public var 'some-ns/foo'"}]
       @findings))
   (testing "unused keyword definitions"
     (reset! findings [])

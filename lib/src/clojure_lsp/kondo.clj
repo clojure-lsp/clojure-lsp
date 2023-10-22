@@ -272,7 +272,8 @@
    :java-class-usages true
    :context [:clojure.test
              :re-frame.core]
-   :var-definitions {:meta (var-definition-metas db)}
+   :var-definitions {:meta (var-definition-metas db)
+                     :callstack true}
    :symbols true})
 
 (defn ^:private config-for-paths [paths file-analyzed-fn db]

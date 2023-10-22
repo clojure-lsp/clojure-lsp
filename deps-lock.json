@@ -213,14 +213,14 @@
       "hash": "sha256-4MoY394FmlFXLiwtetWjDmEbh1NGFv1wRPZx33qbtlg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2023.09.07/clj-kondo-2023.09.07.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2023.10.20/clj-kondo-2023.10.20.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-aM+HEGJUDp9M8bYFuMsvB7I8ozgZ5NUH5cT/hn0ufOI="
+      "hash": "sha256-nr5bR8GZs5bitQ+8sGFc6u0LRm5N9Y9KFrm9iI4DWPY="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2023.09.07/clj-kondo-2023.09.07.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2023.10.20/clj-kondo-2023.10.20.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-/bJD4yarEUGfrV4Z69EBLScGKYHrjN4pNMkE7ZBa32c="
+      "hash": "sha256-POsSHPuG8s5w+gL8O9pimWaeW7+fLhUASXdb08RgKE0="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -373,14 +373,14 @@
       "hash": "sha256-n6pYYudCO9kUHuBAUHGxemuzocncPdgstHX1qka57IM="
     },
     {
-      "mvn-path": "com/fabiodomingues/clj-depend/0.6.1/clj-depend-0.6.1.jar",
+      "mvn-path": "com/fabiodomingues/clj-depend/0.9.0/clj-depend-0.9.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-Nr7MUKEYmY4HFEKsZsBg94ofz5+GnUVwiG+XwCEUZzw="
+      "hash": "sha256-zRPo3rKdKkbYfw3J6G6je1BPHPAqyaGEwZ+m+LRl0u0="
     },
     {
-      "mvn-path": "com/fabiodomingues/clj-depend/0.6.1/clj-depend-0.6.1.pom",
+      "mvn-path": "com/fabiodomingues/clj-depend/0.9.0/clj-depend-0.9.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-swTA2eKMeRg5JPuAgiIMDOkr1F69VDg7nMzoSt3L/aI="
+      "hash": "sha256-cFw8zEeEs4EzPz7dnV/BF5ocXo8VaQJ88Ji4ubK8BE4="
     },
     {
       "mvn-path": "com/fasterxml/jackson/core/jackson-annotations/2.12.4/jackson-annotations-2.12.4.jar",

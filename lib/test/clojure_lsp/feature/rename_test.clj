@@ -308,6 +308,13 @@
       (is (= {:error {:code :invalid-params
                       :message "Can't rename - no element found."}}
              result))))
+  (testing "should not rename when element definition is not found"
+    (h/reset-components!)
+    (let [[[row col]] (h/load-code-and-locs "(defprotocol Foo (bar [|unrenable]))")
+          result (f.rename/prepare-rename h/default-uri row col (h/db))]
+      (is (= {:error {:code :invalid-params
+                      :message "Can't rename - no definition found."}}
+             result))))
   (testing "should not rename plain keywords"
     (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "|:a")

@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2023.10.20`. 
+  - Bump clj-kondo to `2023.10.21-20231022.204832-4`. 
   - Fix move-to-let/expand-let bug for multi-arity functions #1283
   - Fix `:dependency-scheme` setting for .java files from jars #1653
   - Bump graalvm to 21.

@@ -215,10 +215,25 @@ Example:
                                            :exclude-when-contains-meta #{:my-cool-meta}}}}
 ```
 
-
 #### clj-depend
 
 clojure-lsp uses [clj-depend](https://github.com/clj-depend/clj-depend) when any clj-depend config is found either on clojure-lsp config or as a `.clj-depend/config.edn` file.
+
+The clj-depend config should be within the `:config` key.
+
+```clojure
+{:config {:layers {:controller {:defined-by      ".*\\.controller\\..*"
+                                :accesses-layers #{:logic}}
+                   :logic      {:defined-by      ".*\\.logic\\..*"
+                                :accesses-layers #{:model}}}}}
+```
+
+When you need to inform some other parameter for clj-depend that is not a config, you can inform it this way:
+
+```clojure
+{:config    {,,,}
+ :snapshot? true}
+```
 
 #### Disable linter
 

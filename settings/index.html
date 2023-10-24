@@ -1511,6 +1511,16 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 </code></pre></div></p>
 <h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
 <p>clojure-lsp uses <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> when any clj-depend config is found either on clojure-lsp config or as a <code>.clj-depend/config.edn</code> file.</p>
+<p>The clj-depend config should be within the <code>:config</code> key.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:config</span> <span class="p">{</span><span class="ss">:layers</span> <span class="p">{</span><span class="ss">:controller</span> <span class="p">{</span><span class="ss">:defined-by</span>      <span class="s">&quot;.*\\.controller\\..*&quot;</span>
+                                <span class="ss">:accesses-layers</span> <span class="o">#</span><span class="p">{</span><span class="ss">:logic</span><span class="p">}}</span>
+                   <span class="ss">:logic</span>      <span class="p">{</span><span class="ss">:defined-by</span>      <span class="s">&quot;.*\\.logic\\..*&quot;</span>
+                                <span class="ss">:accesses-layers</span> <span class="o">#</span><span class="p">{</span><span class="ss">:model</span><span class="p">}}}}}</span>
+</code></pre></div>
+<p>When you need to inform some other parameter for clj-depend that is not a config, you can inform it this way:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:config</span>    <span class="p">{</span>,,,<span class="p">}</span>
+ <span class="ss">:snapshot?</span> <span class="nv">true</span><span class="p">}</span>
+</code></pre></div>
 <h4 id="disable-linter">Disable linter<a class="headerlink" href="#disable-linter" title="Permanent link">#</a></h4>
 <p>It's not recommended to disable a linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:</p>
 <p><code>.lsp/config.edn</code>
@@ -1649,7 +1659,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 23, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 24, 2023</span>
     
   </small>
 </div>

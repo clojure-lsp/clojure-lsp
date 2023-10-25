@@ -10,7 +10,7 @@
   - Improve overall performance using GraalVM 21 PGO (Profile-Guided Optimizations).
   - Extract the responsibility for merging clj-depend config #1265
   - Support passing configurations to clj-depend via CLI #1694
-  - Bump clj-depend to `0.9.1`
+  - Bump clj-depend to `0.9.2`
 
 - Editor
   - New paredit refactorings:

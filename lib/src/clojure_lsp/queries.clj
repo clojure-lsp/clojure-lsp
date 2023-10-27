@@ -843,3 +843,14 @@
           (xf-same-name namespace)
           (medley/distinct-by :uri))
         (internal-analysis (db-with-ns-analysis db namespace))))
+
+(defn analysis-summary [analysis]
+  {:var-definitions (count (into [] xf-analysis->var-definitions analysis))
+   :var-usages (count (into [] xf-analysis->var-usages analysis))
+   :keyword-definitions (count (into [] xf-analysis->keyword-definitions analysis))
+   :keyword-usages (count (into [] xf-analysis->keyword-usages analysis))
+   :namespace-definitions (count (into [] xf-analysis->namespace-definitions analysis))
+   :symbols (count (into [] xf-analysis->symbols analysis))
+   :java-class-definitions (count (into [] xf-analysis->java-class-definitions analysis))
+   :java-class-usages (count (into [] xf-analysis->java-class-usages analysis))
+   :java-member-definitions (count (into [] xf-analysis->java-member-definitions analysis))})

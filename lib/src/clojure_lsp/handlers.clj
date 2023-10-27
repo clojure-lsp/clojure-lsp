@@ -317,20 +317,22 @@
     (f.workspace-symbols/workspace-symbols query @db*)))
 
 (defn ^:private server-info [{:keys [db*]}]
-  (let [db-value @db*]
-    {:project-root-uri (:project-root-uri db-value)
-     :project-settings (:project-settings db-value)
-     :classpath-settings (:classpath-settings db-value)
-     :classpath (:classpath db-value)
-     :client-settings (:client-settings db-value)
-     :final-settings (settings/all db-value)
-     :cljfmt-raw (binding [*print-meta* true]
-                   (pr-str (f.format/resolve-user-cljfmt-config db-value)))
-     :port (or (:port db-value)
-               "NREPL only available on :debug profile (`bb debug-cli`)")
+  (let [db @db*]
+    {:project-root-uri (:project-root-uri db)
      :server-version (shared/clojure-lsp-version)
      :clj-kondo-version (lsp.kondo/clj-kondo-version)
-     :log-path (:log-path db-value)}))
+     :log-path (:log-path db)
+     :project-settings (:project-settings db)
+     :classpath-settings (:classpath-settings db)
+     :client-settings (:client-settings db)
+     :final-settings (settings/all db)
+     :classpath (:classpath db)
+     :cljfmt-raw (binding [*print-meta* true]
+                   (pr-str (f.format/resolve-user-cljfmt-config db)))
+     :analysis-summary {:external (q/analysis-summary (q/external-analysis db))
+                        :internal (q/analysis-summary (q/internal-analysis db))}
+     :port (or (:port db)
+               "NREPL only available on :debug profile (`bb debug-cli`)")}))
 
 (defn server-info-log [{:keys [producer] :as components}]
   (shared/logging-task

@@ -22,6 +22,7 @@
     - `kill`
   - Improve rename to avoid internal errors and show proper error messages. #1691
   - Exclude unused-public-vars when inside a comment block.
+  - Add `:analysis-summary` field to `serverInfo` command to get information about project for performance analysis.
 
 ## 2023.08.06-00.28.06
 

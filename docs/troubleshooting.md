@@ -1,6 +1,8 @@
 # Troubleshooting
 
-## Server log
+## Logs
+
+### Server log
 
 clojure-lsp logs most of what is doing to a file which location could be found:
 
@@ -13,7 +15,7 @@ You can open server logs in a buffer with <code>M-x</code> <code>lsp-clojure-ser
 
 </details>
 
-## Client<->Server log
+### Client<->Server log
 
 All LSP clients should provide a way to get the jsonrpc logs between client and server, this helps debug the requests and responses content and time.
 
@@ -32,6 +34,73 @@ Check below how to get the logs for most used clients:
 </details>
 
 An alternative is to pass `--trace-level verbose` to clojure-lsp during process start and clojure-lsp will log the communication to the server-log.
+
+### Server Info
+
+clojure-lsp has a custom command that prints useful information about the current running clojure-lsp for the current project, it's called `clojure/serverInfo/log`, some clients already have ways to call that automatically:
+
+- Emacs lsp-mode: via `lsp-clojure-server-info` command.
+- VsCode Calva: via `Calva Diagnostics: Clojure-lsp Server Info` command.
+- Intellij clojure-lsp plugin: via `Settings` `Tools` `Clojure LSP` `Copy server info to clipboard` option.
+
+## Some features are not working
+
+clojure-lsp uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to analyze the classpath
+during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.
+
+Please note that `clojure-lsp` comes bundled with `clj-kondo`, so you do not have to install it separately.
+
+For more information, check the [Classpath scan](settings.md#classpath-scan) settings section.
+
+### Classpath scan error
+
+By default clojure-lsp knows how to scan most common clojure projects using the following rules:
+
+- If the project root has a `project.clj` file, it'll run `lein classpath` to get the classpath.
+- If the project root has a `deps.edn` file, it'll run `clojure -Spath` to get the classpath.
+- If the project root has a `build.boot` file, it'll run `boot show --fake-classpath` to get the classpath.
+- If the project root has a `shadow-cljs.edn` file, it'll run `npx shadow-cljs classpath` to get the classpath.
+
+If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the [settings section](settings.md).
+
+### Folders not being analyzed/linted
+
+By default clojure-lsp get source-paths from classpath, for more details check [settings section](settings.md#source-paths-discovery).
+
+* If the definition lives under a different source dir, you can define `source-aliases` or `source-paths` setting as mentioned on [settings section](settings.md#source-paths-discovery).
+
+* It is also important to get your `project-root` correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.
+
+* If you are using `deps` and using a `:local/root` dependency to reference another project, i.e.,
+
+```clojure
+{:deps {foo.bar/baz {:local/root "/path/to/foo/project/containing/a/deps.edn"}}}
+```
+
+* and you are finding that `gotoDefinition` isn't working when attempting to jump to the namespace in the referenced project, then
+it could be that your `~/.config/clojure-lsp/config.edn` (or legacy `~/.lsp/config.edn`) has a source paths entry, i.e., `:source-paths
+["src" "test"]`. This will prevent the lookup from working, as it restricts clojure-lsp to only scan those folders in the
+current project for sources, and not the other project referenced via the `:local/root` deps entry. It can be fixed by removing
+the `:source-paths` from the config (as clojure-lsp has good defaults anyway). If you do require more specific source paths,
+then those can be added at the project level.
+
+### Wrong diagnostics/lint
+
+- clojure-lsp use clj-kondo to lint and cache in a `.clj-kondo/.cache` dir, try to remove that folder if you think it's not linting correctly
+- clojure-lsp persist the external jars analysis in a `.lsp/.cache/` folder, if you have issues with some specific feature,
+try to remove that dir and restart the server.
+- If you have issues with macros, [double check your clj-kondo config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).
+
+### Missing `Add require...` on code actions when using CoC and (neo)vim
+
+If you find, when executing the command
+`(coc-codeaction-line)` (or `(coc-codeaction-selected)` or
+`(coc-codeaction-cursor)`), that you aren't getting back
+all of the code actions you might expect, please ensure that you have,
+in your `coc-settings.json` the line `disableDiagnostics` set to
+`false` or better yet, don't have the line there at all :-
+
+---)
 
 ## Server is not initializing
 
@@ -98,65 +167,14 @@ whatever...)
 </details>
 
 ---
+## High memory usage
 
-## Some features are not working
+clojure-lsp uses a native image that helps a lot with memory usage, but there is no hard limit so for huge Clojure projects or projects with lots of dependencies, memory may be a issue because of multiple analysis (keywords, function usages, java class/members etc).
 
-clojure-lsp uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) to analyze the classpath
-during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.
+It's possible to retrieve the project analysis of a running clojure-lsp process via the [serverInfo](#server-info) command, a `:analysis` map will contain both internal (your project) and external (project dependencies) count of each analysis used by clojure-lsp, extremally high count of elements (> hundred thousand) tends to increase memory usage + cache size (`.lsp/.cache`).
 
-Please note that `clojure-lsp` comes bundled with `clj-kondo`, so you do not have to install it separately.
+As last resource if your project has a enormous number of some specific elements, it's possible to disable some analysis which should help decrease memory usage and even increase performance via the `:analysis` setting, but keep in mind that some features related to those analysis may not work, for example, `{:analysis {:keywords false}}` will remove support for find-references of keywords, or `{:analysis {:java {:class-definitions false :member-definitions false}}}` will completly disable java features like auto completion of java elements.
 
-For more information, check the [Classpath scan](settings.md#classpath-scan) settings section.
-
-### Classpath scan error
-
-By default clojure-lsp knows how to scan most common clojure projects using the following rules:
-
-- If the project root has a `project.clj` file, it'll run `lein classpath` to get the classpath.
-- If the project root has a `deps.edn` file, it'll run `clojure -Spath` to get the classpath.
-- If the project root has a `build.boot` file, it'll run `boot show --fake-classpath` to get the classpath.
-- If the project root has a `shadow-cljs.edn` file, it'll run `npx shadow-cljs classpath` to get the classpath.
-
-If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the `project-specs` clojure-lsp setting, for more details check the [settings section](settings.md).
-
-### Folders not being analyzed/linted
-
-By default clojure-lsp get source-paths from classpath, for more details check [settings section](settings.md#source-paths-discovery).
-
-* If the definition lives under a different source dir, you can define `source-aliases` or `source-paths` setting as mentioned on [settings section](settings.md#source-paths-discovery).
-
-* It is also important to get your `project-root` correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.
-
-* If you are using `deps` and using a `:local/root` dependency to reference another project, i.e.,
-
-```clojure
-{:deps {foo.bar/baz {:local/root "/path/to/foo/project/containing/a/deps.edn"}}}
-```
-
-* and you are finding that `gotoDefinition` isn't working when attempting to jump to the namespace in the referenced project, then
-it could be that your `~/.config/clojure-lsp/config.edn` (or legacy `~/.lsp/config.edn`) has a source paths entry, i.e., `:source-paths
-["src" "test"]`. This will prevent the lookup from working, as it restricts clojure-lsp to only scan those folders in the
-current project for sources, and not the other project referenced via the `:local/root` deps entry. It can be fixed by removing
-the `:source-paths` from the config (as clojure-lsp has good defaults anyway). If you do require more specific source paths,
-then those can be added at the project level.
-
-### Wrong diagnostics/lint
-
-- clojure-lsp use clj-kondo to lint and cache in a `.clj-kondo/.cache` dir, try to remove that folder if you think it's not linting correctly
-- clojure-lsp persist the external jars analysis in a `.lsp/.cache/` folder, if you have issues with some specific feature,
-try to remove that dir and restart the server.
-- If you have issues with macros, [double check your clj-kondo config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).
-
-### Missing `Add require...` on code actions when using CoC and (neo)vim
-
-If you find, when executing the command
-`(coc-codeaction-line)` (or `(coc-codeaction-selected)` or
-`(coc-codeaction-cursor)`), that you aren't getting back
-all of the code actions you might expect, please ensure that you have,
-in your `coc-settings.json` the line `disableDiagnostics` set to
-`false` or better yet, don't have the line there at all :-)
-
----
 ## MacOS
 
 In some version of MacOS, Apple restrict the binary to run, to fix that run: `xattr -d com.apple.quarantine /path/to/clojure-lsp`

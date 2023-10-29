@@ -418,23 +418,36 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#logs" class="md-nav__link">
+    Logs
+  </a>
+  
+    <nav class="md-nav" aria-label="Logs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#server-log" class="md-nav__link">
     Server log
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#client-server-log" class="md-nav__link">
     Client&lt;-&gt;Server log
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#server-is-not-initializing" class="md-nav__link">
-    Server is not initializing
+        
+          <li class="md-nav__item">
+  <a href="#server-info" class="md-nav__link">
+    Server Info
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -476,6 +489,20 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-is-not-initializing" class="md-nav__link">
+    Server is not initializing
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#high-memory-usage" class="md-nav__link">
+    High memory usage
+  </a>
   
 </li>
       
@@ -695,23 +722,36 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#logs" class="md-nav__link">
+    Logs
+  </a>
+  
+    <nav class="md-nav" aria-label="Logs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#server-log" class="md-nav__link">
     Server log
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#client-server-log" class="md-nav__link">
     Client&lt;-&gt;Server log
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#server-is-not-initializing" class="md-nav__link">
-    Server is not initializing
+        
+          <li class="md-nav__item">
+  <a href="#server-info" class="md-nav__link">
+    Server Info
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -757,6 +797,20 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#server-is-not-initializing" class="md-nav__link">
+    Server is not initializing
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#high-memory-usage" class="md-nav__link">
+    High memory usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#macos" class="md-nav__link">
     MacOS
   </a>
@@ -781,7 +835,8 @@
                 
                 
                 <h1 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">#</a></h1>
-<h2 id="server-log">Server log<a class="headerlink" href="#server-log" title="Permanent link">#</a></h2>
+<h2 id="logs">Logs<a class="headerlink" href="#logs" title="Permanent link">#</a></h2>
+<h3 id="server-log">Server log<a class="headerlink" href="#server-log" title="Permanent link">#</a></h3>
 <p>clojure-lsp logs most of what is doing to a file which location could be found:</p>
 <ul>
 <li>on <code>:log-path</code> if specified in your clojure-lsp config, for example: <code>{:log-path "/tmp/clojure-lsp.out"}</code></li>
@@ -793,7 +848,7 @@ You can open server logs in a buffer with <code>M-x</code> <code>lsp-clojure-ser
 
 </details>
 
-<h2 id="client-server-log">Client&lt;-&gt;Server log<a class="headerlink" href="#client-server-log" title="Permanent link">#</a></h2>
+<h3 id="client-server-log">Client&lt;-&gt;Server log<a class="headerlink" href="#client-server-log" title="Permanent link">#</a></h3>
 <p>All LSP clients should provide a way to get the jsonrpc logs between client and server, this helps debug the requests and responses content and time.</p>
 <p>Check below how to get the logs for most used clients:</p>
 <details>
@@ -809,6 +864,65 @@ You can open server logs in a buffer with <code>M-x</code> <code>lsp-clojure-ser
 </details>
 
 <p>An alternative is to pass <code>--trace-level verbose</code> to clojure-lsp during process start and clojure-lsp will log the communication to the server-log.</p>
+<h3 id="server-info">Server Info<a class="headerlink" href="#server-info" title="Permanent link">#</a></h3>
+<p>clojure-lsp has a custom command that prints useful information about the current running clojure-lsp for the current project, it's called <code>clojure/serverInfo/log</code>, some clients already have ways to call that automatically:</p>
+<ul>
+<li>Emacs lsp-mode: via <code>lsp-clojure-server-info</code> command.</li>
+<li>VsCode Calva: via <code>Calva Diagnostics: Clojure-lsp Server Info</code> command.</li>
+<li>Intellij clojure-lsp plugin: via <code>Settings</code> <code>Tools</code> <code>Clojure LSP</code> <code>Copy server info to clipboard</code> option.</li>
+</ul>
+<h2 id="some-features-are-not-working">Some features are not working<a class="headerlink" href="#some-features-are-not-working" title="Permanent link">#</a></h2>
+<p>clojure-lsp uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> to analyze the classpath
+during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.</p>
+<p>Please note that <code>clojure-lsp</code> comes bundled with <code>clj-kondo</code>, so you do not have to install it separately.</p>
+<p>For more information, check the <a href="../settings/#classpath-scan">Classpath scan</a> settings section.</p>
+<h3 id="classpath-scan-error">Classpath scan error<a class="headerlink" href="#classpath-scan-error" title="Permanent link">#</a></h3>
+<p>By default clojure-lsp knows how to scan most common clojure projects using the following rules:</p>
+<ul>
+<li>If the project root has a <code>project.clj</code> file, it'll run <code>lein classpath</code> to get the classpath.</li>
+<li>If the project root has a <code>deps.edn</code> file, it'll run <code>clojure -Spath</code> to get the classpath.</li>
+<li>If the project root has a <code>build.boot</code> file, it'll run <code>boot show --fake-classpath</code> to get the classpath.</li>
+<li>If the project root has a <code>shadow-cljs.edn</code> file, it'll run <code>npx shadow-cljs classpath</code> to get the classpath.</li>
+</ul>
+<p>If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the <code>project-specs</code> clojure-lsp setting, for more details check the <a href="../settings/">settings section</a>.</p>
+<h3 id="folders-not-being-analyzedlinted">Folders not being analyzed/linted<a class="headerlink" href="#folders-not-being-analyzedlinted" title="Permanent link">#</a></h3>
+<p>By default clojure-lsp get source-paths from classpath, for more details check <a href="../settings/#source-paths-discovery">settings section</a>.</p>
+<ul>
+<li>
+<p>If the definition lives under a different source dir, you can define <code>source-aliases</code> or <code>source-paths</code> setting as mentioned on <a href="../settings/#source-paths-discovery">settings section</a>.</p>
+</li>
+<li>
+<p>It is also important to get your <code>project-root</code> correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.</p>
+</li>
+<li>
+<p>If you are using <code>deps</code> and using a <code>:local/root</code> dependency to reference another project, i.e.,</p>
+</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:deps</span> <span class="p">{</span><span class="nv">foo.bar/baz</span> <span class="p">{</span><span class="ss">:local/root</span> <span class="s">&quot;/path/to/foo/project/containing/a/deps.edn&quot;</span><span class="p">}}}</span>
+</code></pre></div>
+<ul>
+<li>and you are finding that <code>gotoDefinition</code> isn't working when attempting to jump to the namespace in the referenced project, then
+it could be that your <code>~/.config/clojure-lsp/config.edn</code> (or legacy <code>~/.lsp/config.edn</code>) has a source paths entry, i.e., <code>:source-paths
+["src" "test"]</code>. This will prevent the lookup from working, as it restricts clojure-lsp to only scan those folders in the
+current project for sources, and not the other project referenced via the <code>:local/root</code> deps entry. It can be fixed by removing
+the <code>:source-paths</code> from the config (as clojure-lsp has good defaults anyway). If you do require more specific source paths,
+then those can be added at the project level.</li>
+</ul>
+<h3 id="wrong-diagnosticslint">Wrong diagnostics/lint<a class="headerlink" href="#wrong-diagnosticslint" title="Permanent link">#</a></h3>
+<ul>
+<li>clojure-lsp use clj-kondo to lint and cache in a <code>.clj-kondo/.cache</code> dir, try to remove that folder if you think it's not linting correctly</li>
+<li>clojure-lsp persist the external jars analysis in a <code>.lsp/.cache/</code> folder, if you have issues with some specific feature,
+try to remove that dir and restart the server.</li>
+<li>If you have issues with macros, <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">double check your clj-kondo config</a>.</li>
+</ul>
+<h3 id="missing-add-require-on-code-actions-when-using-coc-and-neovim">Missing <code>Add require...</code> on code actions when using CoC and (neo)vim<a class="headerlink" href="#missing-add-require-on-code-actions-when-using-coc-and-neovim" title="Permanent link">#</a></h3>
+<p>If you find, when executing the command
+<code>(coc-codeaction-line)</code> (or <code>(coc-codeaction-selected)</code> or
+<code>(coc-codeaction-cursor)</code>), that you aren't getting back
+all of the code actions you might expect, please ensure that you have,
+in your <code>coc-settings.json</code> the line <code>disableDiagnostics</code> set to
+<code>false</code> or better yet, don't have the line there at all :-</p>
+<p>---)</p>
 <h2 id="server-is-not-initializing">Server is not initializing<a class="headerlink" href="#server-is-not-initializing" title="Permanent link">#</a></h2>
 <p>Make sure you have the <a href="../installation/#native-binary-recommended">most recent version of <code>clojure-lsp</code></a></p>
 <p>Check if the executable is working running it from the command line, it should start up and start reading from stdin.
@@ -867,58 +981,10 @@ whatever...)
 </details>
 
 <hr />
-<h2 id="some-features-are-not-working">Some features are not working<a class="headerlink" href="#some-features-are-not-working" title="Permanent link">#</a></h2>
-<p>clojure-lsp uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> to analyze the classpath
-during server initialize for most features work, so make sure you don't see any "Error while looking up classpath..." on clojure-lsp log file.</p>
-<p>Please note that <code>clojure-lsp</code> comes bundled with <code>clj-kondo</code>, so you do not have to install it separately.</p>
-<p>For more information, check the <a href="../settings/#classpath-scan">Classpath scan</a> settings section.</p>
-<h3 id="classpath-scan-error">Classpath scan error<a class="headerlink" href="#classpath-scan-error" title="Permanent link">#</a></h3>
-<p>By default clojure-lsp knows how to scan most common clojure projects using the following rules:</p>
-<ul>
-<li>If the project root has a <code>project.clj</code> file, it'll run <code>lein classpath</code> to get the classpath.</li>
-<li>If the project root has a <code>deps.edn</code> file, it'll run <code>clojure -Spath</code> to get the classpath.</li>
-<li>If the project root has a <code>build.boot</code> file, it'll run <code>boot show --fake-classpath</code> to get the classpath.</li>
-<li>If the project root has a <code>shadow-cljs.edn</code> file, it'll run <code>npx shadow-cljs classpath</code> to get the classpath.</li>
-</ul>
-<p>If your project doesn't follow the above rules or you need a custom command to get the classpath you need to configure the <code>project-specs</code> clojure-lsp setting, for more details check the <a href="../settings/">settings section</a>.</p>
-<h3 id="folders-not-being-analyzedlinted">Folders not being analyzed/linted<a class="headerlink" href="#folders-not-being-analyzedlinted" title="Permanent link">#</a></h3>
-<p>By default clojure-lsp get source-paths from classpath, for more details check <a href="../settings/#source-paths-discovery">settings section</a>.</p>
-<ul>
-<li>
-<p>If the definition lives under a different source dir, you can define <code>source-aliases</code> or <code>source-paths</code> setting as mentioned on <a href="../settings/#source-paths-discovery">settings section</a>.</p>
-</li>
-<li>
-<p>It is also important to get your <code>project-root</code> correct in your client otherwise the source paths will not be found, check the project-root via your LSP client.</p>
-</li>
-<li>
-<p>If you are using <code>deps</code> and using a <code>:local/root</code> dependency to reference another project, i.e.,</p>
-</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:deps</span> <span class="p">{</span><span class="nv">foo.bar/baz</span> <span class="p">{</span><span class="ss">:local/root</span> <span class="s">&quot;/path/to/foo/project/containing/a/deps.edn&quot;</span><span class="p">}}}</span>
-</code></pre></div>
-<ul>
-<li>and you are finding that <code>gotoDefinition</code> isn't working when attempting to jump to the namespace in the referenced project, then
-it could be that your <code>~/.config/clojure-lsp/config.edn</code> (or legacy <code>~/.lsp/config.edn</code>) has a source paths entry, i.e., <code>:source-paths
-["src" "test"]</code>. This will prevent the lookup from working, as it restricts clojure-lsp to only scan those folders in the
-current project for sources, and not the other project referenced via the <code>:local/root</code> deps entry. It can be fixed by removing
-the <code>:source-paths</code> from the config (as clojure-lsp has good defaults anyway). If you do require more specific source paths,
-then those can be added at the project level.</li>
-</ul>
-<h3 id="wrong-diagnosticslint">Wrong diagnostics/lint<a class="headerlink" href="#wrong-diagnosticslint" title="Permanent link">#</a></h3>
-<ul>
-<li>clojure-lsp use clj-kondo to lint and cache in a <code>.clj-kondo/.cache</code> dir, try to remove that folder if you think it's not linting correctly</li>
-<li>clojure-lsp persist the external jars analysis in a <code>.lsp/.cache/</code> folder, if you have issues with some specific feature,
-try to remove that dir and restart the server.</li>
-<li>If you have issues with macros, <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">double check your clj-kondo config</a>.</li>
-</ul>
-<h3 id="missing-add-require-on-code-actions-when-using-coc-and-neovim">Missing <code>Add require...</code> on code actions when using CoC and (neo)vim<a class="headerlink" href="#missing-add-require-on-code-actions-when-using-coc-and-neovim" title="Permanent link">#</a></h3>
-<p>If you find, when executing the command
-<code>(coc-codeaction-line)</code> (or <code>(coc-codeaction-selected)</code> or
-<code>(coc-codeaction-cursor)</code>), that you aren't getting back
-all of the code actions you might expect, please ensure that you have,
-in your <code>coc-settings.json</code> the line <code>disableDiagnostics</code> set to
-<code>false</code> or better yet, don't have the line there at all :-)</p>
-<hr />
+<h2 id="high-memory-usage">High memory usage<a class="headerlink" href="#high-memory-usage" title="Permanent link">#</a></h2>
+<p>clojure-lsp uses a native image that helps a lot with memory usage, but there is no hard limit so for huge Clojure projects or projects with lots of dependencies, memory may be a issue because of multiple analysis (keywords, function usages, java class/members etc).</p>
+<p>It's possible to retrieve the project analysis of a running clojure-lsp process via the <a href="#server-info">serverInfo</a> command, a <code>:analysis</code> map will contain both internal (your project) and external (project dependencies) count of each analysis used by clojure-lsp, extremally high count of elements (&gt; hundred thousand) tends to increase memory usage + cache size (<code>.lsp/.cache</code>).</p>
+<p>As last resource if your project has a enormous number of some specific elements, it's possible to disable some analysis which should help decrease memory usage and even increase performance via the <code>:analysis</code> setting, but keep in mind that some features related to those analysis may not work, for example, <code>{:analysis {:keywords false}}</code> will remove support for find-references of keywords, or <code>{:analysis {:java {:class-definitions false :member-definitions false}}}</code> will completly disable java features like auto completion of java elements.</p>
 <h2 id="macos">MacOS<a class="headerlink" href="#macos" title="Permanent link">#</a></h2>
 <p>In some version of MacOS, Apple restrict the binary to run, to fix that run: <code>xattr -d com.apple.quarantine /path/to/clojure-lsp</code></p>
                 

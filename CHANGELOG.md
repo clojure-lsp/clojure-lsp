@@ -11,6 +11,7 @@
   - Extract the responsibility for merging clj-depend config #1265
   - Support passing configurations to clj-depend via CLI #1694
   - Bump clj-depend to `0.9.2`
+  - Performance: remove keyword-usages elements from external analysis as they are not used for any feature and for big projects may affect memory. #1700
 
 - Editor
   - New paredit refactorings:
@@ -23,6 +24,7 @@
   - Improve rename to avoid internal errors and show proper error messages. #1691
   - Exclude unused-public-vars when inside a comment block.
   - Add `:analysis-summary` field to `serverInfo` command to get information about project for performance analysis.
+  - Add `:analysis` settings, with options to disable specific analysis for better performance on huge projects. #1700
 
 ## 2023.08.06-00.28.06
 

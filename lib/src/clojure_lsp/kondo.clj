@@ -99,7 +99,10 @@
 ;; some into two elements. As such, the buckets we get from clj-kondo aren't
 ;; exactly the same as the buckets we have in our db.
 
-(defn ^:private element->normalized-elements [{:keys [bucket arglist-strs] :as element}]
+(defn ^:private element->normalized-elements
+  [{:keys [bucket arglist-strs] :as element}
+   keyword-definitions-enabled?
+   keyword-usages-enabled?]
   (case bucket
     :var-definitions
     [(-> element
@@ -125,9 +128,16 @@
     [(element-with-fallback-name-position element)]
 
     :keywords
-    [(-> element
-         element-with-fallback-name-position
-         (assoc :bucket (if (:reg element) :keyword-definitions :keyword-usages)))]
+    (cond
+      (and (:reg element) keyword-definitions-enabled?)
+      [(-> element
+           element-with-fallback-name-position
+           (assoc :bucket :keyword-definitions))]
+
+      (and (not (:external? element)) keyword-usages-enabled?)
+      [(-> element
+           element-with-fallback-name-position
+           (assoc :bucket :keyword-usages))])
 
     (:java-member-definitions
      :java-class-definitions)
@@ -158,23 +168,25 @@
        (or (not (identical? :var-definitions bucket))
            name)))
 
-(defn ^:private normalize-analysis [external? analysis]
-  (reduce-kv
-    (fn [result kondo-bucket kondo-elements]
-      (transduce
-        (comp
-          (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?)))
-          (filter valid-element?))
-        (completing
-          (fn [result {:keys [uri bucket] :as element}]
-            ;; intentionally use element bucket, since it may have been
-            ;; normalized to something besides kondo-bucket
-            (update-in result [uri bucket] (fnil conj []) element)))
-        result
-        kondo-elements))
-    ;; TODO: Can result be a transient?
-    {}
-    analysis))
+(defn ^:private normalize-analysis [external? settings analysis]
+  (let [keyword-definitions-enabled? (get-in settings [:analysis :keywords :definitions] true)
+        keyword-usages-enabled? (get-in settings [:analysis :keywords :usages] true)]
+    (reduce-kv
+      (fn [result kondo-bucket kondo-elements]
+        (transduce
+          (comp
+            (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?) keyword-definitions-enabled? keyword-usages-enabled?))
+            (filter valid-element?))
+          (completing
+            (fn [result {:keys [uri bucket] :as element}]
+              ;; intentionally use element bucket, since it may have been
+              ;; normalized to something besides kondo-bucket
+              (update-in result [uri bucket] (fnil conj []) element)))
+          result
+          kondo-elements))
+      ;; TODO: Can result be a transient?
+      {}
+      analysis)))
 
 (defn ^:private normalize
   "Put kondo result in a standard format, with `analysis` normalized and
@@ -193,7 +205,7 @@
         analysis (->> analysis
                       filter-analysis
                       (medley/map-vals #(map trade-filename-for-uri %))
-                      (normalize-analysis external?)
+                      (normalize-analysis external? (settings/all db))
                       (with-uris ensure-uris {}))
         findings (->> findings
                       (map trade-filename-for-uri)
@@ -251,32 +263,7 @@
     (cond-> [:arglists :style/indent]
       (seq metas) (concat metas))))
 
-(defn ^:private config-for-shallow-analysis [db]
-  {:arglists true
-   :keywords true
-   :protocol-impls true
-   :java-class-definitions true
-   :java-member-definitions true
-   :var-usages false
-   :var-definitions {:shallow true
-                     :meta (var-definition-metas db)}})
-
-(defn ^:private config-for-full-analysis [db]
-  {:arglists true
-   :locals true
-   :keywords true
-   :protocol-impls true
-   :java-class-definitions true
-   :java-member-definitions true
-   :instance-invocations true
-   :java-class-usages true
-   :context [:clojure.test
-             :re-frame.core]
-   :var-definitions {:meta (var-definition-metas db)
-                     :callstack true}
-   :symbols true})
-
-(defn ^:private config-for-paths [paths file-analyzed-fn db]
+(defn ^:private config-for-paths [paths file-analyzed-fn db settings]
   (-> {:cache true
        :parallel true
        :config-dir (some-> db :project-root-uri project-config-dir)
@@ -286,33 +273,40 @@
                    (string/join (System/getProperty "path.separator")))]
        :config {:output {:canonical-paths true}}
        :file-analyzed-fn file-analyzed-fn}
-      (with-additional-config (settings/all db))))
+      (with-additional-config settings)))
 
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
-  (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))]
-    (-> (config-for-paths paths file-analyzed-fn db)
+  (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))
+        settings (settings/all db)]
+    (-> (config-for-paths paths file-analyzed-fn db settings)
         (assoc :custom-lint-fn custom-lint-fn)
-        (assoc-in [:config :analysis] (config-for-full-analysis db))
-        (assoc-in [:config :analysis :keywords] full-analysis?)
-        (assoc-in [:config :analysis :locals] full-analysis?)
-        (assoc-in [:config :analysis :symbols] full-analysis?)
-        (assoc-in [:config :analysis :arglists] full-analysis?)
-        (assoc-in [:config :analysis :instance-invocations] full-analysis?)
-        (assoc-in [:config :analysis :protocol-impls] full-analysis?)
-        (assoc-in [:config :analysis :java-class-usages] full-analysis?)
-        (assoc-in [:config :analysis :java-member-definitions] full-analysis?)
-        (assoc-in [:config :analysis :java-class-definitions] full-analysis?))))
+        (assoc-in [:config :analysis] {:arglists full-analysis?
+                                       :locals full-analysis?
+                                       :keywords (and full-analysis? (get-in settings [:analysis :keywords] true))
+                                       :protocol-impls full-analysis?
+                                       :java-class-definitions (and full-analysis? (get-in settings [:analysis :java :class-definitions] true))
+                                       :java-member-definitions (and full-analysis? (get-in settings [:analysis :java :member-definitions] true))
+                                       :instance-invocations full-analysis?
+                                       :java-class-usages full-analysis?
+                                       :context [:clojure.test
+                                                 :re-frame.core]
+                                       :var-definitions {:meta (var-definition-metas db)
+                                                         :callstack true}
+                                       :symbols (and full-analysis? (get-in settings [:analysis :symbols] true))}))))
 
 (defn ^:private config-for-external-paths [paths db file-analyzed-fn]
-  (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))]
-    (-> (config-for-paths paths file-analyzed-fn db)
+  (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))
+        settings (settings/all db)]
+    (-> (config-for-paths paths file-analyzed-fn db settings)
         (assoc :skip-lint true)
-        (assoc-in [:config :analysis] (config-for-shallow-analysis db))
-        (assoc-in [:config :analysis :keywords] full-analysis?)
-        (assoc-in [:config :analysis :arglists] full-analysis?)
-        (assoc-in [:config :analysis :protocol-impls] full-analysis?)
-        (assoc-in [:config :analysis :java-member-definitions] full-analysis?)
-        (assoc-in [:config :analysis :java-class-definitions] full-analysis?))))
+        (assoc-in [:config :analysis] {:var-usages false
+                                       :keywords (and full-analysis? (get-in settings [:analysis :keywords] true))
+                                       :arglists full-analysis?
+                                       :protocol-impls full-analysis?
+                                       :java-class-definitions (and full-analysis? (get-in settings [:analysis :java :class-definitions] true))
+                                       :java-member-definitions (and full-analysis? (get-in settings [:analysis :java :member-definitions] true))
+                                       :var-definitions {:shallow true
+                                                         :meta (var-definition-metas db)}}))))
 
 (defn ^:private config-for-copy-configs [paths db]
   {:cache true
@@ -334,18 +328,31 @@
   (let [db @db*
         filename (shared/uri->filename uri)
         custom-lint-fn #(custom-lint-file! filename uri @db* %)
-        lang (shared/uri->file-type uri)]
+        lang (shared/uri->file-type uri)
+        settings (settings/all db)]
     (-> {:cache true
          :lint ["-"]
-         :copy-configs (settings/get db [:copy-kondo-configs?] true)
+         :copy-configs (get settings :copy-kondo-configs? true)
          :filename filename
          :config-dir (some-> db :project-root-uri project-config-dir)
          :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
-                  :analysis (config-for-full-analysis db)}}
+                  :analysis {:arglists true
+                             :locals true
+                             :keywords (get-in settings [:analysis :keywords] true)
+                             :protocol-impls true
+                             :java-class-definitions (get-in settings [:analysis :java :class-definitions] true)
+                             :java-member-definitions (get-in settings [:analysis :java :member-definitions] true)
+                             :instance-invocations true
+                             :java-class-usages true
+                             :context [:clojure.test
+                                       :re-frame.core]
+                             :var-definitions {:meta (var-definition-metas db)
+                                               :callstack true}
+                             :symbols (get-in settings [:analysis :symbols] true)}}}
         (shared/assoc-in-some [:lang] (when (not= :unknown lang)
                                         lang))
-        (with-additional-config (settings/all db)))))
+        (with-additional-config settings))))
 
 (defn ^:private run-kondo! [config err-hint]
   (let [err-writer (java.io.StringWriter.)]

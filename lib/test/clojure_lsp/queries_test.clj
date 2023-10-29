@@ -1199,3 +1199,15 @@
     [{:uri (h/file-uri "file:///src/a.cljc")}
      {:uri (h/file-uri "file:///test/a.clj")}]
     (q/find-all-project-namespace-definitions (h/db) 'a)))
+
+(deftest analysis-summary-test
+  (h/load-code-and-locs "(ns a) (def a 1) (def b 2) (def c 3)" (h/file-uri "file:///src/a.clj"))
+  (h/load-code-and-locs "(ns b) (def d 1) (def e 2) :a 1 :b 2" (h/file-uri "file:///src/b.clj"))
+
+  (h/assert-submap
+    {:internal {:var-definitions 5
+                :keyword-usages 2
+                :var-usages 5
+                :namespace-definitions 2}
+     :external {}}
+    (q/analysis-summary (h/db))))

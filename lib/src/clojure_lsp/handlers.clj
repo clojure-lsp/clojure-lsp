@@ -329,8 +329,7 @@
      :classpath (:classpath db)
      :cljfmt-raw (binding [*print-meta* true]
                    (pr-str (f.format/resolve-user-cljfmt-config db)))
-     :analysis-summary {:external (q/analysis-summary (q/external-analysis db))
-                        :internal (q/analysis-summary (q/internal-analysis db))}
+     :analysis-summary (q/analysis-summary db)
      :port (or (:port db)
                "NREPL only available on :debug profile (`bb debug-cli`)")}))
 

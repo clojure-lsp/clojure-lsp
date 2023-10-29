@@ -2219,8 +2219,9 @@
 <li>Improve overall performance using GraalVM 21 PGO (Profile-Guided Optimizations).</li>
 <li>Extract the responsibility for merging clj-depend config #1265</li>
 <li>Support passing configurations to clj-depend via CLI #1694</li>
+<li>Bump clj-depend to <code>0.9.2</code></li>
 <li>
-<p>Bump clj-depend to <code>0.9.2</code></p>
+<p>Performance: remove keyword-usages elements from external analysis as they are not used for any feature and for big projects may affect memory. #1700</p>
 </li>
 <li>
 <p>Editor</p>
@@ -2237,6 +2238,7 @@
 <li>Improve rename to avoid internal errors and show proper error messages. #1691</li>
 <li>Exclude unused-public-vars when inside a comment block.</li>
 <li>Add <code>:analysis-summary</code> field to <code>serverInfo</code> command to get information about project for performance analysis.</li>
+<li>Add <code>:analysis</code> settings, with options to disable specific analysis for better performance on huge projects. #1700</li>
 </ul>
 <h2 id="20230806-002806">2023.08.06-00.28.06<a class="headerlink" href="#20230806-002806" title="Permanent link">#</a></h2>
 <ul>
@@ -3624,7 +3626,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 27, 2023</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 29, 2023</span>
     
   </small>
 </div>

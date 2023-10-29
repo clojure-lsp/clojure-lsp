@@ -2,12 +2,12 @@
         org.clojure/tools.cli {:mvn/version "1.0.214"}
         borkdude/dynaload {:mvn/version "0.3.5"}
         nrepl/bencode {:mvn/version "1.1.0"}
-        com.taoensso/timbre {:mvn/version "6.0.4"}
+        com.taoensso/timbre {:mvn/version "6.3.1"}
         clojure-lsp/lib {:local/root "../lib"}
         funcool/promesa {:mvn/version "10.0.594"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.83.1314"}}
+                               lambdaisland/kaocha {:mvn/version "1.87.1366"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test
@@ -21,7 +21,7 @@
            :build {:extra-paths ["../lib/resources"]
                    :extra-deps {babashka/fs {:mvn/version "0.3.17"}
                                 babashka/process {:mvn/version "0.5.18"}}
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.9.4" :sha "76b78fe"}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.9.6" :sha "8e78bcc"}
                                   com.github.ericdallo/deps-bin {:mvn/version "0.2.0"}
                                   slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}
@@ -29,7 +29,7 @@
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-paths ["dev"]
                    :extra-deps {cider/cider-nrepl {:mvn/version "0.41.0"}
-                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.3"}
+                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.1.1"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.2.2"}
                                 criterium/criterium {:mvn/version "0.4.6"}
                                 nrepl/nrepl {:mvn/version "1.0.0"}}
@@ -39,4 +39,4 @@
                                "-Dborkdude.dynaload.aot=true"
                                "-Dclojure.compiler.direct-linking=true"
                                "-Dclojure.spec.skip-macros=true"]
-                    :extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "0.1.4"}}}}}
+                    :extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}}}}}

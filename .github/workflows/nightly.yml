@@ -260,7 +260,7 @@ jobs:
   windows:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
-    runs-on: windows-2022
+    runs-on: windows-latest
     strategy:
       fail-fast: false
     steps:
@@ -284,6 +284,8 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
+          lein: '2.9.1'
+          boot: '2.8.3'
           bb: '0.9.161'
 
       - name: Install MSVC
@@ -298,6 +300,11 @@ jobs:
       - name: Install native-image component
         run: |
           gu.cmd install native-image
+
+      # see https://github.com/oracle/graal/issues/4340
+      - name: GraalVM workaround to support UPX compression
+        run: |
+          7z d "$env:JAVA_HOME\lib\svm\builder\svm.jar" com/oracle/svm/core/windows/WindowsImageHeapProviderFeature.class
 
       - name: Build Windows native image
         env:

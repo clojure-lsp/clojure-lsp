@@ -132,9 +132,9 @@
                         "--no-fallback"
                         "--native-image-info"
                         "--features=clj_easy.graal_build_time.InitClojureClasses"
-                        "-march=compatibility"
+                        (when-not (fs/windows?) "-march=compatibility")
                         "-O1"
-                        ;; "--pgo=graalvm/default.iprof"
+                        (when-not (:pgo opts) "--pgo=graalvm/default.iprof")
                         (or (System/getenv "CLOJURE_LSP_XMX")
                             "-J-Xmx8g")
                         (when (= "true" (System/getenv "CLOJURE_LSP_STATIC"))
@@ -151,7 +151,8 @@
     (println "Set GRAALVM_HOME env")))
 
 (defn native-cli-pgo-instrument [opts]
-  (native-cli (merge opts {:extra-args ["--pgo-instrument"]})))
+  (native-cli (merge opts {:pgo true
+                           :extra-args ["--pgo-instrument"]})))
 
 (defn deploy-clojars [opts]
   (server-jar opts)

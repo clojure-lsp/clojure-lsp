@@ -113,13 +113,7 @@ jobs:
         with:
           java-version: '21'
           distribution: 'graalvm'
-          native-image-musl: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install native dev tools
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install build-essential zlib1g-dev
 
       - name: Build Linux native image
         env:
@@ -234,7 +228,6 @@ jobs:
         with:
           java-version: '21'
           distribution: 'graalvm'
-          native-image-musl: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build MacOS native image

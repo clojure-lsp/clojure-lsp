@@ -231,7 +231,6 @@ jobs:
             export JAVA_HOME=/graalvm
             export GRAALVM_HOME=/graalvm
             export CLOJURE_LSP_XMX="-J-Xmx8g"
-            gu install native-image
             bb native-cli
             cp clojure-lsp "/artifacts/clojure-lsp"
             echo "Produced artifact at /artifacts/clojure-lsp"

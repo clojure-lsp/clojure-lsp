@@ -132,10 +132,9 @@
                         "--no-fallback"
                         "--native-image-info"
                         "--features=clj_easy.graal_build_time.InitClojureClasses"
-                        (when-not (fs/windows?) "-march=compatibility")
+                        "-march=compatibility"
                         "-O1"
-                        (when-not (or (:pgo-instrument opts)
-                                      (fs/windows?)) "--pgo=graalvm/default.iprof")
+                        (when-not (:pgo-instrument opts) "--pgo=graalvm/default.iprof")
                         (or (System/getenv "CLOJURE_LSP_XMX")
                             "-J-Xmx8g")
                         (when (= "true" (System/getenv "CLOJURE_LSP_STATIC"))

@@ -341,11 +341,6 @@ jobs:
           minimum-size: 8GB
           maximum-size: 16GB
 
-      - name: Prepare java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-
       - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
         with:
@@ -357,15 +352,11 @@ jobs:
       - name: Install MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Install GraalVM
-        uses: DeLaGuardo/setup-graalvm@master
+      - uses: graalvm/setup-graalvm@v1
         with:
-          graalvm: 22.2.0
-          java: java11
-
-      - name: Install native-image component
-        run: |
-          gu.cmd install native-image
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # see https://github.com/oracle/graal/issues/4340
       - name: GraalVM workaround to support UPX compression

@@ -110,7 +110,6 @@ jobs:
         with:
           java-version: '21'
           distribution: 'graalvm'
-          native-image-musl: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Linux native image
@@ -214,7 +213,7 @@ jobs:
             mv clojure-lsp-standalone.jar "${PWD}/artifacts/"
             wget -q https://download.oracle.com/graalvm/21/archive/graalvm-jdk-21_linux-aarch64_bin.tar.gz
             tar -xzf graalvm-jdk-21_linux-aarch64_bin.tar.gz
-            mv graalvm-jdk-21* graalvm
+            mv $(ls -d */) graalvm
           dockerRunArgs: |
             --volume "${PWD}/graalvm:/graalvm"
             --volume "${PWD}/artifacts:/artifacts"

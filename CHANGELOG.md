@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023.10.30-16.25.41
+
 - General
   - Bump clj-kondo to `2023.10.21-20231022.204832-4`. 
   - Fix move-to-let/expand-let bug for multi-arity functions #1283

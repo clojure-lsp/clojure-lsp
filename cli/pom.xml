@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2023.08.06-00.28.06</version>
+  <version>2023.10.30-16.25.41</version>
   <name>clojure-lsp-server</name>
   <dependencies>
     <dependency>
@@ -46,7 +46,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2023.07.14-20230717.090255-3</version>
+      <version>2023.10.21-20231022.204832-4</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
@@ -76,7 +76,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>timbre</artifactId>
-      <version>6.0.4</version>
+      <version>6.3.1</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>
@@ -96,7 +96,7 @@
     <dependency>
       <groupId>borkdude</groupId>
       <artifactId>rewrite-edn</artifactId>
-      <version>0.4.6</version>
+      <version>0.4.7</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-clj</groupId>
@@ -127,7 +127,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>core.async</artifactId>
-      <version>1.6.673</version>
+      <version>1.6.681</version>
     </dependency>
   </dependencies>
   <repositories>
@@ -151,6 +151,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2023.08.06-00.28.06</tag>
+    <tag>2023.10.30-16.25.41</tag>
   </scm>
 </project>

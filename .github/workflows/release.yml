@@ -213,6 +213,7 @@ jobs:
             mv clojure-lsp-standalone.jar "${PWD}/artifacts/"
             wget -q https://download.oracle.com/graalvm/21/archive/graalvm-jdk-21_linux-aarch64_bin.tar.gz
             tar -xzf graalvm-jdk-21_linux-aarch64_bin.tar.gz
+            ls
             mv $(ls -d */) graalvm/
           dockerRunArgs: |
             --volume "${PWD}/graalvm:/graalvm"

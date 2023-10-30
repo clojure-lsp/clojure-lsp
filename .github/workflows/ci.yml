@@ -115,42 +115,68 @@ jobs:
         run: bb pod-test
 
   graalvm-build:
-    runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
+    # needs: [build-cli-jar, release-dev-build]
+    continue-on-error: true
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install Clojure
+
+      - name: configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 8GB
+          maximum-size: 16GB
+
+      - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: '1.10.3.1013'
+          lein: '2.9.1'
+          boot: '2.8.3'
           bb: '0.9.161'
+
+      - name: Install MSVC
+        uses: ilammy/msvc-dev-cmd@v1
 
       - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '21'
           distribution: 'graalvm'
-          native-image-musl: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Linux native image
+      # see https://github.com/oracle/graal/issues/4340
+      - name: GraalVM workaround to support UPX compression
+        run: |
+          7z d "$env:JAVA_HOME\lib\svm\builder\svm.jar" com/oracle/svm/core/windows/WindowsImageHeapProviderFeature.class
+
+      - name: Build Windows native image
         env:
-          CLOJURE_LSP_XMX: "-J-Xmx6g"
-          CLOJURE_LSP_STATIC: true
-          CLOJURE_LSP_MUSL: true
+          # CLOJURE_LSP_JAR: ..\clojure-lsp-standalone.jar
+          CLOJURE_LSP_XMX: "-J-Xmx7g"
         run: |
           bb native-cli
 
       - name: Compress binary
         uses: svenstaro/upx-action@v2
         with:
-          file: clojure-lsp
+          file: clojure-lsp.exe
+
+      # Remove after all places are using clojure-lsp-dev-builds
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          path: clojure-lsp.exe
+          name: clojure-lsp-native-windows-amd64
+
+      - name: Zip binary
+        run: |
+          jar -cMf clojure-lsp-native-windows-amd64.zip clojure-lsp.exe
 
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          name: clojure-lsp-native
-          path: clojure-lsp
+          name: clojure-lsp-native.exe
+          path: clojure-lsp.exe
 
   graalvm-integration-test:
     needs: graalvm-build

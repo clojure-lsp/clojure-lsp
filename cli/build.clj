@@ -131,6 +131,7 @@
                         "--verbose"
                         "--no-fallback"
                         "--native-image-info"
+                        "--features=clj_easy.graal_build_time.InitClojureClasses"
                         "-march=compatibility"
                         "-O1"
                         ;; "--pgo=graalvm/default.iprof"

@@ -103,6 +103,7 @@
     (logger/info (format "Finding classpath via `%s`" command))
     (try
       (let [sep (re-pattern (System/getProperty "path.separator"))
+            env (merge {} (System/getenv) env)
             {:keys [exit out err]} (apply shell (into classpath-cmd
                                                       (cond-> [:dir (str root-path)]
                                                         env (conj :env (merge {} (System/getenv) env)))))]
@@ -116,18 +117,21 @@
             {:command command
              :paths (set paths)})
           {:command command
+           :env env
            :error err}))
       (catch Exception e
         {:command command
+         :env env
          :error (.getMessage e)}))))
 
 (defn ^:private lookup-classpath-handling-error! [project-spec root-path producer]
-  (let [{:keys [command error paths]} (lookup-classpath! root-path project-spec)
+  (let [{:keys [command error env paths]} (lookup-classpath! root-path project-spec)
         retry-action "Retry"
         ignore-action "Ignore"]
     (if error
       (do
         (logger/error (format "Error while looking up classpath info in %s. Error: %s" (str root-path) error))
+        (logger/debug (format "Env used for classpath lookup:\nSHELL: %s\nPATH: %s" (get env "SHELL") (get env "PATH")))
         (if-let [chosen-action (producer/show-message-request
                                  producer
                                  (format (str "LSP classpath lookup failed when running `%s`. Some features may not work properly if ignored.\n\n"

@@ -99,14 +99,14 @@
         classpath-cmd)))
 
 (defn ^:private lookup-classpath! [root-path {:keys [classpath-cmd env]}]
-  (let [command (string/join " " classpath-cmd)]
+  (let [command (string/join " " classpath-cmd)
+        env-with-default (merge {} (System/getenv) env)]
     (logger/info (format "Finding classpath via `%s`" command))
     (try
       (let [sep (re-pattern (System/getProperty "path.separator"))
-            env (merge {} (System/getenv) env)
             {:keys [exit out err]} (apply shell (into classpath-cmd
                                                       (cond-> [:dir (str root-path)]
-                                                        env (conj :env (merge {} (System/getenv) env)))))]
+                                                        env (conj :env env-with-default))))]
         (if (= 0 exit)
           (let [paths (-> out
                           string/split-lines
@@ -117,11 +117,11 @@
             {:command command
              :paths (set paths)})
           {:command command
-           :env env
+           :env env-with-default
            :error err}))
       (catch Exception e
         {:command command
-         :env env
+         :env env-with-default
          :error (.getMessage e)}))))
 
 (defn ^:private lookup-classpath-handling-error! [project-spec root-path producer]

@@ -136,6 +136,7 @@ Alternatively, you can configure the `project-specs` specific for your project, 
 `.lsp/config.edn`
 ```clojure
 {:project-specs [{:project-path "deps.edn"
+                  :env {"PATH" "/some/custom/path"} ;; optional if you want to override the PATH used in the classpath-cmd
                   :classpath-cmd ["clojure" "-A:my-custom-alias" "-Spath"]}]}
 ```
 

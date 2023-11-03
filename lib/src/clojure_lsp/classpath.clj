@@ -181,21 +181,38 @@
            (str "-A:")
            vector))
 
-(defn default-project-specs [source-aliases]
+(defn default-project-specs
+  "A col of project-specs, clojure-lsp will use each matched project-spec and
+   merge removing duplicates.
+
+  `project-path`: file name which will be used to determine if project spec
+   matches and should run `classpath-cmd`.
+
+  `classpath-cmd`: shell command to run that should return a claspath string
+  like some/path:/other/path:/path/etc
+
+  `env` optional map of strings which will inject env variables to
+  the `classpath-cmd`. E.g `{\"PATH\": \"/some/path\"}`"
+  [source-aliases]
   (->> [{:project-path "project.clj"
+         :env nil
          :classpath-cmd (->> ["lein" (lein-source-aliases source-aliases) "classpath"]
                              flatten
                              (remove nil?)
                              vec)}
         {:project-path "deps.edn"
+         :env nil
          :classpath-cmd (->> ["clojure" (deps-source-aliases source-aliases) "-Spath"]
                              flatten
                              (remove nil?)
                              vec)}
         {:project-path "build.boot"
+         :env nil
          :classpath-cmd ["boot" "show" "--fake-classpath"]}
         {:project-path "shadow-cljs.edn"
+         :env nil
          :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
         {:project-path "bb.edn"
+         :env nil
          :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
        (map #(update % :classpath-cmd classpath-cmd->normalize))))

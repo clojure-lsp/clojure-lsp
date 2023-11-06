@@ -846,10 +846,14 @@
 (merge-with into)
 
 (defn analysis-summary [db]
-  (let [summary-fn #(update-vals (->> %
-                                      vals
-                                      (reduce (fn [acc analysis]
-                                                (merge-with into acc analysis)) {}))
-                                 count)]
+  (let [summary-fn (fn [analysis]
+                     (reduce-kv
+                       (fn [acc k v]
+                         (assoc acc k (count v)))
+                       {}
+                       (->> analysis
+                            vals
+                            (reduce (fn [acc analysis]
+                                      (merge-with into acc analysis)) {}))))]
     {:internal (summary-fn (internal-analysis db))
      :external (summary-fn (external-analysis db))}))

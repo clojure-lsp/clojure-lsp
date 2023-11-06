@@ -3,9 +3,9 @@
   <modelVersion>4.0.0</modelVersion>
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
-  <artifactId>clojure-lsp-server</artifactId>
-  <version>2023.10.30-16.25.41</version>
-  <name>clojure-lsp-server</name>
+  <artifactId>clojure-lsp-standalone</artifactId>
+  <version>2023.10.30-16.25.41-hotfix1</version>
+  <name>clojure-lsp-standalone</name>
   <dependencies>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -151,6 +151,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2023.10.30-16.25.41</tag>
+    <tag>2023.10.30-16.25.41-hotfix1</tag>
   </scm>
 </project>

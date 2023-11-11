@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix deep-merge of client settings with project settings.
+
 ## 2023.10.30-16.25.41
 
 - General

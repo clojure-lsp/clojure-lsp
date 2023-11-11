@@ -190,7 +190,7 @@
                                                                        (re-find #"^/[A-Z]:/")
                                                                        boolean)
                                         :encode-colons-in-path? (string/includes? project-root-uri "%3A")}}
-        settings (shared/deep-merge encoding-settings
+        settings (medley/deep-merge encoding-settings
                                     client-settings
                                     project-settings
                                     force-settings)
@@ -252,7 +252,7 @@
                                          (some-> (:classpath @db*)
                                                  (config/resolve-from-classpath-config-paths settings)))]
         (swap! db* assoc
-               :settings (shared/deep-merge (:settings @db*)
+               :settings (medley/deep-merge (:settings @db*)
                                             classpath-settings
                                             project-settings
                                             force-settings)

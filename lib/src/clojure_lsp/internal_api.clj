@@ -209,9 +209,10 @@
     (swap! db* assoc :project-analysis-type :project-only)
     (analyze! options components)))
 
-(defn ^:private setup-empty-analysis! [_options {:keys [db*]}]
+(defn ^:private setup-project-ns-only-analysis! [options {:keys [db*] :as components}]
   (when (not (:analysis @db*))
-    (swap! db* assoc :project-analysis-type :empty)))
+    (swap! db* assoc :project-analysis-type :project-namespaces-only)
+    (analyze! options components)))
 
 (defn ^:private dynamic-setup-project-analysis! [options default-analysis-type components]
   (case (get-in options [:analysis :type] default-analysis-type)
@@ -363,7 +364,7 @@
   ;; This breaks the :style/indent support, but improves performance a lot
   ;; if anyone suffers from that specific feature we should check how to support
   ;; that better
-  (setup-empty-analysis! options components)
+  (setup-project-ns-only-analysis! options components)
   (cli-println options "Formatting namespaces...")
   (let [db @db*
         edits (->> (options->uris options db)

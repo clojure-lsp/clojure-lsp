@@ -14,6 +14,7 @@
    [clojure.string :as string]
    [medley.core :as medley])
   (:import
+   [java.io File]
    (java.net URI)))
 
 (set! *warn-on-reflection* true)
@@ -81,6 +82,33 @@
                      (lsp.kondo/db-with-results kondo-result)
                      (lsp.depend/db-with-results depend-result))))))
 
+(defn ^:private analyze-source-paths-namespaces-only! [paths db* _file-analyzed-fn]
+  (let [db @db*
+        namespace-definitions-result
+        {:external? false
+         :analysis
+         (into {}
+               (comp
+                 (mapcat #(file-seq (io/file %)))
+                 (map (fn [^File f]
+                        (when (and (shared/file-exists? f)
+                                   (not (shared/directory? f)))
+                          (when-let [uri (shared/filename->uri (.getCanonicalPath f) db)]
+                            (when-let [ns (shared/uri->namespace uri db)]
+                              [uri ns])))))
+                 (remove nil?)
+                 (map (fn [[uri ns]]
+                        {uri {:namespace-definitions [{:uri uri
+                                                       :row 1
+                                                       :col 1
+                                                       :end-row 1
+                                                       :end-col 1
+                                                       :bucket :namespace-definitions
+                                                       :name (symbol ns)}]}})))
+               paths)}]
+    (swap! db* (fn [state-db]
+                 (lsp.kondo/db-with-results state-db namespace-definitions-result)))))
+
 (defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* producer]}]
   (logger/info "Analyzing classpath for project root" (str root-path))
   (when classpath
@@ -109,7 +137,8 @@
       (swap! db* assoc :full-scan-analysis-startup true))))
 
 (defn ^:private copy-configs-from-classpath! [classpath settings db*]
-  (when (get settings :copy-kondo-configs? true)
+  (when (and (get settings :copy-kondo-configs? true)
+             (not (= :project-namespaces-only (:project-analysis-type @db*))))
     (logger/info "Copying kondo configs from classpath to project if any...")
     (when classpath
       (when-let [{:keys [config]} (shared/logging-time
@@ -218,7 +247,7 @@
                                 (= (:kondo-config-hash @db*) kondo-config-hash)
                                 (not dependency-scheme-changed?))
           fast-startup? (or use-db-analysis?
-                            (= :project-only (:project-analysis-type @db*)))
+                            (#{:project-only :project-namespaces-only} (:project-analysis-type @db*)))
           task-list (if fast-startup? fast-tasks slow-tasks)]
       (if use-db-analysis?
         (let [classpath (:classpath @db*)]
@@ -259,11 +288,14 @@
                :classpath-settings classpath-settings))
       (publish-task-progress producer (:analyzing-project task-list) progress-token)
       (logger/info startup-logger-tag "Analyzing source paths for project root" (str root-path))
-      (analyze-source-paths! (-> @db* :settings :source-paths)
-                             db*
-                             (fn [{:keys [total-files files-done]}]
-                               (let [task (-> (:analyzing-project task-list)
-                                              (partial-task files-done total-files))]
-                                 (publish-task-progress producer task progress-token))))
+      (let [analyze-source-paths-fn (if (= :project-namespaces-only (:project-analysis-type @db*))
+                                      analyze-source-paths-namespaces-only!
+                                      analyze-source-paths!)]
+        (analyze-source-paths-fn (-> @db* :settings :source-paths)
+                                 db*
+                                 (fn [{:keys [total-files files-done]}]
+                                   (let [task (-> (:analyzing-project task-list)
+                                                  (partial-task files-done total-files))]
+                                     (publish-task-progress producer task progress-token)))))
       (swap! db* assoc :settings-auto-refresh? true)
       (publish-task-progress producer (:done task-list) progress-token))))

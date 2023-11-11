@@ -5,6 +5,9 @@
 - General
   - Fix deep-merge of client settings with project settings.
 
+- API/CLI
+  - Drastically improves performance of `format` task matching `cljfmt`, avoiding analyzing the project. #1723
+
 ## 2023.10.30-16.25.41
 
 - General

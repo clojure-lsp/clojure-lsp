@@ -7,6 +7,7 @@ VERSION=$"$(date -u +"%Y.%m.%d-%H.%M.%S")"
 git fetch origin
 git pull origin HEAD
 echo "$VERSION" > lib/resources/CLOJURE_LSP_VERSION
+echo "$VERSION" > lib/resources/CLOJURE_LSP_RELEASED_VERSION
 sed -i "s/## Unreleased/## Unreleased\n\n## $VERSION/g" CHANGELOG.md
 bb lib-pom
 bb cli-pom

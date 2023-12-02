@@ -587,8 +587,12 @@
                              " (:require"
                              "  [some :refer [bar baz bla"
                              "                blowning car"
-                             "                cat clown cobble danger Dee"
-                             "                did done doo fear fight foo]]))"
+                             "                cat clown"
+                             "                cobble"
+                             "                danger Dee"
+                             "                did done doo"
+                             "                fear fight"
+                             "                foo]]))"
                              "   foo bar baz Dee bla blowning cat car clown cobble doo did done danger fear fight"))
       (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 40}}}}}
                      (h/code "(ns foo.bar"

@@ -5,6 +5,9 @@
 - General
   - Fix deep-merge of client settings with project settings.
   - Fix `max-line-length` on clean-ns feature not respecting some lines when contains a lot of refers. #1729
+  
+- Editor
+  - Fix edn tree visualization for keys with same name in the same level. #1558
 
 - API/CLI
   - Drastically improves performance of `format` task matching `cljfmt`, avoiding analyzing the project. #1723

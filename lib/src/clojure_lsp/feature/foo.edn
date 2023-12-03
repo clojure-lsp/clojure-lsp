@@ -1,0 +1,4 @@
+{:foo {:enabled true}
+ :bar {:enabled false}
+
+ :baz {:enabled true}}

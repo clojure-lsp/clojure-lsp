@@ -59,7 +59,7 @@
         (rest coll)
         (cons (first coll) (lazy-seq (remove-first item-to-remove (rest coll))))))))
 
-(defn ^:private edn->element-tree [m keyword-elements symbol-elements]
+(defn ^:private edn->element-tree [m keyword-elements* symbol-elements*]
   ;; TODO use tail recur for better performance
   (when (coll? m)
     (->> m
@@ -67,7 +67,7 @@
            (fn [acc entry]
              (cond
                (map? entry)
-               (concat acc (edn->element-tree entry keyword-elements symbol-elements))
+               (concat acc (edn->element-tree entry keyword-elements* symbol-elements*))
 
                (or (not (coll? entry))
                    (< (count entry) 2))
@@ -76,10 +76,12 @@
                :else
                (let [[k v] (vec entry)
                      element (or (if (keyword? k)
-                                   (first (filter #(= (:name %) (name k)) keyword-elements))
-                                   (first (filter #(= (:symbol %) k) symbol-elements)))
+                                   (last (filter #(= (:name %) (name k)) @keyword-elements*))
+                                   (last (filter #(= (:symbol %) k) @symbol-elements*)))
                                  ;; fallback to dumb element
                                  {:symbol (or (some-> k str) "nil") :row 0 :col 0 :end-row 0 :end-col 0})
+                     _ (swap! keyword-elements* #(remove-first element %))
+                     _ (swap! symbol-elements* #(remove-first element %))
                      document-symbol (element->document-symbol element)
                      kind (cond
                             (string? v) :string
@@ -98,8 +100,8 @@
                                 :children
                                 (edn->element-tree
                                   v
-                                  (remove-first element keyword-elements)
-                                  (remove-first element symbol-elements)))
+                                  keyword-elements*
+                                  symbol-elements*))
 
                          (coll? v)
                          (shared/assoc-some
@@ -109,8 +111,8 @@
                                 (keep
                                   #(edn->element-tree
                                      %
-                                     (remove-first element keyword-elements)
-                                     (remove-first element symbol-elements)))
+                                     keyword-elements*
+                                     symbol-elements*))
                                 flatten
                                 seq))
 
@@ -124,8 +126,8 @@
     (try
       (some-> (parser/safe-zloc-of-file db uri)
               parser/safe-zloc-sexpr
-              (edn->element-tree (get-in db [:analysis uri :keyword-usages])
-                                 (get-in db [:analysis uri :symbols])))
+              (edn->element-tree (atom (get-in db [:analysis uri :keyword-usages]))
+                                 (atom (get-in db [:analysis uri :symbols]))))
       (catch Exception e
         (println e)))
     (when-let [namespace-definition (q/find-namespace-definition-by-uri db uri)]

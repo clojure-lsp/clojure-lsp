@@ -119,6 +119,44 @@
              (f.document-symbol/document-symbols
                (h/db)
                (h/file-uri "file:///a.edn")))))
+    (testing "nested maps with same key name"
+      (h/load-code-and-locs
+        (h/code (str '{:foo {:a 1}
+                       :bar {:a 2}}))
+        (h/file-uri "file:///a.edn"))
+      (is (= [{:name "foo"
+               :kind :struct
+               :range
+               {:start {:line 0 :character 1} :end {:line 0 :character 5}}
+               :selection-range
+               {:start {:line 0 :character 1} :end {:line 0 :character 5}}
+               :tags []
+               :children
+               [{:name "a"
+                 :kind :number
+                 :range
+                 {:start {:line 0 :character 7} :end {:line 0 :character 9}}
+                 :selection-range
+                 {:start {:line 0 :character 7} :end {:line 0 :character 9}}
+                 :tags []}]}
+              {:name "bar"
+               :kind :struct
+               :range
+               {:start {:line 0 :character 14} :end {:line 0 :character 18}}
+               :selection-range
+               {:start {:line 0 :character 14} :end {:line 0 :character 18}}
+               :tags []
+               :children
+               [{:name "a"
+                 :kind :number
+                 :range
+                 {:start {:line 0 :character 20} :end {:line 0 :character 22}}
+                 :selection-range
+                 {:start {:line 0 :character 20} :end {:line 0 :character 22}}
+                 :tags []}]}]
+             (f.document-symbol/document-symbols
+               (h/db)
+               (h/file-uri "file:///a.edn")))))
     (testing "vector root"
       (h/load-code-and-locs
         (h/code "[{:a 1 :b [{:c 2} {:d 3}]}]")

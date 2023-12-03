@@ -155,23 +155,29 @@
         difference-changed-indentation (if (= old-ns-row refers-start-row)
                                          (- new-initial-ns-pos old-ns-col)
                                          0)
-        init-refer-sep (+ 2 refers-start-col difference-changed-indentation)]
+        init-refer-sep (+ 2 refers-start-col difference-changed-indentation)
+        max-line-length (settings/get db [:clean :sort :refer :max-line-length] 80)
+        max-chars-per-line (- max-line-length init-refer-sep)]
     (->> sorted-refers
-         (map-indexed (fn [idx refer-node]
-                        (let [end-col (->> sorted-refers
-                                           (take idx)
-                                           (map (comp count str n/sexpr))
-                                           (interpose 1)
-                                           (reduce + 0)
-                                           (+ init-refer-sep (-> refer-node n/sexpr str count)))
-                              max-line-length (settings/get db [:clean :sort :refer :max-line-length] 80)]
-                          (if (and max-line-length
-                                   (> max-line-length 0))
-                            (let [lines-n (if (> (quot end-col max-line-length) 0)
-                                            (+ init-refer-sep end-col)
-                                            end-col)]
-                              [refer-node (quot lines-n max-line-length)])
-                            [refer-node 0]))))
+         (reduce
+           (if (and max-line-length
+                    (> max-line-length 0))
+             (fn [{:keys [line-len cur-line] :as acc} refer-node]
+               (let [len (count (str (n/sexpr refer-node)))
+                     sep-len (if (zero? line-len) 0 1)
+                     line-len (+ line-len sep-len len)]
+                 (if (< max-chars-per-line line-len)
+                   (-> (assoc acc :line-len len)
+                       (update :cur-line inc)
+                       (update :res conj [refer-node (inc cur-line)]))
+                   (-> (assoc acc :line-len line-len)
+                       (update :res conj [refer-node cur-line])))))
+             (fn [acc refer-node]
+               (update acc :res conj [refer-node 0])))
+           {:line-len 0
+            :cur-line 0
+            :res      []})
+         :res
          refer-node-with-add-new-lines
          (map (fn [[refer-node add-new-line?]]
                 (if add-new-line?

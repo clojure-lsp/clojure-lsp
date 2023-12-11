@@ -281,7 +281,8 @@
                     "Some cool docs :foo"
                     (h/file-path "/a.clj")]
                    (:contents (hover foo-row foo-col))))
-            (is (= [{:language "clojure"
+            (is (= ["calling: clojure.core/->>"
+                    {:language "clojure"
                      :value "a/bar [x y]"}
                     "Other cool docs :bar"
                     (h/file-path "/a.clj")]
@@ -297,7 +298,8 @@
           (let [code (h/code "(ns a)"
                              "(defn |foo \"Some cool docs :foo\" [x y] x)")
                 [[foo-row foo-col]] (h/load-code-and-locs code)]
-            (is (= [{:language "clojure"
+            (is (= ["calling: clojure.core/defn"
+                    {:language "clojure"
                      :value "a/foo [x y]"}
                     "Some cool docs :foo"
                     (h/file-path "/a.clj")]
@@ -306,7 +308,8 @@
         (let [_ (h/load-code-and-locs (h/code "(ns ^{:doc \"Some cool docstring\"} some-a)") (h/file-uri "file:///some_a.clj"))
               code-b (h/code "(ns some-b (:require [some-|a :as abc]))")
               [[row col]] (h/load-code-and-locs code-b (h/file-uri "file:///some_b.clj"))]
-          (is (= [{:language "clojure"
+          (is (= ["calling: :require"
+                  {:language "clojure"
                    :value "some-a"}
                   "Some cool docstring"
                   (h/file-path "/some_a.clj")]

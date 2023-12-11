@@ -119,10 +119,32 @@
                (string/join ", ")
                (format "(%s)"))))
 
+(defn ^:private calling-line
+  [{namespace :ns :keys [name to method-name arglist-strs bucket]} markdown?]
+  (let [caller (condp = bucket
+                 :keyword-usages
+                 (str ":" name)
+
+                 :var-usages
+                 (str to "/" name)
+
+                 :local-usages
+                 name
+
+                 :instance-invocations
+                 (str "." method-name)
+
+                 (str namespace "/" name))
+        args (apply str (map (partial str " ") arglist-strs))]
+    (if markdown?
+      (str clojure-opening-code "#_calling: " caller args closing-code line-break)
+      (str "calling: " caller args))))
+
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc uri return-type bucket] :as definition}
    db*
-   {:keys [additional-text-edits?]}]
+   {:keys [additional-text-edits?]}
+   & [calling]]
   (let [db @db*
         content-formats (get-in db [:client-capabilities :text-document :hover :content-format])
         arity-on-same-line? (or (settings/get db [:hover :arity-on-same-line?])
@@ -154,6 +176,8 @@
                                   :java-class-definitions} bucket)
                              java-opening-code
                              clojure-opening-code) sym-line closing-code)
+                calling
+                , ((partial str (calling-line calling markdown?)))
                 (and additional-text-edits? additional-edits-warning-text)
                 , (str "\n\n" additional-edits-warning-text)
                 clojuredocs
@@ -168,6 +192,8 @@
                                uri)))}
       ;; Default to plaintext
       (cond-> []
+        calling
+        , (conj (calling-line calling markdown?))
         sym
         , (conj {:language "clojure"
                  :value (str (if arity-on-same-line? sym-line sym))})
@@ -194,31 +220,37 @@
                                edit/find-function-usage-name-loc
                                z/node
                                meta)
+         func-element (when func-position
+                        (q/find-element-under-cursor db uri (:row func-position) (:col func-position)))
+         func-definition (when func-element (q/find-definition db func-element))
          inside-ns (and cursor-loc (edit/inside-require? cursor-loc))
-         element (cond
-                   (or (contains? #{:var-usages :var-definitions} (:bucket cursor-element))
-                       inside-ns)
+         element (if (or (contains? #{:var-usages :var-definitions} (:bucket cursor-element))
+                         inside-ns)
                    cursor-element
-
-                   func-position
-                   (q/find-element-under-cursor db uri (:row func-position) (:col func-position))
-
-                   :else
                    (loop [try-col col]
                      (if-let [usage (q/find-element-under-cursor db uri row try-col)]
                        usage
                        (when (pos? try-col)
                          (recur (dec try-col))))))
-
-         definition (when element (q/find-definition db element))]
+         definition (when element (q/find-definition db element))
+         calling (when (and element func-element (not= element func-element))
+                   (or func-definition func-element))]
      (cond
        definition
        {:range (shared/->range element)
-        :contents (hover-documentation definition db* docs-config)}
+        :contents (hover-documentation definition db* docs-config calling)}
 
        element
        {:range (shared/->range element)
-        :contents (hover-documentation element db* docs-config)}
+        :contents (hover-documentation element db* docs-config calling)}
+
+       func-definition
+       {:range (shared/->range func-element)
+        :contents (hover-documentation func-definition db* docs-config)}
+
+       func-element
+       {:range (shared/->range func-element)
+        :contents (hover-documentation func-element db* docs-config)}
 
        :else
        {:contents []}))))

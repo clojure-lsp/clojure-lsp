@@ -1010,14 +1010,14 @@
       "hash": "sha256-Xe66kz8gwkNNCBozUpigMJuTl2+p1ZQc+QwEgldebZA="
     },
     {
-      "mvn-path": "dev/weavejester/cljfmt/0.11.2/cljfmt-0.11.2.jar",
+      "mvn-path": "dev/weavejester/cljfmt/0.12.0/cljfmt-0.12.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-M+i453CwbbNF1TB9PN1hfTIMtRLz68IYyEbMZIe6PjM="
+      "hash": "sha256-cvX9CXlsdlDDxOmYzdoDmUE3kFohe5wdFSEvXRhl3LU="
     },
     {
-      "mvn-path": "dev/weavejester/cljfmt/0.11.2/cljfmt-0.11.2.pom",
+      "mvn-path": "dev/weavejester/cljfmt/0.12.0/cljfmt-0.12.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-1LKnT5ZvmViuxF9wUI3sqY2HP/t9cNLxQp9KMp0kutw="
+      "hash": "sha256-QacuiiVkslwkVPrT6MIR+YveRwXqC0EwASfebQTV6/o="
     },
     {
       "mvn-path": "expound/expound/0.9.0/expound-0.9.0.jar",

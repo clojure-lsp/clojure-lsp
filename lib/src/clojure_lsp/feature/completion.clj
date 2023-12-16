@@ -313,16 +313,29 @@
            :java-class-usages])))
 
 (defn ^:private with-definition-kws-args-element-items
-  [matches-fn {:keys [arglist-kws name-row name-col uri]} resolve-support]
-  (->> (flatten arglist-kws)
-       (map (fn [kw]
-              {:name (str kw)
-               :name-row name-row
-               :name-col name-col
-               :uri uri
-               :bucket :keyword-usages}))
-       (filter #(matches-fn (keyword-element->str % nil nil)))
-       (mapv #(element->completion-item % nil :kw-arg resolve-support))))
+  [cursor-loc matches-fn {:keys [arglist-kws name-row name-col uri]} resolve-support]
+
+  (let [children-els-count (some-> cursor-loc z/up z/child-sexprs count)
+        existing-keys (set (cond
+                             (= 1 children-els-count)
+                             nil
+
+                             (some-> cursor-loc z/up z/child-sexprs count even?)
+                             (some->> cursor-loc z/up parser/safe-zloc-sexpr keys (mapv str))
+
+                             :else
+                             (some->> cursor-loc z/rightmost z/remove z/up parser/safe-zloc-sexpr keys (mapv str))))]
+    (->> (flatten arglist-kws)
+         (map (fn [kw]
+                {:name (str kw)
+                 :name-row name-row
+                 :name-col name-col
+                 :uri uri
+                 :bucket :keyword-usages}))
+         (filter #(let [label (keyword-element->str % nil nil)]
+                    (and (matches-fn label)
+                         (not (contains? existing-keys label)))))
+         (mapv #(element->completion-item % nil :kw-arg resolve-support)))))
 
 (defn ^:private with-ns-definition-elements [matches-fn non-local-db resolve-support]
   (into []
@@ -433,9 +446,9 @@
           (:analysis non-local-db))))
 
 (defn ^:private with-elements-from-keyword
-  [cursor-element matches-fn simple-cursor? caller-var-definition db resolve-support]
+  [cursor-element cursor-loc matches-fn simple-cursor? caller-var-definition db resolve-support]
   (if (:arglist-kws caller-var-definition)
-    (with-definition-kws-args-element-items matches-fn caller-var-definition resolve-support)
+    (with-definition-kws-args-element-items cursor-loc matches-fn caller-var-definition resolve-support)
     (into [] (comp
                q/xf-analysis->keywords
                (bucket-elems-xf :keyword-usages matches-fn cursor-element)
@@ -647,7 +660,7 @@
                     (with-elements-from-aliased-keyword cursor-loc cursor-element local-buckets non-local-db resolve-support)
 
                     keyword-value?
-                    (with-elements-from-keyword cursor-element matches-fn simple-cursor? caller-var-definition db resolve-support)
+                    (with-elements-from-keyword cursor-element cursor-loc matches-fn simple-cursor? caller-var-definition db resolve-support)
 
                     :else
                     (cond-> []

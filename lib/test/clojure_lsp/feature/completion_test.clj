@@ -495,24 +495,26 @@
       (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 7 (h/db)))))
 
 (deftest completing-arg-keywords-from-function-definition
-  (h/load-code-and-locs (h/code "(ns some.a) (defn my-api [{:keys [foo bar baz] :as bla}] 1)")
+  (h/load-code-and-locs (h/code "(ns some.a) (defn my-api [{:keys [foo bar baz barz] :as bla}] 1)")
                         (h/file-uri "file:///some/a.clj"))
   (h/load-code-and-locs (h/code "(ns some.b (:require [some.a :as a]))"
                                 "(a/my-api {:})")
                         (h/file-uri "file:///some/b.clj"))
   (h/load-code-and-locs (h/code "(ns some.c (:require [some.a :as a]))"
                                 "(a/my-api {:foo 1"
+                                "           :barz 2"
                                 "           :b})")
                         (h/file-uri "file:///some/c.clj"))
   (h/assert-submaps
     [{:label ":bar" :kind :keyword}
+     {:label ":barz" :kind :keyword}
      {:label ":baz" :kind :keyword}
      {:label ":foo" :kind :keyword}]
     (f.completion/completion (h/file-uri "file:///some/b.clj") 2 13 (h/db)))
   (h/assert-submaps
     [{:label ":bar" :kind :keyword}
      {:label ":baz" :kind :keyword}]
-    (f.completion/completion (h/file-uri "file:///some/c.clj") 3 13 (h/db))))
+    (f.completion/completion (h/file-uri "file:///some/c.clj") 4 13 (h/db))))
 
 (deftest completing-java-class-usages
   (h/load-code-and-locs

@@ -9,6 +9,7 @@
 - Editor
   - Fix edn tree visualization for keys with same name in the same level. #1558
   - Make clear when `hover` feature is in a calling and not in a specific symbol. #1281
+  - Exclude keys that are already included in the function call from completion suggestions. #1720
 
 - API/CLI
   - Drastically improves performance of `format` task matching `cljfmt`, avoiding analyzing the project. #1723

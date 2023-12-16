@@ -118,14 +118,14 @@
       "hash": "sha256-XBwijxopsG0KfQNJD15k+vcTo8YWcpi6Fxz/wzz57Rg="
     },
     {
-      "mvn-path": "borkdude/edamame/1.1.17/edamame-1.1.17.jar",
+      "mvn-path": "borkdude/edamame/1.3.23/edamame-1.3.23.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-QdHXxv1hkppapxTXGzWjZ6/j8iNP6X+JnYoCIqI4KNg="
+      "hash": "sha256-nm6BmZ66C/z3D61MlxA1TaNV37nSQAwepLpGK9Tv9VA="
     },
     {
-      "mvn-path": "borkdude/edamame/1.1.17/edamame-1.1.17.pom",
+      "mvn-path": "borkdude/edamame/1.3.23/edamame-1.3.23.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-mU55fCDJvYaGxVStkaYbFtJc2Xa4CZRUM01F36uVPmE="
+      "hash": "sha256-FSyVB9jpXsj9TeHIQLvurP9BeXwFoi6z5LAPGeUfwp4="
     },
     {
       "mvn-path": "borkdude/rewrite-edn/0.4.7/rewrite-edn-0.4.7.jar",
@@ -223,16 +223,14 @@
       "hash": "sha256-r/kF09oR/1EVcpq2SfSI/mEXxUm/CP/dnHHRO2nSu0k="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2023.10.21-SNAPSHOT/clj-kondo-2023.10.21-20231022.204832-4.jar",
-      "snapshot": "clj-kondo-2023.10.21-SNAPSHOT.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2023.12.15/clj-kondo-2023.12.15.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-+8ber/+NbzUxTtxGCR+0x85PIW3MUZjGo+eogvXf0+4="
+      "hash": "sha256-sT9BDJ4bFoDiALXYu+ZNxz2n+GMHoHajwru4RGNEJHQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2023.10.21-SNAPSHOT/clj-kondo-2023.10.21-20231022.204832-4.pom",
-      "snapshot": "clj-kondo-2023.10.21-SNAPSHOT.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2023.12.15/clj-kondo-2023.12.15.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-n3QLfKmRDx46KrRfym0jMHNbgWJRM6NnXtNnuy9CiVc="
+      "hash": "sha256-NTYt9jyTgJicRwMN0xerXQhhxAh4DQJNCLRwb1cL6b4="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -1010,14 +1008,14 @@
       "hash": "sha256-Xe66kz8gwkNNCBozUpigMJuTl2+p1ZQc+QwEgldebZA="
     },
     {
-      "mvn-path": "dev/weavejester/cljfmt/0.11.2/cljfmt-0.11.2.jar",
+      "mvn-path": "dev/weavejester/cljfmt/0.12.0/cljfmt-0.12.0.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-M+i453CwbbNF1TB9PN1hfTIMtRLz68IYyEbMZIe6PjM="
+      "hash": "sha256-cvX9CXlsdlDDxOmYzdoDmUE3kFohe5wdFSEvXRhl3LU="
     },
     {
-      "mvn-path": "dev/weavejester/cljfmt/0.11.2/cljfmt-0.11.2.pom",
+      "mvn-path": "dev/weavejester/cljfmt/0.12.0/cljfmt-0.12.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-1LKnT5ZvmViuxF9wUI3sqY2HP/t9cNLxQp9KMp0kutw="
+      "hash": "sha256-QacuiiVkslwkVPrT6MIR+YveRwXqC0EwASfebQTV6/o="
     },
     {
       "mvn-path": "expound/expound/0.9.0/expound-0.9.0.jar",
@@ -2180,14 +2178,14 @@
       "hash": "sha256-G2nywdVJ8si0e2uT3KcQPW/sQFBryQvVqXV1zWpEeh4="
     },
     {
-      "mvn-path": "org/babashka/sci/0.7.38/sci-0.7.38.jar",
+      "mvn-path": "org/babashka/sci/0.8.41/sci-0.8.41.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-djIms/cwUwrSUId8FaLdgDoU7jVZf52JIze0+Rjv8xI="
+      "hash": "sha256-3HCe7cK54zw8pjPq16C9GpqdhffPQRnkwnYB7QYSG9I="
     },
     {
-      "mvn-path": "org/babashka/sci/0.7.38/sci-0.7.38.pom",
+      "mvn-path": "org/babashka/sci/0.8.41/sci-0.8.41.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-LDlUwB8agJhiOQhWMOF6Iz9TRq2Dn/NdYsqnfyb0s8A="
+      "hash": "sha256-bLAX6lSX2D/h8A9TRp7fJcM1fCEYPc/WqryzT5U0t84="
     },
     {
       "mvn-path": "org/benf/cfr/0.152/cfr-0.152.jar",

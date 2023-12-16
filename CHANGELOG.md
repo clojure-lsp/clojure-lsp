@@ -5,6 +5,8 @@
 - General
   - Fix deep-merge of client settings with project settings.
   - Fix `max-line-length` on clean-ns feature not respecting some lines when contains a lot of refers. #1729
+  - Bump cljfmt to 0.12.0.
+  - Bump clj-kondo to `2023.12.15`.
   
 - Editor
   - Fix edn tree visualization for keys with same name in the same level. #1558

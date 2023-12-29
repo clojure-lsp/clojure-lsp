@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023.12.29-12.09.27
+
 - General
   - Fix deep-merge of client settings with project settings.
   - Fix `max-line-length` on clean-ns feature not respecting some lines when contains a lot of refers. #1729

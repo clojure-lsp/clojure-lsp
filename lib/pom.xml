@@ -6,6 +6,13 @@
   <artifactId>clojure-lsp</artifactId>
   <version>2023.12.29-12.09.27</version>
   <name>clojure-lsp</name>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
   <dependencies>
     <dependency>
       <groupId>org.clojure</groupId>

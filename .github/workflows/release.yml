@@ -195,18 +195,18 @@ jobs:
     continue-on-error: true
     strategy:
       fail-fast: false
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v2
         with:
           name: clojure-lsp-standalone.jar
 
       - name: Generate binary on aarch64
-        uses: uraimo/run-on-arch-action@v2.0.9
+        uses: uraimo/run-on-arch-action@v2
         with:
           arch: aarch64
-          distro: ubuntu20.04
+          distro: ubuntu22.04
           githubToken: ${{ github.token }}
           setup: |
             mkdir -p "${PWD}/artifacts"
@@ -217,7 +217,7 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}/graalvm:/graalvm"
             --volume "${PWD}/artifacts:/artifacts"
-            --memory "8g"
+            --memory "9g"
           install: |
             apt-get update -q -y
             apt-get install -q -y build-essential curl git libz-dev
@@ -230,7 +230,7 @@ jobs:
             export PATH=/graalvm/bin:$PATH
             export JAVA_HOME=/graalvm
             export GRAALVM_HOME=/graalvm
-            export CLOJURE_LSP_XMX="-J-Xmx8g"
+            export CLOJURE_LSP_XMX="-J-Xmx9g"
             bb native-cli
             cp clojure-lsp "/artifacts/clojure-lsp"
             echo "Produced artifact at /artifacts/clojure-lsp"

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix `didChangeConfiguration` throwing exception. #1749
+
 ## 2023.12.29-12.09.27
 
 - General

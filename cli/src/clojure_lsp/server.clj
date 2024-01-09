@@ -397,7 +397,7 @@
        (conform-or-log ::coercer/any-or-error)
        eventually))
 
-(defmethod lsp.server/receive-notification "workspace/didChangeConfiguration" [components params]
+(defmethod lsp.server/receive-notification "workspace/didChangeConfiguration" [_ components params]
   (->> params
        (handler/did-change-configuration components)
        (conform-or-log ::coercer/change-configration-of-error)

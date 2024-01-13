@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix binary not wokring on some aarch64 linux. #1748
+
 - Editor
   - Fix `didChangeConfiguration` throwing exception. #1749
   - Fix `rename` of ns causing wrong ns names because of duplicate rename actions. #1751

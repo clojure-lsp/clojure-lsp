@@ -14,6 +14,16 @@
 (def server-file "target/clojure-lsp-server.jar")
 (def standalone-file "target/clojure-lsp-standalone.jar")
 
+(def ^:private aarch64?
+  (-> (System/getProperty "os.arch")
+      (string/lower-case)
+      (string/includes? "aarch64")))
+
+(def ^:private linux?
+  (-> (System/getProperty "os.name")
+      (string/lower-case)
+      (string/includes? "linux")))
+
 (defn clean [_]
   (b/delete {:path "target"}))
 
@@ -138,6 +148,9 @@
                                       (fs/windows?)) "--pgo=graalvm/default.iprof")
                         (or (System/getenv "CLOJURE_LSP_XMX")
                             "-J-Xmx8g")
+                        (when (and linux? aarch64?)
+                          ["-Djdk.lang.Process.launchMechanism=vfork"
+                           "-H:PageSize=65536"])
                         (when (= "true" (System/getenv "CLOJURE_LSP_STATIC"))
                           ["--static"
                            (if (= "true" (System/getenv "CLOJURE_LSP_MUSL"))

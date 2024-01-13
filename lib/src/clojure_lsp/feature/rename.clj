@@ -275,7 +275,7 @@
           result
           (shared/->range element))))))
 
-(defn rename-element [uri new-name db element source]
+(defn rename-element [new-name db element source]
   (let [{:keys [error] :as result} (rename-status db element)]
     (if error
       result
@@ -289,20 +289,20 @@
                                     {:text-document text-document
                                      :edits (mapv #(dissoc % :text-document) edits)})))]
         (if (and (identical? :namespace-definitions (:bucket definition))
-                 (not (identical? :namespace-alias (:bucket element)))
                  (not= :rename-file source))
           (let [def-uri (:uri definition)
                 file-type (shared/uri->file-type def-uri)
                 new-uri (shared/namespace->uri replacement source-path file-type db)]
-            (shared/client-changes (concat doc-changes
-                                           [{:kind "rename"
-                                             :old-uri uri
-                                             :new-uri new-uri}])
+            ;; We only add the rename file change as willRenameFiles request
+            ;; will do the other changes
+            (shared/client-changes [{:kind "rename"
+                                     :old-uri def-uri
+                                     :new-uri new-uri}]
                                    db))
           (shared/client-changes doc-changes db))))))
 
 (defn rename-from-position
   [uri new-name row col db]
   (if-let [element (q/find-element-under-cursor db uri row col)]
-    (rename-element uri new-name db element :rename)
+    (rename-element new-name db element :rename)
     error-no-element))

@@ -174,68 +174,37 @@
       {:error {:code :invalid-params
                :message "Can't rename - namespace is defined in multiple files."}}
       (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db))))
-  (testing "when source-paths are valid and client capabilities has document-changes"
-    (h/reset-components!)
-    (swap! (h/db*) shared/deep-merge
-           {:project-root-uri (h/file-uri "file:///my-project")
-            :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
-            :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
-    (h/load-code-and-locs (h/code "(ns foo.bar-baz (:require [clojure.spec.alpha :as s]))"
-                                  "(s/def ::foo 1)") (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
-    (h/load-code-and-locs (h/code "(ns foo.qux (:require [foo.bar-baz :as f]))"
-                                  ":foo.bar-baz/foo") (h/file-uri "file:///my-project/src/foo/qux.clj"))
-    (is (= {:document-changes
-            [{:text-document {:version 0
-                              :uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")}
-              :edits [{:range
-                       {:start {:line 0 :character 4}
-                        :end {:line 0 :character 15}}
-                       :new-text "foo.baz-qux"}]}
-             {:text-document {:version 0
-                              :uri (h/file-uri "file:///my-project/src/foo/qux.clj")}
-              :edits [{:range
-                       {:start {:line 0 :character 23}
-                        :end {:line 0 :character 34}}
-                       :new-text "foo.baz-qux"}
-                      {:range
-                       {:start {:line 1 :character 0}
-                        :end {:line 1 :character 16}}
-                       :new-text ":foo.baz-qux/foo"}]}
-             {:kind "rename"
-              :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")
-              :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.clj")}]}
-           (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db)))))
-  (testing "renaming ns for cljc files"
-    (h/reset-components!)
-    (swap! (h/db*) shared/deep-merge
-           {:project-root-uri (h/file-uri "file:///my-project")
-            :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
-            :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
-    (h/load-code-and-locs (h/code "(ns foo.bar-baz (:require [clojure.spec.alpha :as s]))"
-                                  "(s/def ::foo 1)") (h/file-uri "file:///my-project/src/foo/bar_baz.cljc"))
-    (h/load-code-and-locs (h/code "(ns foo.qux (:require [foo.bar-baz :as f]))"
-                                  ":foo.bar-baz/foo") (h/file-uri "file:///my-project/src/foo/qux.cljc"))
-    (is (= {:document-changes
-            [{:text-document {:version 0
-                              :uri (h/file-uri "file:///my-project/src/foo/bar_baz.cljc")}
-              :edits [{:range
-                       {:start {:line 0 :character 4}
-                        :end {:line 0 :character 15}}
-                       :new-text "foo.baz-qux"}]}
-             {:text-document {:version 0
-                              :uri (h/file-uri "file:///my-project/src/foo/qux.cljc")}
-              :edits [{:range
-                       {:start {:line 0 :character 23}
-                        :end {:line 0 :character 34}}
-                       :new-text "foo.baz-qux"}
-                      {:range
-                       {:start {:line 1 :character 0}
-                        :end {:line 1 :character 16}}
-                       :new-text ":foo.baz-qux/foo"}]}
-             {:kind "rename"
-              :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.cljc")
-              :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.cljc")}]}
-           (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.cljc") "foo.baz-qux" 1 5 (h/db))))))
+  (testing "should trigger only a rename change and not all references changes"
+    (testing "when source-paths are valid and client capabilities has document-changes"
+      (h/reset-components!)
+      (swap! (h/db*) shared/deep-merge
+             {:project-root-uri (h/file-uri "file:///my-project")
+              :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
+              :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+      (h/load-code-and-locs (h/code "(ns foo.bar-baz (:require [clojure.spec.alpha :as s]))"
+                                    "(s/def ::foo 1)") (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
+      (h/load-code-and-locs (h/code "(ns foo.qux (:require [foo.bar-baz :as f]))"
+                                    ":foo.bar-baz/foo") (h/file-uri "file:///my-project/src/foo/qux.clj"))
+      (is (= {:document-changes
+              [{:kind "rename"
+                :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")
+                :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.clj")}]}
+             (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.clj") "foo.baz-qux" 1 5 (h/db)))))
+    (testing "renaming ns for cljc files"
+      (h/reset-components!)
+      (swap! (h/db*) shared/deep-merge
+             {:project-root-uri (h/file-uri "file:///my-project")
+              :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
+              :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+      (h/load-code-and-locs (h/code "(ns foo.bar-baz (:require [clojure.spec.alpha :as s]))"
+                                    "(s/def ::foo 1)") (h/file-uri "file:///my-project/src/foo/bar_baz.cljc"))
+      (h/load-code-and-locs (h/code "(ns foo.qux (:require [foo.bar-baz :as f]))"
+                                    ":foo.bar-baz/foo") (h/file-uri "file:///my-project/src/foo/qux.cljc"))
+      (is (= {:document-changes
+              [{:kind "rename"
+                :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.cljc")
+                :new-uri (h/file-uri "file:///my-project/src/foo/baz_qux.cljc")}]}
+             (f.rename/rename-from-position (h/file-uri "file:///my-project/src/foo/bar_baz.cljc") "foo.baz-qux" 1 5 (h/db)))))))
 
 (deftest rename-defrecord
   (h/reset-components!)

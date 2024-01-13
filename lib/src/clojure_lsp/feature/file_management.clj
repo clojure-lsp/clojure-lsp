@@ -384,5 +384,5 @@
                  (when (and new-ns
                             old-ns-definition
                             (not= new-ns (name (:name old-ns-definition))))
-                   (f.rename/rename-element old-uri new-ns db old-ns-definition :rename-file)))))
+                   (f.rename/rename-element new-ns db old-ns-definition :rename-file)))))
        (reduce #(shared/deep-merge %1 %2) {:document-changes []})))

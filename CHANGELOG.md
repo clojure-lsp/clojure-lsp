@@ -4,6 +4,7 @@
 
 - Editor
   - Fix `didChangeConfiguration` throwing exception. #1749
+  - Fix `rename` of ns causing wrong ns names because of duplicate rename actions. #1751
 
 ## 2023.12.29-12.09.27
 

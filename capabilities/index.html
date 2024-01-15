@@ -481,6 +481,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#project-tree" class="md-nav__link">
+    Project tree
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#server-info-raw" class="md-nav__link">
     Server Info Raw
   </a>
@@ -759,6 +766,13 @@
           <li class="md-nav__item">
   <a href="#test-tree" class="md-nav__link">
     Test tree
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-tree" class="md-nav__link">
+    Project tree
   </a>
   
 </li>
@@ -1340,7 +1354,30 @@ All commands expect the first three args to be <code>[document-uri, line, charac
 <p><code>TestTreeNode</code>: <code>{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}</code></p>
 </li>
 <li>
-<p><code>TestTreeKind</code>: <code>:namespace 1 :deftest 2 | :testing 3</code></p>
+<p><code>TestTreeKind</code>: <code>:namespace 1 | :deftest 2 | :testing 3</code></p>
+</li>
+</ul>
+<h4 id="project-tree">Project tree<a class="headerlink" href="#project-tree" title="Permanent link">#</a></h4>
+<p>Request the project tree showing project source-paths and external dependencies.
+If params is null request the project root nodes, otherwise request the nodes of the passed node.
+The project tree is lazy, so client should request the nodes of a node when user expand it manually.</p>
+<p>Type: Client request with response</p>
+<p>Capability: <code>experimental.projectTree</code></p>
+<p>Method: <code>clojure/workspace/projectTree/nodes</code></p>
+<p>Params: <code>ProjectTreeNodeLeaf</code> | <code>null</code></p>
+<p>Response: <code>ProjectTreeNodeBranch</code></p>
+<ul>
+<li>
+<p><code>ProjectTreeNode</code>: <code>ProjectTreeNodeBranch | ProjectTreeNodeLeaf</code></p>
+</li>
+<li>
+<p><code>ProjectTreeNodeBranch</code>: <code>{:name string, :type ProjectTreeNodeType, :uri string?, :detail string?, :id string?, :nodes [ProjectTreeNode]}</code></p>
+</li>
+<li>
+<p><code>ProjectTreeNodeLeaf</code>: <code>{:name string, :type ProjectTreeNodeType, :id string?, :uri string?, :detail string?, final boolean}</code></p>
+</li>
+<li>
+<p><code>ProjectTreeNodeType</code>: <code>:project 1 | :source-path 2 | :library 3 | :jar 4 | :ns 5 | :class 6</code></p>
 </li>
 </ul>
 <h4 id="server-info-raw">Server Info Raw<a class="headerlink" href="#server-info-raw" title="Permanent link">#</a></h4>
@@ -1379,7 +1416,7 @@ All commands expect the first three args to be <code>[document-uri, line, charac
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 13, 2024</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 15, 2024</span>
     
   </small>
 </div>

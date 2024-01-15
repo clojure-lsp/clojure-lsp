@@ -109,6 +109,7 @@
                                                                        :matches "file"}
                                                              :scheme "file"}]}}}
         :experimental {:testTree true
+                       :projectTree true
                        :cursorInfo true
                        :serverInfo true
                        :clojuredocs true}}}

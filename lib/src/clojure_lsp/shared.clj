@@ -288,7 +288,7 @@
   "Returns absolute `path` (string) as relative file path starting at `root` (string)
 
   The output representation path matches that of the operating system."
-  [path root]
+  [^String path ^String root]
   (let [path-obj (-> path io/file .toPath)]
     (if (.isAbsolute path-obj)
       (.toString (.relativize (-> root io/file .toPath) path-obj))

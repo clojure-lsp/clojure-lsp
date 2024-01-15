@@ -13,6 +13,7 @@
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
+   [clojure-lsp.feature.project-tree :as f.project-tree]
    [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
@@ -561,3 +562,8 @@
   (shared/logging-task
     :did-change-configuration
     (settings/set-all db* settings)))
+
+(defn project-tree-nodes [{:keys [db*]} current-node]
+  (shared/logging-task
+    :project-tree-nodes
+    (f.project-tree/nodes @db* current-node)))

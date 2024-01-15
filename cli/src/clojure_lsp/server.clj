@@ -208,6 +208,13 @@
        (handler/clojuredocs-raw components)
        eventually))
 
+(defmethod lsp.server/receive-request "clojure/workspace/projectTree/nodes" [_ components params]
+  (->> params
+       (conform-or-log ::clojure-coercer/project-tree-params)
+       (handler/project-tree-nodes components)
+       (conform-or-log ::clojure-coercer/project-tree-response)
+       eventually))
+
 ;;;; Document sync features
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_synchronization
@@ -462,6 +469,7 @@
      :text-document-sync (:text-document-sync-kind settings)
      :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
      :experimental {:test-tree true
+                    :project-tree true
                     :cursor-info true
                     :server-info true
                     :clojuredocs true}}))

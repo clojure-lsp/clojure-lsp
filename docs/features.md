@@ -356,6 +356,12 @@ Show the tests tree hierarchy of a file
 
 ![](images/features/test-tree.png)
 
+### Project tree
+
+Show the project tree ns and external dependencies.
+
+![](images/features/project-tree.png)
+
 ### Diagnostics (linter)
 
 All linters besides the ones below come from [clj-kondo](https://github.com/clj-kondo/clj-kondo) that clojure-lsp calls under the hood to lint the code and retrieve the analysis to

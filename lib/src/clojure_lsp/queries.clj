@@ -84,6 +84,8 @@
 (defn ^:private xf-analysis->buckets-elems [& bucket-names]
   (comp xf-analysis->by-bucket
         (xf-by-bucket->buckets-elems bucket-names)))
+(defn ^:private xf-analysis->scoped-path-analysis [path-uri]
+  (filter #(string/starts-with? (:uri %) path-uri)))
 
 (def xf-analysis->java-class-definitions (xf-analysis->bucket-elems :java-class-definitions))
 (def xf-analysis->java-class-usages (xf-analysis->bucket-elems :java-class-usages))
@@ -670,6 +672,28 @@
           (xf-var-defs false))
         (:analysis db)))
 
+(defn find-all-path-namespace-definitions [db path-uri]
+  (into []
+        (comp
+          xf-analysis->namespace-definitions
+          (xf-analysis->scoped-path-analysis path-uri))
+        (:analysis db)))
+
+(defn find-all-path-var-definitions [db path-uri]
+  (into []
+        (comp
+          xf-analysis->var-definitions
+          (xf-analysis->scoped-path-analysis path-uri)
+          (xf-var-defs false))
+        (:analysis db)))
+
+(defn find-all-path-java-class-definitions [db path-uri]
+  (into []
+        (comp
+          xf-analysis->java-class-definitions
+          (xf-analysis->scoped-path-analysis path-uri))
+        (:analysis db)))
+
 (def ^:private xf-defmethods
   (comp (filter :defmethod)
         (medley/distinct-by (juxt :to :name :name-row :name-col))))
@@ -843,7 +867,6 @@
           (xf-same-name namespace)
           (medley/distinct-by :uri))
         (internal-analysis (db-with-ns-analysis db namespace))))
-(merge-with into)
 
 (defn analysis-summary [db]
   (let [summary-fn (fn [analysis]

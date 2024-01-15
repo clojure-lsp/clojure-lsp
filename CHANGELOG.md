@@ -4,6 +4,7 @@
 
 - General
   - Fix binary not wokring on some aarch64 linux. #1748
+  - Add new `Project tree` feature via the `clojure/workspace/projectTree/nodes` custom method. #1752
 
 - Editor
   - Fix `didChangeConfiguration` throwing exception. #1749

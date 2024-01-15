@@ -141,7 +141,31 @@ Response: `TestTreeParams`
 
   - `TestTreeNode`: `{:name string, name-range: Range, range: Range, :kind TestTreeKind, :children [TestTreeNode]}`
 
-  - `TestTreeKind`: `:namespace 1 :deftest 2 | :testing 3`
+  - `TestTreeKind`: `:namespace 1 | :deftest 2 | :testing 3`
+  
+#### Project tree
+
+Request the project tree showing project source-paths and external dependencies.
+If params is null request the project root nodes, otherwise request the nodes of the passed node.
+The project tree is lazy, so client should request the nodes of a node when user expand it manually.
+
+Type: Client request with response
+
+Capability: `experimental.projectTree`
+
+Method: `clojure/workspace/projectTree/nodes`
+
+Params: `ProjectTreeNodeLeaf` | `null`
+
+Response: `ProjectTreeNodeBranch`
+
+  - `ProjectTreeNode`: `ProjectTreeNodeBranch | ProjectTreeNodeLeaf`
+
+  - `ProjectTreeNodeBranch`: `{:name string, :type ProjectTreeNodeType, :uri string?, :detail string?, :id string?, :nodes [ProjectTreeNode]}`
+  
+  - `ProjectTreeNodeLeaf`: `{:name string, :type ProjectTreeNodeType, :id string?, :uri string?, :detail string?, final boolean}`
+
+  - `ProjectTreeNodeType`: `:project 1 | :source-path 2 | :library 3 | :jar 4 | :ns 5 | :class 6`
 
 #### Server Info Raw
 

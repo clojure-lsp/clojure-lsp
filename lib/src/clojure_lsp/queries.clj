@@ -880,3 +880,30 @@
                                       (merge-with into acc analysis)) {}))))]
     {:internal (summary-fn (internal-analysis db))
      :external (summary-fn (external-analysis db))}))
+
+(def ^:private defines-interface?
+  '#{clojure.core/defprotocol cljs.core/defprotocol
+     clojure.core/definterface cljs.core/definterface
+     clojure.core/defmulti cljs.core/defmulti})
+
+(def ^:private defines-class?
+  '#{clojure.core/defrecord cljs.core/defrecord
+     clojure.core/deftype cljs.core/deftype})
+
+(defn element->symbol-kind [{:keys [bucket] :as el}]
+  (case bucket
+    (:namespace-usages :namespace-definitions) :namespace
+    :var-definitions (cond
+                       (or (:fixed-arities el) (:varargs-min-arity el) (:macro el))
+                       #_=> :function
+                       (some->> el defined-bys (some defines-interface?))
+                       #_=> :interface
+                       (some->> el defined-bys (some defines-class?))
+                       #_=> :class
+                       :else
+                       #_=> :variable)
+    :var-usages (if (:defmethod el)
+                  :function
+                  :variable)
+    :keyword-usages :field
+    :null))

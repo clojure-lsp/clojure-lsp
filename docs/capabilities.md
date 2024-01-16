@@ -163,9 +163,9 @@ Response: `ProjectTreeNodeBranch`
 
   - `ProjectTreeNodeBranch`: `{:name string, :type ProjectTreeNodeType, :uri string?, :detail string?, :id string?, :nodes [ProjectTreeNode]}`
   
-  - `ProjectTreeNodeLeaf`: `{:name string, :type ProjectTreeNodeType, :id string?, :uri string?, :detail string?, final boolean}`
+  - `ProjectTreeNodeLeaf`: `{:name string, :type ProjectTreeNodeType, :id string?, :uri string?, :range Range?, :detail string?, final boolean}`
 
-  - `ProjectTreeNodeType`: `:project 1 | :source-path 2 | :library 3 | :jar 4 | :ns 5 | :class 6`
+  - `ProjectTreeNodeType`: `:project 1 | :source-path 2 | :library 3 | :jar 4 | :ns 5 | :class 6 | :function 7 | :variable 8 | :interface 9`
 
 #### Server Info Raw
 

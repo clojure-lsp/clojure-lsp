@@ -21,7 +21,7 @@
     {:name (if arglist-strs
              (str (name el-name) " " (some->> arglist-strs (remove nil?) (string/join " ")))
              (name el-name))
-     :kind (f.document-symbol/element->symbol-kind parent-element)
+     :kind (q/element->symbol-kind parent-element)
      :tags (cond-> [] deprecated (conj 1))
      ;; TODO Consider using URI for display purposes, especially if we support
      ;; remote LSP connections

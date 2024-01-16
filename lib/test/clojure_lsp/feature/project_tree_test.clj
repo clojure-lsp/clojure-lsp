@@ -15,10 +15,10 @@
   (h/assert-submap
     {:name "project"
      :type :project
-     :nodes [{:name "src/test/clojure"
+     :nodes [{:name "src/main/clojure"
               :final false
               :type :source-path}
-             {:name "src/main/clojure"
+             {:name "src/test/clojure"
               :final false
               :type :source-path}
              {:name "External dependencies"
@@ -45,11 +45,11 @@
      :type :source-path
      :nodes [{:name "foo.bar"
               :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
-              :final true
+              :final false
               :type :ns}
              {:name "foo.baz"
               :uri (h/file-uri "file:///user/project/src/main/clojure/foo/baz.clj")
-              :final true
+              :final false
               :type :ns}]}
     (f.project-tree/nodes (h/db) {:name "src/main/clojure"
                                   :type :source-path})))
@@ -106,13 +106,53 @@
      :uri (h/file-uri "jar:file:///path/to/some.jar")
      :nodes [{:name "foo.bar-jar"
               :uri (h/file-uri "jar:file:///path/to/some.jar!/foo/bar_jar.clj")
-              :final true
+              :final false
               :type :ns}
              {:name "baz.baz"
               :uri (h/file-uri "jar:file:///path/to/some.jar!/baz/baz.clj")
-              :final true
+              :final false
               :type :ns}]}
     (f.project-tree/nodes (h/db) {:name "some.jar"
                                   :detail (h/file-uri "jar:file:///path/to/some.jar")
                                   :uri (h/file-uri "jar:file:///path/to/some.jar")
                                   :type :jar})))
+
+(deftest ns-node-test
+  (swap! (h/db*) shared/deep-merge {:settings {:dependency-scheme "jar"
+                                               :source-paths #{(h/file-path "/user/project/src/main/clojure")
+                                                               (h/file-path "/user/project/src/test/clojure")}}
+                                    :project-root-uri (h/file-uri "file:///user/project")})
+  (h/load-code-and-locs (h/code "(ns foo.bar)"
+                                "(def a 1)"
+                                "(def ^:private b 2)"
+                                "(defn c [] 3)"
+                                "(definterface Foo)") (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj"))
+  (h/assert-submap
+    {:name "foo.bar"
+     :type :ns
+     :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
+     :nodes [{:name "a"
+              :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
+              :range {:start {:line 1 :character 5} :end {:line 1 :character 6}}
+              :final true
+              :type :variable}
+             {:name "b"
+              :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
+              :range {:start {:line 2 :character 15} :end {:line 2 :character 16}}
+              :final true
+              :type :variable
+              :detail "private"}
+             {:name "c"
+              :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
+              :range {:start {:line 3 :character 6} :end {:line 3 :character 7}}
+              :final true
+              :type :function}
+             {:name "Foo"
+              :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
+              :range {:start {:line 4 :character 14} :end {:line 4 :character 17}}
+              :final true
+              :type :interface}]}
+    (f.project-tree/nodes (h/db) {:name "foo.bar"
+                                  :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
+                                  :final false
+                                  :type :ns})))

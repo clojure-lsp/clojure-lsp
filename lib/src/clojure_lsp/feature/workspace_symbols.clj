@@ -26,7 +26,7 @@
 
 (defn ^:private element->workspace-symbol [element]
   {:name (f.document-symbol/element->name element)
-   :kind (f.document-symbol/element->symbol-kind element)
+   :kind (q/element->symbol-kind element)
    :location {:uri (:uri element)
               :range (shared/->scope-range element)}})
 

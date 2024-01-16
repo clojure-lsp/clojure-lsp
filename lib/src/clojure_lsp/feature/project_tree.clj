@@ -14,7 +14,7 @@
                       {:name (shared/relativize-filepath source-path (.getCanonicalPath project-root))
                        :final false
                        :type :source-path})
-                    source-paths)
+                    (sort source-paths))
               [{:name "External dependencies"
                 :id :external-dependencies
                 :final false
@@ -29,9 +29,9 @@
               (fn [namespace-definition]
                 {:name (str (:name namespace-definition))
                  :uri (:uri namespace-definition)
-                 :final true
+                 :final false
                  :type :ns})
-              namespace-definitions)}))
+              (sort-by :name namespace-definitions))}))
 
 (defn ^:private external-dependencies-node [node db]
   (let [uris (keys (q/external-analysis db))
@@ -63,7 +63,7 @@
                   :namespace-definitions
                   {:name (str (:name element))
                    :uri (:uri element)
-                   :final true
+                   :final false
                    :type :ns}
 
                   :java-class-definitions
@@ -72,6 +72,22 @@
                    :final true
                    :type :class}))
               (concat ns-definitions java-class-definitions))}))
+
+(defn ^:private ns-node [node db]
+  (let [var-definitions (q/find-var-definitions db (:uri node) true)]
+    {:name (:name node)
+     :type (:type node)
+     :uri (:uri node)
+     :nodes (mapv
+              (fn [element]
+                (shared/assoc-some
+                  {:name (str (:name element))
+                   :uri (:uri element)
+                   :range (shared/->range element)
+                   :final true
+                   :type (q/element->symbol-kind element)}
+                  :detail (when (:private element) "private")))
+              var-definitions)}))
 
 (defn nodes [db current-node]
   (cond
@@ -86,7 +102,10 @@
     (external-dependencies-node current-node db)
 
     (= :jar (:type current-node))
-    (jar-node current-node db)))
+    (jar-node current-node db)
+
+    (= :ns (:type current-node))
+    (ns-node current-node db)))
 
 (comment
   ;; workspace/projectTree/nodes - no args
@@ -108,7 +127,7 @@
 
   {:nodes [{:name "foo.bar"
             :uri "file:///..."
-            :final true
+            :final false
             :type :ns}]}
 
   ;; workspace/projectTree/nodes - external-dependencies
@@ -122,11 +141,24 @@
 
   {:nodes [{:name "bla.Foo"
             :uri "jar://...."
+            :detail "jar://...."
             :final true
             :type :class}]}
   ;; or
-
   {:nodes [{:name "foo.bar"
             :uri "jar://...."
+            :final false
+            :type :ns}]}
+
+  ;; workspace/projectTree/nodes - ns
+
+  {:nodes [{:name "some-function"
+            :uri "file:///..."
+            :range {:start {:line 1 :character 2}
+                    :end {:line 2 :character 3}}
             :final true
-            :type :ns}]})
+            :type :function
+            ;; or :type :variable
+            ;; or :type :class
+            ;; or :type :interface
+            }]})

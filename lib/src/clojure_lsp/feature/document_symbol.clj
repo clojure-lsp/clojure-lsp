@@ -6,33 +6,6 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:private defines-interface?
-  '#{clojure.core/defprotocol cljs.core/defprotocol
-     clojure.core/definterface cljs.core/definterface
-     clojure.core/defmulti cljs.core/defmulti})
-
-(def ^:private defines-class?
-  '#{clojure.core/defrecord cljs.core/defrecord
-     clojure.core/deftype cljs.core/deftype})
-
-(defn element->symbol-kind [{:keys [bucket] :as el}]
-  (case bucket
-    (:namespace-usages :namespace-definitions) :namespace
-    :var-definitions (cond
-                       (or (:fixed-arities el) (:varargs-min-arity el) (:macro el))
-                       #_=> :function
-                       (some->> el q/defined-bys (some defines-interface?))
-                       #_=> :interface
-                       (some->> el q/defined-bys (some defines-class?))
-                       #_=> :class
-                       :else
-                       #_=> :variable)
-    :var-usages (if (:defmethod el)
-                  :function
-                  :variable)
-    :keyword-usages :field
-    :null))
-
 (defn element->name [{elem-name :name symbol :symbol :keys [dispatch-val-str]}]
   (cond-> (or (some-> symbol str) (name elem-name))
     dispatch-val-str (str " " dispatch-val-str)))
@@ -40,7 +13,7 @@
 (defn ^:private element->document-symbol [e]
   (shared/assoc-some
     {:name (element->name e)
-     :kind (element->symbol-kind e)
+     :kind (q/element->symbol-kind e)
      :range (shared/->scope-range e)
      :selection-range (shared/->range e)
      :tags (cond-> []
@@ -135,7 +108,7 @@
                   ;; TODO Consider using URI for display purposes, especially if
                   ;; we support remote LSP connections
                   (shared/uri->filename uri))
-        :kind (element->symbol-kind namespace-definition)
+        :kind (q/element->symbol-kind namespace-definition)
         :range shared/full-file-range
         :selection-range (if namespace-definition
                            (shared/->scope-range namespace-definition)

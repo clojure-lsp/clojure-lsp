@@ -28,7 +28,8 @@
                                                    :test-tree/tree]))
 
 (def project-tree-type-enum
-  {:project 1 :source-path 2 :library 3 :jar 4 :ns 5 :class 6})
+  {:project 1 :source-path 2 :library 3 :jar 4 :ns 5
+   :class 6 :function 7 :variable 8 :interface 9})
 
 (s/def :project-tree/type
   (s/and (s/or :keyword (s/and keyword?

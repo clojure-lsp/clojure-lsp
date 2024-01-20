@@ -249,6 +249,27 @@
                                      {:range (h/->range alias-start-pos alias-end-pos) :new-text "your-alias"}]}
       result)))
 
+(deftest rename-alias-from-alias-definition
+  (h/reset-components!)
+  (h/load-code-and-locs (h/code "(ns some.ns)"
+                                "(defn |foo| [a] 1)"))
+  (h/load-code-and-locs
+    (h/code "(ns another.ns (:require [some.ns :as other-alias]))"
+            "other-alias/foo") (h/file-uri "file:///b.clj"))
+  (let [[alias-start-pos alias-end-pos
+         usage-1-start-pos usage-1-end-pos
+         usage-2-start-pos usage-2-end-pos] (h/load-code-and-locs
+                                              (h/code "(ns other.ns (:require [some.ns :as |my-alias|]))"
+                                                      "|my-alias/foo|"
+                                                      "(|my-alias/foo| 1)") (h/file-uri "file:///c.clj"))
+        [alias-start-r alias-start-c] alias-start-pos
+        result (:changes (f.rename/rename-from-position (h/file-uri "file:///c.clj") "your-alias" alias-start-r alias-start-c (h/db)))]
+    (h/assert-submap
+      {(h/file-uri "file:///c.clj") [{:range (h/->range alias-start-pos alias-end-pos) :new-text "your-alias"}
+                                     {:range (h/->range usage-1-start-pos usage-1-end-pos) :new-text "your-alias/foo"}
+                                     {:range (h/->range usage-2-start-pos usage-2-end-pos) :new-text "your-alias/foo"}]}
+      result)))
+
 (deftest rename-destructuring-or
   (h/reset-components!)
   (let [[key-start-pos key-end-pos

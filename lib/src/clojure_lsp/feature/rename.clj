@@ -289,6 +289,7 @@
                                     {:text-document text-document
                                      :edits (mapv #(dissoc % :text-document) edits)})))]
         (if (and (identical? :namespace-definitions (:bucket definition))
+                 (not (identical? :namespace-alias (:bucket element)))
                  (not= :rename-file source))
           (let [def-uri (:uri definition)
                 file-type (shared/uri->file-type def-uri)

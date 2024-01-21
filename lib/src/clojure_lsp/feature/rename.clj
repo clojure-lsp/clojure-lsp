@@ -296,9 +296,11 @@
                 new-uri (shared/namespace->uri replacement source-path file-type db)]
             ;; We only add the rename file change as willRenameFiles request
             ;; will do the other changes
-            (shared/client-changes [{:kind "rename"
-                                     :old-uri def-uri
-                                     :new-uri new-uri}]
+            (shared/client-changes (concat
+                                     (when (:api? db) doc-changes)
+                                     [{:kind "rename"
+                                       :old-uri def-uri
+                                       :new-uri new-uri}])
                                    db))
           (shared/client-changes doc-changes db))))))
 

@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.call-hierarchy
   (:require
-   [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]

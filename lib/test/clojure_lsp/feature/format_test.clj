@@ -117,4 +117,8 @@
     (is (= [{:range {:start {:line 0 :character 0}
                      :end {:line 0 :character 5}}
              :new-text "(a)"}]
-           (range-formatting "(a | |)\n(b  )\n(c d)")))))
+           (range-formatting "(a | |)\n(b  )\n(c d)"))))
+  (testing "when parens are unbalenced"
+    (is (= nil
+           (let [[[row col] [end-row end-col]] (h/load-code-and-locs "(str :foo :bar :baz))")]
+             (f.format/range-formatting (h/file-uri "file:///a.clj") {:row row :col col :end-row end-row :end-col end-col} (h/db)))))))

@@ -9,6 +9,7 @@
 - Editor
   - Fix `didChangeConfiguration` throwing exception. #1749
   - Fix `rename` of ns causing wrong ns names because of duplicate rename actions. #1751
+  - Fix `range-formatting` throwing exceptions when unbalanced parens are sent from client. #1758
 
 ## 2023.12.29-12.09.27
 

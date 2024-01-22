@@ -129,23 +129,23 @@
     []))
 
 (defn range-formatting [doc-id format-pos db]
-  (let [cljfmt-settings (cljfmt-config db)
-        root-loc (parser/zloc-of-file db doc-id)
-        start-loc (or (parser/to-pos root-loc (:row format-pos) (:col format-pos))
-                      (z/leftmost* root-loc))
-        start-top-loc (edit/to-top start-loc)
-        end-loc (or (parser/to-pos start-top-loc (:end-row format-pos) (:end-col format-pos))
-                    (z/rightmost* root-loc))
-        end-top-loc (edit/to-top end-loc)
+  (when-let [root-loc (parser/safe-zloc-of-file db doc-id)]
+    (let [cljfmt-settings (cljfmt-config db)
+          start-loc (or (parser/to-pos root-loc (:row format-pos) (:col format-pos))
+                        (z/leftmost* root-loc))
+          start-top-loc (edit/to-top start-loc)
+          end-loc (or (parser/to-pos start-top-loc (:end-row format-pos) (:end-col format-pos))
+                      (z/rightmost* root-loc))
+          end-top-loc (edit/to-top end-loc)
 
-        forms (->> start-top-loc
-                   (iterate z/right*) ;; maintain comments and whitespace between nodes
-                   (take-while (complement z/end?))
-                   (medley/take-upto #(= % end-top-loc)))
-        span (merge (-> start-top-loc z/node meta (select-keys [:row :col]))
-                    (-> end-top-loc z/node meta (select-keys [:end-row :end-col])))]
-    [{:range (shared/->range span)
-      :new-text (-> (map z/node forms)
-                    n/forms-node
-                    (cljfmt/reformat-form cljfmt-settings)
-                    n/string)}]))
+          forms (->> start-top-loc
+                     (iterate z/right*) ;; maintain comments and whitespace between nodes
+                     (take-while (complement z/end?))
+                     (medley/take-upto #(= % end-top-loc)))
+          span (merge (-> start-top-loc z/node meta (select-keys [:row :col]))
+                      (-> end-top-loc z/node meta (select-keys [:end-row :end-col])))]
+      [{:range (shared/->range span)
+        :new-text (-> (map z/node forms)
+                      n/forms-node
+                      (cljfmt/reformat-form cljfmt-settings)
+                      n/string)}])))

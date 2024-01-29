@@ -591,9 +591,14 @@
     ;; db/db*, so it can be inspected in the nREPL.
     (alter-var-root #'db/db* (constantly db*))))
 
-(defn start-server! [server]
+(defn start-server! [server log-path]
   (let [timbre-logger (->TimbreLogger)
-        log-path (logger/setup timbre-logger)
+        log-path (if log-path
+                   (do
+                     (logger/setup timbre-logger)
+                     (logger/set-log-path timbre-logger log-path)
+                     log-path)
+                   (logger/setup timbre-logger))
         db* (atom (assoc db/initial-db :log-path log-path))
         producer (ClojureLspProducer. server db*)
         components {:db* db*
@@ -610,10 +615,10 @@
     (spawn-async-tasks! components)
     (lsp.server/start server components)))
 
-(defn run-lsp-io-server! [trace-level]
+(defn run-lsp-io-server! [trace-level log-path]
   (lsp.server/discarding-stdout
     (let [log-ch (async/chan (async/sliding-buffer 20))
           server (lsp.io-server/stdio-server {:log-ch log-ch
                                               :trace-ch log-ch
                                               :trace-level trace-level})]
-      (start-server! server))))
+      (start-server! server log-path))))

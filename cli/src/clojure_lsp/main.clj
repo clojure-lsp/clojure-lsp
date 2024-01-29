@@ -150,7 +150,7 @@
 (defn ^:private handle-action!
   [action options]
   (if (= "listen" action)
-    (let [finished @(server/run-lsp-io-server! (:trace-level options))]
+    (let [finished @(server/run-lsp-io-server! (:trace-level options) (:log-path options))]
       {:result-code (if (= :done finished) 0 1)})
     (try
       (case action

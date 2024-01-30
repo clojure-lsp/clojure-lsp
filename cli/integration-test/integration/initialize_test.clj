@@ -107,7 +107,10 @@
         :documentHighlightProvider true
         :workspace {:fileOperations {:willRename {:filters [{:pattern {:glob "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}"
                                                                        :matches "file"}
-                                                             :scheme "file"}]}}}
+                                                             :scheme "file"}]}
+                                     :didRename {:filters [{:pattern {:glob "**/*.{clj,cljs,cljc,cljd,edn,bb,clj_kondo}"
+                                                                      :matches "file"}
+                                                            :scheme "file"}]}}}
         :experimental {:testTree true
                        :projectTree true
                        :cursorInfo true

@@ -437,6 +437,11 @@
        (conform-or-log ::coercer/workspace-edit-or-error)
        after-changes))
 
+(defmethod lsp.server/receive-notification "workspace/didRenameFiles" [_ components params]
+  (->> params
+       (handler/did-rename-files components)
+       eventually))
+
 (defn capabilities [settings]
   (conform-or-log
     ::coercer/server-capabilities
@@ -458,7 +463,10 @@
      :workspace-symbol-provider true
      :workspace {:file-operations {:will-rename {:filters [{:scheme "file"
                                                             :pattern {:glob known-files-pattern
-                                                                      :matches "file"}}]}}}
+                                                                      :matches "file"}}]}
+                                   :did-rename {:filters [{:scheme "file"
+                                                           :pattern {:glob known-files-pattern
+                                                                     :matches "file"}}]}}}
      :semantic-tokens-provider (when (or (not (contains? settings :semantic-tokens?))
                                          (:semantic-tokens? settings))
                                  {:token-types semantic-tokens/token-types-str

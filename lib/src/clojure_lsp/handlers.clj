@@ -557,6 +557,11 @@
     :will-rename-files
     (f.file-management/will-rename-files files @db*)))
 
+(defn did-rename-files [components {:keys [files]}]
+  (shared/logging-task
+    :did-rename-files
+    (f.file-management/did-rename-files files components)))
+
 (defn did-change-configuration
   [{:keys [db*]} settings]
   (shared/logging-task

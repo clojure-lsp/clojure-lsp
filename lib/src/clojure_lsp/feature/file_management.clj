@@ -277,7 +277,10 @@
                                      :version version})))
 
 (defn analyze-watched-files! [uris {:keys [db* producer] :as components}]
-  (let [filenames (map shared/uri->filename uris)
+  (let [filenames (->> uris
+                       ;; we check if file still exists/should be linted
+                       (filter #(get-in @db* [:documents %]))
+                       (map shared/uri->filename))
         result (shared/logging-time
                  "Watched files analyzed, took %s"
                  (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil))]
@@ -386,3 +389,6 @@
                             (not= new-ns (name (:name old-ns-definition))))
                    (f.rename/rename-element new-ns db old-ns-definition :rename-file)))))
        (reduce #(shared/deep-merge %1 %2) {:document-changes []})))
+
+(defn did-rename-files [files components]
+  (files-deleted components (mapv :old-uri files)))

@@ -30,7 +30,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | workspace/executeCommand               | √    | See [Extra capabilities](#extra-capabilities)                                 |
 | workspace/applyEdit                    | √    | TextDocumentEdit and RenameFile only                                          |
 | workspace/willRenameFiles              | √    |                                                                               |
-| workspace/didRenameFiles               |      |                                                                               |
+| workspace/didRenameFiles               | √    |                                                                               |
 | workspace/willCreateFiles              |      |                                                                               |
 | workspace/didCreateFiles               |      |                                                                               |
 | workspace/willDeleteFiles              |      |                                                                               |

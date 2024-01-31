@@ -12,6 +12,7 @@
   - Fix `rename` of ns causing wrong ns names because of duplicate rename actions. #1751
   - Fix `range-formatting` throwing exceptions when unbalanced parens are sent from client. #1758
   - Fix rename functions need to clean up LSP state or restart in some clients implementing LSP method `didRenameFiles`. #1755
+  - Fix `thread last all` failed after comment form `#_(...)`. #1745  
 
 ## 2023.12.29-12.09.27
 

@@ -72,7 +72,8 @@
         movement (if (= '-> sym) z/right (comp z/rightmost z/right))]
     (if-let [first-loc (-> zloc z/down movement)]
       (let [first-node (z/node first-loc)
-            parent-op (z/sexpr (z/left zloc))
+            zl (z/left zloc)
+            parent-op (when (z/sexpr-able? zl) (z/sexpr zl))
             threaded? (= sym parent-op)
             meta-node (cond-> zloc
                         threaded? z/up

@@ -80,6 +80,16 @@
   (is (= (h/code "(->> (foo)"
                  "     (interpose (spaces)))")
          (thread-last-all "|(interpose (spaces) (foo))")))
+  (is (= (h/code "#_(nothing)"
+                 "(->> []"
+                 "     (map f)"
+                 "     (filter #_false? true?))")
+         (thread-last-all "#_(nothing)\n(filt|er #_false? true? (map f []))")))
+  (is (= (h/code "#_c"
+                 "(-> m"
+                 "    (assoc #_:no :a 1)"
+                 "    (dissoc #_:nono :b))")
+         (thread-first-all "#_c\n(d|issoc (assoc m #_:no :a 1) #_:nono :b)")))
   (is (nil? (thread-last-all "|[:a :b]")))
   (is (= (h/code "(->> [:a :b]"
                  "     (get-in foo))")

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2024.02.01-11.01.59
+
 - General
   - Fix binary not wokring on some aarch64 linux. #1748
   - Add new `Project tree` feature via the `clojure/workspace/projectTree/nodes` custom method. #1752

@@ -249,10 +249,22 @@
       (->> (add-to-namespace zloc :import package-name class-name db)
            (cleaning-ns-edits uri db)))))
 
+(defn ^:private add-to-rcf
+  [zloc rcf-pos type ns-sym sym db]
+  (when (or (= :require-simple type) sym)
+    (let [libspec (case type
+                    :require-refer {:type :require :lib ns-sym :refer sym}
+                    :require-alias {:type :require :lib ns-sym :alias sym}
+                    :require-simple {:type :require :lib ns-sym}
+                    :import {:type :import :lib ns-sym :class sym})]
+      (add-to-namespace* zloc libspec db))))
+
 (defn add-known-alias
-  [zloc alias-to-add qualified-ns-to-add db]
+  [zloc alias-to-add qualified-ns-to-add rcf-pos db]
   (when (and qualified-ns-to-add alias-to-add)
-    (add-to-namespace zloc :require-alias qualified-ns-to-add alias-to-add db)))
+    (if rcf-pos
+      (add-to-rcf zloc rcf-pos :require-alias qualified-ns-to-add alias-to-add db)
+      (add-to-namespace zloc :require-alias qualified-ns-to-add alias-to-add db))))
 
 (defn add-simple-require
   [zloc qualified-ns-to-add db]
@@ -490,7 +502,7 @@
                     (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
 
                     chosen-alias
-                    (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) db)
+                    (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) nil db)
 
                     :else
                     (add-simple-require zloc (symbol chosen-ns) db))

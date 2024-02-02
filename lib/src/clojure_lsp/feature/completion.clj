@@ -154,9 +154,9 @@
       definition (assoc :documentation (f.hover/hover-documentation definition db* docs-config)))))
 
 (defn ^:private completion-item-with-alias-edit
-  [completion-item cursor-loc alias-to-add ns-to-add db]
+  [completion-item cursor-loc alias-to-add ns-to-add rcf-pos db]
   (let [edits (some-> cursor-loc
-                      (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add db)
+                      (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add rcf-pos db)
                       r.transform/result)]
     (cond-> completion-item
       (seq edits) (assoc :additional-text-edits (mapv #(update % :range shared/->range)
@@ -173,15 +173,17 @@
 
 (defn ^:private completion-item-with-unresolved-alias-edit
   [completion-item cursor-loc alias-to-add ns-to-add db uri resolve-support]
-  (if (contains? (:properties resolve-support) "additionalTextEdits")
+  (let [rcf-pos (some-> cursor-loc edit/inside-rcf? z/node meta)]
+    (if (contains? (:properties resolve-support) "additionalTextEdits")
     ;; client supports postponing the expensive edit calculation
-    (add-unresolved completion-item
-                    "alias"
-                    {:ns-to-add    (name ns-to-add)
-                     :alias-to-add (name alias-to-add)
-                     :uri          uri})
+      (add-unresolved completion-item
+                      "alias"
+                      {:ns-to-add    (name ns-to-add)
+                       :alias-to-add (name alias-to-add)
+                       :rcf-pos rcf-pos
+                       :uri          uri})
     ;; client can't postpone the edit calculation, so do it now, even though it's expensive
-    (completion-item-with-alias-edit completion-item cursor-loc alias-to-add ns-to-add db)))
+      (completion-item-with-alias-edit completion-item cursor-loc alias-to-add ns-to-add rcf-pos db))))
 
 (defn ^:private generic-priority->specific-priority
   [element priority]
@@ -719,9 +721,9 @@
                                                                                                     (some #{"alias"}))})
     item))
 
-(defmethod resolve-unresolved "alias" [_ item _other-unresolved {:keys [uri alias-to-add ns-to-add db]}]
+(defmethod resolve-unresolved "alias" [_ item _other-unresolved {:keys [uri alias-to-add ns-to-add rcf-pos db]}]
   (if-let [zloc (parser/safe-zloc-of-file db uri)]
-    (completion-item-with-alias-edit item zloc (symbol alias-to-add) (symbol ns-to-add) db)
+    (completion-item-with-alias-edit item zloc (symbol alias-to-add) (symbol ns-to-add) rcf-pos db)
     item))
 
 (defn resolve-item [{:keys [data] :as item} db*]

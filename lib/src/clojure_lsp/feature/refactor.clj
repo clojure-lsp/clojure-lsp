@@ -33,8 +33,8 @@
 (defmethod refactor :add-missing-libspec [{:keys [loc uri db]}]
   (f.add-missing-libspec/add-missing-libspec loc uri db))
 
-(defmethod refactor :add-require-suggestion [{:keys [loc uri args db]}]
-  (apply f.add-missing-libspec/add-require-suggestion loc uri (concat args [db])))
+(defmethod refactor :add-require-suggestion [{:keys [loc uri args db components]}]
+  (apply f.add-missing-libspec/add-require-suggestion loc uri (concat args [db components])))
 
 (defmethod refactor :clean-ns [{:keys [loc uri db]}]
   (f.clean-ns/clean-ns-edits loc uri db))

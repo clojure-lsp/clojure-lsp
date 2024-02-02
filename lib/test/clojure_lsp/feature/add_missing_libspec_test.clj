@@ -445,7 +445,7 @@
     (is (nil? (add-missing-import "(ns foo.bar) |;; comment" nil)))))
 
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db)))
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db) {}))
 
 (deftest add-require-suggestion-test
   (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))

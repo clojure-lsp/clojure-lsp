@@ -4,6 +4,7 @@
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.parser :as parser]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
@@ -491,38 +492,53 @@
     {:range (meta (z/node replaced-loc))
      :loc replaced-loc}))
 
-(defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer db]
+(defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer db {:keys [producer]}]
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
-          chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))]
+          chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))
+          comment-zloc (edit/inside-rcf? zloc)
+          c-setting (settings/get db [:completion :add-require-inside-comments])]
+      (if (and
+            (not (= false? c-setting))
+            comment-zloc
+            (or c-setting
+                (and
+                  producer
+                  (= "Yes"
+                     (producer/show-message-request
+                       producer
+                       "Add require inside this comment form? (to avoid this prompt, set :add-require-inside-comments to true or false in config)"
+                       :info
+                       [{:title "Yes"}
+                        {:title "No"}])))))
+        nil ;;TODO
+        (->> (concat ;ns-case (unchanged)
+               (->> (cond
+                      chosen-refer
+                      (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
 
-      (->> (concat
-             (->> (cond
-                    chosen-refer
-                    (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
+                      chosen-alias
+                      (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) nil db)
 
-                    chosen-alias
-                    (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) nil db)
+                      :else
+                      (add-simple-require zloc (symbol chosen-ns) db))
+                    (cleaning-ns-edits uri db))
+               (when chosen-alias-or-ns
+                 (cond
+                   cursor-namespace-str
+                         ;; When we're aliasing clojure.string to string, we want to change
+                         ;; all nodes after the namespace like clojure.string/split to string/split.
+                   (->> (find-forms (z/next (edit/find-namespace zloc))
+                                    #(when-let [sym-ns (some-> % safe-sym namespace)]
+                                       (and (or
+                                              (= chosen-ns sym-ns)
+                                              (= cursor-namespace-str sym-ns))
+                                            (not= chosen-alias-or-ns sym-ns))))
+                        (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
 
-                    :else
-                    (add-simple-require zloc (symbol chosen-ns) db))
-                  (cleaning-ns-edits uri db))
-             (when chosen-alias-or-ns
-               (cond
-                 cursor-namespace-str
-                 ;; When we're aliasing clojure.string to string, we want to change
-                 ;; all nodes after the namespace like clojure.string/split to string/split.
-                 (->> (find-forms (z/next (edit/find-namespace zloc))
-                                  #(when-let [sym-ns (some-> % safe-sym namespace)]
-                                     (and (or
-                                            (= chosen-ns sym-ns)
-                                            (= cursor-namespace-str sym-ns))
-                                          (not= chosen-alias-or-ns sym-ns))))
-                      (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
-
-                 (some-> zloc safe-sym)
-                 [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))
-           seq))))
+                   (some-> zloc safe-sym)
+                   [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))
+             seq)))))
 
 (defn add-missing-libspec
   [zloc uri db]
@@ -537,4 +553,5 @@
           (:ns suggestion)
           (:alias suggestion)
           (:refer suggestion)
-          db)))))
+          db
+          {})))))

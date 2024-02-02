@@ -203,6 +203,10 @@
            (and (= :token (z/tag zloc))
                 (= :refer (-> zloc z/up z/left z/sexpr))))))
 
+(defn inside-rcf?
+  [zloc]
+  (find-ops-up zloc "comment"))
+
 (defn find-refer-ns [zloc]
   (when (inside-refer? zloc)
     (if (= :vector (z/tag zloc))

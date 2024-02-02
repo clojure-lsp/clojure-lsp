@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-kondo to `2023.12.16-20240202.114914-15`.
+
 ## 2024.02.01-11.01.59
 
 - General

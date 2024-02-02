@@ -222,7 +222,9 @@
                            (with-meta class-sym nil)]
 
                           (= :require libspec-type)
-                          (cond-> (with-meta lib-sym nil)
+                          (cond-> (if (string? lib-sym)
+                                    lib-sym
+                                    (with-meta lib-sym nil))
                             (or alias-sym refer-sym) (vector)
                             alias-sym (conj :as (with-meta alias-sym nil))
                             refer-sym (conj :refer [(with-meta refer-sym nil)])))
@@ -499,6 +501,11 @@
                                                          (sort-by (fn [[alias freq]]
                                                                     [(- freq) alias]))
                                                          (into (array-map))))))
+        js-requires (->> ns-alias-pairs
+                         (keep (fn [[alias-namespace _ original-alias-namespace]]
+                                 (when (string? original-alias-namespace)
+                                   alias-namespace)))
+                         set)
         alias-namespaces (get aliases->namespaces cursor-namespace-str)
         namespace-aliases (get namespaces->aliases cursor-namespace-str)
         common-namespace (some-> (get common-sym/common-alias->info (symbol cursor-namespace-str)) str)
@@ -508,17 +515,20 @@
       alias-namespaces
       (->> alias-namespaces
            (map (fn [[alias-namespace ns-count]]
-                  {:ns alias-namespace
-                   :alias cursor-namespace-str
-                   :count ns-count})))
+                  (cond-> {:ns alias-namespace
+                           :alias cursor-namespace-str
+                           :count ns-count}
+                    ;; Written like this just to keep old test cases working
+                    (contains? js-requires alias-namespace) (assoc :js-require true)))))
 
       ;; This namespace has existing aliases
       (and namespace-aliases (seq namespace-aliases))
       (->> namespace-aliases
            (mapv (fn [[namespace-alias alias-count]]
-                   {:ns cursor-namespace-str
-                    :alias namespace-alias
-                    :count alias-count})))
+                   (cond-> {:ns cursor-namespace-str
+                            :alias namespace-alias
+                            :count alias-count}
+                     (contains? js-requires cursor-namespace-str) (assoc :js-require true)))))
 
       ;; This is not an existing alias, so assume an existing, fully qualified namespace
       ;; Derive suggestions for new aliases
@@ -550,10 +560,11 @@
 
 (defn find-alias-ns-pairs [db uri]
   (let [langs (shared/uri->available-langs uri)]
+    ;; Third value to keep the original name type so we can check for JS requires
     (concat (->> (dep-graph/ns-aliases-for-langs db langs)
-                 (map (juxt (comp str :to) (comp str :alias))))
+                 (map (juxt (comp str :to) (comp str :alias) :to)))
             (->> (dep-graph/ns-names-for-langs db langs)
-                 (map (juxt str (constantly nil)))))))
+                 (map (juxt str (constantly nil) identity))))))
 
 (defn find-require-suggestions [zloc uri db]
   (when-let [cursor-sym (safe-sym zloc)]
@@ -590,9 +601,12 @@
     {:range (meta (z/node replaced-loc))
      :loc replaced-loc}))
 
-(defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer db {:keys [producer]}]
+(defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer js-require db {:keys [producer]}]
   (when-let [cursor-sym (safe-sym zloc)]
-    (let [cursor-namespace-str (namespace cursor-sym)
+    (let [chosen-ns (if js-require
+                      chosen-ns
+                      (symbol chosen-ns))
+          cursor-namespace-str (namespace cursor-sym)
           chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))
           rcf-zloc (add-to-rcf? zloc :require db producer)
           to-ns? (nil? rcf-zloc)
@@ -600,13 +614,13 @@
       (->> (concat
              (cond->> (cond
                         chosen-refer
-                        (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
+                        (add-known-refer zloc (symbol chosen-refer) chosen-ns db)
 
                         chosen-alias
-                        (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) db)
+                        (add-known-alias zloc (symbol chosen-alias-or-ns) chosen-ns db)
 
                         :else
-                        (add-simple-require zloc (symbol chosen-ns) db))
+                        (add-simple-require zloc chosen-ns db))
                to-ns? (cleaning-ns-edits uri db))
              (when chosen-alias-or-ns
                (cond
@@ -623,7 +637,12 @@
                                           (not= chosen-alias-or-ns sym-ns))))
                       (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
 
-                 (and to-ns? (some-> zloc safe-sym))
+                 (and to-ns?
+                      (some-> zloc safe-sym)
+                      ;; It seems like it isn't useful to modify the cursor-symbol
+                      ;; when adding a JS require, because the completion result is only given
+                      ;; when the cursor symbol is already using the selected alias?
+                      (not js-require))
                  [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))
            seq))))
 
@@ -640,5 +659,6 @@
           (:ns suggestion)
           (:alias suggestion)
           (:refer suggestion)
+          (:js-require suggestion)
           db
           components)))))

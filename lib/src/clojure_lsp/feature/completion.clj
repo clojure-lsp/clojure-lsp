@@ -188,10 +188,11 @@
     ;; client supports postponing the expensive edit calculation
       (add-unresolved completion-item
                       "alias"
-                      {:ns-to-add    (name ns-to-add)
-                       :alias-to-add (name alias-to-add)
-                       :rcf-pos rcf-pos
-                       :uri          uri})
+                      (cond-> {:ns-to-add    (name ns-to-add)
+                               :alias-to-add (name alias-to-add)
+                               :rcf-pos rcf-pos
+                               :uri          uri}
+                        (string? ns-to-add) (assoc :js-require true)))
     ;; client can't postpone the edit calculation, so do it now, even though it's expensive
       (completion-item-with-alias-edit completion-item cursor-loc alias-to-add ns-to-add rcf-pos db))))
 
@@ -388,20 +389,20 @@
                                  (matches-fn (:to element)))))
                      (map (fn [element]
                             [(some-> element :alias name)
-                             (some-> element :to name)]))
+                             (some-> element :to)]))
                      (distinct)
                      (map (fn [[element-alias element-to]]
                             (let [match-alias? (matches-fn element-alias)]
                               {:item         {:label    (if match-alias?
                                                           element-alias
-                                                          element-to)
+                                                          (name element-to))
                                               :priority :required-alias
                                               :kind     :property
                                               :detail   (if match-alias?
-                                                          (str "alias to: " element-to)
+                                                          (str "alias to: " (name element-to))
                                                           (str ":as " element-alias))}
                                :alias-to-add (symbol (str element-alias))
-                               :ns-to-add    (symbol (str element-to))}))))
+                               :ns-to-add    element-to}))))
                    aliases))
            ;; When the cursor exactly equals (or when the namespace part of the
            ;; cursor equals) one or more aliases, suggest var definitions from those
@@ -732,9 +733,12 @@
                                                                        :content-format-capability-path [:text-document :completion :completion-item :documentation-format]})
     item))
 
-(defmethod resolve-unresolved "alias" [_ item _other-unresolved {:keys [uri alias-to-add ns-to-add rcf-pos db]}]
+(defmethod resolve-unresolved "alias" [_ item _other-unresolved {:keys [uri alias-to-add ns-to-add rcf-pos js-require db]}]
   (if-let [zloc (parser/safe-zloc-of-file db uri)]
-    (completion-item-with-alias-edit item zloc (symbol alias-to-add) (symbol ns-to-add) rcf-pos db)
+    (let [ns-to-add (if js-require
+                      ns-to-add
+                      (symbol ns-to-add))]
+      (completion-item-with-alias-edit item zloc (symbol alias-to-add) ns-to-add rcf-pos db))
     item))
 
 (defn resolve-item [{:keys [data] :as item} db*]

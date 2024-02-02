@@ -648,12 +648,8 @@
                :additional-text-edits [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
                                         :new-text (h/code "(ns aaa "
                                                           "  (:require"
-                                                          ;; FIXME: Why does this include "@mui" part?
-                                                          ;; Is it because additional-text-edits is added directy vs. through resolveItem?
-                                                          ;; Still wont work as it isn't a string.
-                                                          ;; "    [\"@mui/material/Grid$default\" :as Grid]))"
-                                                          "    [@mui/material/Grid$default :as Grid]))"
-                                                          )}]}]
+                                                          "    [\"@mui/material/Grid$default\" :as Grid]))")}]
+               :score 9}]
              (f.completion/completion (h/file-uri "file:///aaa.clj") row col (h/db)))))
 
     (h/assert-submap {:label "Grid"
@@ -661,18 +657,14 @@
                       :additional-text-edits [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
                                                :new-text (h/code "(ns aaa "
                                                                  "  (:require"
-                                                                 ;; FIXME:
-                                                                 "    [material/Grid$default :as Grid]))"
-                                                                 ; "    [\"@mui/material/Grid$default\" :as Grid]))"
-                                                                 )}]}
+                                                                 "    [\"@mui/material/Grid$default\" :as Grid]))")}]}
                      (f.completion/resolve-item {:label "Grid"
                                                  :kind :property
                                                  :data {:unresolved [["alias"
-                                                                      {;; FIXME:
-                                                                       ; :ns-to-add "@mui/material/Grid$default"
-                                                                       :ns-to-add "material/Grid$default"
+                                                                      {:ns-to-add "@mui/material/Grid$default"
                                                                        :alias-to-add "Grid"
-                                                                       :uri (h/file-uri "file:///aaa.clj")}]]}}
+                                                                       :uri (h/file-uri "file:///aaa.clj")
+                                                                       :js-require true}]]}}
                                                 (h/db*)))))
 
 (comment

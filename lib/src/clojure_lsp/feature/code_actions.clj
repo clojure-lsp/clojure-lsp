@@ -107,9 +107,11 @@
 
 (defn ^:private require-suggestion-actions
   [uri alias-suggestions]
-  (map (fn [{:keys [ns alias refer position count]}]
+  (map (fn [{:keys [ns alias refer position count js-require]}]
          {:title        (format "Add require '[%s%s%s]'%s"
-                                ns
+                                (if js-require
+                                  (str \" ns \")
+                                  ns)
                                 (if alias (str " :as " alias) "")
                                 (if refer (str " :refer [" refer "]") "")
                                 (if count (str " × " count) ""))
@@ -117,7 +119,7 @@
           :is-preferred true
           :command      {:title     "Add require suggestion"
                          :command   "add-require-suggestion"
-                         :arguments [uri (:line position) (:character position) ns alias refer]}})
+                         :arguments [uri (:line position) (:character position) ns alias refer js-require]}})
        alias-suggestions))
 
 (defn ^:private missing-import-actions [uri missing-imports]

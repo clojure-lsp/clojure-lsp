@@ -13,6 +13,7 @@
   - Fix `suppress-diagnostics` not working on top-level forms when preceded by comment. #1678 
   - Fix add missing import feature on some corner cases for java imports. #1754
   - Fix semantic tokens and other analysis not being applied for project files at root. #1759
+  - Add support for adding missing requires and completion results referring to JS libraries which already have an alias in the project #1587
   
 ## 2024.02.01-11.01.59
 

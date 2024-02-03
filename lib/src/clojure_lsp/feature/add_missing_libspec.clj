@@ -3,6 +3,7 @@
    [clojure-lsp.common-symbols :as common-sym]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -231,6 +232,54 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
+(defn add-to-rcf*
+  [zloc
+   {libspec-type :type
+    lib-sym :lib
+    refer-sym :refer
+    alias-sym :alias
+    #_#_class-sym :class}
+   _]
+  (let [rcf-zip (-> zloc z/up z/subzip)
+        type (-> libspec-type name) ;"require"
+        left-ident 2
+        col (+  left-ident 2 (count type))
+        add-form-type? (not= type (some-> rcf-zip
+                                          z/down
+                                          z/next
+                                          z/down
+                                          z/string))
+
+        form-to-add
+        (cond-> (with-meta lib-sym nil)
+          (or alias-sym refer-sym) (vector)
+          alias-sym (conj :as (with-meta alias-sym nil))
+          refer-sym (conj :refer [(with-meta refer-sym nil)]))
+        result-loc
+        (if add-form-type?
+          (z/subedit-> rcf-zip
+                       z/down
+                       z/insert-newline-right
+                       z/next*
+                       (z/insert-right (n/spaces left-ident))
+                       z/next*
+                       (z/insert-right (n/list-node [(n/token-node
+                                                       (symbol type))]))
+                       (z/find-value z/next (symbol type))
+                       (z/insert-right (n/quote-node [form-to-add]))
+                       z/up
+                       z/insert-newline-right)
+          (z/subedit-> rcf-zip
+                       (z/find-value z/next (symbol type))
+                       z/up
+                       (z/append-child* (n/newlines 1))
+                       (z/append-child* (n/spaces col))
+                       (z/append-child (n/quote-node [form-to-add]))))]
+    (logger/debug {:range (meta (z/node result-loc))
+                   :loc result-loc})
+    [{:range (meta (z/node result-loc))
+      :loc result-loc}]))
+
 (defn ^:private add-to-namespace
   [zloc type ns-sym sym db]
   (when (or (= :require-simple type) sym)
@@ -239,7 +288,14 @@
                     :require-alias {:type :require :lib ns-sym :alias sym}
                     :require-simple {:type :require :lib ns-sym}
                     :import {:type :import :lib ns-sym :class sym})]
-      (add-to-namespace* zloc libspec db))))
+      (logger/debug zloc)
+      (if (and
+            (= (:type libspec) :require)
+            zloc
+            (= :token (z/tag zloc))
+            (= "comment" (z/string zloc)))
+        (add-to-rcf* zloc libspec db)
+        (add-to-namespace* zloc libspec db)))))
 
 (defn add-missing-import [zloc uri import-name db]
   (when-let [import-name (or import-name
@@ -250,22 +306,10 @@
       (->> (add-to-namespace zloc :import package-name class-name db)
            (cleaning-ns-edits uri db)))))
 
-(defn ^:private add-to-rcf
-  [zloc rcf-pos type ns-sym sym db]
-  (when (or (= :require-simple type) sym)
-    (let [libspec (case type
-                    :require-refer {:type :require :lib ns-sym :refer sym}
-                    :require-alias {:type :require :lib ns-sym :alias sym}
-                    :require-simple {:type :require :lib ns-sym}
-                    :import {:type :import :lib ns-sym :class sym})]
-      (add-to-namespace* zloc libspec db))))
-
 (defn add-known-alias
-  [zloc alias-to-add qualified-ns-to-add rcf-pos db]
+  [zloc alias-to-add qualified-ns-to-add db]
   (when (and qualified-ns-to-add alias-to-add)
-    (if rcf-pos
-      (add-to-rcf zloc rcf-pos :require-alias qualified-ns-to-add alias-to-add db)
-      (add-to-namespace zloc :require-alias qualified-ns-to-add alias-to-add db))))
+    (add-to-namespace zloc :require-alias qualified-ns-to-add alias-to-add db)))
 
 (defn add-simple-require
   [zloc qualified-ns-to-add db]
@@ -492,53 +536,61 @@
     {:range (meta (z/node replaced-loc))
      :loc replaced-loc}))
 
-(defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer db {:keys [producer]}]
-  (when-let [cursor-sym (safe-sym zloc)]
-    (let [cursor-namespace-str (namespace cursor-sym)
-          chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))
-          comment-zloc (edit/inside-rcf? zloc)
-          c-setting (settings/get db [:completion :add-require-inside-comments])]
-      (if (and
+(defn ^:private add-to-rcf?
+  "returns zloc of rcf when require should be done in rcf-form, otherwise nil"
+  [zloc db producer]
+  (let [rcf-zloc (edit/inside-rcf? zloc)
+        c-setting (settings/get db [:completion :add-libs-inside-rcf])]
+    (when (and
             (not (= false? c-setting))
-            comment-zloc
+            rcf-zloc
             (or c-setting
                 (and
                   producer
                   (= "Yes"
                      (producer/show-message-request
                        producer
-                       "Add require inside this comment form? (to avoid this prompt, set :add-require-inside-comments to true or false in config)"
+                       "Add require inside this comment form? (to avoid this prompt, set { :completion {:add-libs-inside-rcf true|false }.)"
                        :info
                        [{:title "Yes"}
-                        {:title "No"}])))))
-        nil ;;TODO
-        (->> (concat ;ns-case (unchanged)
-               (->> (cond
-                      chosen-refer
-                      (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
+                        {:title "No"}]))))) rcf-zloc)))
 
-                      chosen-alias
-                      (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) nil db)
+(defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer db {:keys [producer]}]
+  (when-let [cursor-sym (safe-sym zloc)]
+    (let [cursor-namespace-str (namespace cursor-sym)
+          chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))
+          rcf-zloc (add-to-rcf? zloc db producer)
+          to-ns? (nil? rcf-zloc)
+          zloc (or rcf-zloc zloc)]
+      (->> (concat
+             (cond->> (cond
+                        chosen-refer
+                        (add-known-refer zloc (symbol chosen-refer) (symbol chosen-ns) db)
 
-                      :else
-                      (add-simple-require zloc (symbol chosen-ns) db))
-                    (cleaning-ns-edits uri db))
-               (when chosen-alias-or-ns
-                 (cond
-                   cursor-namespace-str
+                        chosen-alias
+                        (add-known-alias zloc (symbol chosen-alias-or-ns) (symbol chosen-ns) db)
+
+                        :else
+                        (add-simple-require zloc (symbol chosen-ns) db))
+               to-ns? (cleaning-ns-edits uri db))
+             (when chosen-alias-or-ns
+               (cond
+                 cursor-namespace-str
                          ;; When we're aliasing clojure.string to string, we want to change
-                         ;; all nodes after the namespace like clojure.string/split to string/split.
-                   (->> (find-forms (z/next (edit/find-namespace zloc))
-                                    #(when-let [sym-ns (some-> % safe-sym namespace)]
-                                       (and (or
-                                              (= chosen-ns sym-ns)
-                                              (= cursor-namespace-str sym-ns))
-                                            (not= chosen-alias-or-ns sym-ns))))
-                        (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
+                         ;; all nodes after the namespace like clojure.string/split to string/split. 
+                 (->> (find-forms (if to-ns?
+                                    (z/next (edit/find-namespace zloc))
+                                    (-> zloc z/up z/subzip))
+                                  #(when-let [sym-ns (some-> % safe-sym namespace)]
+                                     (and (or
+                                            (= chosen-ns sym-ns)
+                                            (= cursor-namespace-str sym-ns))
+                                          (not= chosen-alias-or-ns sym-ns))))
+                      (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
 
-                   (some-> zloc safe-sym)
-                   [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))
-             seq)))))
+                 (and to-ns? (some-> zloc safe-sym))
+                 [(add-ns-to-loc-change zloc chosen-alias-or-ns)])))
+           seq))))
 
 (defn add-missing-libspec
   [zloc uri db]

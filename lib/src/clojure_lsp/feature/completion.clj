@@ -155,8 +155,11 @@
 
 (defn ^:private completion-item-with-alias-edit
   [completion-item cursor-loc alias-to-add ns-to-add rcf-pos db]
-  (let [edits (some-> cursor-loc
-                      (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add rcf-pos db)
+  (let [zloc (cond-> cursor-loc
+               rcf-pos (edit/find-at-pos
+                         (:row rcf-pos) (:col rcf-pos)))
+        edits (some-> zloc
+                      (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add db)
                       r.transform/result)]
     (cond-> completion-item
       (seq edits) (assoc :additional-text-edits (mapv #(update % :range shared/->range)
@@ -173,7 +176,8 @@
 
 (defn ^:private completion-item-with-unresolved-alias-edit
   [completion-item cursor-loc alias-to-add ns-to-add db uri resolve-support]
-  (let [rcf-pos (some-> cursor-loc edit/inside-rcf? z/node meta)]
+  (let [rcf-pos (when (settings/get db [:completion :add-libs-inside-rcf])
+                  (some-> cursor-loc edit/inside-rcf? z/node meta))]
     (if (contains? (:properties resolve-support) "additionalTextEdits")
     ;; client supports postponing the expensive edit calculation
       (add-unresolved completion-item

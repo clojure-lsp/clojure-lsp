@@ -3,7 +3,6 @@
    [clojure-lsp.common-symbols :as common-sym]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
-   [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
@@ -232,53 +231,80 @@
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
+(defn ^:private add-to-rcf?
+  "returns zloc of rcf when require should be done in rcf-form, otherwise nil"
+  [zloc db producer]
+  (let [rcf-zloc (edit/inside-rcf? zloc)
+        c-setting (settings/get db [:completion :add-libs-inside-rcf])]
+    (when (and
+            (not (= false? c-setting))
+            rcf-zloc
+            (or c-setting
+                (and
+                  producer
+                  (= "Yes"
+                     (producer/show-message-request
+                       producer
+                       "Add require inside this comment form? (to avoid this prompt, set { :completion {:add-libs-inside-rcf true|false }.)"
+                       :info
+                       [{:title "Yes"}
+                        {:title "No"}]))))) rcf-zloc)))
+
 (defn add-to-rcf*
   [zloc
    {libspec-type :type
     lib-sym :lib
     refer-sym :refer
     alias-sym :alias
-    #_#_class-sym :class}
+    class-sym :class}
    _]
   (let [rcf-zip (-> zloc z/up z/subzip)
-        type (-> libspec-type name) ;"require"
+        type (-> libspec-type name)
         left-ident 2
         col (+  left-ident 2 (count type))
-        add-form-type? (not= type (some-> rcf-zip
-                                          z/down
-                                          z/next
-                                          z/down
-                                          z/string))
+        ;;look for (require ...) or (import ...)
+        ;;as first or second child of comment form
+        add-form-type? (nil? (#{(some-> rcf-zip
+                                        z/down
+                                        z/right
+                                        z/down
+                                        z/string)
+                                (some-> rcf-zip
+                                        z/down
+                                        z/right
+                                        z/right
+                                        z/down
+                                        z/string)} type))
 
-        form-to-add
-        (cond-> (with-meta lib-sym nil)
-          (or alias-sym refer-sym) (vector)
-          alias-sym (conj :as (with-meta alias-sym nil))
-          refer-sym (conj :refer [(with-meta refer-sym nil)]))
-        result-loc
-        (if add-form-type?
-          (z/subedit-> rcf-zip
-                       z/down
-                       z/insert-newline-right
-                       z/next*
-                       (z/insert-right (n/spaces left-ident))
-                       z/next*
-                       (z/insert-right (n/list-node [(n/token-node
-                                                       (symbol type))]))
-                       (z/find-value z/next (symbol type))
-                       (z/insert-right (n/quote-node [form-to-add]))
-                       z/up
-                       z/insert-newline-right)
-          (z/subedit-> rcf-zip
-                       (z/find-value z/next (symbol type))
-                       z/up
-                       (z/append-child* (n/newlines 1))
-                       (z/append-child* (n/spaces col))
-                       (z/append-child (n/quote-node [form-to-add]))))]
-    (logger/debug {:range (meta (z/node result-loc))
-                   :loc result-loc})
-    [{:range (meta (z/node result-loc))
-      :loc result-loc}]))
+        form-to-add (cond
+                      (= :import libspec-type)
+                      [(with-meta lib-sym nil)
+                       (with-meta class-sym nil)]
+                      (= :require libspec-type)
+                      (cond-> (with-meta lib-sym nil)
+                        (or alias-sym refer-sym) (vector)
+                        alias-sym (conj :as (with-meta alias-sym nil))
+                        refer-sym (conj :refer [(with-meta refer-sym nil)]) 'true (#(n/quote-node [%]))))]
+       ;;we can't simply return an edited comment-zipper, because the cursor
+       ;;is inside and the update conflicts with completion, so we return
+       ;;only the updated lib-type form
+    (if add-form-type?
+      (let [range (meta (z/node rcf-zip))
+            new-form (z/edit-> (z/of-string "")
+                               (z/append-child* (n/newlines 1))
+                               (z/append-child* (n/spaces left-ident))
+                               (z/append-child (n/list-node [(n/token-node (symbol type)) (n/spaces 1) form-to-add])))]
+        [{:range {:row (:row range) :col 9 ;after (comment 
+                  :end-row (:row range) :end-col 9}
+          :loc new-form}])
+      (let [form (-> (z/find-value rcf-zip z/next (symbol type))
+                     z/up)
+            new-form (z/subedit-> form
+                                  (z/append-child* (n/newlines 1))
+                                  (z/append-child* (n/spaces col))
+                                  (z/append-child form-to-add))]
+        [{:range (meta (z/node form))
+          :loc new-form}]))))
 
 (defn ^:private add-to-namespace
   [zloc type ns-sym sym db]
@@ -288,23 +314,24 @@
                     :require-alias {:type :require :lib ns-sym :alias sym}
                     :require-simple {:type :require :lib ns-sym}
                     :import {:type :import :lib ns-sym :class sym})]
-      (logger/debug zloc)
+         ;;add to rcf is zloc is comment form, otherwise add to ns
       (if (and
-            (= (:type libspec) :require)
             zloc
             (= :token (z/tag zloc))
             (= "comment" (z/string zloc)))
         (add-to-rcf* zloc libspec db)
         (add-to-namespace* zloc libspec db)))))
 
-(defn add-missing-import [zloc uri import-name db]
+(defn add-missing-import [zloc uri import-name db {:keys [producer]}]
   (when-let [import-name (or import-name
                              (first (find-missing-imports zloc db)))]
     (let [split (string/split import-name #"\.")
           package-name (symbol (string/join "." (drop-last split)))
-          class-name (symbol (last split))]
-      (->> (add-to-namespace zloc :import package-name class-name db)
-           (cleaning-ns-edits uri db)))))
+          class-name (symbol (last split))
+          rcf-zloc (add-to-rcf? zloc db producer)
+          zloc (or rcf-zloc zloc)]
+      (cond->> (add-to-namespace zloc :import package-name class-name db)
+        (nil? rcf-zloc) (cleaning-ns-edits uri db)))))
 
 (defn add-known-alias
   [zloc alias-to-add qualified-ns-to-add db]
@@ -536,25 +563,6 @@
     {:range (meta (z/node replaced-loc))
      :loc replaced-loc}))
 
-(defn ^:private add-to-rcf?
-  "returns zloc of rcf when require should be done in rcf-form, otherwise nil"
-  [zloc db producer]
-  (let [rcf-zloc (edit/inside-rcf? zloc)
-        c-setting (settings/get db [:completion :add-libs-inside-rcf])]
-    (when (and
-            (not (= false? c-setting))
-            rcf-zloc
-            (or c-setting
-                (and
-                  producer
-                  (= "Yes"
-                     (producer/show-message-request
-                       producer
-                       "Add require inside this comment form? (to avoid this prompt, set { :completion {:add-libs-inside-rcf true|false }.)"
-                       :info
-                       [{:title "Yes"}
-                        {:title "No"}]))))) rcf-zloc)))
-
 (defn add-require-suggestion [zloc uri chosen-ns chosen-alias chosen-refer db {:keys [producer]}]
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
@@ -593,7 +601,7 @@
            seq))))
 
 (defn add-missing-libspec
-  [zloc uri db]
+  [zloc uri db components]
   (when zloc
     (let [all-suggestions (find-require-suggestions zloc uri db)]
       (when-let [suggestion (some->> all-suggestions
@@ -606,4 +614,4 @@
           (:alias suggestion)
           (:refer suggestion)
           db
-          {})))))
+          components)))))

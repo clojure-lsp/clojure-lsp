@@ -186,7 +186,7 @@
       (find-require-suggestions "|;; comment"))))
 
 (defn ^:private add-missing-libspec [code]
-  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
+  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" (h/db) {}))
 
 (defn ^:private as-sexp [[{:keys [loc]} :as locs]]
   (assert (= 1 (count locs)))
@@ -332,7 +332,7 @@
                                                 settings)})
 
   (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
-  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db)))
+  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db) {}))
 
 (deftest add-missing-import-test
   (testing "when there is no :import form"

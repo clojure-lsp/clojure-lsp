@@ -113,6 +113,82 @@
 (defn ^:private find-when-starts-with-sym [zloc sym]
   (z/find-next zloc z/next #(and (= :token (z/tag %))
                                  (string/starts-with? (z/string %) (str sym)))))
+
+(defn ^:private need-to-add-libspec?
+  [zloc lib-sym refer-sym alias-sym class-sym]
+  (or
+                             ;; missing import
+    (and class-sym (not (z/find-value zloc z/next class-sym)))
+                             ;; missing namespace
+    (and lib-sym (not (z/find-value zloc z/next lib-sym)))
+                             ;; missing refer
+    (and refer-sym (not (z/find-value zloc z/next refer-sym)))
+                             ;; missing alias
+    (and alias-sym (not (z/find-value zloc z/next alias-sym)))))
+
+(defn ^:private modified-existing-libform
+  [ns-zip form-type-loc lib-sym refer-sym _ class-sym]
+  (let [existing-unwrapped-require (when refer-sym (z/find-value ns-zip z/next lib-sym))
+        existing-wrapped-require (when existing-unwrapped-require
+                                   (let [wrapped-require (z/up existing-unwrapped-require)]
+                                     (when (= :vector (z/tag wrapped-require))
+                                       wrapped-require)))
+        existing-refer (when existing-wrapped-require
+                         (z/find-value (zsub/subzip existing-wrapped-require) z/next ':refer))
+        existing-import-package-only (when class-sym
+                                       (z/find-value (z/up form-type-loc) z/next lib-sym))
+        existing-import-package-by-segment (when (and existing-import-package-only
+                                                      (#{:list :vector} (z/tag (z/prev existing-import-package-only))))
+                                             (z/up existing-import-package-only))
+        exisiting-import-package-by-full-package (when (and class-sym
+                                                            (not existing-import-package-by-segment))
+                                                   (find-when-starts-with-sym ns-zip lib-sym))
+        exisiting-import-package-by-single-full-package (when (and exisiting-import-package-by-full-package
+                                                                   (not (find-when-starts-with-sym exisiting-import-package-by-full-package lib-sym)))
+                                                          exisiting-import-package-by-full-package)]
+    {:existing-import-package-by-full-package
+     exisiting-import-package-by-full-package
+     :result-loc (cond
+                   existing-refer
+                   (z/subedit-> ns-zip
+                                (z/find-value z/next lib-sym)
+                                (z/find-value z/next ':refer)
+                                z/right
+                                (z/append-child* (n/spaces 1))
+                                (z/append-child refer-sym))
+
+                   existing-wrapped-require
+                   (z/subedit-> ns-zip
+                                (z/find-value z/next lib-sym)
+                                z/up
+                                (z/append-child* (n/spaces 1))
+                                (z/append-child :refer)
+                                (z/append-child [refer-sym]))
+
+                   existing-unwrapped-require
+                   (z/subedit-> ns-zip
+                                (z/find-value z/next lib-sym)
+                                (paredit/wrap-around :vector)
+                                z/up
+                                (z/append-child* (n/spaces 1))
+                                (z/append-child :refer)
+                                (z/append-child [refer-sym]))
+
+                   existing-import-package-by-segment
+                   (z/subedit-> ns-zip
+                                (z/find-value z/next lib-sym)
+                                z/up
+                                (z/append-child* (n/spaces 1))
+                                (z/append-child class-sym))
+
+                   exisiting-import-package-by-single-full-package
+                   (let [existing-class-name (symbol (last (string/split (z/string exisiting-import-package-by-single-full-package) #"\.")))]
+                     (z/subedit-> ns-zip
+                                  (z/find-next z/next #(= exisiting-import-package-by-single-full-package %))
+                                  (z/replace [lib-sym existing-class-name class-sym])))
+
+                   :else nil)}))
+
 (defn add-to-namespace*
   [zloc
    {libspec-type :type
@@ -122,20 +198,8 @@
     class-sym :class}
    db]
   (let [ns-loc (edit/find-namespace zloc)
-        ns-zip (zsub/subzip ns-loc)
-        need-to-add? (or
-                       ;; missing import
-                       (and class-sym (not (z/find-value ns-zip z/next class-sym)))
-
-                       ;; missing namespace
-                       (and lib-sym (not (z/find-value ns-zip z/next lib-sym)))
-
-                       ;; missing refer
-                       (and refer-sym (not (z/find-value ns-zip z/next refer-sym)))
-
-                       ;; missing alias
-                       (and alias-sym (not (z/find-value ns-zip z/next alias-sym))))]
-    (when need-to-add?
+        ns-zip (zsub/subzip ns-loc)]
+    (when (need-to-add-libspec? ns-zip lib-sym refer-sym alias-sym class-sym)
       (let [add-form-type? (not (z/find-value ns-zip z/next libspec-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next libspec-type)
             ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
@@ -144,27 +208,11 @@
                   (if (= :same-line ns-inner-blocks-indentation)
                     2
                     5))
-            existing-unwrapped-require (when refer-sym (z/find-value ns-zip z/next lib-sym))
-            existing-wrapped-require (when existing-unwrapped-require
-                                       (let [wrapped-require (z/up existing-unwrapped-require)]
-                                         (when (= :vector (z/tag wrapped-require))
-                                           wrapped-require)))
-            existing-refer (when existing-wrapped-require
-                             (z/find-value (zsub/subzip existing-wrapped-require) z/next ':refer))
-            existing-import-package-only (when class-sym
-                                           (z/find-value (z/up form-type-loc) z/next lib-sym))
-            existing-import-package-by-segment (when (and existing-import-package-only
-                                                          (#{:list :vector} (z/tag (z/prev existing-import-package-only))))
-                                                 (z/up existing-import-package-only))
-            exisiting-import-package-by-full-package (when (and class-sym
-                                                                (not existing-import-package-by-segment))
-                                                       (find-when-starts-with-sym ns-zip lib-sym))
-            exisiting-import-package-by-single-full-package (when (and exisiting-import-package-by-full-package
-                                                                       (not (find-when-starts-with-sym exisiting-import-package-by-full-package lib-sym)))
-                                                              exisiting-import-package-by-full-package)
+            {:keys [result-loc exisiting-import-package-by-full-package]}
+            (modified-existing-libform ns-zip form-type-loc lib-sym refer-sym alias-sym class-sym)
             form-to-add (cond
-                          (and exisiting-import-package-by-full-package
-                               (= :import libspec-type))
+                          (and (= :import libspec-type)
+                               exisiting-import-package-by-full-package)
                           (with-meta (symbol (str lib-sym "." class-sym)) nil)
 
                           (= :import libspec-type)
@@ -176,58 +224,19 @@
                             (or alias-sym refer-sym) (vector)
                             alias-sym (conj :as (with-meta alias-sym nil))
                             refer-sym (conj :refer [(with-meta refer-sym nil)])))
-            result-loc (cond
-                         existing-refer
-                         (z/subedit-> ns-zip
-                                      (z/find-value z/next lib-sym)
-                                      (z/find-value z/next ':refer)
-                                      z/right
-                                      (z/append-child* (n/spaces 1))
-                                      (z/append-child refer-sym))
-
-                         existing-wrapped-require
-                         (z/subedit-> ns-zip
-                                      (z/find-value z/next lib-sym)
-                                      z/up
-                                      (z/append-child* (n/spaces 1))
-                                      (z/append-child :refer)
-                                      (z/append-child [refer-sym]))
-
-                         existing-unwrapped-require
-                         (z/subedit-> ns-zip
-                                      (z/find-value z/next lib-sym)
-                                      (paredit/wrap-around :vector)
-                                      z/up
-                                      (z/append-child* (n/spaces 1))
-                                      (z/append-child :refer)
-                                      (z/append-child [refer-sym]))
-
-                         existing-import-package-by-segment
-                         (z/subedit-> ns-zip
-                                      (z/find-value z/next lib-sym)
-                                      z/up
-                                      (z/append-child* (n/spaces 1))
-                                      (z/append-child class-sym))
-
-                         exisiting-import-package-by-single-full-package
-                         (let [existing-class-name (symbol (last (string/split (z/string exisiting-import-package-by-single-full-package) #"\.")))]
+            result-loc (or result-loc ;if not modified lib add new entry
                            (z/subedit-> ns-zip
-                                        (z/find-next z/next #(= exisiting-import-package-by-single-full-package %))
-                                        (z/replace [lib-sym existing-class-name class-sym])))
-
-                         :else
-                         (z/subedit-> ns-zip
-                                      (cond->
-                                       add-form-type? (z/append-child (n/newlines 1))
-                                       add-form-type? (z/append-child (n/spaces 2))
-                                       add-form-type? (z/append-child (list libspec-type)))
-                                      (z/find-value z/next libspec-type)
-                                      (z/up)
-                                      (cond->
-                                       (or (not add-form-type?)
-                                           (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
-                                      (z/append-child* (n/spaces (dec col)))
-                                      (z/append-child form-to-add)))]
+                                        (cond->
+                                         add-form-type? (z/append-child (n/newlines 1))
+                                         add-form-type? (z/append-child (n/spaces 2))
+                                         add-form-type? (z/append-child (list libspec-type)))
+                                        (z/find-value z/next libspec-type)
+                                        (z/up)
+                                        (cond->
+                                         (or (not add-form-type?)
+                                             (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
+                                        (z/append-child* (n/spaces (dec col)))
+                                        (z/append-child form-to-add)))]
         [{:range (meta (z/node result-loc))
           :loc result-loc}]))))
 
@@ -258,53 +267,67 @@
     alias-sym :alias
     class-sym :class}
    _]
-  (let [rcf-zip (-> zloc z/up z/subzip)
-        type (-> libspec-type name)
-        left-ident 2
-        col (+  left-ident 2 (count type))
+  (when
+   (-> zloc
+       edit/find-namespace
+       zsub/subzip
+       (need-to-add-libspec? lib-sym refer-sym alias-sym class-sym))
+    (let [rcf-zip (-> zloc z/up z/subzip)
+          type (-> libspec-type name)
+          left-ident (or (some-> rcf-zip
+                                 (z/find-tag z/next* :newline)
+                                 z/next
+                                 z/node
+                                 meta
+                                 :col
+                                 dec) 2)
+          col (+  left-ident 2 (count type))
         ;;look for (require ...) or (import ...)
         ;;as first or second child of comment form
-        add-form-type? (nil? (#{(some-> rcf-zip
-                                        z/down
-                                        z/right
-                                        z/down
-                                        z/string)
-                                (some-> rcf-zip
-                                        z/down
-                                        z/right
-                                        z/right
-                                        z/down
-                                        z/string)} type))
-
-        form-to-add (cond
-                      (= :import libspec-type)
-                      [(with-meta lib-sym nil)
-                       (with-meta class-sym nil)]
-                      (= :require libspec-type)
-                      (cond-> (with-meta lib-sym nil)
-                        (or alias-sym refer-sym) (vector)
-                        alias-sym (conj :as (with-meta alias-sym nil))
-                        refer-sym (conj :refer [(with-meta refer-sym nil)]) 'true (#(n/quote-node [%]))))]
+          add-form-type? (nil? (#{(some-> rcf-zip
+                                          z/down
+                                          z/right
+                                          z/down
+                                          z/string)
+                                  (some-> rcf-zip
+                                          z/down
+                                          z/right
+                                          z/right
+                                          z/down
+                                          z/string)} type))
+          form-to-add (cond
+                        (= :import libspec-type)
+                        [(with-meta lib-sym nil)
+                         (with-meta class-sym nil)]
+                        (= :require libspec-type)
+                        (cond-> (with-meta lib-sym nil)
+                          (or alias-sym refer-sym) (vector)
+                          alias-sym (conj :as (with-meta alias-sym nil))
+                          refer-sym (conj :refer [(with-meta refer-sym nil)]) true (#(n/quote-node [%]))))]
        ;;we can't simply return an edited comment-zipper, because the cursor
        ;;is inside and the update conflicts with completion, so we return
-       ;;only the updated lib-type form
-    (if add-form-type?
-      (let [range (meta (z/node rcf-zip))
-            new-form (z/edit-> (z/of-string "")
-                               (z/append-child* (n/newlines 1))
-                               (z/append-child* (n/spaces left-ident))
-                               (z/append-child (n/list-node [(n/token-node (symbol type)) (n/spaces 1) form-to-add])))]
-        [{:range {:row (:row range) :col 9 ;after (comment 
-                  :end-row (:row range) :end-col 9}
-          :loc new-form}])
-      (let [form (-> (z/find-value rcf-zip z/next (symbol type))
-                     z/up)
-            new-form (z/subedit-> form
-                                  (z/append-child* (n/newlines 1))
-                                  (z/append-child* (n/spaces col))
-                                  (z/append-child form-to-add))]
-        [{:range (meta (z/node form))
-          :loc new-form}]))))
+       ;;only the updated/inserted libform
+      (if add-form-type?
+        (let [range (meta (z/node rcf-zip))
+              new-form (z/edit-> (z/of-string "")
+                                 (z/append-child* (n/newlines 1))
+                                 (z/append-child* (n/spaces left-ident))
+                                 (z/append-child (n/list-node [(n/token-node (symbol type)) (n/spaces 1) form-to-add])))]
+          [{:range {:row (:row range) :col 9 ;after (comment 
+                    :end-row (:row range) :end-col 9}
+            :loc new-form}])
+        (let [form (-> (z/find-value rcf-zip z/next (symbol type))
+                       z/up)
+              form-zip (z/subzip form)]
+          (when (need-to-add-libspec?
+                  (z/subzip form) lib-sym refer-sym alias-sym class-sym)
+            (let [result-loc (or (:result-loc (modified-existing-libform form-zip form-zip lib-sym refer-sym alias-sym class-sym))
+                                 (z/subedit-> form
+                                              (z/append-child* (n/newlines 1))
+                                              (z/append-child* (n/spaces col))
+                                              (z/append-child form-to-add)))]
+              [{:range (meta (z/node form))
+                :loc result-loc}])))))))
 
 (defn ^:private add-to-namespace
   [zloc type ns-sym sym db]

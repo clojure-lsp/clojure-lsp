@@ -151,6 +151,7 @@
           :detail "alias to: bbb",
           :data {"unresolved" [["alias" {"ns-to-add" "bbb"
                                          "alias-to-add" "bb"
+                                         "rcf-pos" nil
                                          "uri" (h/file-uri "file:///aaa.clj")}]]}}
          ;; to var in ns
          {:label "bb/bar",
@@ -161,6 +162,7 @@
                                                  "name-col" 6}]
                                ["alias" {"ns-to-add" "bbb"
                                          "alias-to-add" "bb"
+                                         "rcf-pos" nil
                                          "uri" (h/file-uri "file:///aaa.clj")}]]}}]
         (f.completion/completion (h/file-uri "file:///aaa.clj") bb-row bb-col (h/db))))))
 

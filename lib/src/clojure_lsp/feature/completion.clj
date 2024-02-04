@@ -156,6 +156,7 @@
 (defn ^:private completion-item-with-alias-edit
   [completion-item cursor-loc alias-to-add ns-to-add rcf-pos db]
   (let [zloc (cond-> cursor-loc
+               rcf-pos edit/to-root
                rcf-pos (edit/find-at-pos
                          (:row rcf-pos) (:col rcf-pos)))
         edits (some-> zloc

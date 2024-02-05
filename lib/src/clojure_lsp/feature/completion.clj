@@ -177,7 +177,7 @@
 
 (defn ^:private completion-item-with-unresolved-alias-edit
   [completion-item cursor-loc alias-to-add ns-to-add db uri resolve-support]
-  (let [rcf-pos (when (settings/get db [:completion :add-libs-inside-rcf])
+  (let [rcf-pos (when (= :always (settings/get db [:add-missing :add-to-rcf]))
                   (some-> cursor-loc edit/inside-rcf? z/node meta))]
     (if (contains? (:properties resolve-support) "additionalTextEdits")
     ;; client supports postponing the expensive edit calculation

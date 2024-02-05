@@ -447,7 +447,7 @@
 (defn add-missing-import-to-rcf [code import-name & [settings]]
   (h/reset-components!)
   (swap! (h/db*) shared/deep-merge {:settings (merge
-                                                {:completion {:add-libs-inside-rcf true}
+                                                {:add-missing {:add-to-rcf :always}
                                                  :clean {:automatically-after-ns-refactor false}}
                                                 settings)})
 
@@ -597,7 +597,7 @@
                     (add-require-suggestion "clojure.string" nil "split")))))))
 
 (defn add-require-suggestion-to-rcf [code chosen-ns chosen-alias chosen-refer]
-  (swap! (h/db*) shared/deep-merge {:settings {:completion  {:add-libs-inside-rcf true}}})
+  (swap! (h/db*) shared/deep-merge {:settings {:add-missing {:add-to-rcf :always}}})
   (h/load-code-and-locs code)
   (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db) {}))
 

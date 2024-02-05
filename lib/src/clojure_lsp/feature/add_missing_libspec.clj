@@ -241,23 +241,24 @@
           :loc result-loc}]))))
 
 (defn ^:private add-to-rcf?
-  "returns zloc of rcf when require should be done in rcf-form, otherwise nil"
-  [zloc db producer]
+  "returns zloc of rcf when require/import should be added to rcf-form, otherwise nil"
+  [zloc mode db producer]
   (let [rcf-zloc (edit/inside-rcf? zloc)
-        c-setting (settings/get db [:completion :add-libs-inside-rcf])]
+        c-setting (settings/get db [:add-missing :add-to-rcf])]
     (when (and
-            (not (= false? c-setting))
             rcf-zloc
-            (or c-setting
-                (and
-                  producer
-                  (= "Yes"
-                     (producer/show-message-request
-                       producer
-                       "Add require inside this comment form? (to avoid this prompt, set { :completion {:add-libs-inside-rcf true|false }.)"
-                       :info
-                       [{:title "Yes"}
-                        {:title "No"}]))))) rcf-zloc)))
+            (or
+              (= :always c-setting)
+              (and
+                (not= :never c-setting)
+                producer
+                (= "Yes"
+                   (producer/show-message-request
+                     producer
+                     (format "Add %s inside this comment form?" (name mode))
+                     :info
+                     [{:title "Yes"}
+                      {:title "No"}]))))) rcf-zloc)))
 
 (defn add-to-rcf*
   [zloc
@@ -352,7 +353,7 @@
     (let [split (string/split import-name #"\.")
           package-name (symbol (string/join "." (drop-last split)))
           class-name (symbol (last split))
-          rcf-zloc (add-to-rcf? zloc db producer)
+          rcf-zloc (add-to-rcf? zloc :import db producer)
           zloc (or rcf-zloc zloc)]
       (cond->> (add-to-namespace zloc :import package-name class-name db)
         (nil? rcf-zloc) (cleaning-ns-edits uri db)))))
@@ -591,7 +592,7 @@
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
           chosen-alias-or-ns (when-not chosen-refer (or chosen-alias chosen-ns))
-          rcf-zloc (add-to-rcf? zloc db producer)
+          rcf-zloc (add-to-rcf? zloc :require db producer)
           to-ns? (nil? rcf-zloc)
           zloc (or rcf-zloc zloc)]
       (->> (concat

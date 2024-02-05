@@ -179,7 +179,7 @@
                                       "  bb|)")
                               (h/file-uri "file:///aaa.clj"))]
     (testing "without resolve support"
-      (swap! (h/db*) merge {:settings {:completion {:add-libs-inside-rcf true}}
+      (swap! (h/db*) merge {:settings {:add-missing {:add-to-rcf :always}}
                             :client-capabilities {:text-document {:completion {:completion-item {:resolve-support {:properties ["documentation"]}}}}}})
       (h/assert-submaps
         [;; to ns
@@ -201,7 +201,7 @@
             :new-text (h/code "" "  (require '[bbb :as bb])")}]}]
         (f.completion/completion (h/file-uri "file:///aaa.clj") bb-row bb-col (h/db))))
     (testing "with resolve support"
-      (swap! (h/db*) merge {:settings {:completion {:add-libs-inside-rcf true}}
+      (swap! (h/db*) merge {:settings {:add-missing {:add-to-rcf :always}}
                             :client-capabilities {:text-document {:completion {:completion-item {:resolve-support {:properties ["documentation" "additionalTextEdits"]}}}}}})
       (h/assert-submaps
         [;; to ns

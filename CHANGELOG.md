@@ -6,7 +6,7 @@
   - Bump clj-kondo to `2023.12.16-20240202.114914-15`.
 
 - Editor
-  - Added setting to allow requires and imports to be added within the current comment form during code action and completion: `:completion {:add-libs-to-rcf [true|false|nil]}` #1316
+  - Added setting to allow requires and imports to be added within the current comment form during code action and completion: `:add-missing :add-to-rcf` #1316
 
 ## 2024.02.01-11.01.59
 

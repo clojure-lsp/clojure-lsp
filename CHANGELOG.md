@@ -3,7 +3,15 @@
 ## Unreleased
 
 - General
-  - Fix binary not working on some aarch64 linux. #1748
+  - Bump clj-kondo to `2023.12.16-20240202.114914-15`.
+
+- Editor
+  - Fix `suppress-diagnostics` not working on top-level forms when preceded by comment. #1678 
+  
+## 2024.02.01-11.01.59
+
+- General
+  - Fix binary not wokring on some aarch64 linux. #1748
   - Add new `Project tree` feature via the `clojure/workspace/projectTree/nodes` custom method. #1752
   - Fix `--log-path` setting to work with `listen`/empty arg, starting clojure-lsp server and logging properly.
 
@@ -13,8 +21,7 @@
   - Fix `range-formatting` throwing exceptions when unbalanced parens are sent from client. #1758
   - Fix rename functions need to clean up LSP state or restart in some clients implementing LSP method `didRenameFiles`. #1755
   - Fix `thread last all` failed after comment form `#_(...)`. #1745  
-  - Fix `suppress-diagnostics` not working on top-level forms when preceded by comment. #1678
-
+  
 ## 2023.12.29-12.09.27
 
 - General

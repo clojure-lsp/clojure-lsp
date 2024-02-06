@@ -11,6 +11,30 @@
 
 (h/reset-components-before-test)
 
+(deftest lint-project-uniform-aliasing
+  (h/load-code-and-locs "(ns a (:require [clojure.string :as s]))")
+  (h/load-code-and-locs "(ns b (:require [clojure.string :as str]))"
+                        (h/file-uri "file:///b.clj"))
+  (h/load-code-and-locs "(ns c (:require [clojure.string :as string]))"
+                        (h/file-uri "file:///c.clj"))
+  (testing "when linter level is :info"
+    (reset! findings {})
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/uniform-aliasing {:level :info}}}})
+    (h/assert-submaps
+      [{:uri h/default-uri
+        :level :info
+        :type :clojure-lsp/uniform-aliasing
+        :message "Different aliases #{s str} found for clojure.string"
+        :row 1
+        :col 20
+        :end-row 1
+        :end-col 23}]
+      @findings)))
+
 (deftest lint-project-public-vars
   (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
   (h/load-code-and-locs "(ns some-ns (:gen-class)) (defn -main [& _args] 1) (defn -foo [] 1)" (h/file-uri "file:///b.clj"))

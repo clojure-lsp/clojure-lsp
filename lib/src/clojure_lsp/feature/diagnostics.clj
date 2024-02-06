@@ -228,7 +228,8 @@
 (defn ^:private uniform-aliasing [narrowed-db project-db kondo-config]
   (let [dependencies-by-ns (:dep-graph narrowed-db)
         inconsistent-namespaces (for [[k v] dependencies-by-ns
-                                      :when (> (count (:aliases v)) 1)]
+                                      :let [alias-names (->> v :aliases keys (remove nil?))]
+                                      :when (> (count alias-names) 1)]
                                   k)
         inconsistencies (reduce-kv (fn [m k v]
                                      (if (some #{k} inconsistent-namespaces)

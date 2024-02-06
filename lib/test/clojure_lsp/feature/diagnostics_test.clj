@@ -15,6 +15,16 @@
   (h/load-code-and-locs "(ns a (:require [clojure.string]))")
   (h/load-code-and-locs "(ns b (:require [clojure.string :as s]))"
                         (h/file-uri "file:///b.clj"))
+  (testing "when there are two files but only one alias"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/uniform-aliasing {:level :info}}}})
+    (h/assert-submaps
+      []
+      @findings))
   (h/load-code-and-locs "(ns c (:require [clojure.string :as str]))"
                         (h/file-uri "file:///c.clj"))
   (h/load-code-and-locs "(ns d (:require [clojure.string :as string]))"

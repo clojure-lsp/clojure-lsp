@@ -12,20 +12,23 @@
 (h/reset-components-before-test)
 
 (deftest lint-project-uniform-aliasing
-  (h/load-code-and-locs "(ns a (:require [clojure.string :as s]))")
-  (h/load-code-and-locs "(ns b (:require [clojure.string :as str]))"
+  (h/load-code-and-locs "(ns a (:require [clojure.string]))")
+  (h/load-code-and-locs "(ns b (:require [clojure.string :as s]))"
                         (h/file-uri "file:///b.clj"))
-  (h/load-code-and-locs "(ns c (:require [clojure.string :as string]))"
+  (h/load-code-and-locs "(ns c (:require [clojure.string :as str]))"
                         (h/file-uri "file:///c.clj"))
+  (h/load-code-and-locs "(ns d (:require [clojure.string :as string]))"
+                        (h/file-uri "file:///d.clj"))
   (testing "when linter level is :info"
-    (reset! findings {})
+    (reset! findings [])
     (f.diagnostic/custom-lint-uris!
       [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/uniform-aliasing {:level :info}}}})
     (h/assert-submaps
-      [{:uri "file:///a.clj"
+      [{:uri "file:///b.clj"
+        :filename "/b.clj"
         :row 1
         :col 37
         :end-row 1
@@ -33,7 +36,8 @@
         :level :info
         :message "Different aliases #{s string str} found for clojure.string"
         :type :clojure-lsp/uniform-aliasing}
-       {:uri "file:///b.clj"
+       {:uri "file:///c.clj"
+        :filename "/c.clj"
         :row 1
         :col 37
         :end-row 1
@@ -41,7 +45,8 @@
         :level :info
         :message "Different aliases #{s string str} found for clojure.string"
         :type :clojure-lsp/uniform-aliasing}
-       {:uri "file:///c.clj"
+       {:uri "file:///d.clj"
+        :filename "/d.clj"
         :row 1
         :col 37
         :end-row 1

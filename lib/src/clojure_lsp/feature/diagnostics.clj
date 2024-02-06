@@ -225,14 +225,6 @@
                     (:to element))
    :type :clojure-lsp/uniform-aliasing})
 
-(comment
-  inconsistent-dependencies-by-ns sample
-  {clojure.string
-   {:dependents {a 1, b 1, c 1},
-    :aliases {s 1, str 1, string 1},
-    :dependents-internal? true,
-    :dependents-langs {:clj 3}}})
-
 (defn ^:private uniform-aliasing [narrowed-db project-db kondo-config]
   (let [dependencies-by-ns (:dep-graph narrowed-db)
         inconsistent-namespaces (for [[k v] dependencies-by-ns
@@ -240,12 +232,12 @@
                                   k)
         inconsistencies (reduce-kv (fn [m k v]
                                      (if (some #{k} inconsistent-namespaces)
-                                       (assoc m k (-> v :aliases keys set))
+                                       (assoc m k (->> v :aliases keys (remove nil?) set))
                                        m))
                                    {}
                                    dependencies-by-ns)
         inconsistent-dependencies-by-ns (select-keys dependencies-by-ns inconsistent-namespaces)
-        elements (flatten (for [[inconsistent-namespace {inconsistent-dependents :dependents inconsistent-aliases :aliases}] inconsistent-dependencies-by-ns
+        elements (flatten (for [[_inconsistent-namespace {inconsistent-dependents :dependents inconsistent-aliases :aliases}] inconsistent-dependencies-by-ns
                                 [inconsistent-dependent-namespace _] inconsistent-dependents
                                 :let [inconsistent-dependent (get dependencies-by-ns inconsistent-dependent-namespace)
                                       inconsistent-dependent-uris (:uris inconsistent-dependent)]

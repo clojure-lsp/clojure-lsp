@@ -25,14 +25,30 @@
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/uniform-aliasing {:level :info}}}})
     (h/assert-submaps
-      [{:uri h/default-uri
-        :level :info
-        :type :clojure-lsp/uniform-aliasing
-        :message "Different aliases #{s str} found for clojure.string"
+      [{:uri "file:///a.clj"
         :row 1
-        :col 20
+        :col 37
         :end-row 1
-        :end-col 23}]
+        :end-col 38
+        :level :info
+        :message "Different aliases #{s string str} found for clojure.string"
+        :type :clojure-lsp/uniform-aliasing}
+       {:uri "file:///b.clj"
+        :row 1
+        :col 37
+        :end-row 1
+        :end-col 40
+        :level :info
+        :message "Different aliases #{s string str} found for clojure.string"
+        :type :clojure-lsp/uniform-aliasing}
+       {:uri "file:///c.clj"
+        :row 1
+        :col 37
+        :end-row 1
+        :end-col 43
+        :level :info
+        :message "Different aliases #{s string str} found for clojure.string"
+        :type :clojure-lsp/uniform-aliasing}]
       @findings)))
 
 (deftest lint-project-public-vars

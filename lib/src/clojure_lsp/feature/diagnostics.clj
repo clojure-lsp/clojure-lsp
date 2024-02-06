@@ -214,19 +214,16 @@
   (publish-all-diagnostics!* components (map empty-diagnostics-of-uri uris)))
 
 (defn ^:private namespace-alias->finding [element inconsistencies kondo-config]
-  (let [kondo-config (if (:ns element)
-                       (kondo-config-for-ns kondo-config (:ns element) (:filename element))
-                       kondo-config)]
-    {:uri (:uri element)
-     :row (:name-row element)
-     :col (:name-col element)
-     :end-row (:name-end-row element)
-     :end-col (:name-end-col element)
-     :level (or (-> kondo-config :linters :clojure-lsp/inconsistent-alias-var :level) :info)
-     :message (format "Different aliases %s found for %s"
-                      (get inconsistencies (:to element))
-                      (:to element))
-     :type :clojure-lsp/uniform-aliasing}))
+  {:uri (:uri element)
+   :row (:name-row element)
+   :col (:name-col element)
+   :end-row (:name-end-row element)
+   :end-col (:name-end-col element)
+   :level (or (-> kondo-config :linters :clojure-lsp/inconsistent-alias-var :level) :info)
+   :message (format "Different aliases %s found for %s"
+                    (get inconsistencies (:to element))
+                    (:to element))
+   :type :clojure-lsp/uniform-aliasing})
 
 (comment
   inconsistent-dependencies-by-ns sample

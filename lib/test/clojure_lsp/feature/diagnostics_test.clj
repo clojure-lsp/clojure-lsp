@@ -29,6 +29,16 @@
                         (h/file-uri "file:///c.clj"))
   (h/load-code-and-locs "(ns d (:require [clojure.string :as string]))"
                         (h/file-uri "file:///d.clj"))
+  (testing "when linter level is :off"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/uniform-aliasing {:level :off}}}})
+    (h/assert-submaps
+      []
+      @findings))
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
@@ -64,6 +74,16 @@
         :level :info
         :message "Different aliases #{s string str} found for clojure.string"
         :type :clojure-lsp/uniform-aliasing}]
+      @findings))
+  (testing "linter level by default is :off"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
+    (h/assert-submaps
+      []
       @findings)))
 
 (deftest lint-project-public-vars

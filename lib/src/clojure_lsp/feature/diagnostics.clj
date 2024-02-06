@@ -237,18 +237,18 @@
                                    {}
                                    dependencies-by-ns)
         inconsistent-dependencies-by-ns (select-keys dependencies-by-ns inconsistent-namespaces)
-        elements (flatten (for [[_inconsistent-namespace {inconsistent-dependents :dependents inconsistent-aliases :aliases}] inconsistent-dependencies-by-ns
-                                [inconsistent-dependent-namespace _] inconsistent-dependents
-                                :let [inconsistent-dependent (get dependencies-by-ns inconsistent-dependent-namespace)
-                                      inconsistent-dependent-uris (:uris inconsistent-dependent)]
-                                inconsistent-dependent-uri inconsistent-dependent-uris
-                                :let [inconsistent-dependent-var-definitions (-> project-db :analysis (get inconsistent-dependent-uri))
-                                      inconsistent-dependent-namespace-aliases (:namespace-alias inconsistent-dependent-var-definitions)]]
-                            inconsistent-dependent-namespace-aliases))
+        dependent-namespace-aliases (flatten (for [[_ {inconsistent-dependents :dependents}] inconsistent-dependencies-by-ns
+                                                   [inconsistent-dependent-namespace _] inconsistent-dependents
+                                                   :let [inconsistent-dependent (get dependencies-by-ns inconsistent-dependent-namespace)
+                                                         inconsistent-dependent-uris (:uris inconsistent-dependent)]
+                                                   inconsistent-dependent-uri inconsistent-dependent-uris
+                                                   :let [inconsistent-dependent-var-definitions (-> project-db :analysis (get inconsistent-dependent-uri))
+                                                         inconsistent-dependent-namespace-aliases (:namespace-alias inconsistent-dependent-var-definitions)]]
+                                               inconsistent-dependent-namespace-aliases))
         aliases-references (filter (fn [{:keys [alias to]}]
                                      (and (contains? inconsistencies to)
                                           (some #{alias} (get inconsistencies to))))
-                                   elements)
+                                   dependent-namespace-aliases)
         findings (map #(namespace-alias->finding % inconsistencies kondo-config)
                       aliases-references)]
     findings))

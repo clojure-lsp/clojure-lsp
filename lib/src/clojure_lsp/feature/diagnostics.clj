@@ -285,7 +285,8 @@
 (defn ^:private findings-of-project
   [db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)]
-    (unused-public-vars project-db project-db kondo-config)))
+    (concat (unused-public-vars project-db project-db kondo-config)
+            (uniform-aliasing project-db project-db kondo-config))))
 
 (defn ^:private findings-of-uris
   [uris db kondo-config]

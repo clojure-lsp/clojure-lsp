@@ -84,6 +84,21 @@
        :config {}})
     (h/assert-submaps
       []
+      @findings))
+  (h/load-code-and-locs "(ns e (:require [clojure.string :as sut]))"
+                        (h/file-uri "file:///e.clj"))
+  (testing "exclude-aliases"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/uniform-aliasing {:level :error
+                                                         :exclude-aliases #{'sut}}}}})
+    (h/assert-submaps
+      [{:uri "file:///b.clj"}
+       {:uri "file:///c.clj"}
+       {:uri "file:///d.clj"}]
       @findings)))
 
 (deftest lint-project-public-vars

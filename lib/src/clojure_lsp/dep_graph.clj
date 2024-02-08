@@ -15,7 +15,7 @@
 ;; {} map {k1 v1 ...}
 ;; #{} set #{i1 ...}
 ;; #<> multiset #<i1 ...>
-;;     a mulitset is represented internally as a hashmap {i1 f1 ...} where f1 =
+;;     a multiset is represented internally as a hashmap {i1 f1 ...} where f1 =
 ;;     integer > 0, frequency of i1
 
 ;; ns = symbol
@@ -144,7 +144,7 @@
 
 (def ^:private empty-multiset {})
 
-(defn ^:private mulitset-conj [ms x]
+(defn ^:private multiset-conj [ms x]
   (update ms x (fnil inc 0)))
 
 (defn ^:private multiset-disj [ms x]
@@ -163,7 +163,7 @@
   ;; multiset, not vice-versa.
   (boolean (and ms (some ms s))))
 
-(def ^:private ms-conj (fnil mulitset-conj empty-multiset))
+(def ^:private ms-conj (fnil multiset-conj empty-multiset))
 (def ^:private ms-disj (fnil multiset-disj empty-multiset))
 (def ^:private s-conj (fnil conj #{}))
 (def ^:private s-disj (fnil disj #{}))

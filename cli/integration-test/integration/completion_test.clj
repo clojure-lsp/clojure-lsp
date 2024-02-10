@@ -1,6 +1,6 @@
 (ns integration.completion-test
   (:require
-   [clojure.test :refer [deftest testing]]
+   [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]
    [integration.lsp :as lsp]))
@@ -25,16 +25,29 @@
   (lsp/notify! (fixture/did-open-source-path-notification "completion/b.clj"))
 
   (testing "normal completions"
-    (testing "get completions"
-      (h/assert-contains-submaps
-        [{:label "definterface"
-          :kind 3
-          :detail "clojure.core/definterface"
-          :score 6
-          :data {:unresolved [["documentation" {:uri "file:///clojure.core.clj"
-                                                :name "definterface"
-                                                :ns "clojure.core"}]]}}]
-        (lsp/request! (fixture/completion-request "completion/a.clj" 2 3))))
+    (let [defmacro-item  {:label "defmacro"
+                          :kind 3
+                          :detail "clojure.core/defmacro"
+                          :score 6
+                          :data {:unresolved [["documentation" {:uri "file:///clojure.core.clj"
+                                                                :name "defmacro"
+                                                                :ns "clojure.core"}]]}}]
+      (testing "get completions"
+        (h/assert-contains-submaps
+          [defmacro-item]
+          (lsp/request! (fixture/completion-request "completion/a.clj" 2 3)))
+
+        (testing "resolve item"
+          (let [result (lsp/request! (fixture/completion-item-resolve-request defmacro-item))]
+            (h/assert-submap
+              {:label "defmacro"
+               :kind 3
+               :detail "clojure.core/defmacro"
+               :score 6}
+              result)
+            (is (= "markdown" (:kind (:documentation result))))
+            (is (string? (:value (:documentation result))))))))
+
     (testing "get snippets"
       (h/assert-contains-submaps
         [{:label "defn"

@@ -143,10 +143,11 @@
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc uri return-type bucket] :as definition}
    db*
-   {:keys [additional-text-edits?]}
+   {:keys [additional-text-edits? content-format-capability-path]}
    & [calling]]
   (let [db @db*
-        content-formats (get-in db [:client-capabilities :text-document :hover :content-format])
+        content-formats (get-in db (concat [:client-capabilities] (or content-format-capability-path
+                                                                      [:text-document :hover :content-format])))
         arity-on-same-line? (or (settings/get db [:hover :arity-on-same-line?])
                                 (settings/get db [:show-docs-arity-on-same-line?]))
         hide-filename? (settings/get db [:hover :hide-file-location?])

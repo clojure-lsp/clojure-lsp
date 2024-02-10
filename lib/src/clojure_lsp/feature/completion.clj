@@ -151,7 +151,12 @@
                               (= var-name (str (:name element))))
                      element)]
     (cond-> completion-item
-      definition (assoc :documentation (f.hover/hover-documentation definition db* docs-config)))))
+      definition (assoc :documentation (let [documentation (f.hover/hover-documentation definition db* docs-config)]
+                                         (if (vector? documentation)
+                                           (->> documentation
+                                                (mapv #(or (:value %) %))
+                                                (string/join "\n"))
+                                           documentation))))))
 
 (defn ^:private completion-item-with-alias-edit
   [completion-item cursor-loc alias-to-add ns-to-add db]
@@ -716,7 +721,8 @@
                      (find-element-by-position args db))]
     (completion-item-with-documentation item element (:name args) db* {:additional-text-edits? (->> other-unresolved
                                                                                                     (map first)
-                                                                                                    (some #{"alias"}))})
+                                                                                                    (some #{"alias"}))
+                                                                       :content-format-capability-path [:text-document :completion :completion-item :documentation-format]})
     item))
 
 (defmethod resolve-unresolved "alias" [_ item _other-unresolved {:keys [uri alias-to-add ns-to-add db]}]

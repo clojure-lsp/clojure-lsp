@@ -231,13 +231,13 @@
       (let [exclude-aliases (-> kondo-config :linters :clojure-lsp/uniform-aliasing :exclude-aliases set)
             dependencies-by-ns (:dep-graph narrowed-db)
             inconsistent-namespaces (for [[k v] dependencies-by-ns
-                                          :let [alias-names (->> v :aliases keys (remove exclude-aliases) (remove nil?))]
+                                          :let [alias-names (->> v :aliases-breakdown :internal keys (remove exclude-aliases) (remove nil?))]
                                           :when (> (count alias-names) 1)]
                                       k)
             inconsistent-namespaces (remove (set exclude-aliases) inconsistent-namespaces)
             inconsistencies (reduce-kv (fn [m k v]
                                          (if (some #{k} inconsistent-namespaces)
-                                           (assoc m k (->> v :aliases keys (remove exclude-aliases) (remove nil?) set))
+                                           (assoc m k (->> v :aliases-breakdown :internal keys (remove exclude-aliases) (remove nil?) set))
                                            m))
                                        {}
                                        dependencies-by-ns)

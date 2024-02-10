@@ -184,6 +184,16 @@
         (update-in [:dep-graph from :dependencies] f name)
         (update-in [:dep-graph name :dependents] f from)
         (update-in [:dep-graph name :aliases] f alias)
+        (update-in [:dep-graph name :aliases-breakdown :internal] (fn [current]
+                                                                    (let [new (or current {})]
+                                                                      (if (:internal? doc)
+                                                                        (f new alias)
+                                                                        new))))
+        (update-in [:dep-graph name :aliases-breakdown :external] (fn [current]
+                                                                    (let [new (or current {})]
+                                                                      (if-not (:internal? doc)
+                                                                        (f new alias)
+                                                                        new))))
         ;; NOTE: We could store :dependents-uris, and look up whether any of
         ;; them are internal. But this way keeps that lookup out of
         ;; ns-aliases, which is on the hotpath in completion.

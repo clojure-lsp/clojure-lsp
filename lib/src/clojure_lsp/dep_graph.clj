@@ -173,7 +173,8 @@
 
 (defn ^:private update-usage [db f {:keys [from name alias uri lang]}]
   (let [doc (get-in db [:documents uri])
-        usage-langs (or (some-> lang list set) (:langs doc))]
+        usage-langs (or (some-> lang list set) (:langs doc))
+        internal? (:internal? doc)]
     ;; A dep-graph item is a summary of the ways a namespace is used across the
     ;; whole project. We keep multisets of most of its data, so that we know not
     ;; only that a namespace `aaa` is aliased as `a`, but that it is aliased as
@@ -184,16 +185,10 @@
         (update-in [:dep-graph from :dependencies] f name)
         (update-in [:dep-graph name :dependents] f from)
         (update-in [:dep-graph name :aliases] f alias)
-        (update-in [:dep-graph name :aliases-breakdown :internal] (fn [current]
-                                                                    (let [new (or current {})]
-                                                                      (if (:internal? doc)
-                                                                        (f new alias)
-                                                                        new))))
-        (update-in [:dep-graph name :aliases-breakdown :external] (fn [current]
-                                                                    (let [new (or current {})]
-                                                                      (if-not (:internal? doc)
-                                                                        (f new alias)
-                                                                        new))))
+        (update-in [:dep-graph name :aliases-breakdown :internal]
+                   #(if internal? (f % alias) (or % empty-multiset)))
+        (update-in [:dep-graph name :aliases-breakdown :external]
+                   #(if-not internal? (f % alias) (or % empty-multiset)))
         ;; NOTE: We could store :dependents-uris, and look up whether any of
         ;; them are internal. But this way keeps that lookup out of
         ;; ns-aliases, which is on the hotpath in completion.
@@ -201,7 +196,7 @@
         ;; dependents-internal? We could stop using a namespace. I think the
         ;; only consequence is that it would continue to show up in completions
         ;; and alias suggestions when it might not have otherwise.
-        (update-in [:dep-graph name :dependents-internal?] #(or % (:internal? doc)))
+        (update-in [:dep-graph name :dependents-internal?] #(or % internal?))
         ;; NOTE: :dependents-langs is used only in add-missing-libspec, so it's
         ;; not on a hotpath, but :dependents-internal? has already established
         ;; this pattern.

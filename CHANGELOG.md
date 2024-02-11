@@ -4,7 +4,7 @@
 
 - General
   - Bump clj-kondo to `2023.12.16-20240202.114914-15`.
-  - Add `:clojure-lsp/uniform-aliasing` linter. #1770
+  - Add `:clojure-lsp/different-aliases` linter. #1770
 
 - Editor
   - Fix documentation resolve not working for clients without hover markdown support.

@@ -220,16 +220,16 @@
    :col (:name-col element)
    :end-row (:name-end-row element)
    :end-col (:name-end-col element)
-   :level (-> kondo-config :linters :clojure-lsp/uniform-aliasing :level)
+   :level (-> kondo-config :linters :clojure-lsp/different-aliases :level)
    :message (format "Different aliases %s found for %s"
                     (get inconsistencies (:to element))
                     (:to element))
-   :type :clojure-lsp/uniform-aliasing})
+   :type :clojure-lsp/different-aliases})
 
-(defn ^:private uniform-aliasing [narrowed-db project-db kondo-config]
-  (let [kondo-config (update-in kondo-config [:linters :clojure-lsp/uniform-aliasing :level] #(or % :off))]
-    (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/uniform-aliasing :level))
-      (let [exclude-aliases-config (-> kondo-config :linters :clojure-lsp/uniform-aliasing :exclude-aliases set)
+(defn ^:private different-aliases [narrowed-db project-db kondo-config]
+  (let [kondo-config (update-in kondo-config [:linters :clojure-lsp/different-aliases :level] #(or % :off))]
+    (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/different-aliases :level))
+      (let [exclude-aliases-config (-> kondo-config :linters :clojure-lsp/different-aliases :exclude-aliases set)
             exclude-aliases (conj exclude-aliases-config nil) ;; nil here means an unaliased require
             dep-graph (:dep-graph narrowed-db)
             inconsistencies (into {} (for [[ns dep-graph-item] dep-graph
@@ -279,14 +279,14 @@
   [db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)]
     (concat (unused-public-vars project-db project-db kondo-config)
-            (uniform-aliasing project-db project-db kondo-config))))
+            (different-aliases project-db project-db kondo-config))))
 
 (defn ^:private findings-of-uris
   [uris db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)
         db-of-uris (update project-db :analysis select-keys uris)]
     (concat (unused-public-vars db-of-uris project-db kondo-config)
-            (uniform-aliasing db-of-uris project-db kondo-config))))
+            (different-aliases db-of-uris project-db kondo-config))))
 
 (defn ^:private finalize-findings! [findings reg-finding!]
   (let [uri->filename (memoize shared/uri->filename)]

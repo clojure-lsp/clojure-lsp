@@ -11,7 +11,7 @@
 
 (h/reset-components-before-test)
 
-(deftest lint-project-uniform-aliasing
+(deftest lint-project-different-aliases
   (h/load-code-and-locs "(ns a (:require [clojure.string]))")
   (h/load-code-and-locs "(ns b (:require [clojure.string :as s]))"
                         (h/file-uri "file:///b.clj"))
@@ -21,7 +21,7 @@
       [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/uniform-aliasing {:level :info}}}})
+       :config {:linters {:clojure-lsp/different-aliases {:level :info}}}})
     (h/assert-submaps
       []
       @findings))
@@ -35,7 +35,7 @@
       [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/uniform-aliasing {:level :off}}}})
+       :config {:linters {:clojure-lsp/different-aliases {:level :off}}}})
     (h/assert-submaps
       []
       @findings))
@@ -45,7 +45,7 @@
       [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/uniform-aliasing {:level :info}}}})
+       :config {:linters {:clojure-lsp/different-aliases {:level :info}}}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///b.clj")
         :row 1
@@ -54,7 +54,7 @@
         :end-col 38
         :level :info
         :message "Different aliases #{s string str} found for clojure.string"
-        :type :clojure-lsp/uniform-aliasing}
+        :type :clojure-lsp/different-aliases}
        {:uri (h/file-uri "file:///c.clj")
         :row 1
         :col 37
@@ -62,7 +62,7 @@
         :end-col 40
         :level :info
         :message "Different aliases #{s string str} found for clojure.string"
-        :type :clojure-lsp/uniform-aliasing}
+        :type :clojure-lsp/different-aliases}
        {:uri (h/file-uri "file:///d.clj")
         :row 1
         :col 37
@@ -70,7 +70,7 @@
         :end-col 43
         :level :info
         :message "Different aliases #{s string str} found for clojure.string"
-        :type :clojure-lsp/uniform-aliasing}]
+        :type :clojure-lsp/different-aliases}]
       @findings))
   (testing "linter level by default is :off"
     (reset! findings [])
@@ -90,8 +90,8 @@
       [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/uniform-aliasing {:level :error
-                                                         :exclude-aliases #{'sut}}}}})
+       :config {:linters {:clojure-lsp/different-aliases {:level :error
+                                                          :exclude-aliases #{'sut}}}}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///b.clj")}
        {:uri (h/file-uri "file:///c.clj")}

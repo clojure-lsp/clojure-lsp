@@ -377,7 +377,7 @@ Below you can find the custom linters implemented on clojure-lsp side that uses 
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 
-#### clojure-lsp/uniform-aliasing
+#### clojure-lsp/different-aliases
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 

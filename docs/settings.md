@@ -221,7 +221,7 @@ Example:
                                            :exclude-when-contains-meta #{:my-cool-meta}}}}
 ```
 
-###### clojure-lsp/uniform-aliasing
+###### clojure-lsp/different-aliases
 
 Sometimes, it's desirable to use the same alias across namespaces to enhance readability and reduce cognitive load.
 

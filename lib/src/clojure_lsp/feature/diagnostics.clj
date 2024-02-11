@@ -9,6 +9,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.set :as set]
    [clojure.string :as string]
    [rewrite-clj.zip :as z])
   (:gen-class))
@@ -228,34 +229,23 @@
 (defn ^:private uniform-aliasing [narrowed-db project-db kondo-config]
   (let [kondo-config (update-in kondo-config [:linters :clojure-lsp/uniform-aliasing :level] #(or % :off))]
     (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/uniform-aliasing :level))
-      (let [exclude-aliases (-> kondo-config :linters :clojure-lsp/uniform-aliasing :exclude-aliases set)
-            dependencies-by-ns (:dep-graph narrowed-db)
-            inconsistent-namespaces (for [[k v] dependencies-by-ns
-                                          :let [alias-names (->> v :aliases-breakdown :internal keys (remove exclude-aliases) (remove nil?))]
-                                          :when (> (count alias-names) 1)]
-                                      k)
-            inconsistent-namespaces (remove (set exclude-aliases) inconsistent-namespaces)
-            inconsistencies (reduce-kv (fn [m k v]
-                                         (if (some #{k} inconsistent-namespaces)
-                                           (assoc m k (->> v :aliases-breakdown :internal keys (remove exclude-aliases) (remove nil?) set))
-                                           m))
-                                       {}
-                                       dependencies-by-ns)
-            inconsistent-dependencies-by-ns (select-keys dependencies-by-ns inconsistent-namespaces)
-            dependent-namespace-aliases (flatten (for [[_ {inconsistent-dependents :dependents}] inconsistent-dependencies-by-ns
-                                                       [inconsistent-dependent-namespace _] inconsistent-dependents
-                                                       :let [inconsistent-dependent (get dependencies-by-ns inconsistent-dependent-namespace)
-                                                             inconsistent-dependent-uris (:uris inconsistent-dependent)]
-                                                       inconsistent-dependent-uri inconsistent-dependent-uris
-                                                       :let [inconsistent-dependent-var-definitions (-> project-db :analysis (get inconsistent-dependent-uri))
-                                                             inconsistent-dependent-namespace-aliases (:namespace-alias inconsistent-dependent-var-definitions)]]
-                                                   inconsistent-dependent-namespace-aliases))
-            aliases-references (filter (fn [{:keys [alias to]}]
-                                         (and (contains? inconsistencies to)
-                                              (some #{alias} (get inconsistencies to))))
-                                       dependent-namespace-aliases)]
-        (map #(namespace-alias->finding % inconsistencies kondo-config)
-             aliases-references)))))
+      (let [exclude-aliases-config (-> kondo-config :linters :clojure-lsp/uniform-aliasing :exclude-aliases set)
+            exclude-aliases (conj exclude-aliases-config nil) ;; nil here means an unaliased require
+            dep-graph (:dep-graph narrowed-db)
+            inconsistencies (into {} (for [[ns dep-graph-item] dep-graph
+                                           :let [aliases-assigned (-> dep-graph-item :aliases-breakdown :internal keys set (set/difference exclude-aliases))]
+                                           :when (> (count aliases-assigned) 1)]
+                                       [ns aliases-assigned]))]
+        (flatten (for [{dependents :dependents} (map dep-graph (keys inconsistencies))
+                       [namespace _] dependents
+                       :let [dep-graph-item (get dep-graph namespace)]
+                       uri (:uris dep-graph-item)
+                       :let [var-definition (-> project-db :analysis (get uri))]
+                       namespace-alias (:namespace-alias var-definition)
+                       :when (let [{:keys [alias to]} namespace-alias]
+                               (and (contains? inconsistencies to)
+                                    (some #{alias} (get inconsistencies to))))]
+                   (namespace-alias->finding namespace-alias inconsistencies kondo-config)))))))
 
 (defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
   (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)

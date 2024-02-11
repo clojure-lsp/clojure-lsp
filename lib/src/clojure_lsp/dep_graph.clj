@@ -27,6 +27,8 @@
 ;; {(':dependencies' #<ns*>)?
 ;;  (':dependents' #<ns*>)?
 ;;  (':aliases' #<(alias | nil)*>)? ;; nil for when the ns is required without an alias
+;;  (':aliases-breakdown' {:internal #<(alias | nil)*>?   ;; aliases found in internal files
+;;                         :external #<(alias | nil)*>?}) ;; aliases found in external files
 ;;  (':uris' #{uri*})?
 ;;  (':internal?' boolean)?
 ;;  (':dependents-internal?' boolean)?
@@ -52,7 +54,11 @@
 ;; namespace. If the code had `(:require [aaa :as a])`, then `'aaa` would
 ;; include `'a` in its aliases. Unaliased requires like `(:require [aaa])` will
 ;; include `nil` in their aliases. May be either empty or absent if a namespace
-;; isn't required by other namespaces.
+;; isn't required by other namespaces. It compreends all internal and external
+;; aliases found in the project.
+
+;; :aliases-breakdown is a map of the aliases found in internal and external
+;; files. It's a fine grained version of :aliases.
 
 ;; :uris is a set of the uris of the files in which the namespace is defined.
 ;; This can be either absent or empty if the namespace is required but never

@@ -377,7 +377,11 @@ Below you can find the custom linters implemented on clojure-lsp side that uses 
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 
-#### clj-depend 
+#### clojure-lsp/uniform-aliasing
+
+For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
+
+#### clj-depend
 
 Clojure-lsp has a optional integration with [clj-depend](https://github.com/clj-depend/clj-depend), making it easier to configure namespaces relationship.
 

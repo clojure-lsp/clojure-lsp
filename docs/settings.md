@@ -221,6 +221,15 @@ Example:
                                            :exclude-when-contains-meta #{:my-cool-meta}}}}
 ```
 
+###### clojure-lsp/uniform-aliasing
+
+Sometimes, it's desirable to use the same alias across namespaces to enhance readability and reduce cognitive load.
+
+It has the possible keys/values:
+
+- `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:off`.
+- `:exclude-aliases` ignores the symbols provided in a set, example `#{'sut}`
+
 #### clj-depend
 
 clojure-lsp uses [clj-depend](https://github.com/clj-depend/clj-depend) when any clj-depend config is found either on clojure-lsp config or as a `.clj-depend/config.edn` file.

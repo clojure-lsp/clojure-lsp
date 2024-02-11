@@ -236,16 +236,16 @@
                                            :let [aliases-assigned (-> dep-graph-item :aliases-breakdown :internal keys set (set/difference exclude-aliases))]
                                            :when (> (count aliases-assigned) 1)]
                                        [ns aliases-assigned]))]
-        (flatten (for [{dependents :dependents} (map dep-graph (keys inconsistencies))
-                       [namespace _] dependents
-                       :let [dep-graph-item (get dep-graph namespace)]
-                       uri (:uris dep-graph-item)
-                       :let [var-definition (-> project-db :analysis (get uri))]
-                       namespace-alias (:namespace-alias var-definition)
-                       :when (let [{:keys [alias to]} namespace-alias]
-                               (and (contains? inconsistencies to)
-                                    (some #{alias} (get inconsistencies to))))]
-                   (namespace-alias->finding namespace-alias inconsistencies kondo-config)))))))
+        (for [{dependents :dependents} (map dep-graph (keys inconsistencies))
+              [namespace _] dependents
+              :let [dep-graph-item (get dep-graph namespace)]
+              uri (:uris dep-graph-item)
+              :let [var-definition (-> project-db :analysis (get uri))]
+              namespace-alias (:namespace-alias var-definition)
+              :when (let [{:keys [alias to]} namespace-alias]
+                      (and (contains? inconsistencies to)
+                           (some #{alias} (get inconsistencies to))))]
+          (namespace-alias->finding namespace-alias inconsistencies kondo-config))))))
 
 (defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
   (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)

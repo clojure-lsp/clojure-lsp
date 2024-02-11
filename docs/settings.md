@@ -228,7 +228,7 @@ Sometimes, it's desirable to use the same alias across namespaces to enhance rea
 It has the possible keys/values:
 
 - `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:off`.
-- `:exclude-aliases` ignores the symbols provided in a set, example `#{'sut}`
+- `:exclude-aliases` ignores the symbols provided in a set, example `#{sut}`
 
 #### clj-depend
 

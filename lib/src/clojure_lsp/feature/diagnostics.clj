@@ -232,10 +232,13 @@
       (let [exclude-aliases-config (-> kondo-config :linters :clojure-lsp/different-aliases :exclude-aliases set)
             exclude-aliases (conj exclude-aliases-config nil) ;; nil here means an unaliased require
             dep-graph (:dep-graph narrowed-db)
-            inconsistencies (into {} (for [[ns dep-graph-item] dep-graph
-                                           :let [aliases-assigned (-> dep-graph-item :aliases-breakdown :internal keys set (set/difference exclude-aliases))]
-                                           :when (> (count aliases-assigned) 1)]
-                                       [ns aliases-assigned]))]
+            inconsistencies (reduce (fn [m [ns dep-graph-item]]
+                                        (let [aliases-assigned (-> dep-graph-item :aliases-breakdown :internal keys set (set/difference exclude-aliases))]
+                                             (if (> (count aliases-assigned) 1)
+                                                 (assoc m ns aliases-assigned)
+                                                 m)))
+                                    {}
+                                    dep-graph)]
         (for [{dependents :dependents} (map dep-graph (keys inconsistencies))
               [namespace _] dependents
               :let [dep-graph-item (get dep-graph namespace)]

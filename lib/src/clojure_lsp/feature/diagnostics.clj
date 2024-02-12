@@ -233,10 +233,10 @@
             exclude-aliases (conj exclude-aliases-config nil) ;; nil here means an unaliased require
             dep-graph (:dep-graph narrowed-db)
             inconsistencies (reduce (fn [m [ns dep-graph-item]]
-                                        (let [aliases-assigned (-> dep-graph-item :aliases-breakdown :internal keys set (set/difference exclude-aliases))]
-                                             (if (> (count aliases-assigned) 1)
-                                                 (assoc m ns aliases-assigned)
-                                                 m)))
+                                      (let [aliases-assigned (-> dep-graph-item :aliases-breakdown :internal keys set (set/difference exclude-aliases))]
+                                        (if (> (count aliases-assigned) 1)
+                                          (assoc m ns aliases-assigned)
+                                          m)))
                                     {}
                                     dep-graph)]
         (for [{dependents :dependents} (map dep-graph (keys inconsistencies))

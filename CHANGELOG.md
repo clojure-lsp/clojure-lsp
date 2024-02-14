@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2023.12.16-20240202.114914-15`.
+  - Bump clj-kondo to `2024.02.12`.
 
 - Editor
   - Fix documentation resolve not working for clients without hover markdown support.

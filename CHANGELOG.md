@@ -3,12 +3,15 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2023.12.16-20240202.114914-15`.
+  - Bump clj-kondo to `2024.02.12`.
   - Add `:clojure-lsp/different-aliases` linter. #1770
 
 - Editor
   - Fix documentation resolve not working for clients without hover markdown support.
 
+- Editor
+  - Fix `suppress-diagnostics` not working on top-level forms when preceded by comment. #1678 
+  
 ## 2024.02.01-11.01.59
 
 - General
@@ -22,7 +25,7 @@
   - Fix `range-formatting` throwing exceptions when unbalanced parens are sent from client. #1758
   - Fix rename functions need to clean up LSP state or restart in some clients implementing LSP method `didRenameFiles`. #1755
   - Fix `thread last all` failed after comment form `#_(...)`. #1745  
-
+  
 ## 2023.12.29-12.09.27
 
 - General

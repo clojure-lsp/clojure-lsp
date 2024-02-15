@@ -285,9 +285,9 @@
            (f.completion/resolve-item {:label "Some" :kind :module} (h/db*)))))
   (testing "When element needs documentation and has a position"
     (h/assert-submap {:label "foo"
-                      :documentation [{:language "clojure" :value "a/foo"}
-                                      "Some docs"
-                                      (h/file-path "/a.clj")]
+                      :documentation (h/code "a/foo"
+                                             "Some docs"
+                                             (h/file-path "/a.clj"))
                       :kind :variable}
                      (f.completion/resolve-item {:label "foo"
                                                  :kind :variable
@@ -299,9 +299,9 @@
                                                 (h/db*))))
   (testing "When element needs documentation and has a namespace"
     (h/assert-submap {:label "foo"
-                      :documentation [{:language "clojure" :value "a/foo"}
-                                      "Some docs"
-                                      (h/file-path "/a.clj")]
+                      :documentation (h/code "a/foo"
+                                             "Some docs"
+                                             (h/file-path "/a.clj"))
                       :kind :function}
                      (f.completion/resolve-item {:label "foo"
                                                  :kind :function
@@ -328,10 +328,10 @@
   (testing "When element needs an alias and documentation"
     (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
     (h/assert-submap {:label "foo"
-                      :documentation [{:language "clojure" :value "a/foo"}
-                                      "* includes additional edits"
-                                      "Some docs"
-                                      (h/file-path "/a.clj")]
+                      :documentation (h/code "a/foo"
+                                             "* includes additional edits"
+                                             "Some docs"
+                                             (h/file-path "/a.clj"))
                       :kind :function
                       :additional-text-edits [{:range {:start {:line 0, :character 0}, :end {:line 0, :character 8}},
                                                :new-text (h/code "(ns aaa "

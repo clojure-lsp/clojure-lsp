@@ -23,6 +23,10 @@
    {:textDocument {:uri (h/source-path->uri path)}
     :position {:line line :character character}}])
 
+(defn completion-item-resolve-request [params]
+  [:completionItem/resolve
+   params])
+
 (defn definition-request [uri line character]
   [:textDocument/definition
    {:textDocument {:uri uri}

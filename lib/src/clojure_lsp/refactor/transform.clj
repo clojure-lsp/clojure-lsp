@@ -932,11 +932,11 @@
                       zloc)
         {form-row :row form-col :col :as form-pos} (-> form-zloc z/node meta)
         loc-w-comment (z/edit-> form-zloc
-                                (z/insert-left (n/uneval-node (cond-> [(n/map-node [(n/keyword-node :clj-kondo/ignore)
-                                                                                    (n/spaces 1)
-                                                                                    (n/vector-node [(keyword diagnostic-code)])])
-                                                                       (n/newlines 1)]
-                                                                (> (dec form-col) 0) (conj (n/spaces (dec form-col)))))))]
+                                (z/insert-left* (n/uneval-node (cond-> [(n/map-node [(n/keyword-node :clj-kondo/ignore)
+                                                                                     (n/spaces 1)
+                                                                                     (n/vector-node [(keyword diagnostic-code)])])
+                                                                        (n/newlines 1)]
+                                                                 (> (dec form-col) 0) (conj (n/spaces (dec form-col)))))))]
     [{:loc loc-w-comment
       :range (assoc form-pos
                     :end-row form-row

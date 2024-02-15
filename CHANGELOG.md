@@ -7,8 +7,7 @@
 
 - Editor
   - Fix documentation resolve not working for clients without hover markdown support.
-
-- Editor
+  - Added setting to allow requires and imports to be added within the current comment form during code action and completion: `:add-missing :add-to-rcf` #1316
   - Fix `suppress-diagnostics` not working on top-level forms when preceded by comment. #1678 
   
 ## 2024.02.01-11.01.59

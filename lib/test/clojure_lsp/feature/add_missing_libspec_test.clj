@@ -186,7 +186,7 @@
       (find-require-suggestions "|;; comment"))))
 
 (defn ^:private add-missing-libspec [code]
-  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
+  (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" (h/db) {}))
 
 (defn ^:private as-sexp [[{:keys [loc]} :as locs]]
   (assert (= 1 (count locs)))
@@ -332,7 +332,7 @@
                                                 settings)})
 
   (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
-  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db)))
+  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db) {}))
 
 (deftest add-missing-import-test
   (testing "when there is no :import form"
@@ -444,8 +444,72 @@
   (testing "when on invalid location"
     (is (nil? (add-missing-import "(ns foo.bar) |;; comment" nil)))))
 
+(defn add-missing-import-to-rcf [code import-name & [settings]]
+  (h/reset-components!)
+  (swap! (h/db*) shared/deep-merge {:settings (merge
+                                                {:add-missing {:add-to-rcf :always}
+                                                 :clean {:automatically-after-ns-refactor false}}
+                                                settings)})
+
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
+  (h/load-code-and-locs code)
+  (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db) {}))
+
+(deftest add-missing-import-to-rcf-test
+  (testing "when there is no import form"
+    (is (= (h/code "(ns foo.bar)"
+                   "(comment"
+                   "  (import [java.util Date])"
+                   "  Date.)")
+           (-> (h/code "(ns foo.bar)"
+                       "(comment"
+                       "  |Date.)")
+               (add-missing-import-to-rcf "java.util.Date")
+               (h/changes->code (h/db))))))
+  (testing "when there is no import form but require "
+    (is (= (h/code "(ns foo.bar)"
+                   "(comment"
+                   "  (import [java.util Date])"
+                   "  (require '[clojure.string :as str])"
+                   "  Date.)")
+           (-> (h/code "(ns foo.bar)"
+                       "(comment"
+                       "  (require '[clojure.string :as str])"
+                       "  |Date.)")
+               (add-missing-import-to-rcf "java.util.Date")
+               (h/changes->code (h/db))))))
+  (testing "when there are imports already"
+    (is (= (h/code "(ns foo.bar)"
+                   "(comment"
+                   "  (import [java.io File]"
+                   "          [java.util Arrays Date])"
+                   "  (require '[clojure.string :as str])"
+                   "  Date.)")
+           (-> (h/code "(ns foo.bar)"
+                       "(comment"
+                       "  (import [java.io File]"
+                       "          java.util.Arrays)"
+                       "  (require '[clojure.string :as str])"
+                       "  |Date.)")
+               (add-missing-import-to-rcf "java.util.Date")
+               (h/changes->code (h/db))))))
+  (testing "when this import is imported already in ns form"
+    (is (= nil
+           (-> (h/code "(ns foo.bar "
+                       "  (:import "
+                       "    [java.util Date]))"
+                       "(comment |Date.)")
+               (add-missing-import-to-rcf "java.util.Date")))))
+  (testing "when this import is imported already in rcf"
+    (is (= nil
+           (-> (h/code "(ns foo.bar)"
+                       "(comment "
+                       "  (import [java.util Date])"
+                       "  |Date.)")
+               (add-missing-import-to-rcf "java.util.Date"))))))
+
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db)))
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db) {}))
 
 (deftest add-require-suggestion-test
   (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
@@ -531,6 +595,86 @@
       (is (nil? (-> (h/code "(ns foo.bar)"
                             "|;; comment")
                     (add-require-suggestion "clojure.string" nil "split")))))))
+
+(defn add-require-suggestion-to-rcf [code chosen-ns chosen-alias chosen-refer]
+  (swap! (h/db*) shared/deep-merge {:settings {:add-missing {:add-to-rcf :always}}})
+  (h/load-code-and-locs code)
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db) {}))
+
+(deftest add-require-suggestion-to-rcf-test
+  (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
+  (testing "alias"
+    (testing "on empty "
+      (is (= (h/code "(ns foo.bar)"
+                     "(comment"
+                     "  (require '[clojure.string :as str])"
+                     "  str/a)")
+             (-> (h/code
+                   "(ns foo.bar)"
+                   "(comment"
+                   "  |str/a)")
+                 (add-require-suggestion-to-rcf "clojure.string" "str" nil)
+                 (h/changes->code (h/db))))))
+    (testing "changing alias"
+      (is (= (h/code "(ns foo.bar)"
+                     "(comment"
+                     "(require '[clojure.string :as my-str])"
+                     "my-str/a)")
+             (-> (h/code "(ns foo.bar)"
+                         "(comment"
+                         "|clojure.string/a)")
+                 (add-require-suggestion-to-rcf "clojure.string" "my-str" nil)
+                 (h/changes->code (h/db))))))
+    (testing "on already existing requires in rcf"
+      (is (= (h/code "(ns foo.bar)"
+                     "(comment"
+                     "  (require '[clojure.java.io :as io]"
+                     "           '[clojure.string :as my-str])"
+                     "my-str/a)")
+             (-> (h/code "(ns foo.bar)"
+                         "(comment"
+                         "  (require '[clojure.java.io :as io])"
+                         "|str/a)")
+                 (add-require-suggestion-to-rcf "clojure.string" "my-str" nil)
+                 (h/changes->code (h/db))))))
+    (testing "on already existing import in rcf"
+      (is (= (h/code "(ns foo.bar)"
+                     "(comment"
+                     "  (require '[clojure.string :as my-str])"
+                     "  (import [java.util Date])"
+                     "  my-str/a)")
+             (-> (h/code "(ns foo.bar)"
+                         "(comment"
+                         "  (import [java.util Date])"
+                         "  |str/a)")
+                 (add-require-suggestion-to-rcf "clojure.string" "my-str" nil)
+                 (h/changes->code (h/db)))))))
+  (testing "refer"
+    (testing "on empty"
+      (is (is (= (h/code "(ns foo.bar)"
+                         "(comment"
+                         "  (require '[clojure.string :refer [split]])"
+                         "  split)")
+                 (-> (h/code
+                       "(ns foo.bar)"
+                       "(comment"
+                       "  |split)")
+                     (add-require-suggestion-to-rcf "clojure.string" nil "split")
+                     (h/changes->code (h/db)))))))
+    (testing "on existing ns with alias"
+      (is (= (h/code "(ns foo.bar"
+                     "  (:require"
+                     "   [clojure.string :as str]))"
+                     "(comment"
+                     "  (require '[clojure.string :refer [split]])"
+                     "  split)")
+             (-> (h/code "(ns foo.bar"
+                         "  (:require"
+                         "   [clojure.string :as str]))"
+                         "(comment"
+                         "  |split)")
+                 (add-require-suggestion-to-rcf "clojure.string" nil "split")
+                 (h/changes->code (h/db))))))))
 
 (defn- find-missing-imports [code]
   (f.add-missing-libspec/find-missing-imports (h/zloc-from-code code) (h/db)))

@@ -379,6 +379,8 @@ For more information on how to configure it, check the [diagnostics settings sec
 
 #### clojure-lsp/different-aliases
 
+![](images/features/different-aliases.png)
+
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 
 #### clj-depend

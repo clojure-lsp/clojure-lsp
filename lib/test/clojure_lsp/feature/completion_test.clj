@@ -151,6 +151,7 @@
           :detail "alias to: bbb",
           :data {"unresolved" [["alias" {"ns-to-add" "bbb"
                                          "alias-to-add" "bb"
+                                         "rcf-pos" nil
                                          "uri" (h/file-uri "file:///aaa.clj")}]]}}
          ;; to var in ns
          {:label "bb/bar",
@@ -161,6 +162,66 @@
                                                  "name-col" 6}]
                                ["alias" {"ns-to-add" "bbb"
                                          "alias-to-add" "bb"
+                                         "rcf-pos" nil
+                                         "uri" (h/file-uri "file:///aaa.clj")}]]}}]
+        (f.completion/completion (h/file-uri "file:///aaa.clj") bb-row bb-col (h/db))))))
+
+(deftest completing-aliases-to-rcf
+  (h/load-code-and-locs (h/code "(ns bbb)"
+                                "(def bar)")
+                        (h/file-uri "file:///bbb.clj"))
+  (h/load-code-and-locs (h/code "(ns ccc"
+                                "  (:require [bbb :as bb]))")
+                        (h/file-uri "file:///ccc.clj"))
+  (let [[[bb-row bb-col]]
+        (h/load-code-and-locs (h/code "(ns aaa)"
+                                      "(comment"
+                                      "  bb|)")
+                              (h/file-uri "file:///aaa.clj"))]
+    (testing "without resolve support"
+      (swap! (h/db*) merge {:settings {:add-missing {:add-to-rcf :always}}
+                            :client-capabilities {:text-document {:completion {:completion-item {:resolve-support {:properties ["documentation"]}}}}}})
+      (h/assert-submaps
+        [;; to ns
+         {:label "bb",
+          :kind :property,
+          :detail "alias to: bbb",
+          :additional-text-edits
+          [{:range {:start {:line 1, :character 8}, :end {:line 1, :character 8}},
+            :new-text (h/code "" "  (require '[bbb :as bb])")}]}
+         ;; to var in ns
+         {:label "bb/bar",
+          :kind :variable
+          :data {"unresolved" [["documentation" {"name" "bar"
+                                                 "uri" (h/file-uri "file:///bbb.clj")
+                                                 "name-row" 2
+                                                 "name-col" 6}]]},
+          :additional-text-edits
+          [{:range {:start {:line 1, :character 8}, :end {:line 1, :character 8}},
+            :new-text (h/code "" "  (require '[bbb :as bb])")}]}]
+        (f.completion/completion (h/file-uri "file:///aaa.clj") bb-row bb-col (h/db))))
+    (testing "with resolve support"
+      (swap! (h/db*) merge {:settings {:add-missing {:add-to-rcf :always}}
+                            :client-capabilities {:text-document {:completion {:completion-item {:resolve-support {:properties ["documentation" "additionalTextEdits"]}}}}}})
+      (h/assert-submaps
+        [;; to ns
+         {:label "bb",
+          :kind :property,
+          :detail "alias to: bbb",
+          :data {"unresolved" [["alias" {"ns-to-add" "bbb"
+                                         "alias-to-add" "bb"
+                                         "rcf-pos" {"row" 2, "col" 2, "end-row" 2, "end-col" 9}
+                                         "uri" (h/file-uri "file:///aaa.clj")}]]}}
+         ;; to var in ns
+         {:label "bb/bar",
+          :kind :variable
+          :data {"unresolved" [["documentation" {"name" "bar"
+                                                 "uri" (h/file-uri "file:///bbb.clj")
+                                                 "name-row" 2
+                                                 "name-col" 6}]
+                               ["alias" {"ns-to-add" "bbb"
+                                         "alias-to-add" "bb"
+                                         "rcf-pos" {"row" 2, "col" 2, "end-row" 2, "end-col" 9}
                                          "uri" (h/file-uri "file:///aaa.clj")}]]}}]
         (f.completion/completion (h/file-uri "file:///aaa.clj") bb-row bb-col (h/db))))))
 

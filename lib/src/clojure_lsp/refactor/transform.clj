@@ -809,7 +809,8 @@
                                      ns-or-alias
                                      ns-or-alias ;; TODO Suggest a better alias
                                      nil
-                                     db)
+                                     db
+                                     {})
                                def-uri (into
                                          [{:loc (z/up (z/of-string (format "(ns %s)\n" ns-or-alias)))
                                            :range min-range}]

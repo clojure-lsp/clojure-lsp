@@ -1,5 +1,6 @@
 (ns clojure-lsp.kondo
   (:require
+   [babashka.fs :as fs]
    [clj-kondo.core :as kondo]
    [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
@@ -219,7 +220,9 @@
 (defn ^:private normalize-for-file
   "Normalize kondo result for a single file."
   [kondo-results db filename uri]
-  (let [external? (shared/external-filename? filename (settings/get db [:source-paths]))
+  (let [project-dep-files (mapv :project-path (settings/get db [:project-specs]))
+        external? (and (shared/external-filename? filename (settings/get db [:source-paths]))
+                       (not (some #(= (fs/file-name filename) %) project-dep-files)))
         normalization-config {:external? external?
                               :ensure-uris [uri]}]
     (normalize kondo-results normalization-config db)))

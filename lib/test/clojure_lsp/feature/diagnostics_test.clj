@@ -11,6 +11,93 @@
 
 (h/reset-components-before-test)
 
+(deftest lint-project-different-aliases
+  (h/load-code-and-locs "(ns a (:require [clojure.string]))")
+  (h/load-code-and-locs "(ns b (:require [clojure.string :as s]))"
+                        (h/file-uri "file:///b.clj"))
+  (testing "when there are two files but only one alias"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/different-aliases {:level :info}}}})
+    (h/assert-submaps
+      []
+      @findings))
+  (h/load-code-and-locs "(ns c (:require [clojure.string :as str]))"
+                        (h/file-uri "file:///c.clj"))
+  (h/load-code-and-locs "(ns d (:require [clojure.string :as string]))"
+                        (h/file-uri "file:///d.clj"))
+  (testing "when linter level is :off"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/different-aliases {:level :off}}}})
+    (h/assert-submaps
+      []
+      @findings))
+  (testing "when linter level is :info"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/different-aliases {:level :info}}}})
+    (h/assert-submaps
+      [{:uri (h/file-uri "file:///b.clj")
+        :row 1
+        :col 37
+        :end-row 1
+        :end-col 38
+        :level :info
+        :message "Different aliases #{s string str} found for clojure.string"
+        :type :clojure-lsp/different-aliases}
+       {:uri (h/file-uri "file:///c.clj")
+        :row 1
+        :col 37
+        :end-row 1
+        :end-col 40
+        :level :info
+        :message "Different aliases #{s string str} found for clojure.string"
+        :type :clojure-lsp/different-aliases}
+       {:uri (h/file-uri "file:///d.clj")
+        :row 1
+        :col 37
+        :end-row 1
+        :end-col 43
+        :level :info
+        :message "Different aliases #{s string str} found for clojure.string"
+        :type :clojure-lsp/different-aliases}]
+      @findings))
+  (testing "linter level by default is :off"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
+    (h/assert-submaps
+      []
+      @findings))
+  (h/load-code-and-locs "(ns e (:require [clojure.string :as sut]))"
+                        (h/file-uri "file:///e.clj"))
+  (testing "exclude-aliases"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [h/default-uri]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/different-aliases {:level :error
+                                                          :exclude-aliases #{'sut}}}}})
+    (h/assert-submaps
+      [{:uri (h/file-uri "file:///b.clj")}
+       {:uri (h/file-uri "file:///c.clj")}
+       {:uri (h/file-uri "file:///d.clj")}]
+      @findings)))
+
 (deftest lint-project-public-vars
   (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
   (h/load-code-and-locs "(ns some-ns (:gen-class)) (defn -main [& _args] 1) (defn -foo [] 1)" (h/file-uri "file:///b.clj"))

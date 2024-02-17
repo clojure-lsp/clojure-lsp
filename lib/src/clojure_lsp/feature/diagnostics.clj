@@ -9,6 +9,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.core.async :as async]
+   [clojure.set :as set]
    [clojure.string :as string]
    [rewrite-clj.zip :as z])
   (:gen-class))
@@ -213,6 +214,42 @@
 (defn publish-empty-diagnostics! [uris components]
   (publish-all-diagnostics!* components (map empty-diagnostics-of-uri uris)))
 
+(defn ^:private namespace-alias->finding [element inconsistencies kondo-config]
+  {:uri (:uri element)
+   :row (:name-row element)
+   :col (:name-col element)
+   :end-row (:name-end-row element)
+   :end-col (:name-end-col element)
+   :level (-> kondo-config :linters :clojure-lsp/different-aliases :level)
+   :message (format "Different aliases %s found for %s"
+                    (get inconsistencies (:to element))
+                    (:to element))
+   :type :clojure-lsp/different-aliases})
+
+(defn ^:private different-aliases [narrowed-db project-db kondo-config]
+  (let [kondo-config (update-in kondo-config [:linters :clojure-lsp/different-aliases :level] #(or % :off))]
+    (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/different-aliases :level))
+      (let [exclude-aliases-config (-> kondo-config :linters :clojure-lsp/different-aliases :exclude-aliases set)
+            exclude-aliases (conj exclude-aliases-config nil) ;; nil here means an unaliased require
+            dep-graph (:dep-graph narrowed-db)
+            inconsistencies (reduce (fn [m [ns dep-graph-item]]
+                                      (let [aliases-assigned (-> dep-graph-item :aliases-breakdown :internal keys set (set/difference exclude-aliases))]
+                                        (if (> (count aliases-assigned) 1)
+                                          (assoc m ns aliases-assigned)
+                                          m)))
+                                    {}
+                                    dep-graph)]
+        (for [{dependents :dependents} (map dep-graph (keys inconsistencies))
+              [namespace _] dependents
+              :let [dep-graph-item (get dep-graph namespace)]
+              uri (:uris dep-graph-item)
+              :let [var-definition (-> project-db :analysis (get uri))]
+              namespace-alias (:namespace-alias var-definition)
+              :when (let [{:keys [alias to]} namespace-alias]
+                      (and (contains? inconsistencies to)
+                           (some #{alias} (get inconsistencies to))))]
+          (namespace-alias->finding namespace-alias inconsistencies kondo-config))))))
+
 (defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
   (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
         var-definitions (->> (q/find-all-var-definitions narrowed-db)
@@ -244,13 +281,15 @@
 (defn ^:private findings-of-project
   [db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)]
-    (unused-public-vars project-db project-db kondo-config)))
+    (concat (unused-public-vars project-db project-db kondo-config)
+            (different-aliases project-db project-db kondo-config))))
 
 (defn ^:private findings-of-uris
   [uris db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)
         db-of-uris (update project-db :analysis select-keys uris)]
-    (unused-public-vars db-of-uris project-db kondo-config)))
+    (concat (unused-public-vars db-of-uris project-db kondo-config)
+            (different-aliases db-of-uris project-db kondo-config))))
 
 (defn ^:private finalize-findings! [findings reg-finding!]
   (let [uri->filename (memoize shared/uri->filename)]

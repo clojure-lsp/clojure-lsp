@@ -15,7 +15,7 @@
 ;; {} map {k1 v1 ...}
 ;; #{} set #{i1 ...}
 ;; #<> multiset #<i1 ...>
-;;     a mulitset is represented internally as a hashmap {i1 f1 ...} where f1 =
+;;     a multiset is represented internally as a hashmap {i1 f1 ...} where f1 =
 ;;     integer > 0, frequency of i1
 
 ;; ns = symbol
@@ -27,6 +27,8 @@
 ;; {(':dependencies' #<ns*>)?
 ;;  (':dependents' #<ns*>)?
 ;;  (':aliases' #<(alias | nil)*>)? ;; nil for when the ns is required without an alias
+;;  (':aliases-breakdown' {:internal #<(alias | nil)*>?   ;; aliases found in internal files
+;;                         :external #<(alias | nil)*>?}) ;; aliases found in external files
 ;;  (':uris' #{uri*})?
 ;;  (':internal?' boolean)?
 ;;  (':dependents-internal?' boolean)?
@@ -52,7 +54,11 @@
 ;; namespace. If the code had `(:require [aaa :as a])`, then `'aaa` would
 ;; include `'a` in its aliases. Unaliased requires like `(:require [aaa])` will
 ;; include `nil` in their aliases. May be either empty or absent if a namespace
-;; isn't required by other namespaces.
+;; isn't required by other namespaces. It compreends all internal and external
+;; aliases found in the project.
+
+;; :aliases-breakdown is a map of the aliases found in internal and external
+;; files. It's a fine grained version of :aliases.
 
 ;; :uris is a set of the uris of the files in which the namespace is defined.
 ;; This can be either absent or empty if the namespace is required but never
@@ -144,7 +150,7 @@
 
 (def ^:private empty-multiset {})
 
-(defn ^:private mulitset-conj [ms x]
+(defn ^:private multiset-conj [ms x]
   (update ms x (fnil inc 0)))
 
 (defn ^:private multiset-disj [ms x]
@@ -163,7 +169,7 @@
   ;; multiset, not vice-versa.
   (boolean (and ms (some ms s))))
 
-(def ^:private ms-conj (fnil mulitset-conj empty-multiset))
+(def ^:private ms-conj (fnil multiset-conj empty-multiset))
 (def ^:private ms-disj (fnil multiset-disj empty-multiset))
 (def ^:private s-conj (fnil conj #{}))
 (def ^:private s-disj (fnil disj #{}))
@@ -173,7 +179,8 @@
 
 (defn ^:private update-usage [db f {:keys [from name alias uri lang]}]
   (let [doc (get-in db [:documents uri])
-        usage-langs (or (some-> lang list set) (:langs doc))]
+        usage-langs (or (some-> lang list set) (:langs doc))
+        internal? (:internal? doc)]
     ;; A dep-graph item is a summary of the ways a namespace is used across the
     ;; whole project. We keep multisets of most of its data, so that we know not
     ;; only that a namespace `aaa` is aliased as `a`, but that it is aliased as
@@ -184,6 +191,10 @@
         (update-in [:dep-graph from :dependencies] f name)
         (update-in [:dep-graph name :dependents] f from)
         (update-in [:dep-graph name :aliases] f alias)
+        (update-in [:dep-graph name :aliases-breakdown :internal]
+                   #(if internal? (f % alias) (or % empty-multiset)))
+        (update-in [:dep-graph name :aliases-breakdown :external]
+                   #(if-not internal? (f % alias) (or % empty-multiset)))
         ;; NOTE: We could store :dependents-uris, and look up whether any of
         ;; them are internal. But this way keeps that lookup out of
         ;; ns-aliases, which is on the hotpath in completion.
@@ -191,7 +202,7 @@
         ;; dependents-internal? We could stop using a namespace. I think the
         ;; only consequence is that it would continue to show up in completions
         ;; and alias suggestions when it might not have otherwise.
-        (update-in [:dep-graph name :dependents-internal?] #(or % (:internal? doc)))
+        (update-in [:dep-graph name :dependents-internal?] #(or % internal?))
         ;; NOTE: :dependents-langs is used only in add-missing-libspec, so it's
         ;; not on a hotpath, but :dependents-internal? has already established
         ;; this pattern.

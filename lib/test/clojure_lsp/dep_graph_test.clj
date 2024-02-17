@@ -26,6 +26,7 @@
                   :internal? false
                   :uris #{(h/file-uri "zipfile:///some.jar::xxx.clj")}}
             'xxx.yyy {:aliases {nil 1}
+                      :aliases-breakdown {:internal {} :external {nil 1}}
                       :dependencies '{clojure.core 1}
                       :dependents '{xxx 1}
                       :dependents-internal? false
@@ -33,6 +34,7 @@
                       :internal? false
                       :uris #{(h/file-uri "zipfile:///some.jar::xxx/yyy.clj")}}
             'clojure.core {:aliases {nil 2},
+                           :aliases-breakdown {:internal {} :external {nil 2}}
                            :dependents '{xxx 1, xxx.yyy 1},
                            :dependents-internal? false,
                            :dependents-langs {:clj 2}}}
@@ -58,6 +60,7 @@
                   :internal? true
                   :uris #{(h/file-uri "file:///aaa.clj")}}
             'bbb {:aliases '{b 1}
+                  :aliases-breakdown {:internal '{b 1} :external {}}
                   :dependencies '{clojure.core 1, ccc 1}
                   :dependents '{aaa 1}
                   :dependents-internal? true
@@ -65,6 +68,7 @@
                   :internal? true
                   :uris #{(h/file-uri "file:///bbb.clj")}}
             'ccc {:aliases '{c 2}
+                  :aliases-breakdown {:internal '{c 2} :external {}}
                   :dependencies '{clojure.core 1}
                   :dependents '{aaa 1, bbb 1}
                   :dependents-internal? true
@@ -72,6 +76,7 @@
                   :internal? true
                   :uris #{(h/file-uri "file:///ccc.clj")}}
             'clojure.core {:aliases {nil 3},
+                           :aliases-breakdown {:internal {nil 3} :external {}}
                            :dependents '{aaa 1, bbb 1, ccc 1},
                            :dependents-internal? true,
                            :dependents-langs {:clj 3}}}

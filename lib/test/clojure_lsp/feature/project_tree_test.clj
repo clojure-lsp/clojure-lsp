@@ -15,10 +15,10 @@
   (h/assert-submap
     {:name "project"
      :type :project
-     :nodes [{:name "src/main/clojure"
+     :nodes [{:name (h/file-path "src/main/clojure")
               :final false
               :type :source-path}
-             {:name "src/test/clojure"
+             {:name (h/file-path "src/test/clojure")
               :final false
               :type :source-path}
              {:name "External dependencies"
@@ -41,7 +41,7 @@
   (h/load-code-and-locs (h/code "(ns foo.bar-jar)"
                                 "(def d 1)") (h/file-uri "jar:file:///path/to/some.jar!/foo/bar_jar.clj"))
   (h/assert-submap
-    {:name "src/main/clojure"
+    {:name (h/file-path "src/main/clojure")
      :type :source-path
      :nodes [{:name "foo.bar"
               :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
@@ -51,7 +51,7 @@
               :uri (h/file-uri "file:///user/project/src/main/clojure/foo/baz.clj")
               :final false
               :type :ns}]}
-    (f.project-tree/nodes (h/db) {:name "src/main/clojure"
+    (f.project-tree/nodes (h/db) {:name (h/file-path "src/main/clojure")
                                   :type :source-path})))
 
 (deftest external-dependencies-node-test

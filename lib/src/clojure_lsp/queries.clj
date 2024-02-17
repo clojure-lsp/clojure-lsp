@@ -679,14 +679,6 @@
           (xf-analysis->scoped-path-analysis path-uri))
         (:analysis db)))
 
-(defn find-all-path-var-definitions [db path-uri]
-  (into []
-        (comp
-          xf-analysis->var-definitions
-          (xf-analysis->scoped-path-analysis path-uri)
-          (xf-var-defs false))
-        (:analysis db)))
-
 (defn find-all-path-java-class-definitions [db path-uri]
   (into []
         (comp
@@ -816,6 +808,9 @@
     (or (if keyword-definition?
           (contains? default-excludes (:reg definition))
           (some default-excludes (defined-bys definition)))
+        ;; definterface methods
+        (and (some #{'clojure.core/definterface} (defined-bys definition))
+             (:protocol-name definition))
         (contains? (set/union excluded-ns-or-var default-public-vars-name-to-exclude)
                    (if keyword-definition?
                      ;; FIXME: this creates a qualified symbol, but the set is

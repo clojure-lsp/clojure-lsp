@@ -5,6 +5,7 @@
 - General
   - Bump clj-kondo to `2024.02.12`.
   - Add `:clojure-lsp/different-aliases` linter. #1770
+  - Fix unused-public-var false positives for definterface methods. #1762
 
 - Editor
   - Fix documentation resolve not working for clients without hover markdown support.

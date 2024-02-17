@@ -43,7 +43,7 @@
      :id (:id node)
      :nodes (mapv
               (fn [jar-uri]
-                {:name (second (re-find (re-pattern (str ".+" (if (shared/windows-os?)
+                {:name (second (re-find (re-pattern (str ".+" (if shared/windows-os?
                                                                 (str "\\" (System/getProperty "file.separator"))
                                                                 (System/getProperty "file.separator")) "(.+.jar$)")) jar-uri))
                  :detail jar-uri

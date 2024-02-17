@@ -106,6 +106,10 @@
                                 "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///c.cljs"))
   (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///d.cljs"))
   (h/load-code-and-locs "(ns some-ns) (def foo 1) (comment (def bar 2))" (h/file-uri "file:///e.clj"))
+  (h/load-code-and-locs (h/code "(ns f-ns)"
+                                "(definterface Bar (bar [x]))"
+                                "(definterface Foo (baz [x]))"
+                                "(reify Foo (baz [_ x] x))") (h/file-uri "file:///f.clj"))
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
@@ -283,7 +287,24 @@
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
-    (h/assert-submaps [] @findings)))
+    (h/assert-submaps [] @findings))
+  (testing "definterface methods are excluded when the interface is used."
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///f.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {}})
+    (h/assert-submaps
+      [{:uri (h/file-uri "file:///f.clj")
+        :level :info
+        :type :clojure-lsp/unused-public-var
+        :message "Unused public var 'f-ns/Bar'"
+        :row 2
+        :col 15
+        :end-row 2
+        :end-col 18}]
+      @findings)))
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some_ns.clj"))

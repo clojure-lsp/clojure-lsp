@@ -111,8 +111,10 @@
           (:analysis db))))
 
 (defn ^:private find-when-starts-with-sym [zloc sym]
-  (z/find-next zloc z/next #(and (= :token (z/tag %))
-                                 (string/starts-with? (z/string %) (str sym)))))
+  (z/find-next zloc z/next #(and (identical? :token (z/tag %))
+                                 (if (identical? :vector (z/tag (z/up %)))
+                                   (= (z/string %) (str sym))
+                                   (string/starts-with? (z/string %) (str sym))))))
 
 (defn ^:private need-to-add-libspec?
   [zloc lib-sym refer-sym alias-sym class-sym]

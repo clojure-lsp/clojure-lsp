@@ -423,6 +423,15 @@
                        "    java.util.Calendar)) |Date.")
                (add-missing-import "java.util.Date")
                as-root-str))))
+  (testing "when there is a :require form and :import form"
+    (is (= (h/code "(ns foo.bar"
+                   "  (:import [java.awt.event ActionEvent]"
+                   "           [java.awt Robot]))")
+           (-> (h/code "(ns foo.bar"
+                       "  (:import [java.awt.event ActionEvent]))"
+                       "|Robot.")
+               (add-missing-import "java.awt.Robot")
+               as-root-str))))
   (testing "when on an invalid location"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"

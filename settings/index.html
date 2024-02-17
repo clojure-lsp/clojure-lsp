@@ -439,6 +439,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#clojure-lspdifferent-aliases" class="md-nav__link">
+    clojure-lsp/different-aliases
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -967,6 +974,13 @@
           <li class="md-nav__item">
   <a href="#clojure-lspunused-public-var" class="md-nav__link">
     clojure-lsp/unused-public-var
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clojure-lspdifferent-aliases" class="md-nav__link">
+    clojure-lsp/different-aliases
   </a>
   
 </li>
@@ -1540,6 +1554,13 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
                                            <span class="ss">:exclude-when-defined-by-regex</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;my.custom/macro-.*&quot;</span><span class="p">}</span>
                                            <span class="ss">:exclude-when-contains-meta</span> <span class="o">#</span><span class="p">{</span><span class="ss">:my-cool-meta</span><span class="p">}}}}</span>
 </code></pre></div></p>
+<h6 id="clojure-lspdifferent-aliases">clojure-lsp/different-aliases<a class="headerlink" href="#clojure-lspdifferent-aliases" title="Permanent link">#</a></h6>
+<p>Sometimes, it's desirable to use the same alias across namespaces to enhance readability and reduce cognitive load.</p>
+<p>It has the possible keys/values:</p>
+<ul>
+<li><code>:level</code> with available values: <code>:info</code>, <code>:warning</code>, <code>:error</code> or <code>:off</code> with default value of <code>:off</code>.</li>
+<li><code>:exclude-aliases</code> ignores the symbols provided in a set, example <code>#{sut}</code></li>
+</ul>
 <h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
 <p>clojure-lsp uses <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> when any clj-depend config is found either on clojure-lsp config or as a <code>.clj-depend/config.edn</code> file.</p>
 <p>The clj-depend config should be within the <code>:config</code> key.</p>
@@ -1690,7 +1711,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 15, 2024</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 17, 2024</span>
     
   </small>
 </div>

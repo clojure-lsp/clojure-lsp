@@ -208,23 +208,34 @@
 
 (deftest rename-defrecord
   (h/reset-components!)
-  (let [[def-start-pos def-end-pos
-         use1-start-pos use1-end-pos
-         use2-start-pos use2-end-pos
-         use3-start-pos use3-end-pos
-         use4-start-pos use4-end-pos] (h/load-code-and-locs (h/code "(defrecord |Foo| [a])"
-                                                                    "(|Foo|. 1)"
-                                                                    "(|->Foo| 1)"
-                                                                    "(|map->Foo| {:a 1})"
-                                                                    "|Foo|"))
-        [start-row start-col] def-start-pos
-        result (:changes (f.rename/rename-from-position h/default-uri "Bar" start-row start-col (h/db)))]
-    (is (= {h/default-uri [{:new-text "Bar" :range (h/->range def-start-pos def-end-pos)}
-                           {:new-text "Bar" :range (h/->range use1-start-pos use1-end-pos)}
-                           {:new-text "->Bar" :range (h/->range use2-start-pos use2-end-pos)}
-                           {:new-text "map->Bar" :range (h/->range use3-start-pos use3-end-pos)}
-                           {:new-text "Bar" :range (h/->range use4-start-pos use4-end-pos)}]}
-           result))))
+  (testing "considering all types of defrecord new instance"
+    (let [[def-start-pos def-end-pos
+           use1-start-pos use1-end-pos
+           use2-start-pos use2-end-pos
+           use3-start-pos use3-end-pos
+           use4-start-pos use4-end-pos] (h/load-code-and-locs (h/code "(defrecord |Foo| [a])"
+                                                                      "(|Foo|. 1)"
+                                                                      "(|->Foo| 1)"
+                                                                      "(|map->Foo| {:a 1})"
+                                                                      "|Foo|"))
+          [start-row start-col] def-start-pos
+          result (:changes (f.rename/rename-from-position h/default-uri "Bar" start-row start-col (h/db)))]
+      (is (= {h/default-uri [{:new-text "Bar" :range (h/->range def-start-pos def-end-pos)}
+                             {:new-text "Bar" :range (h/->range use1-start-pos use1-end-pos)}
+                             {:new-text "->Bar" :range (h/->range use2-start-pos use2-end-pos)}
+                             {:new-text "map->Bar" :range (h/->range use3-start-pos use3-end-pos)}
+                             {:new-text "Bar" :range (h/->range use4-start-pos use4-end-pos)}]}
+             result))))
+  (testing "across namespaces"
+    (let [[def-start-pos def-end-pos] (h/load-code-and-locs (h/code "(ns a)"
+                                                                    "(defrecord |Foo| [])"))
+          [usage-start-pos usage-end-pos] (h/load-code-and-locs (h/code "(ns b (:require [a :as foo]))"
+                                                                        "(foo/|Foo|)") (h/file-uri "file:///b.clj"))
+          [start-row start-col] def-start-pos
+          result (:changes (f.rename/rename-from-position h/default-uri "Bar" start-row start-col (h/db)))]
+      (is (= {h/default-uri [{:new-text "Bar" :range (h/->range def-start-pos def-end-pos)}]
+              (h/file-uri "file:///b.clj") [{:new-text "Bar" :range (h/->range usage-start-pos usage-end-pos)}]}
+             result)))))
 
 (deftest rename-alias-from-usages
   (h/reset-components!)

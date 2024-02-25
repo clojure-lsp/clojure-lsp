@@ -170,7 +170,10 @@
   (let [current-name (str (:name reference))
         map->? (string/starts-with? current-name "map->")
         ->? (string/starts-with? current-name "->")
-        name-end (+ (:name-col reference) (count (name current-name)))
+        name-col (if (:alias reference)
+                   (+ (:name-col reference) (inc (count (str (:alias reference)))))
+                   (:name-col reference))
+        name-end (+ name-col (count (name current-name)))
         ref-doc-uri (:uri reference)
         version (get-in db [:documents ref-doc-uri :v] 0)]
     {:new-text (cond
@@ -183,7 +186,9 @@
                  :else
                  replacement)
      :text-document {:version version :uri ref-doc-uri}
-     :range (shared/->range (assoc reference :name-end-col name-end))}))
+     :range (shared/->range (assoc reference
+                                   :name-col name-col
+                                   :name-end-col name-end))}))
 
 (defn ^:private rename-changes
   [element definition references replacement replacement-raw db]

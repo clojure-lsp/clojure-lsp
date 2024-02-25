@@ -40,14 +40,17 @@
   (h/load-code-and-locs "(ns medley.core)" (h/file-uri "file:///medley.core.clj"))
   (h/load-code-and-locs "(ns clojure.data.json)" (h/file-uri "file:///clojure.data.json.clj"))
   (h/load-code-and-locs "(ns some (:require [chesire :as json]))" (h/file-uri "file:///some.clj"))
+  (h/load-code-and-locs "(ns a (:require [\"@mui/material/Grid$default\" :as Grid]))" (h/file-uri "file:///grid.clj"))
   (h/load-code-and-locs (h/code "(ns some)"
                                 "(clojure.set/union #{} #{})"
                                 "(medley.core/foo 1 2)"
-                                "(clojure.data.json/bar 1 2)"))
+                                "(clojure.data.json/bar 1 2)"
+                                "Grid"))
   (testing "simple ns"
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.set :as set]'"
-        :command {:command "add-require-suggestion"}}]
+        :command {:command "add-require-suggestion"
+                  :arguments ["file:///a.clj" 1 3 "clojure.set" "set" nil nil]}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           2
@@ -76,6 +79,19 @@
                           4
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 3 :character 3}}}] {}
+                          (h/db))))
+
+  (testing "already used alias to JS lib"
+    (h/assert-contains-submaps
+      [{:title "Add require '[\"@mui/material/Grid$default\" :as Grid]' × 1"
+        :command {:command "add-require-suggestion"
+                  :arguments ["file:///a.clj" 4 3 "@mui/material/Grid$default" "Grid" nil true]}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          4
+                          5
+                          [{:code  "unresolved-namespace"
+                            :range {:start {:line 4 :character 3}}}] {}
                           (h/db)))))
 
 (deftest add-refer-suggestion-code-actions

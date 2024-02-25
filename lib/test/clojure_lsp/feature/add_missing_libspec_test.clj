@@ -517,11 +517,11 @@
                        "  |Date.)")
                (add-missing-import-to-rcf "java.util.Date"))))))
 
-(defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer]
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db) {}))
+(defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer js-require]
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer js-require (h/db) {}))
 
 (deftest add-require-suggestion-test
-  (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
+  (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])") "file:///clojure/string.clj")
   (testing "alias"
     (testing "on empty ns"
       (is (= (h/code "(ns foo.bar "
@@ -529,14 +529,14 @@
                      "   [clojure.string :as str]))")
              (-> (h/code "(ns foo.bar)"
                          "|str/a")
-                 (add-require-suggestion "clojure.string" "str" nil)
+                 (add-require-suggestion "clojure.string" "str" nil nil)
                  as-root-str))))
     (testing "changing alias"
       (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
                                             "|clojure.string/a")
                                     ;; The code actions will suggest clojure.string or string but it's possible
                                     ;; to have a custom alias if invoked directly.
-                                    (add-require-suggestion "clojure.string" "my-str" nil))]
+                                    (add-require-suggestion "clojure.string" "my-str" nil false))]
         (is (= (h/code "(ns foo.bar "
                        "  (:require"
                        "   [clojure.string :as my-str]))")
@@ -554,12 +554,12 @@
                          "  (:require"
                          "   [clojure.java.io :as io]))"
                          "|str/a")
-                 (add-require-suggestion "clojure.string" "str" nil)
+                 (add-require-suggestion "clojure.string" "str" nil nil)
                  as-root-str))))
     (testing "on invalid location"
       (is (nil? (-> (h/code "(ns foo.bar)"
                             "|;; comment")
-                    (add-require-suggestion "clojure.string" "str" nil))))))
+                    (add-require-suggestion "clojure.string" "str" nil nil))))))
   (testing "refer"
     (testing "on empty ns"
       (is (= (h/code "(ns foo.bar "
@@ -567,7 +567,7 @@
                      "   [clojure.string :refer [split]]))")
              (-> (h/code "(ns foo.bar)"
                          "|split")
-                 (add-require-suggestion "clojure.string" nil "split")
+                 (add-require-suggestion "clojure.string" nil "split" nil)
                  as-root-str))))
     (testing "on non empty ns"
       (is (= (h/code "(ns foo.bar"
@@ -578,7 +578,7 @@
                          "  (:require"
                          "   [clojure.java.io :as io]))"
                          "|split")
-                 (add-require-suggestion "clojure.string" nil "split")
+                 (add-require-suggestion "clojure.string" nil "split" nil)
                  as-root-str))))
     (testing "on existing ns with alias"
       (is (= (h/code "(ns foo.bar"
@@ -588,7 +588,7 @@
                          "  (:require"
                          "   [clojure.string :as str]))"
                          "|split")
-                 (add-require-suggestion "clojure.string" nil "split")
+                 (add-require-suggestion "clojure.string" nil "split" nil)
                  as-root-str))))
     (testing "on existing ns with refers"
       (is (= (h/code "(ns foo.bar"
@@ -598,17 +598,17 @@
                          "  (:require"
                          "   [clojure.string :refer [join]]))"
                          "|split")
-                 (add-require-suggestion "clojure.string" nil "split")
+                 (add-require-suggestion "clojure.string" nil "split" nil)
                  as-root-str))))
     (testing "on invalid location"
       (is (nil? (-> (h/code "(ns foo.bar)"
                             "|;; comment")
-                    (add-require-suggestion "clojure.string" nil "split")))))))
+                    (add-require-suggestion "clojure.string" nil "split" nil)))))))
 
 (defn add-require-suggestion-to-rcf [code chosen-ns chosen-alias chosen-refer]
   (swap! (h/db*) shared/deep-merge {:settings {:add-missing {:add-to-rcf :always}}})
   (h/load-code-and-locs code)
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer (h/db) {}))
+  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer false (h/db) {}))
 
 (deftest add-require-suggestion-to-rcf-test
   (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])" "file:///clojure/string.clj"))
@@ -698,3 +698,41 @@
     (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File/of \"foo\")"))))
   (testing "when usage is invalid"
     (is (nil? (find-missing-imports "(ns a) |;; comment")))))
+
+(deftest add-require-suggestion-test-js-lib
+  (h/load-code-and-locs (h/code "(ns b "
+                                "  (:require"
+                                "    [\"react\" :as react]"
+                                "    [\"@mui/material/Grid$default\" :as Grid]))")
+                        "file:///b.clj")
+
+  (is (= [{:ns "@mui/material/Grid$default" :alias "Grid" :count 1 :js-require true}]
+         (find-require-suggestions "|Grid")))
+
+  (is (= [{:ns "react" :alias "react" :count 1 :js-require true}]
+         (find-require-suggestions "|react")))
+
+  (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
+                                        "|Grid")
+                                (add-require-suggestion "@mui/material/Grid$default" "Grid" nil true))]
+    (is (= (h/code "(ns foo.bar "
+                   "  (:require"
+                   "   [\"@mui/material/Grid$default\" :as Grid]))")
+           (z/root-string (:loc ns-edit))))
+    ;; No need to change form because refering to JS default object
+    (is (= nil
+           (z/string (:loc form-edit)))))
+
+  (let [[ns-edit form-edit] (-> (h/code "(ns foo.bar)"
+                                        "|react/render")
+                                (add-require-suggestion "react" "react" nil true))]
+    (is (= (h/code "(ns foo.bar "
+                   "  (:require"
+                   "   [\"react\" :as react]))")
+           (z/root-string (:loc ns-edit))))
+    ;; No need to change form because refering to JS default object
+    (is (= nil
+           (z/string (:loc form-edit))))))
+
+(comment
+  (clojure.test/run-test add-require-suggestion-test-js-lib))

@@ -604,18 +604,18 @@
 
     (testing "public static methods and fields from simple class name"
       (h/assert-submaps
-        [{:label "SomeClass/myField2" :kind :field :detail "double"}
+        [{:label "SomeClass/myField2" :kind :constant :detail "double"}
          {:label "SomeClass/myMethod2" :kind :method :detail "int (int)"}
          {:label "SomeClass/myMethod3" :kind :method :detail "void ()"}]
         (f.completion/completion (h/file-uri "file:///a.clj") field-r field-c (h/db)))
       (h/assert-submaps
-        [{:label "SomeClass/myField2" :kind :field :detail "double"}
+        [{:label "SomeClass/myField2" :kind :constant :detail "double"}
          {:label "SomeClass/myMethod2" :kind :method :detail "int (int)"}
          {:label "SomeClass/myMethod3" :kind :method :detail "void ()"}]
         (f.completion/completion (h/file-uri "file:///a.clj") method-r method-c (h/db))))
     (testing "public static methods and fields from full class name"
       (h/assert-submaps
-        [{:label "my_class.SomeClass/myField2" :kind :field :detail "double"}
+        [{:label "my_class.SomeClass/myField2" :kind :constant :detail "double"}
          {:label "my_class.SomeClass/myMethod2" :kind :method :detail "int (int)"}
          {:label "my_class.SomeClass/myMethod3" :kind :method :detail "void ()"}]
         (f.completion/completion (h/file-uri "file:///a.clj") full-method-r full-method-c (h/db))))))

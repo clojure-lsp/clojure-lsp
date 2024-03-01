@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2024.02.13-20240223.132856-8`.
+  - Bump clj-kondo to `2024.02.13-20240228.191822-15`.
   - Add `:clojure-lsp/different-aliases` linter. #1770
   - Fix unused-public-var false positives for definterface methods. #1762
   - Fix rename of records when usage is using an alias. #1756

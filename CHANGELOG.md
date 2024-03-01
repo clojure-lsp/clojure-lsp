@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2024.03.01-11.37.51
+
 - General
   - Bump clj-kondo to `2024.02.13-20240228.191822-15`.
   - Add `:clojure-lsp/different-aliases` linter. #1770

@@ -407,7 +407,6 @@
 (defmethod lsp.server/receive-notification "workspace/didChangeConfiguration" [_ components params]
   (->> params
        (handler/did-change-configuration components)
-       (conform-or-log ::coercer/change-configration-of-error)
        eventually))
 
 (defmethod lsp.server/receive-notification "workspace/didChangeWatchedFiles" [_ components params]

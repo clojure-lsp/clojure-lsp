@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Fix `workspace/didChangeConfiguration` exception causing noise on logs. #1784
+
 ## 2024.03.01-11.37.51
 
 - General

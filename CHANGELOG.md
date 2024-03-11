@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-kondo to `2024.03.05`.
+
 - Editor
   - Fix `workspace/didChangeConfiguration` exception causing noise on logs. #1784
 

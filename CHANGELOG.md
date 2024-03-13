@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2024.03.05`.
+  - Bump clj-kondo to `2024.03.13` fixing high memory usage issue.
 
 - Editor
   - Fix `workspace/didChangeConfiguration` exception causing noise on logs. #1784

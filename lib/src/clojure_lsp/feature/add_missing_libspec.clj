@@ -27,17 +27,13 @@
       (z/sexpr zloc)
       (catch Exception _))))
 
-(defn get-keyword-ns [zloc] 
-  (when-let [kw-str (z/string zloc)]
-    (symbol (if (string/starts-with? kw-str "::")
-      (subs kw-str 2)
-      "nil"))))
-
 (defn safe-sym [zloc]
   (when-let [s (safe-sexpr zloc)]
     (cond
       (keyword? s)
-      (get-keyword-ns zloc)
+      (when-let [kw-str (z/string zloc)]
+        (when (string/starts-with? kw-str "::")
+          (symbol (subs kw-str 2))))
       
       (symbol? s)
       s)))

@@ -27,9 +27,19 @@
       (z/sexpr zloc)
       (catch Exception _))))
 
+(defn get-keyword-ns [zloc] 
+  (when-let [kw-str (z/string zloc)]
+    (symbol (if (string/starts-with? kw-str "::")
+      (subs kw-str 2)
+      "nil"))))
+
 (defn safe-sym [zloc]
   (when-let [s (safe-sexpr zloc)]
-    (when (symbol? s)
+    (cond
+      (keyword? s)
+      (get-keyword-ns zloc)
+      
+      (symbol? s)
       s)))
 
 (defn ^:private resolve-ns-inner-blocks-identation [db]

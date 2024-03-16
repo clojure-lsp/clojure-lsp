@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Editor
+  - Adding require command fails for requires without alias. #1791
+  - Add require command without alias now add requires with brackets.
+
 ## 2024.03.13-13.11.00
 
 - General

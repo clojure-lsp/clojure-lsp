@@ -18,7 +18,7 @@
           b-results (h/changes-by-uri->code results b-uri (h/db))]
       (is (= (h/code "(ns apple "
                      "  (:require"
-                     "   bread))"
+                     "   [bread]))"
                      "(bread/bar 1)") a-results))
       (is (= (h/code "(ns bread)"
                      ""

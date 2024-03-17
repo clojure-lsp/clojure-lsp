@@ -197,7 +197,7 @@
   (z/string loc))
 
 (defn ^:private as-root-str [[{:keys [loc]} :as locs]]
-  ;; (assert (= 1 (count locs)))
+  (assert (= 1 (count locs)))
   (z/root-string loc))
 
 (deftest add-missing-libspec-test

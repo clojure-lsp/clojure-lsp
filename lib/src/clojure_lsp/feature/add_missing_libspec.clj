@@ -34,7 +34,7 @@
       (when-let [kw-str (z/string zloc)]
         (when (string/starts-with? kw-str "::")
           (symbol (subs kw-str 2))))
-      
+
       (symbol? s)
       s)))
 

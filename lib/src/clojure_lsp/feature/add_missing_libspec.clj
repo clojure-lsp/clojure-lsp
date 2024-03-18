@@ -228,10 +228,10 @@
                            (with-meta class-sym nil)]
 
                           (= :require libspec-type)
-                          (cond-> (if (string? lib-sym)
-                                    lib-sym
-                                    (with-meta lib-sym nil))
-                            (or alias-sym refer-sym) (vector)
+                          (cond-> (vector
+                                    (if (string? lib-sym)
+                                      lib-sym
+                                      (with-meta lib-sym nil)))
                             alias-sym (conj :as (with-meta alias-sym nil))
                             refer-sym (conj :refer [(with-meta refer-sym nil)])))
             result-loc (or result-loc ;if not modified lib add new entry
@@ -601,7 +601,7 @@
 
 (defn add-ns-to-loc-change [loc chosen-alias]
   (let [replaced-loc (-> loc
-                         (z/replace (-> (symbol chosen-alias (-> loc safe-sym name))
+                         (z/replace (-> (symbol (name chosen-alias) (-> loc safe-sym name))
                                         n/token-node
                                         (with-meta (meta (z/node loc))))))]
     {:range (meta (z/node replaced-loc))
@@ -631,8 +631,8 @@
              (when chosen-alias-or-ns
                (cond
                  cursor-namespace-str
-                         ;; When we're aliasing clojure.string to string, we want to change
-                         ;; all nodes after the namespace like clojure.string/split to string/split. 
+                 ;; When we're aliasing clojure.string to string, we want to change
+                 ;; all nodes after the namespace like clojure.string/split to string/split.
                  (->> (find-forms (if to-ns?
                                     (z/next (edit/find-namespace zloc))
                                     (-> zloc z/up z/subzip))
@@ -641,7 +641,7 @@
                                             (= chosen-ns sym-ns)
                                             (= cursor-namespace-str sym-ns))
                                           (not= chosen-alias-or-ns sym-ns))))
-                      (map #(add-ns-to-loc-change % chosen-alias-or-ns)))
+                      (mapv #(add-ns-to-loc-change % chosen-alias-or-ns)))
 
                  (and to-ns?
                       (some-> zloc safe-sym)

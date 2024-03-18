@@ -196,8 +196,7 @@
   (assert (= 1 (count locs)))
   (z/string loc))
 
-(defn ^:private as-root-str [[{:keys [loc]} :as locs]]
-  (assert (= 1 (count locs)))
+(defn ^:private as-root-str [[{:keys [loc]}]]
   (z/root-string loc))
 
 (deftest add-missing-libspec-test
@@ -603,7 +602,16 @@
     (testing "on invalid location"
       (is (nil? (-> (h/code "(ns foo.bar)"
                             "|;; comment")
-                    (add-require-suggestion "clojure.string" nil "split" nil)))))))
+                    (add-require-suggestion "clojure.string" nil "split" nil))))))
+  (testing "full qualified namespace only"
+    (testing "on existing ns with refers"
+      (is (= (h/code "(ns foo.bar "
+                     "  (:require"
+                     "   [clojure.string]))")
+             (-> (h/code "(ns foo.bar)"
+                         "(|clojure.string/split)")
+                 (add-require-suggestion "clojure.string" nil nil nil)
+                 as-root-str))))))
 
 (defn add-require-suggestion-to-rcf [code chosen-ns chosen-alias chosen-refer]
   (swap! (h/db*) shared/deep-merge {:settings {:add-missing {:add-to-rcf :always}}})
@@ -685,21 +693,7 @@
                  (add-require-suggestion-to-rcf "clojure.string" nil "split")
                  (h/changes->code (h/db))))))))
 
-(defn- find-missing-imports [code]
-  (f.add-missing-libspec/find-missing-imports (h/zloc-from-code code) (h/db)))
-
-(deftest find-missing-import-test
-  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
-  (testing "when usage is a java class"
-    (is (= '["java.io.File"] (find-missing-imports "(ns a) |File"))))
-  (testing "when usage is a java constructor"
-    (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File.)"))))
-  (testing "when usage is a java ns"
-    (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File/of \"foo\")"))))
-  (testing "when usage is invalid"
-    (is (nil? (find-missing-imports "(ns a) |;; comment")))))
-
-(deftest add-require-suggestion-test-js-lib
+(deftest add-require-suggestion-js-lib-test
   (h/load-code-and-locs (h/code "(ns b "
                                 "  (:require"
                                 "    [\"react\" :as react]"
@@ -734,5 +728,16 @@
     (is (= nil
            (z/string (:loc form-edit))))))
 
-(comment
-  (clojure.test/run-test add-require-suggestion-test-js-lib))
+(defn- find-missing-imports [code]
+  (f.add-missing-libspec/find-missing-imports (h/zloc-from-code code) (h/db)))
+
+(deftest find-missing-import-test
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
+  (testing "when usage is a java class"
+    (is (= '["java.io.File"] (find-missing-imports "(ns a) |File"))))
+  (testing "when usage is a java constructor"
+    (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File.)"))))
+  (testing "when usage is a java ns"
+    (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File/of \"foo\")"))))
+  (testing "when usage is invalid"
+    (is (nil? (find-missing-imports "(ns a) |;; comment")))))

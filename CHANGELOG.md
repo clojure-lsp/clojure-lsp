@@ -5,6 +5,7 @@
 - Editor
   - Adding require command fails for requires without alias. #1791
   - Add require command without alias now add requires with brackets.
+  - Project tree feature now support keyword definitions like re-frame sub/reg. #1789
 
 ## 2024.03.13-13.11.00
 

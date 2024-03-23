@@ -900,5 +900,6 @@
     :var-usages (if (:defmethod el)
                   :function
                   :variable)
+    :keyword-definitions :function
     :keyword-usages :field
     :null))

@@ -122,11 +122,12 @@
                                                :source-paths #{(h/file-path "/user/project/src/main/clojure")
                                                                (h/file-path "/user/project/src/test/clojure")}}
                                     :project-root-uri (h/file-uri "file:///user/project")})
-  (h/load-code-and-locs (h/code "(ns foo.bar)"
+  (h/load-code-and-locs (h/code "(ns foo.bar (:require [re-frame.core :as r]))"
                                 "(def a 1)"
                                 "(def ^:private b 2)"
                                 "(defn c [] 3)"
-                                "(definterface Foo)") (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj"))
+                                "(definterface Foo)"
+                                "(r/reg-sub ::foo (fn [_]))") (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj"))
   (h/assert-submap
     {:name "foo.bar"
      :type :ns
@@ -151,7 +152,13 @@
               :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
               :range {:start {:line 4 :character 14} :end {:line 4 :character 17}}
               :final true
-              :type :interface}]}
+              :type :interface}
+             {:name "foo"
+              :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
+              :range {:start {:line 5 :character 11} :end {:line 5 :character 16}}
+              :final true
+              :type :function
+              :detail "reg-sub"}]}
     (f.project-tree/nodes (h/db) {:name "foo.bar"
                                   :uri (h/file-uri "file:///user/project/src/main/clojure/foo/bar.clj")
                                   :final false

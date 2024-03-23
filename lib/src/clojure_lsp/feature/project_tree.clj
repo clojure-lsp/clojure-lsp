@@ -76,7 +76,8 @@
               (concat ns-definitions java-class-definitions))}))
 
 (defn ^:private ns-node [node db]
-  (let [var-definitions (q/find-var-definitions db (:uri node) true)]
+  (let [definitions (concat (q/find-var-definitions db (:uri node) true)
+                            (q/find-keyword-definitions db (:uri node)))]
     {:name (:name node)
      :type (:type node)
      :uri (:uri node)
@@ -88,8 +89,9 @@
                    :range (shared/->range element)
                    :final true
                    :type (q/element->symbol-kind element)}
-                  :detail (when (:private element) "private")))
-              var-definitions)}))
+                  :detail (cond (:private element) "private"
+                                (:reg element) (name (:reg element)))))
+              definitions)}))
 
 (defn nodes [db current-node]
   (cond

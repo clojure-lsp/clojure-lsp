@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.document-symbol
   (:require
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]))
@@ -18,8 +19,8 @@
      :selection-range (shared/->range e)
      :tags (cond-> []
              (:deprecated e) (conj 1))}
-    :detail (when (:private e)
-              "private")))
+    :detail (cond (:private e) "private"
+                  (:reg e) (name (:reg e)))))
 
 (defn ^:private symbol-order [{:keys [selection-range]}]
   [(:line (:start selection-range)) (:character (:start selection-range))])
@@ -102,19 +103,8 @@
               (edn->element-tree (atom (get-in db [:analysis uri :keyword-usages]))
                                  (atom (get-in db [:analysis uri :symbols]))))
       (catch Exception e
-        (println e)))
-    (when-let [namespace-definition (q/find-namespace-definition-by-uri db uri)]
-      [{:name (or (some-> namespace-definition :name name)
-                  ;; TODO Consider using URI for display purposes, especially if
-                  ;; we support remote LSP connections
-                  (shared/uri->filename uri))
-        :kind (q/element->symbol-kind namespace-definition)
-        :range shared/full-file-range
-        :selection-range (if namespace-definition
-                           (shared/->scope-range namespace-definition)
-                           shared/full-file-range)
-        :children (->> (concat (q/find-var-definitions db uri true)
-                               (q/find-defmethods db uri))
-                       (map element->document-symbol)
-                       (sort-by symbol-order)
-                       vec)}])))
+        (logger/error e)))
+    (->> (q/find-element-definitions db uri)
+         (map element->document-symbol)
+         (sort-by symbol-order)
+         vec)))

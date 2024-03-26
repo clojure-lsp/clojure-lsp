@@ -6,6 +6,8 @@
   - Adding require command fails for requires without alias. #1791
   - Add require command without alias now add requires with brackets.
   - Project tree feature now support keyword definitions like re-frame sub/reg. #1789
+  - Support `textDocument/foldingRange` LSP feature. #1602
+  - Improve `textDocument/documentSymbol` considering keyword definitions and returning flatten elements.
 
 ## 2024.03.13-13.11.00
 

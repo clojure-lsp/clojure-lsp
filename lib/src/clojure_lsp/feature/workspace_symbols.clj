@@ -32,7 +32,7 @@
 
 (defn workspace-symbols [query db]
   ;; TODO refactor to be a complete transducer
-  (->> (q/find-internal-definitions db)
+  (->> (q/find-all-element-definitions db)
        (fuzzy-filter query)
        (map element->workspace-symbol)
        ;; Group elements by uri, but otherwise preserve ordering by search score.

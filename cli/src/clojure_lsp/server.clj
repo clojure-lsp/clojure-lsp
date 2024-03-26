@@ -394,6 +394,13 @@
        (conform-or-log ::coercer/linked-editing-ranges-or-error)
        eventually))
 
+(defmethod lsp.server/receive-request "textDocument/foldingRange" [_ components params]
+  (->> params
+       normalize-doc-uri
+       (handler/folding-range components)
+       (conform-or-log ::coercer/folding-ranges-or-error)
+       eventually))
+
 ;;;; Workspace features
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceFeatures
@@ -475,6 +482,7 @@
      :execute-command-provider f.refactor/available-refactors
      :text-document-sync (:text-document-sync-kind settings)
      :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
+     :folding-range-provider true
      :experimental {:test-tree true
                     :project-tree true
                     :cursor-info true

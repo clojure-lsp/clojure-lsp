@@ -9,6 +9,7 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.feature.folding :as f.folding]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.feature.java-interop :as f.java-interop]
@@ -550,6 +551,13 @@
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (f.linked-editing-range/ranges (:uri text-document) row col db))))
+
+(defn folding-range
+  [{:keys [db*]} {:keys [text-document]}]
+  (shared/logging-task
+    :folding-range
+    (let [db @db*]
+      (f.folding/folding-range (:uri text-document) db))))
 
 (defn will-rename-files [{:keys [db*] :as components} {:keys [files]}]
   (process-after-all-changes

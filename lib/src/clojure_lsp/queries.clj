@@ -686,27 +686,6 @@
           (xf-analysis->scoped-path-analysis path-uri))
         (:analysis db)))
 
-(def ^:private xf-defmethods
-  (comp (filter :defmethod)
-        (medley/distinct-by (juxt :to :name :name-row :name-col))))
-
-(defn find-defmethods [db uri]
-  (into []
-        xf-defmethods
-        (get-in db [:analysis uri :var-usages])))
-
-(defn find-internal-definitions
-  "All ns definitions, var definitions and defmethods."
-  [db]
-  (let [analysis (internal-analysis db)]
-    (concat (into []
-                  (xf-analysis->buckets-elems :namespace-definitions :var-definitions)
-                  analysis)
-            (into []
-                  (comp xf-analysis->var-usages
-                        xf-defmethods)
-                  analysis))))
-
 (defn find-keyword-definitions [db uri]
   (into []
         (medley/distinct-by (juxt :ns :name :row :col))
@@ -718,6 +697,35 @@
           xf-analysis->keyword-definitions
           (medley/distinct-by (juxt :ns :name :row :col)))
         (:analysis db)))
+
+(def ^:private xf-defmethods
+  (comp (filter :defmethod)
+        (medley/distinct-by (juxt :to :name :name-row :name-col))))
+
+(defn find-defmethods [db uri]
+  (into []
+        xf-defmethods
+        (get-in db [:analysis uri :var-usages])))
+
+(defn find-element-definitions
+  [db uri]
+  (concat []
+          (some-> (find-namespace-definition-by-uri db uri) vector)
+          (find-var-definitions db uri true)
+          (find-keyword-definitions db uri)
+          (find-defmethods db uri)))
+
+(defn find-all-element-definitions
+  "All ns definitions, var definitions and defmethods."
+  [db]
+  (let [analysis (internal-analysis db)]
+    (concat (into []
+                  (xf-analysis->buckets-elems :namespace-definitions :var-definitions)
+                  analysis)
+            (into []
+                  (comp xf-analysis->var-usages
+                        xf-defmethods)
+                  analysis))))
 
 (defn find-local-by-destructured-keyword [db uri keyword-element]
   (find-first (filter #(and (= (:name-row %) (:name-row keyword-element))

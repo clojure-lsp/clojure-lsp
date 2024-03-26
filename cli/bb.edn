@@ -1,7 +1,7 @@
 {:paths ["integration-test"]
  :min-bb-version "0.4.0"
  :deps {medley/medley {:mvn/version "1.4.0"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.9.3"
+        com.github.clojure-lsp/lsp4clj {:mvn/version "1.10.0"
                                         #_#_:local/root "../../lsp4clj"}
         org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
                                  :git/sha "951b49b8c173244e66443b8188e3ff928a0a71e7"}}

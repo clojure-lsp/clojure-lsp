@@ -18,17 +18,23 @@
     (h/assert-submaps
       [{:name "sample-test.document-symbol.a"
         :kind 3
-        :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
-        :selectionRange {:start {:line 0 :character 0} :end {:line 1 :character 40}}
-        :children
-        [{:name "a-some-var"
-          :kind 13
-          :range {:start {:line 3 :character 0} :end {:line 3 :character 18}}
-          :selectionRange {:start {:line 3 :character 5} :end {:line 3 :character 15}}
-          :tags []}
-         {:name "a-some-public-function"
-          :kind 12
-          :range {:start {:line 5 :character 0} :end {:line 6 :character 10}}
-          :selectionRange {:start {:line 5 :character 6} :end {:line 5 :character 28}}
-          :tags []}]}]
+        :range {:start {:line 0 :character 0} :end {:line 1 :character 40}}
+        :selectionRange {:start {:line 0 :character 4} :end {:line 0 :character 33}}
+        :tags []}
+       {:name "a-some-var"
+        :kind 13
+        :range {:start {:line 3 :character 0} :end {:line 3 :character 18}}
+        :selectionRange {:start {:line 3 :character 5} :end {:line 3 :character 15}}
+        :tags []}
+       {:name "a-some-public-function"
+        :kind 12
+        :range {:start {:line 5 :character 0} :end {:line 6 :character 10}}
+        :selectionRange {:start {:line 5 :character 6} :end {:line 5 :character 28}}
+        :tags []}
+       {:name "a-my-key"
+        :kind 12
+        :range {:start {:line 8 :character 7} :end {:line 8 :character 17}}
+        :selectionRange {:start {:line 8 :character 7} :end {:line 8 :character 17}}
+        :tags []
+        :detail "def"}]
       (lsp/request! (fixture/document-symbol-request "document_symbol/a.clj")))))

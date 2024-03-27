@@ -87,32 +87,32 @@
 
 (deftest document-symbol
   (let [code "(ns a) (def bar ::bar) (def ^:m baz 1) (defmulti mult identity) (defmethod mult \"foo\")"
-        result #{{:name "a"
-                  :kind :namespace
-                  :range {:start {:line 0 :character 0} :end {:line 999999 :character 999999}}
-                  :selection-range {:start {:line 0 :character 0} :end {:line 0 :character 6}}
-                  :children [{:name "bar"
-                              :kind :variable
-                              :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
-                              :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}
-                              :tags []}
-                             {:name "baz"
-                              :kind :variable
-                              :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
-                              :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}
-                              :tags []}
-                               ;; defmulti
-                             {:name "mult",
-                              :kind :interface,
-                              :range {:start {:line 0, :character 39}, :end {:line 0, :character 63}},
-                              :selection-range {:start {:line 0, :character 49}, :end {:line 0, :character 53}}
-                              :tags []}
-                               ;; defmethod
-                             {:name "mult \"foo\"",
-                              :kind :function,
-                              :range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},
-                              :selection-range {:start {:line 0, :character 75}, :end {:line 0, :character 79}}
-                              :tags []}]}}]
+        result [{:name "a"
+                 :kind :namespace
+                 :range {:start {:line 0, :character 0}, :end {:line 0, :character 6}}
+                 :selection-range {:start {:line 0, :character 4}, :end {:line 0, :character 5}}}
+                {:name "bar"
+                 :kind :variable
+                 :range {:start {:line 0 :character 7} :end {:line 0 :character 22}}
+                 :selection-range {:start {:line 0 :character 12} :end {:line 0 :character 15}}
+                 :tags []}
+                {:name "baz"
+                 :kind :variable
+                 :range {:start {:line 0 :character 23} :end {:line 0 :character 38}}
+                 :selection-range {:start {:line 0 :character 32} :end {:line 0 :character 35}}
+                 :tags []}
+                 ;; defmulti
+                {:name "mult",
+                 :kind :interface,
+                 :range {:start {:line 0, :character 39}, :end {:line 0, :character 63}},
+                 :selection-range {:start {:line 0, :character 49}, :end {:line 0, :character 53}}
+                 :tags []}
+                 ;; defmethod
+                {:name "mult \"foo\"",
+                 :kind :function,
+                 :range {:start {:line 0, :character 75}, :end {:line 0, :character 79}},
+                 :selection-range {:start {:line 0, :character 75}, :end {:line 0, :character 79}}
+                 :tags []}]]
     (testing "clj files"
       (h/load-code-and-locs code)
       (h/assert-submaps result

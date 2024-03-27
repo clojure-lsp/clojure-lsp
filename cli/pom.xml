@@ -43,7 +43,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.cli</artifactId>
-      <version>1.0.214</version>
+      <version>1.1.230</version>
     </dependency>
     <dependency>
       <groupId>rewrite-clj</groupId>

@@ -71,6 +71,7 @@
                                             "unwind-all"
                                             "unwind-thread"]}
         :signatureHelpProvider {:triggerCharacters []}
+        :foldingRangeProvider true
         :codeActionProvider {:codeActionKinds ["quickfix"
                                                "refactor"
                                                "refactor.extract"

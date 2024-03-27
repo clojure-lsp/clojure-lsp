@@ -394,11 +394,9 @@ For more information on how to configure it, check the [diagnostics settings sec
 It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like `datomic.api`, with that clojure-lsp will be able to make most features work with those dependencies.
 For more information check the [stubs settings section](settings.md#stub-generation).
 
-### Execute command
+## Execute command
 
 Commands that client can request. Most code actions use these commands as actions.
-
-## clojure-lsp extra commands
 
 __Note: Most of these are available via code actions and clients or users may choose to use the code action menu to execute them instead of mapping.__
 
@@ -460,6 +458,7 @@ Arguments:
 | bb       | backward-barf                | Paredit: backward barf                    | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
 | rs       | raise-sexp                   | Paredit: Raise sexp                       | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
 | ks       | kill-sexp                    | Paredit: Kill sexp                        | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
+| gt       | go-to-test                   | Go to test                                | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                           |
 
 
 ## Dev

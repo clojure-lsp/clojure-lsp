@@ -2,8 +2,8 @@
   (:require
    [clojure-lsp.clojure-coercer :as clojure-coercer]
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.command :as f.command]
    [clojure-lsp.feature.file-management :as f.file-management]
-   [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
    [clojure-lsp.feature.test-tree :as f.test-tree]
    [clojure-lsp.handlers :as handler]
@@ -479,7 +479,7 @@
                                   :token-modifiers semantic-tokens/token-modifiers-str
                                   :range true
                                   :full true})
-     :execute-command-provider f.refactor/available-refactors
+     :execute-command-provider f.command/available-commands
      :text-document-sync (:text-document-sync-kind settings)
      :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
      :folding-range-provider true

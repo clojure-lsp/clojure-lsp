@@ -618,6 +618,16 @@
       "hash": "sha256-4LypffdwI9ZRgGAAeLJGJYwiLhUDJ64urPOynp9cIu4="
     },
     {
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.10.0/lsp4clj-1.10.0.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-ktg0g15PeNc/4JnBks5qL0iWpcVkg7VnvvVUc7/9/d0="
+    },
+    {
+      "mvn-path": "com/github/clojure-lsp/lsp4clj/1.10.0/lsp4clj-1.10.0.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-WMzcglgmqr1UasEzit7bGyA8dttBgqLvN834buRYfO4="
+    },
+    {
       "mvn-path": "com/github/clojure-lsp/lsp4clj/1.9.3/lsp4clj-1.9.3.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-AvQz9uV4dJ6DergnFKBaZwBqEvT2FWfsaz98YTxRTXU="

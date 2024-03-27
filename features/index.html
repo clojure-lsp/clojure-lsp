@@ -674,21 +674,14 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#execute-command" class="md-nav__link">
-    Execute command
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#clojure-lsp-extra-commands" class="md-nav__link">
-    clojure-lsp extra commands
+  <a href="#execute-command" class="md-nav__link">
+    Execute command
   </a>
   
 </li>
@@ -1125,21 +1118,14 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#execute-command" class="md-nav__link">
-    Execute command
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#clojure-lsp-extra-commands" class="md-nav__link">
-    clojure-lsp extra commands
+  <a href="#execute-command" class="md-nav__link">
+    Execute command
   </a>
   
 </li>
@@ -1512,9 +1498,8 @@ make most of features work.</p>
 <h3 id="stub-generation">Stub generation<a class="headerlink" href="#stub-generation" title="Permanent link">#</a></h3>
 <p>It's possible to configure clojure-lsp to generate and analyze stubs for specific namespaces available on your project classpath, this is useful for closed source dependencies like <code>datomic.api</code>, with that clojure-lsp will be able to make most features work with those dependencies.
 For more information check the <a href="../settings/#stub-generation">stubs settings section</a>.</p>
-<h3 id="execute-command">Execute command<a class="headerlink" href="#execute-command" title="Permanent link">#</a></h3>
+<h2 id="execute-command">Execute command<a class="headerlink" href="#execute-command" title="Permanent link">#</a></h2>
 <p>Commands that client can request. Most code actions use these commands as actions.</p>
-<h2 id="clojure-lsp-extra-commands">clojure-lsp extra commands<a class="headerlink" href="#clojure-lsp-extra-commands" title="Permanent link">#</a></h2>
 <p><strong>Note: Most of these are available via code actions and clients or users may choose to use the code action menu to execute them instead of mapping.</strong></p>
 <p>All functions in clojure-lsp have a two-letter mnemonic shortcut. E.g. <code>tf</code> for <code>thread-first-all</code>. We <strong>strongly</strong> suggest that client authors and users use these shortcuts keys when choosing to map these commands to key chords or menus; this allows for users to maintain muscle memory and familiarity as they switch between clients and editors. Thank you to <a href="https://github.com/clojure-emacs/clj-refactor.el#usage">clj-refactor</a> for this system and other tools that adhere to it.</p>
 <p>LSP clients will allow you to bind these commands to shortcuts or menu items using LSP's <code>workspace/executeCommand</code> and passing a map with <code>"command"</code> and <code>"arguments"</code> keys.</p>
@@ -1894,6 +1879,14 @@ For more information check the <a href="../settings/#stub-generation">stubs sett
 <td>Paredit: Kill sexp</td>
 <td><code>[file-uri,row,col]</code></td>
 <td></td>
+<td></td>
+</tr>
+<tr>
+<td>gt</td>
+<td>go-to-test</td>
+<td>Go to test</td>
+<td><code>[file-uri,row,col]</code></td>
+<td>✅</td>
 <td></td>
 </tr>
 </tbody>

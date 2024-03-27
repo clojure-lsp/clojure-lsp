@@ -32,7 +32,7 @@
     <dependency>
       <groupId>com.github.clojure-lsp</groupId>
       <artifactId>lsp4clj</artifactId>
-      <version>1.9.3</version>
+      <version>1.10.0</version>
       <exclusions>
         <exclusion>
           <groupId>funcool</groupId>

@@ -32,7 +32,8 @@
     producer
     (with-out-str (pprint/pprint (server-info @db*)))
     :info
-    nil))
+    nil)
+  {:no-op? true})
 
 (defn server-info-raw [{:keys [db*]}]
   (shared/preserve-kebab-case (server-info @db*)))
@@ -60,7 +61,8 @@
       producer
       (with-out-str (pprint/pprint info))
       :info
-      nil)))
+      nil)
+    {:no-op? true}))
 
 (defn cursor-info-raw [uri {:keys [db*]} row col]
   (shared/preserve-kebab-case (cursor-info uri row col @db*)))

@@ -193,7 +193,7 @@
        sort
        vec))
 
-(defn command-client-seq-changes [uri version result db]
+(defn ^:private command-client-seq-changes [uri version result db]
   (let [changes [{:text-document {:uri uri :version version}
                   :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
     (shared/client-changes changes db)))

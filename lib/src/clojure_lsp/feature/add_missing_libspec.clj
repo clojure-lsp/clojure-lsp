@@ -319,7 +319,7 @@
                                  (cond->
                                   (> left-ident 0) (z/append-child* (n/spaces left-ident)))
                                  (z/append-child (n/list-node [(n/token-node (symbol type)) (n/spaces 1) form-to-add])))]
-          [{:range {:row (:row range) :col 9 ;after (comment 
+          [{:range {:row (:row range) :col 9 ;after (comment
                     :end-row (:row range) :end-col 9}
             :loc new-form}])
         (let [form (-> (z/find-value rcf-zip z/next (symbol type))
@@ -486,10 +486,7 @@
                                  (group-by second)
                                  (medley/map-vals (fn [vs]
                                                     (->> vs
-                                                         (map first)
-                                                         frequencies
-                                                         (sort-by (fn [[ns freq]]
-                                                                    [(- freq) ns]))
+                                                         (mapv (fn [[ns _ count _]] [ns count]))
                                                          (into (array-map))))))
         namespaces->aliases (->> ns-alias-pairs
                                  (group-by first)
@@ -502,7 +499,7 @@
                                                                     [(- freq) alias]))
                                                          (into (array-map))))))
         js-requires (->> ns-alias-pairs
-                         (keep (fn [[alias-namespace _ original-alias-namespace]]
+                         (keep (fn [[alias-namespace _ _ original-alias-namespace]]
                                  (when (string? original-alias-namespace)
                                    alias-namespace)))
                          set)
@@ -560,11 +557,11 @@
 
 (defn find-alias-ns-pairs [db uri]
   (let [langs (shared/uri->available-langs uri)]
-    ;; Third value to keep the original name type so we can check for JS requires
+    ;; Fourth value to keep the original name type so we can check for JS requires
     (concat (->> (dep-graph/ns-aliases-for-langs db langs)
-                 (map (juxt (comp str :to) (comp str :alias) :to)))
+                 (map (juxt (comp str :to) (comp str :alias) :usages-count :to)))
             (->> (dep-graph/ns-names-for-langs db langs)
-                 (map (juxt str (constantly nil) identity))))))
+                 (map (juxt str (constantly nil) (constantly nil) identity))))))
 
 (defn find-require-suggestions [zloc uri db]
   (when-let [cursor-sym (safe-sym zloc)]

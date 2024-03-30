@@ -283,8 +283,8 @@
   (h/load-code-and-locs "(ns aaa (:require [bbb :as b] [ccc :as c]))" (h/file-uri "file:///aaa.clj"))
   (h/load-code-and-locs "(ns bbb (:require [ccc :as c]))" (h/file-uri "file:///bbb.clj"))
   (h/load-code-and-locs "(ns ccc)" (h/file-uri "file:///ccc.clj"))
-  (is (= '#{{:alias c :to ccc}
-            {:alias b :to bbb}}
+  (is (= '#{{:alias c :to ccc :usages-count 2}
+            {:alias b :to bbb :usages-count 1}}
          (dep-graph/ns-aliases (h/db)))))
 
 (deftest ns-aliases-for-langs
@@ -294,16 +294,16 @@
   (h/load-code-and-locs "(ns jjj (:require [kkk :as k] [lll :as l]))" (h/file-uri "file:///aaa.cljs"))
   (h/load-code-and-locs "(ns kkk (:require [lll :as l]))" (h/file-uri "file:///bbb.cljs"))
   (h/load-code-and-locs "(ns lll)" (h/file-uri "file:///ccc.cljs"))
-  (is (= '#{{:alias c :to ccc}
-            {:alias b :to bbb}}
+  (is (= '#{{:alias c :to ccc :usages-count 2}
+            {:alias b :to bbb :usages-count 1}}
          (dep-graph/ns-aliases-for-langs (h/db) #{:clj})))
-  (is (= '#{{:alias k :to kkk}
-            {:alias l :to lll}}
+  (is (= '#{{:alias k :to kkk :usages-count 1}
+            {:alias l :to lll :usages-count 2}}
          (dep-graph/ns-aliases-for-langs (h/db) #{:cljs})))
-  (is (= '#{{:alias c :to ccc}
-            {:alias b :to bbb}
-            {:alias k :to kkk}
-            {:alias l :to lll}}
+  (is (= '#{{:alias c :to ccc :usages-count 2}
+            {:alias b :to bbb :usages-count 1}
+            {:alias k :to kkk :usages-count 1}
+            {:alias l :to lll :usages-count 2}}
          (dep-graph/ns-aliases-for-langs (h/db) #{:clj :cljs}))))
 
 (deftest ns-names-for-langs

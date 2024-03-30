@@ -8,6 +8,7 @@
   - Project tree feature now support keyword definitions like re-frame sub/reg. #1789
   - Support `textDocument/foldingRange` LSP feature. #1602
   - Improve `textDocument/documentSymbol` considering keyword definitions and returning flatten elements.
+  - Fix Add require/import usages count in code actions. #1794.
 
 ## 2024.03.13-13.11.00
 

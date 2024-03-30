@@ -130,11 +130,14 @@
   (h/load-code-and-locs (str "(ns some-ns)\n"
                              "(def foo)")
                         (h/file-uri "file:///a.clj"))
+  (h/load-code-and-locs (h/code "(ns some-other-ns (:require [some-ns :as sns]))"
+                                "sns/foooob")
+                        (h/file-uri "file:///b.clj"))
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
                              "(def bar 1)\n"
                              "(defn baz []\n"
                              "  bar)")
-                        (h/file-uri "file:///b.clj"))
+                        (h/file-uri "file:///c.clj"))
   (h/load-code-and-locs (str "(ns another-ns)\n"
                              "(def bar ons/bar)\n"
                              "(def foo sns/foo)\n"
@@ -142,21 +145,21 @@
                              "MyClass.\n"
                              "Date.\n"
                              "Date/parse")
-                        (h/file-uri "file:///c.clj"))
+                        (h/file-uri "file:///d.clj"))
   (testing "when it has not unresolved-namespace diagnostic"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
-                                      (h/file-uri "file:///c.clj")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///d.clj"))
+                                      (h/file-uri "file:///d.clj")
                                       2
                                       10
                                       [] {}
                                       (h/db)))))
   (testing "when it has unresolved-namespace and can find namespace"
     (h/assert-contains-submaps
-      [{:title "Add require '[some-ns :as sns]' × 1"
+      [{:title "Add require '[some-ns :as sns]' × 2"
         :command {:command "add-require-suggestion"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
-                          (h/file-uri "file:///c.clj")
+      (f.code-actions/all (zloc-of (h/file-uri "file:///d.clj"))
+                          (h/file-uri "file:///d.clj")
                           3
                           11
                           [{:code  "unresolved-namespace"
@@ -164,8 +167,8 @@
                           (h/db))))
   (testing "when it has unresolved-namespace but cannot find namespace"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
-                                      (h/file-uri "file:///c.clj")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///d.clj"))
+                                      (h/file-uri "file:///d.clj")
                                       2
                                       11
                                       [{:code "unresolved-namespace"
@@ -175,8 +178,8 @@
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.test :refer [deftest]]'"
         :command {:command "add-require-suggestion"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
-                          (h/file-uri "file:///c.clj")
+      (f.code-actions/all (zloc-of (h/file-uri "file:///d.clj"))
+                          (h/file-uri "file:///d.clj")
                           4
                           2
                           [{:code  "unresolved-namespace"
@@ -184,8 +187,8 @@
                           (h/db))))
   (testing "when it has unresolved-symbol but it's not a known refer"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
-                                      (h/file-uri "file:///c.clj")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///d.clj"))
+                                      (h/file-uri "file:///d.clj")
                                       4
                                       11
                                       [{:code "unresolved-symbol"
@@ -195,6 +198,12 @@
 
 (deftest add-common-missing-import-code-action
   (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "File.java"))))
+  (h/load-code-and-locs (h/code "(ns some-ns (:import [java.io File]))"
+                                "(File.)")
+                        (h/file-uri "file:///a.clj"))
+  (h/load-code-and-locs (h/code "(ns other-ns (:import [java.io File]))"
+                                "(File.)")
+                        (h/file-uri "file:///b.clj"))
   (h/load-code-and-locs (str "(ns another-ns)\n"
                              "(def bar ons/bar)\n"
                              "(def foo sns/foo)\n"
@@ -224,7 +233,7 @@
                                       (h/db)))))
   (testing "when it has unresolved-symbol and it's a common import"
     (h/assert-contains-submaps
-      [{:title "Add import 'java.io.File'"
+      [{:title "Add import 'java.io.File' × 2"
         :command {:command "add-missing-import"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")
@@ -236,7 +245,7 @@
                           (h/db))))
   (testing "when it has unresolved-namespace and it's a common import via method"
     (h/assert-contains-submaps
-      [{:title "Add import 'java.io.File'"
+      [{:title "Add import 'java.io.File' × 2"
         :command {:command "add-missing-import"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
                           (h/file-uri "file:///c.clj")

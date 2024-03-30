@@ -367,11 +367,12 @@
   "Convert aliases into something that looks a little like :namespace-alias
   analysis elems."
   (mapcat (fn [[namespace {:keys [aliases]}]]
-            (keep (fn [alias]
+            (keep (fn [[alias count]]
                     (when alias
                       {:to namespace
+                       :usages-count count
                        :alias alias}))
-                  (ms-distinct aliases)))))
+                  aliases))))
 
 (defn ns-aliases [{:keys [dep-graph]}]
   (into #{}

@@ -71,14 +71,14 @@
     {:name "External dependencies"
      :id "external-dependencies"
      :type :library
-     :nodes [{:name "asd.some-2-3.jar"
-              :detail (h/file-uri "jar:file:///path/to/asd.some-2-3.jar")
-              :uri (h/file-uri "jar:file:///path/to/asd.some-2-3.jar")
-              :final false
-              :type :jar}
-             {:name "lib.jar"
+     :nodes [{:name "lib.jar"
               :detail (h/file-uri "jar:file:///path/to/another/lib.jar")
               :uri (h/file-uri "jar:file:///path/to/another/lib.jar")
+              :final false
+              :type :jar}
+             {:name "asd.some-2-3.jar"
+              :detail (h/file-uri "jar:file:///path/to/asd.some-2-3.jar")
+              :uri (h/file-uri "jar:file:///path/to/asd.some-2-3.jar")
               :final false
               :type :jar}]}
     (f.project-tree/nodes (h/db) {:name "External dependencies"

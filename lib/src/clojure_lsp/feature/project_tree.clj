@@ -35,9 +35,9 @@
 
 (defn ^:private external-dependencies-node [node db]
   (let [uris (keys (q/external-analysis db))
-        jars (set (keep (fn [uri]
-                          (second (re-find #"(.+)!/|::.*" uri)))
-                        uris))]
+        jars (sort (set (keep (fn [uri]
+                                (second (re-find #"(.+)!/|::.*" uri)))
+                              uris)))]
     {:name (:name node)
      :type (:type node)
      :id (:id node)

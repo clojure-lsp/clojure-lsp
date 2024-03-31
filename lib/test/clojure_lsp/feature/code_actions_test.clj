@@ -50,7 +50,7 @@
     (h/assert-contains-submaps
       [{:title "Add require '[clojure.set :as set]'"
         :command {:command "add-require-suggestion"
-                  :arguments ["file:///a.clj" 1 3 "clojure.set" "set" nil nil]}}]
+                  :arguments [(h/file-uri "file:///a.clj") 1 3 "clojure.set" "set" nil nil]}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           2
@@ -85,7 +85,7 @@
     (h/assert-contains-submaps
       [{:title "Add require '[\"@mui/material/Grid$default\" :as Grid]' × 1"
         :command {:command "add-require-suggestion"
-                  :arguments ["file:///a.clj" 4 3 "@mui/material/Grid$default" "Grid" nil true]}}]
+                  :arguments [(h/file-uri "file:///a.clj") 4 3 "@mui/material/Grid$default" "Grid" nil true]}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           4

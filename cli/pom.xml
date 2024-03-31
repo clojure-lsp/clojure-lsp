@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2024.03.13-13.11.00</version>
+  <version>2024.03.31-19.10.13</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -32,7 +32,7 @@
     <dependency>
       <groupId>com.github.clojure-lsp</groupId>
       <artifactId>lsp4clj</artifactId>
-      <version>1.9.3</version>
+      <version>1.10.0</version>
       <exclusions>
         <exclusion>
           <groupId>funcool</groupId>
@@ -158,6 +158,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2024.03.13-13.11.00</tag>
+    <tag>2024.03.31-19.10.13</tag>
   </scm>
 </project>

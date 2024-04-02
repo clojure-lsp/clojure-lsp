@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Use scope location instead of name location for folding feature.
+
 ## 2024.03.31-19.10.13
 
 - Editor

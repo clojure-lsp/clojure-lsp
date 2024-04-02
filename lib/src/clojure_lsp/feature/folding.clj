@@ -6,9 +6,10 @@
 
 (defn folding-range [uri db]
   (->> (q/find-element-definitions db uri)
-       (mapv (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-               {:start-line name-row
-                :start-character name-col
-                :end-line name-end-row
-                :end-character name-end-col
-                :kind :region}))))
+       (keep (fn [{:keys [row col end-row end-col] :as a}]
+               (when (and row col end-row end-col)
+                 {:start-line (dec row)
+                  :start-character (dec col)
+                  :end-line (dec end-row)
+                  :end-character (dec end-col)
+                  :kind :region})))))

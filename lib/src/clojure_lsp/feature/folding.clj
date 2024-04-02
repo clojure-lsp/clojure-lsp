@@ -6,7 +6,7 @@
 
 (defn folding-range [uri db]
   (->> (q/find-element-definitions db uri)
-       (keep (fn [{:keys [row col end-row end-col] :as a}]
+       (keep (fn [{:keys [row col end-row end-col]}]
                (when (and row col end-row end-col)
                  {:start-line (dec row)
                   :start-character (dec col)

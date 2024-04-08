@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-depend to `0.10.0`.
+
 - Editor
   - Use scope location instead of name location for folding feature.
 

@@ -12,7 +12,7 @@
                              #_#_:local/root "../../clj-kondo"
                              :exclude [com.cognitect/transit-clj
                                        babashka/fs]}
-        com.fabiodomingues/clj-depend {:mvn/version "0.9.2"}
+        com.fabiodomingues/clj-depend {:mvn/version "0.10.0"}
         com.cognitect/transit-clj {:mvn/version "1.0.333"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}

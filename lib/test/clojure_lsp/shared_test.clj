@@ -188,6 +188,15 @@
   (is (= (h/file-path "/project/test/some/cool_ns.clj")
          (shared/namespace+source-path->filename "some.cool-ns" (h/file-path "/project/test/") :clj))))
 
+(deftest uri->source-paths
+  (is (= [(h/file-path "/dir/project/src")]
+         (shared/uri->source-paths (h/file-uri "file:///dir/project/src/clj/a/b.clj")
+                                   [(h/file-path "/dir/project/test") (h/file-path "/dir/project/src")])))
+  (testing "one source-path is a prefix of another"
+    (is (= [(h/file-path "/dir/project/src/cljs")]
+           (shared/uri->source-paths (h/file-uri "file:///dir/project/src/cljs/a/b.clj")
+                                     [(h/file-path "/dir/project/src/clj") (h/file-path "/dir/project/src/cljs")])))))
+
 (deftest jar-file?-test
   (is (= false (shared/jar-file? "")))
   (is (= false (shared/jar-file? "/foo")))

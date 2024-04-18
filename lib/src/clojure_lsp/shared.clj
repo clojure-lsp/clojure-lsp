@@ -250,8 +250,13 @@
     (catch Exception _
       false)))
 
+(defn ^:private ensure-ends-with-slash [^String path]
+  (if (string/ends-with? path (System/getProperty "file.separator"))
+    path
+    (str path (System/getProperty "file.separator"))))
+
 (defn ^:private filename->source-paths [filename source-paths]
-  (filter #(string/starts-with? filename %) source-paths))
+  (filter #(string/starts-with? filename (ensure-ends-with-slash %)) source-paths))
 
 (defn uri->source-paths [uri source-paths]
   (filename->source-paths (uri->filename uri) source-paths))
@@ -332,9 +337,7 @@
 
 (defn ^:private path->folder-with-slash [^String path]
   (if (directory? (io/file path))
-    (if (string/ends-with? path (System/getProperty "file.separator"))
-      path
-      (str path (System/getProperty "file.separator")))
+    (ensure-ends-with-slash path)
     path))
 
 (defn uri->namespace

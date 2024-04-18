@@ -11,6 +11,9 @@
 
 (deftest forward-slurp-test
   (assert-op f.paredit/forward-slurp
+             (h/code "[1 [2 3| 4]]")
+             (h/code "[1 [2 3|] 4]"))
+  (assert-op f.paredit/forward-slurp
              (h/code "[1 [2 [|3 4 5]] 6]")
              (h/code "[1 [2 [|3 4] 5] 6]"))
   (assert-op f.paredit/forward-slurp
@@ -24,6 +27,9 @@
              (h/code "|")))
 
 (deftest forward-barf-test
+  (assert-op f.paredit/forward-barf
+             (h/code "[1 [2] 3| 4]")
+             (h/code "[1 [2 3|] 4]"))
   (assert-op f.paredit/forward-barf
              (h/code "[1 [2 [|3 4] 5] 6]")
              (h/code "[1 [2 [|3 4 5]] 6]"))
@@ -39,6 +45,9 @@
 
 (deftest backward-slurp-test
   (assert-op f.paredit/backward-slurp
+             (h/code "[[1 |2 3] 4]")
+             (h/code "[1 [|2 3] 4]"))
+  (assert-op f.paredit/backward-slurp
              (h/code "[1 [[2 |3 4] 5] 6]")
              (h/code "[1 [2 [|3 4] 5] 6]"))
   (assert-op f.paredit/backward-slurp
@@ -51,7 +60,12 @@
              (h/code "|")
              (h/code "|")))
 
+[[1 2 3] 4]
+
 (deftest backward-barf-test
+  (assert-op f.paredit/backward-barf
+             (h/code "[1 |2 [3] 4]")
+             (h/code "[1 [|2 3] 4]"))
   (assert-op f.paredit/backward-barf
              (h/code "[1 [2 [|3 4] 5] 6]")
              (h/code "[1 [[2 |3 4] 5] 6]"))

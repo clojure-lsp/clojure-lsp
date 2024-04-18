@@ -37,7 +37,7 @@
   (testing "finds last in lineage"
     (let [zloc (z/of-string "(parent (child (grandchild)))")]
       (is (= "(child (grandchild))" (-> zloc (edit/find-at-pos 1 9) z/string)))
-      (is (= "(child (grandchild))" (-> zloc (edit/find-at-pos 1 28) z/string))))))
+      (is (= "(grandchild)" (-> zloc (edit/find-at-pos 1 28) z/string))))))
 
 (deftest find-op-test
   (let [code "(foo ((x) [a] (b {c d})))"

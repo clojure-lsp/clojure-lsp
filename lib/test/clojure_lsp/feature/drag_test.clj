@@ -34,10 +34,10 @@
     (is (not (can-drag-code-backward? "|[:a :b :c :d]")))
     (is (not (can-drag-code-backward? "|'(:a :b :c :d)"))))
   (testing "after last clause"
-    (is (not (can-drag-code-backward? (h/code "{:a 1"
-                                              ""
-                                              " :b 2"
-                                              "|}")))))
+    (is (can-drag-code-backward? (h/code "{:a 1"
+                                         ""
+                                         " :b 2"
+                                         "|}"))))
   (testing "on uneval"
     (is (not (can-drag-code-backward? (h/code "[#_a #_|b]")))))
   (testing "on first entry"

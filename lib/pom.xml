@@ -99,7 +99,7 @@
     <dependency>
       <groupId>com.fabiodomingues</groupId>
       <artifactId>clj-depend</artifactId>
-      <version>0.10.0</version>
+      <version>0.11.0</version>
     </dependency>
     <dependency>
       <groupId>medley</groupId>

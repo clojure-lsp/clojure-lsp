@@ -9,6 +9,8 @@
 - Editor
   - Use scope location instead of name location for folding feature.
   - Fix paredit commands to consider previous element when cursor inside a closing bracket.
+  - Fix paredit commands to move cursor after applying command.
+  - Fix corner case on paredit comamnds duplicating forms.
 
 ## 2024.03.31-19.10.13
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2024.04.22-11.50.26
+
 - General
   - Bump clj-depend to `0.11.0`.
   - Fix renaming ns when one source path is a prefix of another (e.g. `src/clj` and `src/cljs`) #1805

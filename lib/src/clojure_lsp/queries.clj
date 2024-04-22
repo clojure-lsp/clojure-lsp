@@ -98,6 +98,7 @@
 (def xf-analysis->protocol-impls (xf-analysis->bucket-elems :protocol-impls))
 (def xf-analysis->var-definitions (xf-analysis->bucket-elems :var-definitions))
 (def xf-analysis->var-usages (xf-analysis->bucket-elems :var-usages))
+(def xf-analysis->var-usages-and-symbols (xf-analysis->buckets-elems :var-usages :symbols))
 (def xf-analysis->symbols (xf-analysis->bucket-elems :symbols))
 (def xf-analysis->vars (xf-analysis->buckets-elems :var-definitions :var-usages :symbols))
 
@@ -518,7 +519,7 @@
   (let [names (var-definition-names var-definition)]
     (into []
           (comp
-            (if include-declaration? xf-analysis->vars xf-analysis->var-usages)
+            (if include-declaration? xf-analysis->vars xf-analysis->var-usages-and-symbols)
             (filter #(contains? names (:name %)))
             (filter #(safe-equal? (:ns var-definition) (or (:ns %) (:to %))))
             (filter #(or include-declaration?
@@ -566,8 +567,8 @@
                    (internal-analysis db))
         lang (:lang quoted-symbol)
         lang (if (= :edn lang)
-                     ;; when referring to qualified-symbols in edn, pretend it's
-                     ;; referenced from JVM Clojure
+               ;; when referring to qualified-symbols in edn, pretend it's
+               ;; referenced from JVM Clojure
                :clj
                lang)
         name (:name quoted-symbol)

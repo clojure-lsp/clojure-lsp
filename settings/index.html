@@ -1668,7 +1668,7 @@ Note: package imports with only one class will keep indentation: Ex: <code>[java
 <div class="highlight"><pre><span></span><code><span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">|</span><span class="p">]</span> <span class="p">(</span><span class="nb">+ </span><span class="mi">1</span> <span class="mi">2</span><span class="p">))</span>
 </code></pre></div>
 <h3 id="java-support">Java support<a class="headerlink" href="#java-support" title="Permanent link">#</a></h3>
-<p>At the moment, clojure-lsp supports find definition of java classes only, methods, completion and other features are not supported yet.</p>
+<p>At the moment, clojure-lsp only supports find definition of java classes and completion of fields/methods when it detects a Java class (mostly from static classes usages), other features are not supported yet.</p>
 <p>When a find-definition of a java class is triggered, clojure-lsp checks the following:</p>
 <ul>
 <li>If the java source(<code>.java</code>) is available on classpath, clojure-lsp just return that file location.</li>
@@ -1711,7 +1711,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 22, 2024</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 20, 2024</span>
     
   </small>
 </div>

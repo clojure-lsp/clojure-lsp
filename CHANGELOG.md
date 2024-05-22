@@ -4,6 +4,7 @@
 
 - General
   - Bump clj-kondo to `2024.05.22` fixing high memory usage issue.
+  - Fix use of `:filename-pattern` from kondo breaking references.
 
 ## 2024.04.22-11.50.26
 

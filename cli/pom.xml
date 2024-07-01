@@ -103,7 +103,7 @@
     <dependency>
       <groupId>borkdude</groupId>
       <artifactId>rewrite-edn</artifactId>
-      <version>0.4.7</version>
+      <version>0.4.8</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-clj</groupId>

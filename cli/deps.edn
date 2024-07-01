@@ -1,7 +1,7 @@
-{:deps {org.clojure/clojure {:mvn/version "1.11.2"}
+{:deps {org.clojure/clojure {:mvn/version "1.11.3"}
         org.clojure/tools.cli {:mvn/version "1.0.214"}
         borkdude/dynaload {:mvn/version "0.3.5"}
-        nrepl/bencode {:mvn/version "1.1.0"}
+        nrepl/bencode {:mvn/version "1.2.0"}
         com.taoensso/timbre {:mvn/version "6.3.1"}
         clojure-lsp/lib {:local/root "../lib"}
         funcool/promesa {:mvn/version "10.0.594"}}
@@ -32,7 +32,7 @@
                                 com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.1.1"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.2.2"}
                                 criterium/criterium {:mvn/version "0.4.6"}
-                                nrepl/nrepl {:mvn/version "1.0.0"}}
+                                nrepl/nrepl {:mvn/version "1.2.0"}}
                    :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}
            :native {:jvm-opts ["-Xmx2g"
                                "-server"

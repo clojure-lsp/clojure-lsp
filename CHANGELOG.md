@@ -4,6 +4,7 @@
 
 - General
   - Bump clj-kondo to `2024.05.22` fixing high memory usage issue.
+  - Bump Clojure to `1.11.3`
 
 ## 2024.04.22-11.50.26
 

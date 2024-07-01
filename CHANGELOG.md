@@ -6,6 +6,9 @@
   - Bump clj-kondo to `2024.05.22` fixing high memory usage issue.
   - Bump Clojure to `1.11.3`
   - Fix use of `:filename-pattern` from kondo breaking references.
+  
+- Editor
+  - Add code action "Add require" for namespaced keywords. #1793
 
 ## 2024.04.22-11.50.26
 

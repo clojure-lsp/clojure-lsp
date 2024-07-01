@@ -170,8 +170,8 @@
     (h/assert-contains-submaps
       [{:title "Add require '[some-ns :as sns]' × 1"
         :command {:command "add-require-suggestion"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///c.clj"))
-                          (h/file-uri "file:///c.clj")
+      (f.code-actions/all (zloc-of (h/file-uri "file:///d.clj"))
+                          (h/file-uri "file:///d.clj")
                           8
                           4
                           [{:code  "unresolved-namespace"

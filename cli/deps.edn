@@ -7,7 +7,7 @@
         funcool/promesa {:mvn/version "10.0.594"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.87.1366"}}
+                               lambdaisland/kaocha {:mvn/version "1.91.1392"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test

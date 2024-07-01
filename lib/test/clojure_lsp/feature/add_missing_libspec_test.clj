@@ -16,23 +16,23 @@
            (#'f.add-missing-libspec/find-namespace-suggestions "foo" {})))
     (is (= [{:ns "clojure.string" :alias "string"}
             {:ns "clojure.string"}]
-           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.string" {"clojure.string" nil})))
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.string" [["clojure.string" nil]])))
     (is (= [{:ns "clojure.set" :alias "s" :count 1}]
-           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.set" {"clojure.set" "s"})))
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.set" [["clojure.set" "s"]])))
     (is (= [{:ns "clojure.spec.alpha" :alias "spec"} {:ns "clojure.spec.alpha"}]
-           (#'f.add-missing-libspec/find-namespace-suggestions "spec" {"clojure.spec.alpha" nil})))
+           (#'f.add-missing-libspec/find-namespace-suggestions "spec" [["clojure.spec.alpha" nil]])))
     (is (= [{:ns "clojure.spec.alpha" :alias "s" :count 1}]
-           (#'f.add-missing-libspec/find-namespace-suggestions "spec" {"clojure.spec.alpha" "s"})))
+           (#'f.add-missing-libspec/find-namespace-suggestions "spec" [["clojure.spec.alpha" "s"]])))
     (is (= [{:ns "clojure.data.json" :alias "json"}
             {:ns "clojure.data.json"}]
-           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {"clojure.data.json" nil}))))
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" [["clojure.data.json" nil]]))))
   (testing "alias already exists"
-    (is (= [{:ns "bar" :alias "foo" :count 1}] (#'f.add-missing-libspec/find-namespace-suggestions "foo" {"bar" "foo"})))
+    (is (= [{:ns "bar" :alias "foo" :count 1}] (#'f.add-missing-libspec/find-namespace-suggestions "foo" [["bar" "foo" 1]])))
     (is (= [{:ns "clojure.string"}]
-           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.string" {"clojure.string" nil "utils.string" "string"})))
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.string" [["clojure.string" nil] ["utils.string" "string"]])))
     (is (= [{:alias "data.json" :ns "clojure.data.json"}
             {:ns "clojure.data.json"}]
-           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {"clojure.data.json" nil "something.else" "json"})))
+           (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" [["clojure.data.json" nil] ["something.else" "json"]])))
     (is (= [{:alias "data.edn", :count 3, :ns "clojure.data.edn.impl"}
             {:alias "edn.impl", :count 2, :ns "clojure.data.edn.impl"}
             {:alias "impl", :count 1, :ns "clojure.data.edn.impl"}]
@@ -85,7 +85,7 @@
     (is (= nil
            (#'f.add-missing-libspec/find-namespace-suggestions "clojure.data.json" {})))
     (is (= [{:ns "taoensso.timbre" :alias "log" :count 1}]
-           (#'f.add-missing-libspec/find-namespace-suggestions "log" {"taoensso.timbre" "log" "clojure.tools.logging" nil})))
+           (#'f.add-missing-libspec/find-namespace-suggestions "log" [["taoensso.timbre" "log" 1] ["clojure.tools.logging" nil nil]])))
     (is (= [{:ns "clojure.tools.logging" :alias "logging"}]
            (#'f.add-missing-libspec/find-namespace-suggestions "log" {"clojure.tools.logging" nil})))
     (is (= [{:ns "clojure.data.json" :alias "json"}

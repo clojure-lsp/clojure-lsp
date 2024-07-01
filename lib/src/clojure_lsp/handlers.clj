@@ -5,22 +5,23 @@
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.code-actions :as f.code-actions]
    [clojure-lsp.feature.code-lens :as f.code-lens]
+   [clojure-lsp.feature.command :as f.command]
    [clojure-lsp.feature.completion :as f.completion]
+   [clojure-lsp.feature.development-info :as f.development-info]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
    [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.feature.folding :as f.folding]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.feature.project-tree :as f.project-tree]
-   [clojure-lsp.feature.refactor :as f.refactor]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
-   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
@@ -28,9 +29,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.startup :as startup]
-   [clojure.core.async :as async]
-   [clojure.pprint :as pprint]
-   [rewrite-clj.zip :as z]))
+   [clojure.core.async :as async]))
 
 (set! *warn-on-reflection* true)
 
@@ -317,120 +316,45 @@
     :workspace-symbol
     (f.workspace-symbols/workspace-symbols query @db*)))
 
-(defn ^:private server-info [{:keys [db*]}]
-  (let [db @db*]
-    {:project-root-uri (:project-root-uri db)
-     :server-version (shared/clojure-lsp-version)
-     :clj-kondo-version (lsp.kondo/clj-kondo-version)
-     :log-path (:log-path db)
-     :project-settings (:project-settings db)
-     :classpath-settings (:classpath-settings db)
-     :client-settings (:client-settings db)
-     :final-settings (settings/all db)
-     :classpath (:classpath db)
-     :cljfmt-raw (binding [*print-meta* true]
-                   (pr-str (f.format/resolve-user-cljfmt-config db)))
-     :analysis-summary (q/analysis-summary db)
-     :port (or (:port db)
-               "NREPL only available on :debug profile (`bb debug-cli`)")}))
-
-(defn server-info-log [{:keys [producer] :as components}]
+(defn server-info-log [components]
   (shared/logging-task
     :server-info-log
-    (producer/show-message
-      producer
-      (with-out-str (pprint/pprint (server-info components)))
-      :info
-      nil)))
+    (f.development-info/server-info-log components)))
 
 (defn server-info-raw [components]
-  (shared/preserve-kebab-case (server-info components)))
+  (shared/logging-task
+    :server-info-raw
+    (f.development-info/server-info-raw components)))
 
-(defn ^:private cursor-info [{:keys [db*]} [uri line character]]
-  (let [db @db*
-        row (inc line)
-        col (inc character)
-        elements (q/find-all-elements-under-cursor db uri row col)
-        node (some-> (parser/safe-zloc-of-file db uri)
-                     (parser/to-pos row col)
-                     z/node)]
-    (shared/assoc-some {}
-                       :node (if-let [children (:children node)]
-                               (-> node (dissoc :children) (assoc :children-count (count children)))
-                               node)
-                       :elements (mapv (fn [e]
-                                         (shared/assoc-some
-                                           {:element e}
-                                           :definition (q/find-definition db e)
-                                           :semantic-tokens (f.semantic-tokens/element->token-type e)))
-                                       elements))))
-
-(defn cursor-info-log [{:keys [producer] :as components} {:keys [text-document position]}]
+(defn cursor-info-log [components {:keys [text-document position]}]
   (shared/logging-task
     :cursor-info-log
-    (producer/show-message
-      producer
-      (with-out-str (pprint/pprint (cursor-info components
-                                                [(:uri text-document) (:line position) (:character position)])))
-      :info
-      nil)))
+    (f.development-info/cursor-info-log (:uri text-document) components (inc (:line position)) (inc (:character position)))))
 
 (defn cursor-info-raw [components {:keys [text-document position]}]
   (shared/logging-task
     :cursor-info-raw
-    (-> components
-        (cursor-info [(:uri text-document) (:line position) (:character position)])
-        (shared/preserve-kebab-case))))
+    (f.development-info/cursor-info-raw (:uri text-document) components (inc (:line position)) (inc (:character position)))))
 
 (defn clojuredocs-raw [{:keys [db*]} {:keys [sym-name sym-ns]}]
   (shared/logging-task
     :clojuredocs-raw
     (f.clojuredocs/find-docs-for sym-name sym-ns db*)))
 
-(defn ^:private refactor [{:keys [db*] :as components} refactoring [uri line character & args]]
-  (let [db @db*
-        row (inc (int line))
-        col (inc (int character))
-        ;; TODO Instead of v=0 should I send a change AND a document change
-        v (get-in db [:documents uri :v] 0)
-        loc (some-> (parser/zloc-of-file db uri)
-                    (parser/to-pos row col))]
-    (f.refactor/call-refactor {:refactoring (keyword refactoring)
-                               :db          db
-                               :loc         loc
-                               :uri         uri
-                               :row         row
-                               :col         col
-                               :args        args
-                               :version     v}
-                              components)))
-
 (defn execute-command [{:keys [producer] :as components} {:keys [command arguments]}]
-  (cond
-    (= command "server-info")
-    (server-info-log components)
-
-    (= command "cursor-info")
-    (cursor-info-log components
-                     {:text-document (nth arguments 0)
-                      :position {:line (nth arguments 1)
-                                 :character (nth arguments 2)}})
-
-    (some #(= % command) f.refactor/available-refactors)
-    (shared/logging-task
-      :execute-command
-      ;; TODO move components upper to a common place
-      (when-let [{:keys [edit show-document-after-edit error] :as result} (refactor components command arguments)]
-        (if error
-          result
-          (do
-            ;; waits for client to apply edit before showing doc/moving cursor
-            (producer/publish-workspace-edit producer edit)
-            (when show-document-after-edit
-              (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
-                                                                shared/full-file-range))
-                   (producer/show-document-request producer)))
-            edit))))))
+  (shared/logging-task
+    :execute-command
+    (when-let [{:keys [edit show-document-after-edit error] :as result} (f.command/call-command (keyword command) arguments components)]
+      (if error
+        result
+        (do
+          ;; waits for client to apply edit before showing doc/moving cursor
+          (producer/publish-workspace-edit producer edit)
+          (when show-document-after-edit
+            (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
+                                                              shared/full-file-range))
+                 (producer/show-document-request producer)))
+          edit)))))
 
 (defn hover [components {:keys [text-document position]}]
   (when-not (skip-feature-for-uri? :hover (:uri text-document) components)
@@ -550,6 +474,13 @@
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (f.linked-editing-range/ranges (:uri text-document) row col db))))
+
+(defn folding-range
+  [{:keys [db*]} {:keys [text-document]}]
+  (shared/logging-task
+    :folding-range
+    (let [db @db*]
+      (f.folding/folding-range (:uri text-document) db))))
 
 (defn will-rename-files [{:keys [db*] :as components} {:keys [files]}]
   (process-after-all-changes

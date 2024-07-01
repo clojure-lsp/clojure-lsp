@@ -6,7 +6,8 @@ on:
       - master
     paths-ignore:
       - 'deps-lock.json'
-      - 'resources/CLOJURE_LSP_VERSION'
+      - 'lib/resources/CLOJURE_LSP_VERSION'
+      - 'lib/resources/CLOJURE_LSP_RELEASED_VERSION'
       - '.github/workflows/bump_deps.yml'
       - '.github/workflows/bump_downstreams.yml'
       - '.github/workflows/ci.yml'

@@ -2,10 +2,36 @@
 
 ## Unreleased
 
+- General
+  - Bump clj-kondo to `2024.05.22` fixing high memory usage issue.
+  - Bump Clojure to `1.11.3`
+  - Fix use of `:filename-pattern` from kondo breaking references.
+  
+- Editor
+  - Add code action "Add require" for namespaced keywords. #1793
+
+## 2024.04.22-11.50.26
+
+- General
+  - Bump clj-depend to `0.11.0`.
+  - Fix renaming ns when one source path is a prefix of another (e.g. `src/clj` and `src/cljs`) #1805
+
+- Editor
+  - Use scope location instead of name location for folding feature.
+  - Fix paredit commands to consider previous element when cursor inside a closing bracket.
+  - Fix paredit commands to move cursor after applying command.
+  - Fix corner case on paredit comamnds duplicating forms.
+  - References of a var-definition now consider full quoted qualified symbols. #1804
+
+## 2024.03.31-19.10.13
+
 - Editor
   - Adding require command fails for requires without alias. #1791
   - Add require command without alias now add requires with brackets.
-  - Add code action "Add require" for namespaced keywords. #1793
+  - Project tree feature now support keyword definitions like re-frame sub/reg. #1789
+  - Support `textDocument/foldingRange` LSP feature. #1602
+  - Improve `textDocument/documentSymbol` considering keyword definitions and returning flatten elements.
+  - Fix Add require/import usages count in code actions. #1794.
 
 ## 2024.03.13-13.11.00
 

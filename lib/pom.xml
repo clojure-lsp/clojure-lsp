@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2024.03.13-13.11.00</version>
+  <version>2024.04.22-11.50.26</version>
   <name>clojure-lsp</name>
   <licenses>
     <license>
@@ -32,7 +32,7 @@
     <dependency>
       <groupId>com.github.clojure-lsp</groupId>
       <artifactId>lsp4clj</artifactId>
-      <version>1.9.3</version>
+      <version>1.10.0</version>
       <exclusions>
         <exclusion>
           <groupId>funcool</groupId>
@@ -48,7 +48,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2024.03.13</version>
+      <version>2024.05.24</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
@@ -83,7 +83,7 @@
     <dependency>
       <groupId>borkdude</groupId>
       <artifactId>rewrite-edn</artifactId>
-      <version>0.4.7</version>
+      <version>0.4.8</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-clj</groupId>
@@ -99,7 +99,7 @@
     <dependency>
       <groupId>com.fabiodomingues</groupId>
       <artifactId>clj-depend</artifactId>
-      <version>0.9.2</version>
+      <version>0.11.0</version>
     </dependency>
     <dependency>
       <groupId>medley</groupId>
@@ -130,6 +130,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2024.03.13-13.11.00</tag>
+    <tag>2024.04.22-11.50.26</tag>
   </scm>
 </project>

@@ -123,16 +123,14 @@
        alias-suggestions))
 
 (defn ^:private missing-import-actions [uri missing-imports]
-  (let [show-count? (> (count missing-imports) 1)]
-    (map (fn [{:keys [missing-import usages-count position]}]
-           {:title        (str "Add import '" missing-import "'"
-                               (if show-count? (str " x " usages-count) ""))
-            :kind         :quick-fix
-            :is-preferred true
-            :command      {:title     "Add missing import"
-                           :command   "add-missing-import"
-                           :arguments [uri (:line position) (:character position) missing-import]}})
-         missing-imports)))
+  (map (fn [{:keys [missing-import usages-count position]}]
+         {:title        (str "Add import '" missing-import "' × " (or usages-count 0))
+          :kind         :quick-fix
+          :is-preferred true
+          :command      {:title     "Add missing import"
+                         :command   "add-missing-import"
+                         :arguments [uri (:line position) (:character position) missing-import]}})
+       missing-imports))
 
 (defn ^:private change-colls-actions [uri line character other-colls]
   (map (fn [coll]

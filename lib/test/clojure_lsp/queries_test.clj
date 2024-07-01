@@ -317,6 +317,34 @@
           :ns 'some.cool-ns}]
         (q/find-references-from-cursor (h/db) (h/file-uri "file:///b.clj") usage-r usage-c false)))))
 
+(deftest find-references-from-var-definition-to-symbols
+  (let [[[def-r def-c]] (h/load-code-and-locs (h/code "(ns some.cool-ns) (def |foo 1)"))
+        _ (h/load-code-and-locs (h/code "(ns other.cool-ns"
+                                        " (:require [some.cool-ns :as s]))"
+                                        "s/foo"
+                                        "'some.cool-ns/foo"
+                                        "#'some.cool-ns/foo")
+                                (h/file-uri "file:///b.clj"))]
+    (testing "from var-definition"
+      (h/assert-submaps
+        [{:uri (h/file-uri "file:///b.clj")
+          :bucket :var-usages
+          :name-row 3
+          :name 'foo
+          :from 'other.cool-ns}
+         {:uri (h/file-uri "file:///b.clj")
+          :bucket :var-usages
+          :name 'foo
+          :name-row 5
+          :from 'other.cool-ns}
+         {:uri (h/file-uri "file:///b.clj")
+          :bucket :symbols
+          :from 'other.cool-ns
+          :name 'foo
+          :name-row 4
+          :to 'some.cool-ns}]
+        (q/find-references-from-cursor (h/db) h/default-uri def-r def-c false)))))
+
 (deftest find-references-from-defrecord
   (let [code (str "(defrecord |MyRecord [])\n"
                   "(|MyRecord)"

@@ -44,7 +44,7 @@
         5  "foo"
         6  "foo"
         7  "foo"
-        8  "(ns foo)"
+        8  "foo"
         9  " "
         10 "foo/"
         11 "foo/"
@@ -57,7 +57,7 @@
         18 "1"
         19 " "
         20 "2"
-        21 "(+ 1 2)"))
+        21 "2"))
     (is (= "foo/" (to-pos "foo/ " 1 1)))
     (is (= "foo/" (to-pos "foo/\n" 1 1)))
     (is (= "foo/" (to-pos "(foo/)" 1 2)))
@@ -81,7 +81,10 @@
       (is (= "a" (to-pos "foo/ a" 1 6)))
       (is (= "a" (to-pos ": a" 1 3)))
       (is (= "a" (to-pos ":foo/ a" 1 7)))
-      (is (= "a" (to-pos "::foo/ a" 1 8))))))
+      (is (= "a" (to-pos "::foo/ a" 1 8))))
+    (testing "on closing brackets we return previous element"
+      (is (= "[2 3]" (to-pos "[1 [2 3] 4]" 1 4)))
+      (is (= "3" (to-pos "[1 [2 3] 4]" 1 8))))))
 
 (deftest lein-file->edn
   (testing "simple defproject on root"

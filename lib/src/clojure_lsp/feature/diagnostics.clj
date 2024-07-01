@@ -43,7 +43,7 @@
 (defn ^:private unused-public-var->finding [element kondo-config]
   (let [keyword-def? (identical? :keyword-definitions (:bucket element))
         kondo-config (if (:ns element)
-                       (kondo-config-for-ns kondo-config (:ns element) (:filename element))
+                       (kondo-config-for-ns kondo-config (:ns element) (-> element :uri shared/uri->filename))
                        kondo-config)]
     {:uri (:uri element)
      :row (:name-row element)
@@ -59,7 +59,7 @@
      :type :clojure-lsp/unused-public-var}))
 
 (defn ^:private exclude-public-diagnostic-definition? [db kondo-config definition]
-  (let [kondo-config (kondo-config-for-ns kondo-config (:ns definition) (:filename definition))
+  (let [kondo-config (kondo-config-for-ns kondo-config (:ns definition) (-> definition :uri shared/uri->filename))
         excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
         excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
         excluded-metas (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})

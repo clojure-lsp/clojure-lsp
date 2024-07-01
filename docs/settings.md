@@ -391,7 +391,7 @@ It should return a completion item that after applied should result in:
 
 ### Java support
 
-At the moment, clojure-lsp supports find definition of java classes only, methods, completion and other features are not supported yet.
+At the moment, clojure-lsp only supports find definition of java classes and completion of fields/methods when it detects a Java class (mostly from static classes usages), other features are not supported yet.
 
 When a find-definition of a java class is triggered, clojure-lsp checks the following:
 

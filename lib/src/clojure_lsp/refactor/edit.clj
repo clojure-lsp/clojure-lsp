@@ -33,7 +33,13 @@
 (defn ^:private zloc-in-range?
   "Checks whether the `loc`s node is [[in-range?]] of the given `pos`."
   [loc pos]
-  (some-> loc z/node meta (in-range? pos)))
+  (or (some-> loc z/node meta (in-range? pos))
+      ;; on closing brackets we want to return the previous inner element
+      (and (= (-> loc z/node meta :end-col)
+              (:end-col pos))
+           (z/rightmost? loc)
+           (contains? #{:list :vector :map :set} (z/tag (z/up loc)))
+           (some-> loc z/up z/node meta (in-range? pos)))))
 
 (defn find-by-heritability
   "Find the leftmost deepest zloc from `start-zloc` that satisfies `inherits?`.

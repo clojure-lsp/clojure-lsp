@@ -35,17 +35,15 @@
 
 (defn ^:private external-dependencies-node [node db]
   (let [uris (keys (q/external-analysis db))
-        jars (set (keep (fn [uri]
-                          (second (re-find #"(.+)!/|::.*" uri)))
-                        uris))]
+        jars (sort (set (keep (fn [uri]
+                                (second (re-find #"(.+)!/|::.*" uri)))
+                              uris)))]
     {:name (:name node)
      :type (:type node)
      :id (:id node)
      :nodes (mapv
               (fn [jar-uri]
-                {:name (second (re-find (re-pattern (str ".+" (if shared/windows-os?
-                                                                (str "\\" (System/getProperty "file.separator"))
-                                                                (System/getProperty "file.separator")) "(.+.jar$)")) jar-uri))
+                {:name (second (re-find (re-pattern ".+/(.+.jar$)") jar-uri))
                  :detail jar-uri
                  :uri jar-uri
                  :final false
@@ -76,7 +74,8 @@
               (concat ns-definitions java-class-definitions))}))
 
 (defn ^:private ns-node [node db]
-  (let [var-definitions (q/find-var-definitions db (:uri node) true)]
+  (let [definitions (concat (q/find-var-definitions db (:uri node) true)
+                            (q/find-keyword-definitions db (:uri node)))]
     {:name (:name node)
      :type (:type node)
      :uri (:uri node)
@@ -88,8 +87,9 @@
                    :range (shared/->range element)
                    :final true
                    :type (q/element->symbol-kind element)}
-                  :detail (when (:private element) "private")))
-              var-definitions)}))
+                  :detail (cond (:private element) "private"
+                                (:reg element) (name (:reg element)))))
+              definitions)}))
 
 (defn nodes [db current-node]
   (cond

@@ -191,7 +191,7 @@
             (startup/publish-task-progress producer (:done post-startup-tasks) work-done-token))
           (logger/info startup/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
           (producer/refresh-test-tree producer internal-uris)))
-      (producer/show-message producer "No project-root-uri was specified, some features may not work properly." :warning nil))))
+      (producer/show-message producer "No project-root-uri was specified, some features will be limited." :warning nil))))
 
 (defn did-open [{:keys [producer] :as components} {:keys [text-document]}]
   (shared/logging-task

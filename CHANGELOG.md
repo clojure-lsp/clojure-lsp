@@ -7,6 +7,9 @@
   - Bump Clojure to `1.11.3`
   - Fix use of `:filename-pattern` from kondo breaking references.
 
+- Editor
+  - Add `clojure.test/deftest` option to resolve macro as code action. #1850
+
 ## 2024.04.22-11.50.26
 
 - General

@@ -80,7 +80,8 @@
    'clojure-lsp.api/clean-ns! api/clean-ns!
    'clojure-lsp.api/diagnostics api/diagnostics
    'clojure-lsp.api/format! api/format!
-   'clojure-lsp.api/rename! api/rename!})
+   'clojure-lsp.api/rename! api/rename!
+   'clojure-lsp.api/dump api/dump})
 
 (defn run-pod []
   (loop []

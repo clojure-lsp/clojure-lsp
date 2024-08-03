@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2024.04.22-11.50.26</version>
+  <version>2024.08.03-15.28.27</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -17,7 +17,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.11.1</version>
+      <version>1.11.3</version>
     </dependency>
     <dependency>
       <groupId>org.benf</groupId>
@@ -53,7 +53,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2024.05.24</version>
+      <version>2024.08.01</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
@@ -158,6 +158,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2024.04.22-11.50.26</tag>
+    <tag>2024.08.03-15.28.27</tag>
   </scm>
 </project>

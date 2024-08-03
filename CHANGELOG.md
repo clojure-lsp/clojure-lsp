@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2024.08.03-15.28.27
+
 - General
   - Bump clj-kondo to `2024.08.01` fixing high memory usage issue.
   - Bump Clojure to `1.11.3`

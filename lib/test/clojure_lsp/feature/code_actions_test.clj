@@ -144,7 +144,8 @@
                              "(deftest some-test)\n"
                              "MyClass.\n"
                              "Date.\n"
-                             "Date/parse")
+                             "Date/parse\n"
+                             "::sns/foo")
                         (h/file-uri "file:///d.clj"))
   (testing "when it has not unresolved-namespace diagnostic"
     (is (not-any? #(string/starts-with? (:title %) "Add require")
@@ -164,6 +165,17 @@
                           11
                           [{:code  "unresolved-namespace"
                             :range {:start {:line 2 :character 10}}}] {}
+                          (h/db))))
+  (testing "when it has unresolved namespaced keywords and can find namespace"
+    (h/assert-contains-submaps
+      [{:title "Add require '[some-ns :as sns]' × 2"
+        :command {:command "add-require-suggestion"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///d.clj"))
+                          (h/file-uri "file:///d.clj")
+                          8
+                          4
+                          [{:code  "unresolved-namespace"
+                            :range {:start {:line 7 :character 3}}}] {}
                           (h/db))))
   (testing "when it has unresolved-namespace but cannot find namespace"
     (is (not-any? #(string/starts-with? (:title %) "Add require")

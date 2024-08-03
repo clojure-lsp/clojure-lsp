@@ -11,6 +11,7 @@
 - Editor
   - Add `clojure.test/deftest` option to resolve macro as code action. #1850
   - Allow starting clojure-lsp without a project root but with limited features. #1815
+  - Add code action "Add require" for namespaced keywords. #1793
 
 ## 2024.04.22-11.50.26
 

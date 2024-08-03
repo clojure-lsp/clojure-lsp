@@ -29,7 +29,13 @@
 
 (defn safe-sym [zloc]
   (when-let [s (safe-sexpr zloc)]
-    (when (symbol? s)
+    (cond
+      (keyword? s)
+      (when-let [kw-str (z/string zloc)]
+        (when (string/starts-with? kw-str "::")
+          (symbol (subs kw-str 2))))
+
+      (symbol? s)
       s)))
 
 (defn ^:private resolve-ns-inner-blocks-identation [db]

@@ -63,6 +63,7 @@
    "clojure.core/for"
    "clojure.core/->"
    "clojure.core/->>"
+   "clojure.test/deftest"
    "clj-kondo.lint-as/def-catch-all"])
 
 (defn show-message-request-or-error [producer message error]

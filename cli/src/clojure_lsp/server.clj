@@ -517,7 +517,7 @@
   ;; about which messages are sent when probably needs to be handled in lsp4clj.
   ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
   (handler/initialize components
-                      (normalize-uri (:root-uri params))
+                      (some-> (:root-uri params) normalize-uri)
                       (:capabilities params)
                       (client-settings params)
                       (some-> params :work-done-token str))

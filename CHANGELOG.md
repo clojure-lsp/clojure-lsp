@@ -3,11 +3,14 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2024.05.22` fixing high memory usage issue.
+  - Bump clj-kondo to `2024.08.01` fixing high memory usage issue.
   - Bump Clojure to `1.11.3`
   - Fix use of `:filename-pattern` from kondo breaking references.
-  
+  - Add `api.dump` to the pod namespace so it can be used with babashka.
+
 - Editor
+  - Add `clojure.test/deftest` option to resolve macro as code action. #1850
+  - Allow starting clojure-lsp without a project root but with limited features. #1815
   - Add code action "Add require" for namespaced keywords. #1793
 
 ## 2024.04.22-11.50.26

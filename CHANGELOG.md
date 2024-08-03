@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2024.05.24` fixing high memory usage issue.
+  - Bump clj-kondo to `2024.08.01` fixing high memory usage issue.
   - Bump Clojure to `1.11.3`
   - Fix use of `:filename-pattern` from kondo breaking references.
   - Add `api.dump` to the pod namespace so it can be used with babashka.

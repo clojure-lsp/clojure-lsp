@@ -276,7 +276,7 @@ jobs:
   macos-amd64:
     name: Build native MacOS amd64 binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: macos-latest-large
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
@@ -326,7 +326,7 @@ jobs:
   macos-aarch64:
     name: Build native MacOS aarch64 binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: macos-latest-xlarge
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2

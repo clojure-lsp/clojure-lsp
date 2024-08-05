@@ -210,7 +210,7 @@ jobs:
   macos-amd64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
-    runs-on: macos-latest-large
+    runs-on: macos-13
     strategy:
       fail-fast: false
     steps:
@@ -261,7 +261,7 @@ jobs:
   macos-aarch64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
-    runs-on: macos-latest-xlarge
+    runs-on: macos-14
     strategy:
       fail-fast: false
     steps:

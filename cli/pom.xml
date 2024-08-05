@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2024.08.05-16.43.31</version>
+  <version>2024.08.03-15.28.27</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -158,6 +158,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2024.08.05-16.43.31</tag>
+    <tag>2024.08.03-15.28.27</tag>
   </scm>
 </project>

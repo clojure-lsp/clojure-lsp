@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-## 2024.08.05-16.43.31
-
 - General 
   - Fix CI for macos amd64. #1859
   - Replace CirrusCI with Github for macos-aarch64 binary standardizing deploy process.

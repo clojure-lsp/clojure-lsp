@@ -210,58 +210,7 @@ jobs:
   macos-amd64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
-    runs-on: macos-latest-large
-    strategy:
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
-        with:
-          name: clojure-lsp-standalone.jar
-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.10.3.1013'
-          bb: '0.9.161'
-
-      - uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '21'
-          distribution: 'graalvm'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build MacOS native image
-        env:
-          CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
-          CLOJURE_LSP_XMX: "-J-Xmx6g"
-        run: |
-          bb native-cli
-
-      # Remove after all places are using clojure-lsp-dev-builds
-      - name: Upload
-        uses: actions/upload-artifact@v3
-        with:
-          path: clojure-lsp
-          name: clojure-lsp-native-macos-amd64
-
-      - name: Zip binary
-        run: zip clojure-lsp-native-macos-amd64.zip clojure-lsp
-
-      - name: Upload to dev release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
-          prerelease: false
-          repo_name: clojure-lsp/clojure-lsp-dev-builds
-          file: clojure-lsp-native-macos-amd64.zip
-          asset_name: clojure-lsp-native-macos-amd64.zip
-          tag: ${{ needs.release-dev-build.outputs.tag}}
-
-macos-amd64:
-    needs: [build-cli-jar, release-dev-build]
-    continue-on-error: true
-    runs-on: macos-latest-large
+    runs-on: macos-13
     strategy:
       fail-fast: false
     steps:
@@ -312,7 +261,7 @@ macos-amd64:
   macos-aarch64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
-    runs-on: macos-latest-xlarge
+    runs-on: macos-14
     strategy:
       fail-fast: false
     steps:

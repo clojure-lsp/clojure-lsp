@@ -273,10 +273,10 @@ jobs:
           path: clojure-lsp-native-linux-aarch64.zip
           name: clojure-lsp-native-linux-aarch64.zip
 
-  macos:
-    name: Build native MacOS binary
+  macos-amd64:
+    name: Build native MacOS amd64 binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: macos-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
@@ -322,6 +322,56 @@ jobs:
         with:
           path: clojure-lsp-native-macos-amd64.zip
           name: clojure-lsp-native-macos-amd64.zip
+
+  macos-aarch64:
+    name: Build native MacOS aarch64 binary
+    needs: [build-lib-jar, build-cli-jar]
+    runs-on: macos-latest-xlarge
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: clojure-lsp-standalone.jar
+
+      - name: Install clojure build tools
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.10.3.1013'
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          native-image-musl: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build MacOS native image
+        env:
+          CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+        run: |
+          bb native-cli
+
+      - name: Run babashka pod tests
+        env:
+          CLOJURE_LSP_TEST_ENV: native
+        run: bb pod-test
+
+      - name: Run integration tests
+        run: |
+          bb integration-test
+
+      - name: Zip binary
+        run: zip clojure-lsp-native-macos-aarch64.zip clojure-lsp
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          path: clojure-lsp-native-macos-aarch64.zip
+          name: clojure-lsp-native-macos-aarch64.zip
 
   windows:
     name: Build native Windows binary
@@ -400,7 +450,7 @@ jobs:
   release:
     name: Create Release
     environment: prod-release
-    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, macos, windows]
+    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, macos-amd64, macos-aarch64, windows]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.2.0
@@ -507,12 +557,20 @@ jobs:
           asset_name: clojure-lsp-native-linux-aarch64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
 
-      - name: Upload MacOS native binary
+      - name: Upload MacOS amd64 native binary
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip
           asset_name: clojure-lsp-native-macos-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload MacOS aarch64 native binary
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-macos-aarch64.zip/clojure-lsp-native-macos-aarch64.zip
+          asset_name: clojure-lsp-native-macos-aarch64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}
 
       - name: Upload Windows native binary

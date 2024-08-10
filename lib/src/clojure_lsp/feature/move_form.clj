@@ -172,7 +172,7 @@
                                                               (when source-refer
                                                                 {:refer (:name source-refer)}))
 
-                                                    ns-changes (determine-ns-edits local-buckets file-loc def-to-move source-ns source-refer libspec source-uri db)
+                                                    ns-changes (determine-ns-edits local-buckets file-loc def-to-move source-ns source-refer libspec usage-uri db)
                                                     replacement-ns (cond
                                                                      (:alias libspec)
                                                                      (:alias libspec)

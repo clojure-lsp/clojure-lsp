@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix move-form double edit problem in cljc files.
+
 ## 2024.08.05-18.16.00
 
 - General 

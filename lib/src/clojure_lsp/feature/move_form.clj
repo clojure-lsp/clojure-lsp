@@ -92,7 +92,8 @@
   (let [db @db*
         source-nses (vec (dep-graph/ns-names-for-uri db source-uri))
         dest-uri (-> dest-filename (shared/absolute-path db) (shared/filename->uri db))
-        dest-nses (vec (dep-graph/ns-names-for-uri db dest-uri))]
+        dest-nses (vec (dep-graph/ns-names-for-uri db dest-uri))
+        unique-usage (juxt :uri :name :row :col)]
     (when (and (= 1 (count source-nses))
                (= 1 (count dest-nses)))
       (let [source-ns (first source-nses)
@@ -123,7 +124,8 @@
                                       z/rightmost)
                 insertion-pos (meta (z/node insertion-loc))
                 dest-inner-usages (->> inner-usages
-                                       (filterv (comp #(= dest-ns %) :to)))
+                                       (filterv (comp #(= dest-ns %) :to))
+                                       (medley/distinct-by unique-usage))
                 dest-changes (-> [{:loc (z/of-string "\n\n")
                                    :range (assoc insertion-pos :row (:end-row insertion-pos) :col (:end-col insertion-pos))}
                                   {:loc (some-> insertion-loc
@@ -157,10 +159,11 @@
                                                     suggestion (if dest-require
                                                                  {:alias (str (:alias dest-require))}
                                                                  (first namespace-suggestions))
-                                                    usages (filter #(and (not (:refer %))
-                                                                         (= (:to %) source-ns)
-                                                                         (= (:name %) (:name def-to-move)))
-                                                                   (:var-usages local-buckets))
+                                                    usages (->> (:var-usages local-buckets)
+                                                                (filter #(and (not (:refer %))
+                                                                              (= (:to %) source-ns)
+                                                                              (= (:name %) (:name def-to-move))))
+                                                                (medley/distinct-by unique-usage))
                                                     libspec (merge
                                                               {:type :require
                                                                :lib dest-ns}

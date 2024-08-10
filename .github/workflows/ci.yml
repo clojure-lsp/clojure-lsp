@@ -51,12 +51,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04]
-        jdk: [8, 11, 15, 17, 19]
+        jdk: [11, 17, 19]
         include:
           - os: windows-latest
-            jdk: 8
+            jdk: 11
           - os: macos-latest
-            jdk: 8
+            jdk: 11
     steps:
       - uses: actions/checkout@v2.2.0
         with:
@@ -82,12 +82,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04]
-        jdk: [11, 15, 17]
+        jdk: [11, 17, 19]
         include:
           - os: windows-latest
-            jdk: 8
+            jdk: 11
           - os: macos-latest
-            jdk: 8
+            jdk: 11
     steps:
       - uses: actions/checkout@v2.2.0
         with:

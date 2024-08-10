@@ -4,6 +4,7 @@
 
 - General
   - Fix move-form double edit problem in cljc files.
+  - Use correct uri when cleaning ns:es in move-form.
 
 ## 2024.08.05-18.16.00
 

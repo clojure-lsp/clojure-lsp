@@ -165,3 +165,49 @@
                e-results))
         (is (= (:result f-code)
                f-results))))))
+
+(deftest clean-ns-test
+  (testing "clean usage ns:es correctly after move"
+    (h/reset-components!)
+    (let [a-uri (h/file-uri "file:///a.clj")
+          b-uri (h/file-uri "file:///b.clj")
+          c-uri (h/file-uri "file:///c.clj")
+          d-uri (h/file-uri "file:///d.clj")
+          zloc (h/load-code-and-zloc (h/code "(ns apple"
+                                             "  (:require [diner :as d]))"
+                                             "|(def bar inc)"
+                                             "(bar 1)")
+                                     a-uri)
+          _ (h/load-code-and-locs "(ns bread)" b-uri)
+          _ (h/load-code-and-locs (h/code "(ns crumb"
+                                          "  (:require"
+                                          "   [apple]"
+                                          "   [diner]))"
+                                          "(apple/bar 1)"
+                                          "(diner/inc 1)")
+                                  c-uri)
+          _ (h/load-code-and-locs (h/code "(ns diner)"
+                                          "(def inc inc)")
+                                  d-uri)
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))
+          a-results (h/changes-by-uri->code results a-uri (h/db))
+          b-results (h/changes-by-uri->code results b-uri (h/db))
+          c-results (h/changes-by-uri->code results c-uri (h/db))
+          d-results (h/changes-by-uri->code results d-uri (h/db))]
+      (is (= (h/code "(ns apple"
+                     "  (:require"
+                     "   [bread]))"
+                     "(bread/bar 1)") a-results))
+
+      (is (= (h/code "(ns bread)"
+                     ""
+                     "(def bar inc)") b-results))
+
+      (is (= (h/code "(ns crumb"
+                     "  (:require"
+                     "   [bread]"
+                     "   [diner]))"
+                     "(bread/bar 1)"
+                     "(diner/inc 1)") c-results))
+      (is (= (h/code "(ns diner)"
+                     "(def inc inc)") d-results)))))

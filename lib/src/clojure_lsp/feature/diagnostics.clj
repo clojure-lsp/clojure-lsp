@@ -251,32 +251,33 @@
           (namespace-alias->finding namespace-alias inconsistencies kondo-config))))))
 
 (defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
-  (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
-        var-definitions (->> (q/find-all-var-definitions narrowed-db)
-                             (remove exclude-def?))
-        var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
-        var-usages (into #{}
-                         (comp
-                           (q/xf-all-var-usages-to-namespaces var-nses)
-                           (map q/var-usage-signature))
-                         (q/nses-and-dependents-analysis project-db var-nses))
-        var-used? (fn [var-def]
-                    (some var-usages (q/var-definition-signatures var-def)))
-        kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
-                            (remove exclude-def?))
-        kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords
-                    (into #{}
-                          (comp
-                            q/xf-all-keyword-usages
-                            (map q/kw-signature))
-                          (:analysis project-db))
-                    #{})
-        kw-used? (fn [kw-def]
-                   (contains? kw-usages (q/kw-signature kw-def)))]
-    (->> (concat (remove var-used? var-definitions)
-                 (remove kw-used? kw-definitions))
-         (map (fn [unused-var]
-                (unused-public-var->finding unused-var kondo-config))))))
+  (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/unused-public-var :level))
+    (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
+          var-definitions (->> (q/find-all-var-definitions narrowed-db)
+                               (remove exclude-def?))
+          var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
+          var-usages (into #{}
+                           (comp
+                             (q/xf-all-var-usages-to-namespaces var-nses)
+                             (map q/var-usage-signature))
+                           (q/nses-and-dependents-analysis project-db var-nses))
+          var-used? (fn [var-def]
+                      (some var-usages (q/var-definition-signatures var-def)))
+          kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
+                              (remove exclude-def?))
+          kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords
+                      (into #{}
+                            (comp
+                              q/xf-all-keyword-usages
+                              (map q/kw-signature))
+                            (:analysis project-db))
+                      #{})
+          kw-used? (fn [kw-def]
+                     (contains? kw-usages (q/kw-signature kw-def)))]
+      (->> (concat (remove var-used? var-definitions)
+                   (remove kw-used? kw-definitions))
+           (map (fn [unused-var]
+                  (unused-public-var->finding unused-var kondo-config)))))))
 
 (defn ^:private findings-of-project
   [db kondo-config]

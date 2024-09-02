@@ -169,14 +169,7 @@
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
     (h/assert-submaps
-      [{:uri h/default-uri
-        :level :off
-        :type :clojure-lsp/unused-public-var
-        :message "Unused public var 'some-ns/foo'"
-        :row 1
-        :col 20
-        :end-row 1
-        :end-col 23}]
+      []
       @findings))
   (testing "linter level by default is :info"
     (reset! findings [])

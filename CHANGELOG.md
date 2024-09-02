@@ -4,6 +4,7 @@
 
 - General
   - Fix move-form double edit problem in cljc files.
+  - Fix disabling `:clojure-lsp/unused-public-var` linter also disabling `:clojure-lsp/different-aliases`
 
 ## 2024.08.05-18.16.00
 

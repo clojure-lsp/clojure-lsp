@@ -237,13 +237,14 @@
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
 (defn ^:private run-custom-lint? [config]
-  (not= :off (get-in config [:linters :clojure-lsp/unused-public-var :level])))
+  (or (-> config :linters :clojure-lsp/unused-public-var :level (not= :off))
+      (-> config :linters :clojure-lsp/different-aliases :level (not= :off))))
 
 (defn ^:private custom-lint-project!
   [db {:keys [config] :as kondo-ctx} normalization-config]
   (when (run-custom-lint? config)
     (shared/logging-time
-      "Linting whole project for unused-public-var took %s"
+      "Custom linting the whole project took %s"
       (let [db (db-with-analysis db (normalize kondo-ctx normalization-config db))]
         (f.diagnostic/custom-lint-project! db kondo-ctx)))))
 

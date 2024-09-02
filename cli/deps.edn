@@ -32,7 +32,7 @@
                                 com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.1.1"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.2.2"}
                                 criterium/criterium {:mvn/version "0.4.6"}
-                                nrepl/nrepl {:mvn/version "1.2.0"}}
+                                nrepl/nrepl {:mvn/version "1.3.0"}}
                    :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}
            :native {:jvm-opts ["-Xmx2g"
                                "-server"

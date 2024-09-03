@@ -62,21 +62,7 @@ You can help us keep going and improving it by **[supporting the project](https:
 
 ### Gold sponsors
 
-<table id="github-sponsors">
-  <tr>
-    <td align="center">
-      <div>
-        <a href="https://github.com/pitch-io">
-          <img src="https://github.com/pitch-io.png" width="100px;" style="border-radius: 50%;" alt="pitch-io"/>
-          <br/>
-          <sub><b>pitch-io</b></sub>
-        </a>
-        <br/>
-         Pitch
-      </div>
-    </td>
-  </tr>
-</table>
+No Gold sponsors at the moment
 
 ### Sponsors
 

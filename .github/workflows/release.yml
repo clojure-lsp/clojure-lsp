@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: clojure-lsp-standalone.jar
 
@@ -148,7 +148,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: clojure-lsp-standalone.jar
 
@@ -198,7 +198,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: clojure-lsp-standalone.jar
 
@@ -279,7 +279,7 @@ jobs:
     runs-on: macos-13
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: clojure-lsp-standalone.jar
 
@@ -329,7 +329,7 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: clojure-lsp-standalone.jar
 
@@ -379,7 +379,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: clojure-lsp-standalone.jar
 
@@ -490,7 +490,7 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
 
       - name: Upload jar
         uses: svenstaro/upload-release-action@v2

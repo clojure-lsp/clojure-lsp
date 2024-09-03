@@ -169,7 +169,7 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         name: clojure-lsp-native
 
       - name: Setup binary

@@ -181,7 +181,6 @@
     (h/load-code-and-locs (code "(fn [{:keys [foo bar]}])"))
     (is (= [0 1 2 3 0
             0 6 4 4 0
-            0 0 4 4 0
             0 6 3 6 0
             0 4 3 6 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))

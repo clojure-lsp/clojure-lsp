@@ -33,7 +33,7 @@ jobs:
         run: bb lib-jar
 
       - name: Upload jar
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp.jar
           name: clojure-lsp.jar
@@ -65,7 +65,7 @@ jobs:
         run: bb server-jar
 
       - name: Upload server jar
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp-server.jar
           name: clojure-lsp-server.jar
@@ -74,7 +74,7 @@ jobs:
         run: bb cli-prod-jar
 
       - name: Upload standalone jar
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp-standalone.jar
           name: clojure-lsp-standalone.jar
@@ -83,7 +83,7 @@ jobs:
         run: bb prod-cli
 
       - name: Upload bin
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp
           name: clojure-lsp
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
 
@@ -137,7 +137,7 @@ jobs:
         run: zip clojure-lsp-native-linux-amd64.zip clojure-lsp
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp-native-linux-amd64.zip
           name: clojure-lsp-native-linux-amd64.zip
@@ -148,7 +148,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
 
@@ -184,7 +184,7 @@ jobs:
         run: zip clojure-lsp-native-static-linux-amd64.zip clojure-lsp
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp-native-static-linux-amd64.zip
           name: clojure-lsp-native-static-linux-amd64.zip
@@ -198,7 +198,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
 
@@ -268,7 +268,7 @@ jobs:
         run: zip clojure-lsp-native-linux-aarch64.zip clojure-lsp
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp-native-linux-aarch64.zip
           name: clojure-lsp-native-linux-aarch64.zip
@@ -279,7 +279,7 @@ jobs:
     runs-on: macos-13
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
 
@@ -318,7 +318,7 @@ jobs:
         run: zip clojure-lsp-native-macos-amd64.zip clojure-lsp
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp-native-macos-amd64.zip
           name: clojure-lsp-native-macos-amd64.zip
@@ -329,7 +329,7 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
 
@@ -368,7 +368,7 @@ jobs:
         run: zip clojure-lsp-native-macos-aarch64.zip clojure-lsp
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp-native-macos-aarch64.zip
           name: clojure-lsp-native-macos-aarch64.zip
@@ -379,7 +379,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
 
@@ -442,7 +442,7 @@ jobs:
           jar -cMf clojure-lsp-native-windows-amd64.zip clojure-lsp.exe
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: clojure-lsp-native-windows-amd64.zip
           name: clojure-lsp-native-windows-amd64.zip
@@ -490,7 +490,7 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
 
       - name: Upload jar
         uses: svenstaro/upload-release-action@v2

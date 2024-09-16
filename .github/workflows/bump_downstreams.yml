@@ -69,7 +69,7 @@ jobs:
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
       - name: Download artifacts
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v4
         with:
           workflow: release.yml
           workflow_conclusion: success

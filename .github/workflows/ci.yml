@@ -148,7 +148,7 @@ jobs:
           file: clojure-lsp
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: clojure-lsp-native
           path: clojure-lsp
@@ -169,7 +169,7 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         name: clojure-lsp-native
 
       - name: Setup binary

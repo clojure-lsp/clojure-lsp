@@ -62,13 +62,13 @@
   [uris db]
   (let [analyzers (-> db settings/all :linters :analyzers)
         uri+diagnostics (if (seq analyzers)
-                 (reduce (fn [acc [fqns params]]
-                             (if (->> params :severity (contains? #{1 2 3}))
-                                 (shared/deep-merge acc (analyze fqns params uris db))
-                                 acc))
-                         {}
-                         analyzers)
-                 {})]
+                          (reduce (fn [acc [fqns params]]
+                                    (if (->> params :severity (contains? #{1 2 3}))
+                                      (shared/deep-merge acc (analyze fqns params uris db))
+                                      acc))
+                                  {}
+                                  analyzers)
+                          {})]
     uri+diagnostics))
 
 (defn analyze-paths!

@@ -17,7 +17,7 @@
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
 
-        babashka/fs {:mvn/version "0.3.17"}
+        babashka/fs {:mvn/version "0.5.22"}
         com.github.clojure-lsp/lsp4clj {:mvn/version "1.10.0"
                                         #_#_:local/root "../../lsp4clj"
                                         :exclusions [funcool/promesa]}}

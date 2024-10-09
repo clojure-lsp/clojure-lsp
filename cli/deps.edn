@@ -21,7 +21,7 @@
            :build {:extra-paths ["../lib/resources"]
                    :extra-deps {babashka/fs {:mvn/version "0.3.17"}
                                 babashka/process {:mvn/version "0.5.18"}}
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.9.6" :sha "8e78bcc"}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.5" :sha "2a21b7a"}
                                   com.github.ericdallo/deps-bin {:mvn/version "0.2.0"}
                                   slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}

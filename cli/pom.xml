@@ -58,7 +58,7 @@
     <dependency>
       <groupId>dev.weavejester</groupId>
       <artifactId>cljfmt</artifactId>
-      <version>0.12.0</version>
+      <version>0.13.0</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-cljs</groupId>

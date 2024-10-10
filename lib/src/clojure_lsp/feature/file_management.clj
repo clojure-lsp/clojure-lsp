@@ -3,6 +3,7 @@
    [babashka.fs :as fs]
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.config :as config]
+   [clojure-lsp.custom-linters :as lsp.custom-linters]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
@@ -44,7 +45,8 @@
     (swap! db* (fn [state-db]
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
-                     (lsp.depend/db-with-results depend-result))))
+                     (lsp.depend/db-with-results depend-result)
+                     (lsp.custom-linters/db-with-results #(lsp.custom-linters/analyze-uri! uri %)))))
     (f.diagnostic/publish-diagnostics! uri components))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
@@ -257,6 +259,7 @@
                               (-> state-db
                                   (lsp.kondo/db-with-results kondo-result)
                                   (lsp.depend/db-with-results depend-result)
+                                  (lsp.custom-linters/db-with-results #(lsp.custom-linters/analyze-uri! uri %))
                                   (update-in [:documents uri :analyzed-version]
                                              bump-version version)))
           (let [db @db*]

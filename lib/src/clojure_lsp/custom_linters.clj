@@ -61,6 +61,12 @@
                         (println e)))]
     (analyzer-fn {:db db :params params :uris uris})))
 
+;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticSeverity
+(def error 1)
+(def warning 2)
+(def information 3)
+(def hint 4)
+
 (defn analyze-uris!
   [uris db]
   (let [analyzers (-> db settings/all :linters :analyzers)
@@ -68,7 +74,7 @@
                           (shared/logging-time
                             "Finding custom linter diagnostics took %s"
                             (reduce (fn [acc [fqns params]]
-                                      (if (->> params :severity (contains? #{1 2 3}))
+                                      (if (->> params :severity (contains? #{error warning information hint}))
                                         (shared/deep-merge acc (analyze fqns params uris db))
                                         acc))
                                     {}

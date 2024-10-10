@@ -5,28 +5,31 @@
    [clojure.java.io :as io]
    [clojure.pprint]
    [clojure.string :as str]
-   [sci.core :as sci]))
+   [sci.core :as sci])
+  (:import
+   (java.util.jar JarFile)))
 
 (def ^:dynamic *reload* false)
 
 (defn pprint [& args]
   (apply clojure.pprint/pprint args))
 
-(defn find-file-on-classpath ^java.io.File
-  [base-path classpath]
-  (some (fn [cp-entry]
-          (let [f (io/file cp-entry (str base-path ".clj"))]
-            (when (.exists f) f)))
-        classpath))
+(defn ^:private load-file-from-classpath
+  [path [head & tail]]
+  (when head
+    (if (str/ends-with? head ".jar")
+      (if-let [content (with-open [jar (JarFile. head)]
+                         (when-let [entry (.getJarEntry jar path)]
+                           (slurp (.getInputStream jar entry))))]
+        content
+        (recur path tail))
+      (if (shared/file-exists? (io/file head path))
+        (slurp (io/file head path))
+        (recur path tail)))))
 
 (defn analyze
   [fqns params uris db]
-  (let [cp-candidates (remove nil?
-                              (map (fn [cp-entry]
-                                     (let [f (io/file cp-entry "clojure-lsp.exports")]
-                                       (when (.isDirectory f) f)))
-                                   (:classpath db)))
-        sci-ctx (sci/init {:namespaces {'clojure.pprint {'pprint pprint}}
+  (let [sci-ctx (sci/init {:namespaces {'clojure.pprint {'pprint pprint}}
                            :classes {'java.io.Exception Exception
                                      'java.lang.System System
                              ;; enable with-in-str:
@@ -38,12 +41,12 @@
                                      'System java.lang.System}
                            :load-fn (fn [{:keys [:namespace]}]
                                       (let [^String ns-str (namespace-munge (name namespace))
-                                            base-path (.replace ns-str "." "/")
-                                            result (if-let [f (find-file-on-classpath base-path cp-candidates)]
-                                                     {:file (.getAbsolutePath f)
-                                                      :source (slurp f)}
+                                            path (str "clojure-lsp.exports/" (.replace ns-str "." "/") ".clj")
+                                            result (if-let [content (load-file-from-classpath path (:classpath db))]
+                                                     {:file path
+                                                      :source content}
                                                      (binding [*out* *err*]
-                                                       (println "WARNING: file" base-path "not found while loading hook")
+                                                       (println "WARNING: file" path "not found in the classpath while loading custom linter analyzer")
                                                        nil))]
                                         result))})
         analyzer-fn (try
@@ -62,12 +65,14 @@
   [uris db]
   (let [analyzers (-> db settings/all :linters :analyzers)
         uri+diagnostics (if (seq analyzers)
-                          (reduce (fn [acc [fqns params]]
-                                    (if (->> params :severity (contains? #{1 2 3}))
-                                      (shared/deep-merge acc (analyze fqns params uris db))
-                                      acc))
-                                  {}
-                                  analyzers)
+                          (shared/logging-time
+                            "Finding custom linter diagnostics took %s"
+                            (reduce (fn [acc [fqns params]]
+                                      (if (->> params :severity (contains? #{1 2 3}))
+                                        (shared/deep-merge acc (analyze fqns params uris db))
+                                        acc))
+                                    {}
+                                    analyzers))
                           {})]
     uri+diagnostics))
 

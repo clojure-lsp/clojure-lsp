@@ -18,7 +18,7 @@
   [path [head & tail]]
   (when head
     (if (str/ends-with? head ".jar")
-      (if-let [content (with-open [jar (JarFile. head)]
+      (if-let [content (with-open [jar (JarFile. (io/file head))]
                          (when-let [entry (.getJarEntry jar path)]
                            (slurp (.getInputStream jar entry))))]
         content

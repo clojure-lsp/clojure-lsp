@@ -8,6 +8,7 @@
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.snapshot :as snapshot]
    [clojure.core.async :as async]
    [clojure.set :as set]
    [clojure.string :as string]
@@ -174,7 +175,7 @@
                :source "clj-depend"}))
           (get-in db [:clj-depend-violations (symbol namespace)]))))
 
-(defn find-diagnostics [^String uri db]
+(defn find-diagnostics* [^String uri db]
   (let [kondo-level (settings/get db [:linters :clj-kondo :level])
         depend-level (settings/get db [:linters :clj-depend :level] :info)]
     (if (shared/jar-file? uri)
@@ -185,6 +186,9 @@
 
         (not= :off depend-level)
         (concat (clj-depend-violations->diagnostics uri depend-level db))))))
+
+(defn find-diagnostics [^String uri db]
+  (snapshot/discard uri (find-diagnostics* uri db)))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
   (async/put! diagnostics-chan diagnostic))

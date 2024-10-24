@@ -188,7 +188,7 @@
         (concat (clj-depend-violations->diagnostics uri depend-level db))))))
 
 (defn find-diagnostics [^String uri db]
-  (snapshot/discard uri (find-diagnostics* uri db)))
+  (snapshot/discard uri db (find-diagnostics* uri db)))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
   (async/put! diagnostics-chan diagnostic))

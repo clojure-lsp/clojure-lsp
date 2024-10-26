@@ -4,28 +4,40 @@
    [clojure.java.io :as io])
   (:import
    [java.io File]
-   (java.security MessageDigest)))
+   (java.security MessageDigest)
+   [java.util UUID]))
 
-(defn md5
+(defn string-to-uuid [s]
+  (let [md5 (MessageDigest/getInstance "MD5")
+        hash (.digest md5 (.getBytes s "UTF-8"))
+        msb (->> (take 8 hash)
+                 (map #(bit-and % 0xFF))
+                 (reduce (fn [acc b] (bit-or (bit-shift-left acc 8) b)) 0))
+        lsb (->> (drop 8 hash)
+                 (map #(bit-and % 0xFF))
+                 (reduce (fn [acc b] (bit-or (bit-shift-left acc 8) b)) 0))]
+    (UUID. msb lsb)))
+
+(defn ^:private string-to-md5
   [input-str]
   (let [algorithm (MessageDigest/getInstance "MD5")
         raw (.digest algorithm (.getBytes input-str "UTF-8"))]
     (format "%032x" (BigInteger. 1 raw))))
 
-(defn read-db
-  ([] (read-db ".lsp/snapshot.txt"))
+(defn ^:private read-file
+  ([] (read-file (io/file ".lsp" "snapshot.txt")))
   ([path]
    (let [file (io/file path)]
      (if (.exists file)
        (let [result-hash (with-open [reader (io/reader file)]
                            (into #{}
-                                 (map #(keyword (md5 %))
+                                 (map #(string-to-uuid %)
                                       (line-seq reader))))]
-         #_(spit "snapshot-set.edn" (pr-str result-hash))
+         #_(spit "snapshot-uuid.edn" (pr-str result-hash))
          result-hash)
        #{}))))
 
-(def read-db-memo (memoize read-db))
+(def read-file-memo (memoize read-file))
 
 (defn severity->level [severity]
   (case (int severity)
@@ -49,9 +61,12 @@
 
 (defn discard
   [uri db diagnostics]
-  (let [snapshot (read-db-memo)
-        project-path (shared/uri->filename (project-root->uri nil db))
-        filename (shared/uri->filename uri)
-        file-output (shared/relativize-filepath filename project-path)]
-    (remove #(contains? snapshot (keyword (md5 (diagnostic->diagnostic-message file-output %))))
-            diagnostics)))
+  (shared/logging-time
+    "Discarding diagnostics took %s"
+    (let [snapshot (read-file-memo)
+          project-path (shared/uri->filename (project-root->uri nil db))
+          filename (shared/uri->filename uri)
+          file-output (shared/relativize-filepath filename project-path)]
+      (into []
+            (remove #(contains? snapshot (string-to-uuid (diagnostic->diagnostic-message file-output %)))
+                    diagnostics)))))

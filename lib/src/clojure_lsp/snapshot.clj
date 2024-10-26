@@ -27,17 +27,25 @@
 (defn ^:private read-file
   ([] (read-file (io/file ".lsp" "snapshot.txt")))
   ([path]
-   (let [file (io/file path)]
-     (if (.exists file)
-       (let [result-hash (with-open [reader (io/reader file)]
-                           (into #{}
-                                 (map #(string-to-uuid %)
-                                      (line-seq reader))))]
-         #_(spit "snapshot-uuid.edn" (pr-str result-hash))
-         result-hash)
-       #{}))))
+   (shared/logging-time
+     "[SNAPSHOT] Read took %s"
+     (let [file (io/file path)]
+       (if (.exists file)
+         (let [result-hash (with-open [reader (io/reader file)]
+                             (into #{}
+                                   (map #(keyword (string-to-md5 %))
+                                        (line-seq reader))))]
+           #_(spit "snapshot-uuid.edn" (pr-str result-hash))
+           result-hash)
+         #{})))))
 
 (def read-file-memo (memoize read-file))
+
+(defonce cache (atom #{}))
+
+(defn warm-cache!
+  []
+  (swap! cache (fn [_] (read-file))))
 
 (defn severity->level [severity]
   (case (int severity)
@@ -62,11 +70,11 @@
 (defn discard
   [uri db diagnostics]
   (shared/logging-time
-    "Discarding diagnostics took %s"
-    (let [snapshot (read-file-memo)
+    "[SNAPSHOT] Discard took %s"
+    (let [snapshot @cache
           project-path (shared/uri->filename (project-root->uri nil db))
           filename (shared/uri->filename uri)
           file-output (shared/relativize-filepath filename project-path)]
       (into []
-            (remove #(contains? snapshot (string-to-uuid (diagnostic->diagnostic-message file-output %)))
+            (remove #(contains? snapshot (keyword (string-to-md5 (diagnostic->diagnostic-message file-output %))))
                     diagnostics)))))

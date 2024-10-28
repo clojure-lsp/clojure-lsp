@@ -3,7 +3,6 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io])
   (:import
-   [java.io File]
    (java.security MessageDigest)
    [java.util UUID]))
 
@@ -62,17 +61,12 @@
           code
           message))
 
-(defn ^:private project-root->uri [project-root db]
-  (-> (or ^File project-root (io/file ""))
-      .getCanonicalPath
-      (shared/filename->uri db)))
-
 (defn discard
   [uri db diagnostics]
   (shared/logging-time
     "[SNAPSHOT] Discard took %s"
     (let [snapshot @cache
-          project-path (shared/uri->filename (project-root->uri nil db))
+          project-path (shared/uri->filename (shared/project-root->uri nil db))
           filename (shared/uri->filename uri)
           file-output (shared/relativize-filepath filename project-path)]
       (into []

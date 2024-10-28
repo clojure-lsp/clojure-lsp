@@ -157,11 +157,6 @@
     (apply-workspace-rename-edit-summary! change components)
     (apply-workspace-change-edit-summary! change components)))
 
-(defn ^:private project-root->uri [project-root db]
-  (-> (or ^File project-root (io/file ""))
-      .getCanonicalPath
-      (shared/filename->uri db)))
-
 (defn ^:private setup-api! [{:keys [producer db* diagnostics-chan]}]
   (when-not (:analysis @db*)
     (swap! db* assoc :api? true)
@@ -174,7 +169,7 @@
    {:keys [db*] :as components}]
   (try
     (startup/initialize-project
-      (project-root->uri project-root @db*)
+      (shared/project-root->uri project-root @db*)
       {:workspace {:workspace-edit {:document-changes true}}}
       (settings/clean-client-settings {})
       (merge (shared/assoc-some
@@ -237,8 +232,8 @@
        (sort-by #(not= :rename (:kind %)))
        (map (fn [{:keys [kind uri old-text new-text old-uri new-uri]}]
               (if (= :rename kind)
-                (diff/rename-diff old-uri new-uri (project-root->uri project-root db))
-                (diff/unified-diff uri (find-new-uri-checking-rename uri edits) old-text new-text (project-root->uri project-root db)))))
+                (diff/rename-diff old-uri new-uri (shared/project-root->uri project-root db))
+                (diff/unified-diff uri (find-new-uri-checking-rename uri edits) old-text new-text (shared/project-root->uri project-root db)))))
        (map #(if raw? % (diff/colorize-diff %)))
        (string/join "\n")))
 
@@ -315,7 +310,7 @@
       {:result-code 0 :message-fn (constantly "Nothing to clear!")})))
 
 (defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]} db]
-  (let [project-path (shared/uri->filename (project-root->uri project-root db))]
+  (let [project-path (shared/uri->filename (shared/project-root->uri project-root db))]
     (mapcat (fn [[uri diags]]
               (let [filename (shared/uri->filename uri)
                     file-output (if (:canonical-paths output)

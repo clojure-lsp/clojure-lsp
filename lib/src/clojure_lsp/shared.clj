@@ -8,6 +8,7 @@
    [clojure.string :as string]
    [lsp4clj.lsp.responses :as lsp.responses])
   (:import
+   [java.io File]
    [java.net
     JarURLConnection
     URI
@@ -288,6 +289,11 @@
           (uri-encode "zipfile" (str jar-uri-path "::" nested-file)))
         (.toString (filepath->uri-obj filename)))
       (get-in db [:settings :uri-format]))))
+
+(defn project-root->uri [project-root db]
+  (-> (or ^File project-root (io/file ""))
+      .getCanonicalPath
+      (filename->uri db)))
 
 (defn relativize-filepath
   "Returns absolute `path` (string) as relative file path starting at `root` (string)

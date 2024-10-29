@@ -23,7 +23,7 @@
                                         :exclusions [funcool/promesa]}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
-                               lambdaisland/kaocha {:mvn/version "1.87.1366"}
+                               lambdaisland/kaocha {:mvn/version "1.91.1392"}
                                com.taoensso/timbre {:mvn/version "6.3.1"}
                                org.clojure/test.check {:mvn/version "1.1.1"}}
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
@@ -38,6 +38,6 @@
            :build {:extra-paths ["resources"]
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
                                                          :tag "v0.10.5"
-                                                         :sha "8e78bcc"}
+                                                         :sha "2a21b7a"}
                           slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}}}

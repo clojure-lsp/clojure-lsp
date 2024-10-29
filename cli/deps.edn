@@ -1,9 +1,9 @@
 {:deps {org.clojure/tools.cli {:mvn/version "1.1.230"}
         borkdude/dynaload {:mvn/version "0.3.5"}
         nrepl/bencode {:mvn/version "1.2.0"}
-        com.taoensso/timbre {:mvn/version "6.5.0"}
+        com.taoensso/timbre {:mvn/version "6.6.0"}
         clojure-lsp/lib {:local/root "../lib"}
-        funcool/promesa {:mvn/version "10.0.594"}}
+        funcool/promesa {:mvn/version "11.0.678"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}}
@@ -18,9 +18,9 @@
                                                    :sha "75c2216649bf5caf3ae41e7b8fc202e45b090ea9"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
-                   :extra-deps {babashka/fs {:mvn/version "0.3.17"}
+                   :extra-deps {babashka/fs {:mvn/version "0.5.22"}
                                 babashka/process {:mvn/version "0.5.22"}}
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.5" :sha "8e78bcc"}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.5" :sha "2a21b7a"}
                                   com.github.ericdallo/deps-bin {:mvn/version "1.0.0"}
                                   slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}
@@ -28,7 +28,7 @@
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-paths ["dev"]
                    :extra-deps {cider/cider-nrepl {:mvn/version "0.50.2"}
-                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.2.2"}
+                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.4.0"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.3.0"}
                                 criterium/criterium {:mvn/version "0.4.6"}
                                 nrepl/nrepl {:mvn/version "1.3.0"}}

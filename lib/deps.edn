@@ -1,8 +1,8 @@
-{:deps {org.clojure/clojure {:mvn/version "1.11.3"}
-        rewrite-clj/rewrite-clj {:mvn/version "1.1.47"}
+{:deps {org.clojure/clojure {:mvn/version "1.12.0"}
+        rewrite-clj/rewrite-clj {:mvn/version "1.1.48"}
         borkdude/rewrite-edn {:mvn/version "0.4.8" :exclusions [rewrite-clj/rewrite-clj]}
         org.clojure/core.async {:mvn/version "1.6.681"}
-        dev.weavejester/cljfmt {:mvn/version "0.12.0"
+        dev.weavejester/cljfmt {:mvn/version "0.13.0"
                                 :exclusions [rewrite-cljs/rewrite-cljs
                                              com.googlecode.java-diff-utils/diffutils]}
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
@@ -17,7 +17,7 @@
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
 
-        babashka/fs {:mvn/version "0.3.17"}
+        babashka/fs {:mvn/version "0.5.22"}
         com.github.clojure-lsp/lsp4clj {:mvn/version "1.10.0"
                                         #_#_:local/root "../../lsp4clj"
                                         :exclusions [funcool/promesa]}}
@@ -37,7 +37,7 @@
                        :exec-fn cognitect.test-runner.api/test}
            :build {:extra-paths ["resources"]
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
-                                                         :tag "v0.9.6"
+                                                         :tag "v0.10.5"
                                                          :sha "8e78bcc"}
                           slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}}}

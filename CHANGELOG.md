@@ -10,7 +10,7 @@
   - Bump lsp4clj to `1.10.0`.
   - Bump clojure to `1.12.0`.
   - Bump tools.cli to `1.0.230`.
-  - Bump timbre to `6.5.0`.
+  - Bump timbre to `6.6.0`.
   - Bump rewrite-clj to `1.1.48`.
   - Bump cljfmt to `1.13.0`.
   - Bump babashka/fs to `0.5.22`.

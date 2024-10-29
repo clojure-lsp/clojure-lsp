@@ -309,25 +309,6 @@
            :edits edits}))
       {:result-code 0 :message-fn (constantly "Nothing to clear!")})))
 
-(defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]} db]
-  (let [project-path (shared/uri->filename (shared/project-root->uri project-root db))]
-    (mapcat (fn [[uri diags]]
-              (let [filename (shared/uri->filename uri)
-                    file-output (if (:canonical-paths output)
-                                  filename
-                                  (shared/relativize-filepath filename project-path))]
-                (map (fn [{:keys [message severity range code]}]
-                       (cond-> (format "%s:%s:%s: %s: [%s] %s"
-                                       file-output
-                                       (-> range :start :line inc)
-                                       (-> range :start :character inc)
-                                       (name (f.diagnostic/severity->level severity))
-                                       code
-                                       message)
-                         (not raw?) (shared/colorize (f.diagnostic/severity->color severity))))
-                     diags)))
-            diagnostics)))
-
 (defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
   (setup-project-and-clojure-only-deps-analysis! options components)
@@ -347,10 +328,7 @@
     (if (seq diags-by-uri)
       {:result-code (cond errors? 3 warnings? 2 :else 0)
        :message-fn (fn []
-                     (case format
-                       :edn (with-out-str (pr diags-by-uri))
-                       :json (json/generate-string diags-by-uri)
-                       (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
+                     (f.diagnostic/serialize format diags-by-uri options db))
        :diagnostics diags-by-uri}
       {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
 

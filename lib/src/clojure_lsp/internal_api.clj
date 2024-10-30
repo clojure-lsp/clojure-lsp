@@ -325,6 +325,7 @@
         diags (mapcat val diags-by-uri)
         errors? (some (comp #(= 1 %) :severity) diags)
         warnings? (some (comp #(= 2 %) :severity) diags)]
+       (logger/info (str "[SNAPSHOT] Discarding took " (f.diagnostic/discarding-duration-ms)) "ms")
     (if (seq diags-by-uri)
       {:result-code (cond errors? 3 warnings? 2 :else 0)
        :message-fn (fn []

@@ -454,7 +454,9 @@
 
 ;; TODO move to a better place
 (defn client-changes [changes db]
-  (if (get-in db [:client-capabilities :workspace :workspace-edit :document-changes])
+  (if (or
+        (get-in db [:client-capabilities :workspace :workspace-edit :document-changes])
+        (get-in db [:client-capabilities :workspace :workspace-edit :resource-operations]))
     {:document-changes changes}
     {:changes (into {} (map (fn [{:keys [text-document edits]}]
                               [(:uri text-document) edits])

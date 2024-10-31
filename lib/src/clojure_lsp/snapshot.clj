@@ -10,16 +10,15 @@
    (shared/logging-time
      "[SNAPSHOT] Read took %s"
      (let [file (io/file path)]
-       (if (.exists file)
+       (when (.exists file)
          (with-open [reader (io/reader file)]
            (reduce (fn [acc item]
                      (let [path (-> item (str/split #":") first)]
                        (update acc path (fnil conj #{}) item)))
                    {}
-                   (line-seq reader)))
-         {})))))
+                   (line-seq reader))))))))
 
-(defonce cache (atom {}))
+(defonce cache (atom nil))
 
 (defn warm-cache!
   []

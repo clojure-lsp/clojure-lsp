@@ -200,36 +200,39 @@
 
 (def ^:dynamic *discard-duration* (atom []))
 (defmacro logging-time-atom
-          "Executes `body` logging `message` formatted with the time spent
+  "Executes `body` logging `message` formatted with the time spent
   from body."
-          [message & body]
-          (let [start-sym (gensym "start-time")]
-               `(let [~start-sym (System/nanoTime)
-                      result# (do ~@body)]
-                     ~(with-meta
-                        `(swap! *discard-duration* conj (- (System/nanoTime) ~start-sym))
-                        (meta &form))
-                     result#)))
+  [message & body]
+  (let [start-sym (gensym "start-time")]
+    `(let [~start-sym (System/nanoTime)
+           result# (do ~@body)]
+       ~(with-meta
+          `(swap! *discard-duration* conj (- (System/nanoTime) ~start-sym))
+          (meta &form))
+       result#)))
 
 (defn discarding-duration-ms []
-      (let [durations @*discard-duration*]
-           (reset! *discard-duration* [])
-           (float (/ (apply + durations) 1000000))))
+  (let [durations @*discard-duration*]
+    (reset! *discard-duration* [])
+    (float (/ (apply + durations) 1000000))))
 
 (defn find-diagnostics [^String uri db]
   (let [diagnostics (find-diagnostics* uri db)]
-    (logging-time-atom
-      "[SNAPSHOT] discard took %s"
-      (let [project-path (shared/uri->filename (shared/project-root->uri nil db))
-            filename (shared/uri->filename uri)
-            file-output (shared/relativize-filepath filename project-path)
-            ignore (snapshot/discard file-output)
-            result (if (seq ignore)
-                     (into []
-                           (remove #(contains? ignore (diagnostic->diagnostic-message file-output true %))
-                                   diagnostics))
-                     diagnostics)]
-        result))))
+    (if @snapshot/cache
+      (logging-time-atom
+        "[SNAPSHOT] discard took %s"
+
+        (let [project-path (shared/uri->filename (shared/project-root->uri nil db))
+              filename (shared/uri->filename uri)
+              file-output (shared/relativize-filepath filename project-path)
+              ignore (snapshot/discard file-output)
+              result (if (seq ignore)
+                       (into []
+                             (remove #(contains? ignore (diagnostic->diagnostic-message file-output true %))
+                                     diagnostics))
+                       diagnostics)]
+          result))
+      diagnostics)))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
   (async/put! diagnostics-chan diagnostic))

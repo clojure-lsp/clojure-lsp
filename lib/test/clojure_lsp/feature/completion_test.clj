@@ -4,7 +4,8 @@
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is testing]]
+   [clojure.tools.deps.extensions :as tools.deps.extensions]))
 
 (h/reset-components-before-test)
 
@@ -620,6 +621,72 @@
          {:label "my_class.SomeClass/myMethod3" :kind :method :detail "void ()"}]
         (f.completion/completion (h/file-uri "file:///a.clj") full-method-r full-method-c (h/db))))))
 
+(deftest completing-lein-lib-versions
+  (let [[[dependency-1-r dependency-1-c]
+         [plugin-1-r plugin-1-c]]
+        (h/load-code-and-locs
+          (h/code "(defproject my-project \"0.0.1\""
+                  "  :description \"FIXME: write description\""
+                  "  :main ^:skip-aot clojure-sample.core"
+                  "  :dependencies [[org.clojure/clojurescript \"1.10.758\"]"
+                  "                 [org.clojure/clojure \"|\"]]"
+                  "  :plugins [[com.github.clojure-lsp/lein-clojure-lsp \"|\"]])")
+          (h/file-uri "file:///some/my-project/project.clj"))]
+    (testing ":dependencies"
+      (h/assert-submaps
+        [{:label "1.10.0-SNAPSHOT" :kind :text  :sort-text "2"}
+         {:label "1.11.0" :kind :text :sort-text "1"}
+         {:label "1.12.0" :kind :text :detail "latest" :sort-text "0"}]
+        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "1.10.0-SNAPSHOT"}
+                                                                           #:mvn{:version "1.11.0"}
+                                                                           #:mvn{:version "1.12.0"}])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") plugin-1-r plugin-1-c (h/db)))))
+    (testing ":plugins"
+      (h/assert-submaps
+        [{:label "0.1.4" :kind :text  :sort-text "1"}
+         {:label "3.10.2" :kind :text :detail "latest" :sort-text "0"}]
+        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "0.1.4"}
+                                                                           #:mvn{:version "3.10.2"}])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dependency-1-r dependency-1-c (h/db)))))))
+
+(deftest completing-clojure-deps-lib-versions
+  (let [[[mvn-1-r mvn-1-c]
+         [git-tag-1-r git-tag-1-c]
+         [all-coord-r all-coord-c]]
+        (h/load-code-and-locs
+          (h/code "{:deps {org.clojure/clojure {:mvn/version \"1.10.3\"}"
+                  "        org.clojure/core.async {:mvn/version \"1.5.648\"}"
+                  "        nubank/matcher-combinators {:mvn/version \"3.|\"}"
+                  "        io.github.cognitect-labs/test-runner {:git/tag \"|\", :git/sha \"dfb30dd\"}"
+                  "        foo/bar {|}}"
+                  " :paths [\"src\" \"resources\"]"
+                  " :aliases {:test {:extra-paths [\"test\"]}}}")
+          (h/file-uri "file:///some/my-project/deps.edn"))]
+    (testing "mvn coordinate"
+      (h/assert-submaps
+        [{:label "3.4.0" :kind :text :sort-text "001"}
+         {:label "3.4.1" :kind :text :detail "latest" :sort-text "000"}]
+        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "1.2.0"}
+                                                                           #:mvn{:version "3.4.0"}
+                                                                           #:mvn{:version "3.4.1"}])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") mvn-1-r mvn-1-c (h/db)))))
+    (testing "git tag coordinate"
+      (h/assert-submaps
+        [{:label "v0.3.4" :kind :text :sort-text "001"}
+         {:label "v0.3.5" :kind :text :detail "latest" :sort-text "000"}]
+        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:git{:tag "v0.3.4" :sha "2345"}
+                                                                           #:git{:tag "v0.3.5" :sha "1234"}])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") git-tag-1-r git-tag-1-c (h/db)))))
+    (testing "all coordinates"
+      (h/assert-submaps
+        [{:label ":git{:tag \"v0.3.4\", :sha \"2345\"" :kind :text :sort-text "001"}
+         {:label ":git{:tag \"v0.3.5\", :sha \"1234\"" :kind :text :detail "latest" :sort-text "000"}
+         {:label ":mvn{:version \"0.3.4\"" :kind :text :sort-text "002"}]
+        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "0.3.4"}
+                                                                           #:git{:tag "v0.3.4" :sha "2345"}
+                                                                           #:git{:tag "v0.3.5" :sha "1234"}])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") all-coord-r all-coord-c (h/db)))))))
+
 (deftest completing-sorting
   (let [[[row col]] (h/load-code-and-locs
                       (h/code "(ns foo)"
@@ -666,6 +733,3 @@
                                                                        :uri (h/file-uri "file:///aaa.clj")
                                                                        :js-require true}]]}}
                                                 (h/db*)))))
-
-(comment
-  (clojure.test/run-test resolve-item-test-js-libs))

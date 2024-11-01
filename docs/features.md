@@ -56,6 +56,10 @@ To understand what is supported and how to configure it, check the [settings sec
 
 ![](images/features/completion.gif)
 
+#### Library version completion
+
+![](images/features/completion-lib-version.png)
+
 #### Snippets
 
 [Snippets](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#snippet_syntax) are templates that make it easier to enter repeating code patterns, such as common functions/forms, they are available during completion. Tabstops are defined as `$number` with `$0` as last tabstop.

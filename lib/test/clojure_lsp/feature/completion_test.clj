@@ -634,17 +634,17 @@
           (h/file-uri "file:///some/my-project/project.clj"))]
     (testing ":dependencies"
       (h/assert-submaps
-        [{:label "1.10.0-SNAPSHOT" :kind :text  :sort-text "2"}
-         {:label "1.11.0" :kind :text :sort-text "1"}
-         {:label "1.12.0" :kind :text :detail "latest" :sort-text "0"}]
+        [{:label "1.10.0-SNAPSHOT" :kind :text  :sort-text "002"}
+         {:label "1.11.0" :kind :text :sort-text "001"}
+         {:label "1.12.0" :kind :text :detail "latest" :sort-text "000"}]
         (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "1.10.0-SNAPSHOT"}
                                                                            #:mvn{:version "1.11.0"}
                                                                            #:mvn{:version "1.12.0"}])]
           (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") plugin-1-r plugin-1-c (h/db)))))
     (testing ":plugins"
       (h/assert-submaps
-        [{:label "0.1.4" :kind :text  :sort-text "1"}
-         {:label "3.10.2" :kind :text :detail "latest" :sort-text "0"}]
+        [{:label "0.1.4" :kind :text  :sort-text "001"}
+         {:label "3.10.2" :kind :text :detail "latest" :sort-text "000"}]
         (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "0.1.4"}
                                                                            #:mvn{:version "3.10.2"}])]
           (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dependency-1-r dependency-1-c (h/db)))))))

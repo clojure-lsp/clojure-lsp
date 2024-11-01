@@ -199,17 +199,6 @@
     (not raw?) (shared/colorize (severity->color severity))))
 
 (def ^:dynamic *discard-duration* (atom []))
-(defmacro logging-time-atom
-  "Executes `body` logging `message` formatted with the time spent
-  from body."
-  [message & body]
-  (let [start-sym (gensym "start-time")]
-    `(let [~start-sym (System/nanoTime)
-           result# (do ~@body)]
-       ~(with-meta
-          `(swap! *discard-duration* conj (- (System/nanoTime) ~start-sym))
-          (meta &form))
-       result#)))
 
 (defn discarding-duration-ms []
   (let [durations @*discard-duration*]
@@ -219,19 +208,19 @@
 (defn find-diagnostics [^String uri db]
   (let [diagnostics (find-diagnostics* uri db)]
     (if @snapshot/cache
-      (logging-time-atom
-        "[SNAPSHOT] discard took %s"
-
-        (let [project-path (shared/uri->filename (shared/project-root->uri nil db))
-              filename (shared/uri->filename uri)
-              file-output (shared/relativize-filepath filename project-path)
-              ignore (snapshot/discard file-output)
-              result (if (seq ignore)
-                       (into []
-                             (remove #(contains? ignore (diagnostic->diagnostic-message file-output true %))
-                                     diagnostics))
-                       diagnostics)]
-          result))
+      (let [start (System/nanoTime)
+            project-path (shared/uri->filename (shared/project-root->uri nil db))
+            filename (shared/uri->filename uri)
+            relative-path (shared/relativize-filepath filename project-path)
+            messages (snapshot/discard relative-path)
+            result (if messages
+                     (into []
+                           (remove #(contains? messages
+                                               (diagnostic->diagnostic-message relative-path true %))
+                                   diagnostics))
+                     diagnostics)]
+        (swap! *discard-duration* conj (- (System/nanoTime) start))
+        result)
       diagnostics)))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]

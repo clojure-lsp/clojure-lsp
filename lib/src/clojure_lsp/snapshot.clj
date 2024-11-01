@@ -13,8 +13,7 @@
        (when (.exists file)
          (with-open [reader (io/reader file)]
            (reduce (fn [acc item]
-                     (let [path (-> item (str/split #":") first)]
-                       (update acc path (fnil conj #{}) item)))
+                     (update acc (-> item (str/split #":") first) (fnil conj #{}) item))
                    {}
                    (line-seq reader))))))))
 
@@ -26,4 +25,4 @@
 
 (defn discard
   [relative-path]
-  (get @cache relative-path #{}))
+  (get @cache relative-path))

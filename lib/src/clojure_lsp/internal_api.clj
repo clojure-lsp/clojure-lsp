@@ -16,7 +16,8 @@
    [clojure-lsp.startup :as startup]
    [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
-   [clojure.string :as string])
+   [clojure.string :as string]
+   [clojure-lsp.feature.completion :as f.completion])
   (:import
    [java.io File]))
 
@@ -334,7 +335,10 @@
             diagnostics)))
 
 (defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
-  (setup-api! components)
+  (f.completion/lib-version-complete {:dep/coordinate :mvn/version
+                                      :dep/lib 'org.clojure/clojure}
+                                     (constantly true))
+  #_#_#_#_(setup-api! components)
   (setup-project-and-clojure-only-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
   (let [db @db*

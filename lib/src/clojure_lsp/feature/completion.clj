@@ -647,7 +647,7 @@
               :coordinate :mvn/version
               :lib (some-> cursor-loc z/leftmost z/sexpr symbol)}))))
 
-(defn ^:private lib-version-complete [{:dep/keys [coordinate lib]} matches-fn]
+(defn lib-version-complete [{:dep/keys [coordinate lib]} matches-fn]
   (let [versions-coord (tools.deps.extensions/find-all-versions lib nil {:mvn/repos tools.deps.maven/standard-repos})
         version-fn #(or (when coordinate (get % coordinate)) (:git/tag %) (:mvn/version %))
         versions (map version-fn versions-coord)

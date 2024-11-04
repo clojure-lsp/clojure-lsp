@@ -2338,6 +2338,7 @@
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
 <ul>
 <li>General</li>
+<li>Fix client capability check that prevents test file creation.</li>
 <li>Fix move-form double edit problem in cljc files.</li>
 <li>Fix disabling <code>:clojure-lsp/unused-public-var</code> linter also disabling <code>:clojure-lsp/different-aliases</code></li>
 <li>Bump clj-kondo to <code>2024.09.28-20240930.094425-2</code></li>
@@ -2352,7 +2353,7 @@
 </ul>
 <h2 id="20240805-181600">2024.08.05-18.16.00<a class="headerlink" href="#20240805-181600" title="Permanent link">#</a></h2>
 <ul>
-<li>General </li>
+<li>General</li>
 <li>Fix CI for macos amd64. #1859</li>
 <li>Replace CirrusCI with Github for macos-aarch64 binary standardizing deploy process.</li>
 </ul>
@@ -2423,7 +2424,7 @@
 </li>
 <li>Fix documentation resolve not working for clients without hover markdown support.</li>
 <li>Added setting to allow requires and imports to be added within the current comment form during code action and completion: <code>:add-missing :add-to-rcf</code> #1316</li>
-<li>Fix <code>suppress-diagnostics</code> not working on top-level forms when preceded by comment. #1678 </li>
+<li>Fix <code>suppress-diagnostics</code> not working on top-level forms when preceded by comment. #1678</li>
 <li>Fix add missing import feature on some corner cases for java imports. #1754</li>
 <li>Fix semantic tokens and other analysis not being applied for project files at root. #1759</li>
 <li>Add support for adding missing requires and completion results referring to JS libraries which already have an alias in the project #1587</li>
@@ -2443,7 +2444,7 @@
 <li>Fix <code>rename</code> of ns causing wrong ns names because of duplicate rename actions. #1751</li>
 <li>Fix <code>range-formatting</code> throwing exceptions when unbalanced parens are sent from client. #1758</li>
 <li>Fix rename functions need to clean up LSP state or restart in some clients implementing LSP method <code>didRenameFiles</code>. #1755</li>
-<li>Fix <code>thread last all</code> failed after comment form <code>#_(...)</code>. #1745  </li>
+<li>Fix <code>thread last all</code> failed after comment form <code>#_(...)</code>. #1745</li>
 </ul>
 <h2 id="20231229-120927">2023.12.29-12.09.27<a class="headerlink" href="#20231229-120927" title="Permanent link">#</a></h2>
 <ul>
@@ -2470,7 +2471,7 @@
 <h2 id="20231030-162541">2023.10.30-16.25.41<a class="headerlink" href="#20231030-162541" title="Permanent link">#</a></h2>
 <ul>
 <li>General</li>
-<li>Bump clj-kondo to <code>2023.10.21-20231022.204832-4</code>. </li>
+<li>Bump clj-kondo to <code>2023.10.21-20231022.204832-4</code>.</li>
 <li>Fix move-to-let/expand-let bug for multi-arity functions #1283</li>
 <li>Fix <code>:dependency-scheme</code> setting for .java files from jars #1653</li>
 <li>Bump graalvm to 21.</li>
@@ -2712,7 +2713,7 @@
 <li>Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211</li>
 <li>Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211</li>
 <li>End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible</li>
-<li>Bump clj-kondo to <code>2022.10.05</code>. #1226 </li>
+<li>Bump clj-kondo to <code>2022.10.05</code>. #1226</li>
 <li>Fix issue with changes being reporting with spurious and incorrect line endings on MS-Windows text files. #1211</li>
 <li>Index internal data by URI instead of filename, to minimize conversion between these formats when running queries. #1207</li>
 <li>Add support to enable trace logs on server via <code>--trace</code> flag. (For latest Emacs's lsp-mode this can be enabled easyly via <code>lsp-clojure-trace-enable</code> variable)</li>
@@ -2776,7 +2777,7 @@
 <li>Add refactoring <code>Restructure keys</code>, the inverse of <code>Destructure keys</code>. #1170</li>
 <li>Add refactorings to convert between <code>(:x m)</code> and <code>(get m :x)</code> or <code>(:y (:x m))</code> and <code>(get-in m [:x :y])</code>. #1172</li>
 <li>Add support to imported java class on completion. #1193</li>
-<li>Add new question to skip or retry classpath scan during startup if failed. </li>
+<li>Add new question to skip or retry classpath scan during startup if failed.</li>
 <li>Improve performance of processing of changed files outside editor calling clj-kondo in batch. #1205</li>
 <li>When renaming a keyword that is also a destructured key, rename its local usages too. #1192</li>
 </ul>

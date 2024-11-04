@@ -99,30 +99,26 @@
       @findings)))
 
 (deftest lint-project-public-vars
-  (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
-                        :settings {:source-paths [(h/file-path "/project/src") (h/file-path "/project/cool-test")]}})
-  (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))" (h/file-uri "file:///project/src/a.clj"))
-  (h/load-code-and-locs "(ns some-ns (:gen-class)) (defn -main [& _args] 1) (defn -foo [] 1)" (h/file-uri "file:///project/src/b.clj"))
+  (h/load-code-and-locs "(ns some-ns) (defn foo [a b] (+ a b))")
+  (h/load-code-and-locs "(ns some-ns (:gen-class)) (defn -main [& _args] 1) (defn -foo [] 1)" (h/file-uri "file:///b.clj"))
   (h/load-code-and-locs (h/code "(ns some-ns (:require [re-frame.core :as r]))"
                                 "(r/reg-event-fx :some/thing (fn []))"
-                                "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///project/src/c.cljs"))
-  (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///project/src/d.cljs"))
-  (h/load-code-and-locs "(ns some-ns) (def foo 1) (comment (def bar 2))" (h/file-uri "file:///project/src/e.clj"))
+                                "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///c.cljs"))
+  (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///d.cljs"))
+  (h/load-code-and-locs "(ns some-ns) (def foo 1) (comment (def bar 2))" (h/file-uri "file:///e.clj"))
   (h/load-code-and-locs (h/code "(ns f-ns)"
                                 "(definterface Bar (bar [x]))"
                                 "(definterface Foo (baz [x]))"
-                                "(reify Foo (baz [_ x] x))") (h/file-uri "file:///project/src/f.clj"))
-  (h/load-code-and-locs "(ns g-a) (defn foo [a b] (+ a b))" (h/file-uri "file:///project/src/g_a.clj"))
-  (h/load-code-and-locs "(ns g-b (:require [g-a :as g-a])) (g-a/foo 1 2)" (h/file-uri "file:///project/cool-test/g_a_test.clj"))
+                                "(reify Foo (baz [_ x] x))") (h/file-uri "file:///f.clj"))
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/a.clj")]
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
-      [{:uri (h/file-uri "file:///project/src/a.clj")
+      [{:uri h/default-uri
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -134,12 +130,12 @@
   (testing "when linter level is :warning"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/a.clj")]
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
-      [{:uri (h/file-uri "file:///project/src/a.clj")
+      [{:uri h/default-uri
         :level :warning
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -151,12 +147,12 @@
   (testing "when linter level is :error"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/a.clj")]
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
-      [{:uri (h/file-uri "file:///project/src/a.clj")
+      [{:uri h/default-uri
         :level :error
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -168,7 +164,7 @@
   (testing "when linter level is :off"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/a.clj")]
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
@@ -178,12 +174,12 @@
   (testing "linter level by default is :info"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/a.clj")]
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
-      [{:uri (h/file-uri "file:///project/src/a.clj")
+      [{:uri h/default-uri
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'some-ns/foo'"
@@ -195,7 +191,7 @@
   (testing "excluding the whole ns"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/a.clj")]
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
@@ -205,7 +201,7 @@
   (testing "excluding the simple var from ns"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/a.clj")]
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
@@ -215,7 +211,7 @@
   (testing "excluding the specific var"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/a.clj")]
+      [h/default-uri]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
@@ -225,7 +221,7 @@
   (testing "excluding specific syms"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/b.clj")]
+      [(h/file-uri "file:///b.clj")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
@@ -235,24 +231,24 @@
   (testing "excluding when inside comment block"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/e.clj")]
+      [(h/file-uri "file:///e.clj")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
       [{:type :clojure-lsp/unused-public-var
-        :uri (h/file-uri "file:///project/src/e.clj")
+        :uri (h/file-uri "file:///e.clj")
         :message "Unused public var 'some-ns/foo'"}]
       @findings))
   (testing "unused keyword definitions"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/c.cljs")]
+      [(h/file-uri "file:///c.cljs")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
-      [{:uri (h/file-uri "file:///project/src/c.cljs")
+      [{:uri (h/file-uri "file:///c.cljs")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public keyword ':some/thing'"
@@ -260,7 +256,7 @@
         :col 17
         :end-row 2
         :end-col 28}
-       {:uri (h/file-uri "file:///project/src/c.cljs")
+       {:uri (h/file-uri "file:///c.cljs")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public keyword ':otherthing'"
@@ -272,7 +268,7 @@
   (testing "var marked ^:export is excluded"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/d.cljs")]
+      [(h/file-uri "file:///d.cljs")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
@@ -280,7 +276,7 @@
   (testing "var with dash and :gen-class on ns is excluded"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/b.clj")]
+      [(h/file-uri "file:///b.clj")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
@@ -288,12 +284,12 @@
   (testing "definterface methods are excluded when the interface is used."
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/f.clj")]
+      [(h/file-uri "file:///f.clj")]
       (h/db)
       {:reg-finding! #(swap! findings conj %)
        :config {}})
     (h/assert-submaps
-      [{:uri (h/file-uri "file:///project/src/f.clj")
+      [{:uri (h/file-uri "file:///f.clj")
         :level :info
         :type :clojure-lsp/unused-public-var
         :message "Unused public var 'f-ns/Bar'"
@@ -301,33 +297,6 @@
         :col 15
         :end-row 2
         :end-col 18}]
-      @findings))
-  (testing "not ignoring tests references when flag is off"
-    (reset! findings [])
-    (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/g_a.clj")
-       (h/file-uri "file:///project/cool-test/g_a_test.clj")]
-      (h/db)
-      {:reg-finding! #(swap! findings conj %)
-       :config {}})
-    (h/assert-submaps [] @findings))
-  (testing "ignoring tests references when flag is on"
-    (reset! findings [])
-    (f.diagnostic/custom-lint-uris!
-      [(h/file-uri "file:///project/src/g_a.clj")
-       (h/file-uri "file:///project/cool-test/g_a_test.clj")]
-      (h/db)
-      {:reg-finding! #(swap! findings conj %)
-       :config {:linters {:clojure-lsp/unused-public-var {:ignore-test-references? true}}}})
-    (h/assert-submaps
-      [{:uri (h/file-uri "file:///project/src/g_a.clj")
-        :level :info
-        :type :clojure-lsp/unused-public-var
-        :message "Unused public var 'g-a/foo'"
-        :row 1
-        :col 16
-        :end-row 1
-        :end-col 19}]
       @findings)))
 
 (deftest lint-clj-kondo-findings

@@ -29,6 +29,12 @@
                              (q/find-keyword-definitions db uri))
                      (remove (partial q/exclude-public-definition? (:kondo-config db)))))))
 
+(defn ^:private test-reference? [source-uri reference-uri]
+  (and source-uri
+       ;; when in test file, don't count usages of helpers as test references
+       (not (string/starts-with? reference-uri source-uri))
+       (string/includes? reference-uri "_test.")))
+
 (defn resolve-code-lens [uri row col range db]
   (let [segregate-lens? (settings/get db [:code-lens :segregate-test-references] true)
         references (q/find-references-from-cursor db uri row col false)]
@@ -36,8 +42,8 @@
       (let [source-uri (some-> uri
                                (shared/uri->source-path (settings/get db [:source-paths]))
                                (shared/filename->uri db))
-            main-references (remove (comp (partial shared/test-reference? source-uri) :uri) references)
-            test-references (filter (comp (partial shared/test-reference? source-uri) :uri) references)]
+            main-references (remove (comp (partial test-reference? source-uri) :uri) references)
+            test-references (filter (comp (partial test-reference? source-uri) :uri) references)]
         (if (seq test-references)
           {:range range
            :command {:title (str (main-references->string main-references)

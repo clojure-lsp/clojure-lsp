@@ -253,23 +253,16 @@
 (defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
   (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/unused-public-var :level))
     (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
-          ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
           var-definitions (->> (q/find-all-var-definitions narrowed-db)
                                (remove exclude-def?))
           var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
           var-usages (into #{}
-                           (q/xf-all-var-usages-to-namespaces var-nses)
+                           (comp
+                             (q/xf-all-var-usages-to-namespaces var-nses)
+                             (map q/var-usage-signature))
                            (q/nses-and-dependents-analysis project-db var-nses))
-          uri->source-uri (memoize (fn [uri]
-                                     (some-> uri
-                                             (shared/uri->source-path (settings/get project-db [:source-paths]))
-                                             (shared/filename->uri project-db))))
           var-used? (fn [var-def]
-                      (let [source-uri (uri->source-uri (:uri var-def))
-                            usages (if ignore-test-references?
-                                     (set (remove #(shared/test-reference? source-uri (:uri %)) var-usages))
-                                     var-usages)]
-                        (some (set (map q/var-usage-signature usages)) (q/var-definition-signatures var-def))))
+                      (some var-usages (q/var-definition-signatures var-def)))
           kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
                               (remove exclude-def?))
           kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords

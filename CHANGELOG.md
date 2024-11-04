@@ -6,7 +6,6 @@
   - Fix move-form double edit problem in cljc files.
   - Fix disabling `:clojure-lsp/unused-public-var` linter also disabling `:clojure-lsp/different-aliases`
   - Bump clj-kondo to `2024.09.28-20240930.094425-2`
-  - Add support for ignoring tests references for the `clojure-lsp/unused-public-var` linter. #1878
   - Bump lsp4clj to `1.10.0`.
   - Bump clojure to `1.12.0`.
   - Bump tools.cli to `1.0.230`.

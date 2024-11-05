@@ -3,10 +3,10 @@
 ## Unreleased
 
 - General
+  - Fix client capability check that prevents test file creation.
   - Fix move-form double edit problem in cljc files.
   - Fix disabling `:clojure-lsp/unused-public-var` linter also disabling `:clojure-lsp/different-aliases`
   - Bump clj-kondo to `2024.09.28-20240930.094425-2`
-  - Add support for ignoring tests references for the `clojure-lsp/unused-public-var` linter. #1878
   - Bump lsp4clj to `1.10.0`.
   - Bump clojure to `1.12.0`.
   - Bump tools.cli to `1.0.230`.
@@ -18,7 +18,7 @@
 
 ## 2024.08.05-18.16.00
 
-- General 
+- General
   - Fix CI for macos amd64. #1859
   - Replace CirrusCI with Github for macos-aarch64 binary standardizing deploy process.
 
@@ -77,11 +77,11 @@
 - Editor
   - Fix documentation resolve not working for clients without hover markdown support.
   - Added setting to allow requires and imports to be added within the current comment form during code action and completion: `:add-missing :add-to-rcf` #1316
-  - Fix `suppress-diagnostics` not working on top-level forms when preceded by comment. #1678 
+  - Fix `suppress-diagnostics` not working on top-level forms when preceded by comment. #1678
   - Fix add missing import feature on some corner cases for java imports. #1754
   - Fix semantic tokens and other analysis not being applied for project files at root. #1759
   - Add support for adding missing requires and completion results referring to JS libraries which already have an alias in the project #1587
-  
+
 ## 2024.02.01-11.01.59
 
 - General
@@ -94,8 +94,8 @@
   - Fix `rename` of ns causing wrong ns names because of duplicate rename actions. #1751
   - Fix `range-formatting` throwing exceptions when unbalanced parens are sent from client. #1758
   - Fix rename functions need to clean up LSP state or restart in some clients implementing LSP method `didRenameFiles`. #1755
-  - Fix `thread last all` failed after comment form `#_(...)`. #1745  
-  
+  - Fix `thread last all` failed after comment form `#_(...)`. #1745
+
 ## 2023.12.29-12.09.27
 
 - General
@@ -103,7 +103,7 @@
   - Fix `max-line-length` on clean-ns feature not respecting some lines when contains a lot of refers. #1729
   - Bump cljfmt to 0.12.0.
   - Bump clj-kondo to `2023.12.15`.
-  
+
 - Editor
   - Fix edn tree visualization for keys with same name in the same level. #1558
   - Make clear when `hover` feature is in a calling and not in a specific symbol. #1281
@@ -115,7 +115,7 @@
 ## 2023.10.30-16.25.41
 
 - General
-  - Bump clj-kondo to `2023.10.21-20231022.204832-4`. 
+  - Bump clj-kondo to `2023.10.21-20231022.204832-4`.
   - Fix move-to-let/expand-let bug for multi-arity functions #1283
   - Fix `:dependency-scheme` setting for .java files from jars #1653
   - Bump graalvm to 21.
@@ -156,7 +156,7 @@
 
 - Editor
   - Avoid returning all known keywords on empty keywords completion for performance reasons.
-  
+
 - API/CLI
   - Improve mem/cpu usage using less analysis for tasks.
 
@@ -172,7 +172,7 @@
   - Bump lsp4clj to `1.8.0`.
   - Add post startup tasks progress feedbacks, like "Generating stubs", "Analyzing JDK source" and "Fetching Clojars".
   - Bump cljfmt to `0.10.6`. #1605
-  
+
 - Editor
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575
   - Enhance java support for hover and completion of static class members.
@@ -181,7 +181,7 @@
   - Add `score` to completion items for a better completion client sorting. #1595
   - Revamp keyword completion. #1599
   - Avoid LSP errors when cleaning a file without namespaces. #1603
-  
+
 - API/CLI
   - New feature: Find all references via API and CLI. #1572
 
@@ -194,7 +194,7 @@
   - Fix edn tree to consider symbols. #1556
   - Fix edn tree to consider vector root nodes. #1557
   - Fix edn tree to handle invalid edn code and not throw exceptions while typing code.
-  
+
 - API/CLI
   - Avoid enabling unecessary analysis features for API/CLI lint, improving memory usage.
 
@@ -313,7 +313,7 @@
   - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211
   - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
-  - Bump clj-kondo to `2022.10.05`. #1226 
+  - Bump clj-kondo to `2022.10.05`. #1226
   - Fix issue with changes being reporting with spurious and incorrect line endings on MS-Windows text files. #1211
   - Index internal data by URI instead of filename, to minimize conversion between these formats when running queries. #1207
   - Add support to enable trace logs on server via `--trace` flag. (For latest Emacs's lsp-mode this can be enabled easyly via `lsp-clojure-trace-enable` variable)
@@ -368,7 +368,7 @@
   - Add refactoring `Restructure keys`, the inverse of `Destructure keys`. #1170
   - Add refactorings to convert between `(:x m)` and `(get m :x)` or `(:y (:x m))` and `(get-in m [:x :y])`. #1172
   - Add support to imported java class on completion. #1193
-  - Add new question to skip or retry classpath scan during startup if failed. 
+  - Add new question to skip or retry classpath scan during startup if failed.
   - Improve performance of processing of changed files outside editor calling clj-kondo in batch. #1205
   - When renaming a keyword that is also a destructured key, rename its local usages too. #1192
 

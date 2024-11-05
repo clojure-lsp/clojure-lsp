@@ -460,7 +460,9 @@
 
 ;; TODO move to a better place
 (defn client-changes [changes db]
-  (if (get-in db [:client-capabilities :workspace :workspace-edit :document-changes])
+  (if (or
+        (get-in db [:client-capabilities :workspace :workspace-edit :document-changes])
+        (get-in db [:client-capabilities :workspace :workspace-edit :resource-operations]))
     {:document-changes changes}
     {:changes (into {} (map (fn [{:keys [text-document edits]}]
                               [(:uri text-document) edits])
@@ -562,9 +564,3 @@
 (defn ignore-path? [settings path]
   (let [paths-ignore-regex (set (get settings :paths-ignore-regex #{}))]
     (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))
-
-(defn test-reference? [source-uri reference-uri]
-  (and source-uri
-       ;; when in test file, don't count usages of helpers as test references
-       (not (string/starts-with? reference-uri source-uri))
-       (string/includes? reference-uri "_test.")))

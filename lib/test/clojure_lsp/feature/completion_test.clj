@@ -2,6 +2,7 @@
   (:require
    [babashka.fs :as fs]
    [clojure-lsp.feature.completion :as f.completion]
+   [clojure-lsp.feature.completion-lib :as f.completion-lib]
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
@@ -686,6 +687,75 @@
                                                                            #:git{:tag "v0.3.4" :sha "2345"}
                                                                            #:git{:tag "v0.3.5" :sha "1234"}])]
           (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") all-coord-r all-coord-c (h/db)))))))
+
+(deftest completing-clojure-deps-lib-names
+  (let [[[dep-1-r dep-1-c]
+         [dep-2-r dep-2-c]]
+        (h/load-code-and-locs
+          (h/code "{:deps {org.clojure/clojure {:mvn/version \"1.10.3\"}"
+                  "        org.cloj|"
+                  "        nubank/m|"
+                  "        io.github.cognitect-labs/test-runner {:git/tag \"|\", :git/sha \"dfb30dd\"}}"
+                  " :paths [\"src\" \"resources\"]"
+                  " :aliases {:test {:extra-paths [\"test\"]}}}")
+          (h/file-uri "file:///some/my-project/deps.edn"))]
+    (testing "org.clojure completion"
+      (reset! f.completion-lib/libs* nil)
+      (h/assert-submaps
+        [{:label "org.clojure-android/foo" :kind :text}
+         {:label "org.clojure/clojure" :kind :text}
+         {:label "org.clojure/core.async" :kind :text}]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'bar/baz 'org.clojure-android/foo])
+                      f.completion-lib/get-mvn-artifacts! (constantly ["core.async" "clojure"])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") dep-1-r dep-1-c (h/db)))))
+    (testing "artifact-id completion"
+      (reset! f.completion-lib/libs* nil)
+      (h/assert-submaps
+        [{:label "nubank/matcher-combinators" :kind :text}]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'nubank/foo 'nubank/matcher-combinators])
+                      f.completion-lib/get-mvn-artifacts! (constantly ["core.async" "clojure"])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") dep-2-r dep-2-c (h/db)))))))
+
+(deftest completing-lein-lib-names
+  (let [[[dep-1-r dep-1-c]
+         [dep-2-r dep-2-c]
+         [dep-3-r dep-3-c]]
+        (h/load-code-and-locs
+          (h/code "(defproject my-project \"0.0.1\""
+                  "  :description \"FIXME: write description\""
+                  "  :main ^:skip-aot clojure-sample.core"
+                  "  :dependencies [[org.clojure/clojurescript \"1.10.758\"]"
+                  "                 [org.cl|]"
+                  "                 [|]"
+                  "                 [nubank/ma|]]"
+                  "  :plugins [[com.github.clojure-lsp/lein-clojure-lsp \"|\"]])")
+          (h/file-uri "file:///some/my-project/project.clj"))]
+    (testing "org.clojure completion"
+      (reset! f.completion-lib/libs* nil)
+      (h/assert-submaps
+        [{:label "org.clojure-android/foo" :kind :text}
+         {:label "org.clojure/clojure" :kind :text}
+         {:label "org.clojure/core.async" :kind :text}]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'bar/baz 'org.clojure-android/foo])
+                      f.completion-lib/get-mvn-artifacts! (constantly ["core.async" "clojure"])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dep-1-r dep-1-c (h/db)))))
+    (testing "empty completion"
+      (reset! f.completion-lib/libs* nil)
+      (h/assert-submaps
+        [{:label "bar/baz" :kind :text}
+         {:label "com.cognitect/clojure" :kind :text}
+         {:label "foo/bar" :kind :text}
+         {:label "org.clojure/clojure" :kind :text}]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'bar/baz])
+                      f.completion-lib/get-mvn-artifacts! (constantly ["clojure"])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dep-2-r dep-2-c (h/db)))))
+    (testing "artifact completion"
+      (reset! f.completion-lib/libs* nil)
+      (h/assert-submaps
+        [{:label "nubank/matcher-combinators" :kind :text}]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'bar/baz 'nubank/foo 'nubank/matcher-combinators])
+                      f.completion-lib/get-mvn-artifacts! (constantly ["core.async" "clojure"])]
+          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dep-3-r dep-3-c (h/db)))))))
 
 (deftest completing-sorting
   (let [[[row col]] (h/load-code-and-locs

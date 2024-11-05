@@ -3,6 +3,7 @@
    [clojure-lsp.common-symbols :as common-sym]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
+   [clojure-lsp.feature.completion-lib :as f.completion-lib]
    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
    [clojure-lsp.feature.format]
    [clojure-lsp.feature.hover :as f.hover]
@@ -12,15 +13,10 @@
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.deps]
-   [clojure.tools.deps.extensions :as tools.deps.extensions]
-   [clojure.tools.deps.util.maven :as tools.deps.maven]
    [medley.core :as medley]
-   [rewrite-clj.zip :as z])
-  (:import
-   [clojure.lang PersistentVector]))
+   [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
 
@@ -46,7 +42,8 @@
    :simple-cursor
    :locals
    :kw-arg
-   :dep-version])
+   :lib-version
+   :lib-name])
 
 (def priority-kw->number
   (reduce (fn [m priority]
@@ -607,66 +604,6 @@
                        [(:score %1) (:label %2) (:detail %2)]))
        not-empty))
 
-(def ^:private deps-files
-  {"deps.edn" :clojure-deps
-   "bb.edn" :babashka
-   "project.clj" :leiningen})
-
-(defn ^:private lib-version-completion-context
-  "Completion of version of libs in deps.edn, project.clj files."
-  [cursor-loc uri]
-  (when-let [dep-type (and cursor-loc (get deps-files (.getName (io/file uri))))]
-    (case dep-type
-      (:clojure-deps :babashka)
-      (cond
-        (identical? :mvn/version (when (some-> cursor-loc z/prev z/tag (= :token))
-                                   (some-> cursor-loc z/prev z/sexpr)))
-        #:dep{:type dep-type
-              :coordinate :mvn/version
-              :lib (z/sexpr (z/prev (z/up cursor-loc)))}
-
-        (identical? :git/tag (when (some-> cursor-loc z/prev z/tag (= :token))
-                               (some-> cursor-loc z/prev z/sexpr)))
-        #:dep{:type dep-type
-              :coordinate :git/tag
-              :lib (z/sexpr (z/prev (z/up cursor-loc)))}
-
-        (some-> cursor-loc z/prev z/string symbol qualified-symbol?)
-        #:dep{:type dep-type
-              :lib (some-> cursor-loc z/prev z/string symbol)}
-
-        (some-> cursor-loc z/prev z/prev z/string symbol qualified-symbol?)
-        #:dep{:type dep-type
-              :lib (some-> cursor-loc z/prev z/prev z/string symbol)})
-
-      :leiningen
-      (cond
-        (contains? #{:dependencies :managed-dependencies :plugins :pom-plugins :extensions}
-                   (some-> cursor-loc z/up z/up z/prev z/sexpr))
-        #:dep{:type dep-type
-              :coordinate :mvn/version
-              :lib (some-> cursor-loc z/leftmost z/sexpr symbol)}))))
-
-(defn ^:private lib-version-complete [{:dep/keys [coordinate lib]} matches-fn]
-  (let [versions-coord (tools.deps.extensions/find-all-versions lib nil {:mvn/repos tools.deps.maven/standard-repos})
-        version-fn #(or (when coordinate (get % coordinate)) (:git/tag %) (:mvn/version %))
-        versions (map version-fn versions-coord)
-        item-fn (fn [version label]
-                  (when (or (not coordinate)
-                            (matches-fn label))
-                    (let [index (.indexOf ^PersistentVector (vec (reverse versions)) version)]
-                      {:label label
-                       :detail (when (= 0 index) "latest")
-                       :sort-text (format "%03d" index)
-                       :kind :text
-                       :priority :dep-version})))]
-    (if coordinate
-      (keep (fn [version] (item-fn version version)) versions)
-      (keep (fn [version-coord]
-              (let [version-coord-str (str version-coord)]
-                (item-fn (version-fn version-coord) (subs version-coord-str 1 (dec (count version-coord-str))))))
-            versions-coord))))
-
 (defn completion [uri row col db]
   (let [root-zloc (parser/safe-zloc-of-file db uri)
         ;; (dec col) because we're completing what's behind the cursor
@@ -726,10 +663,10 @@
             java-class-for-static-member (when (symbol? cursor-value)
                                            (let [[_ match1 match2] (re-find #"^([A-Z]\w*)/|\.([A-Z]\w*)/" (str cursor-value))]
                                              (or match1 match2)))
-            lib-version-completion-context (lib-version-completion-context cursor-loc uri)
+            lib-completion-context (f.completion-lib/lib-completion-context cursor-loc uri)
             items (cond
-                    lib-version-completion-context
-                    (lib-version-complete lib-version-completion-context matches-fn)
+                    lib-completion-context
+                    (f.completion-lib/complete lib-completion-context matches-fn cursor-value)
 
                     inside-refer?
                     (with-refer-elements matches-fn cursor-loc non-local-db resolve-support)

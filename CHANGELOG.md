@@ -15,6 +15,7 @@
   - Bump cljfmt to `1.13.0`.
   - Bump babashka/fs to `0.5.22`.
   - New feature: completion of lib versions on deps.edn, bb.edn and project.clj files. #1905
+  - New feature: completion of clojure lib names from clojars and mvn-central for deps.edn, bb.edn and project.clj files. #1909
 
 ## 2024.08.05-18.16.00
 

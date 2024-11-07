@@ -58,9 +58,7 @@ To understand what is supported and how to configure it, check the [settings sec
 
 #### Library names and version completion
 
-![](images/features/completion-lib-name.png)
-
-![](images/features/completion-lib-version.png)
+![](images/features/completion-lib.gif)
 
 #### Snippets
 

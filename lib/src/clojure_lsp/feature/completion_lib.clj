@@ -77,7 +77,8 @@
                        (some-> cursor-loc z/up z/up z/prev z/sexpr)))
         #:dep{:type :name}))))
 
-(defonce libs* (atom {:loading false :libs nil}))
+(def initial-libs-value {:loading false :libs nil})
+(defonce libs* (atom initial-libs-value))
 
 (defn ^:private fetch-clojars-libs!
   "Return a map of libs with all its versions.
@@ -151,8 +152,10 @@
           (swap! libs* assoc :loading true)
           (let [clojars-libs* (future (fetch-clojars-libs!))
                 mvn-central-libs* (future (fetch-clojure-mvn-central-libs!))
-                github-libs* (future (fetch-github-clojure-libs!))]
-            (reset! libs* {:loading false :libs (shared/deep-merge @clojars-libs* @mvn-central-libs* @github-libs*)}))))))
+                github-libs* (future (fetch-github-clojure-libs!))
+                libs (shared/deep-merge @clojars-libs* @mvn-central-libs* @github-libs*)]
+            (reset! libs* {:loading false :libs libs})
+            libs)))))
 
 (defn fetch-libs! []
   (when-not (:libs @libs*)

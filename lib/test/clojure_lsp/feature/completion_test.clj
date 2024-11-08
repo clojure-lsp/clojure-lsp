@@ -5,8 +5,7 @@
    [clojure-lsp.feature.completion-lib :as f.completion-lib]
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
-   [clojure.test :refer [deftest is testing]]
-   [clojure.tools.deps.extensions :as tools.deps.extensions]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)
 
@@ -634,21 +633,27 @@
                   "  :plugins [[com.github.clojure-lsp/lein-clojure-lsp \"|\"]])")
           (h/file-uri "file:///some/my-project/project.clj"))]
     (testing ":dependencies"
+      (reset! f.completion-lib/libs* nil)
       (h/assert-submaps
-        [{:label "1.10.0-SNAPSHOT" :kind :text  :sort-text "002"}
-         {:label "1.11.0" :kind :text :sort-text "001"}
+        [{:label "1.11.0" :kind :text :sort-text "001"}
          {:label "1.12.0" :kind :text :detail "latest" :sort-text "000"}]
-        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "1.10.0-SNAPSHOT"}
-                                                                           #:mvn{:version "1.11.0"}
-                                                                           #:mvn{:version "1.12.0"}])]
-          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") plugin-1-r plugin-1-c (h/db)))))
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'foo/bar [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                       'org.clojure/clojure [{:mvn/version "1.12.0"} {:mvn/version "1.11.0"}]
+                                                                       'org.clojure-android/foo [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {})]
+          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dependency-1-r dependency-1-c (h/db)))))
     (testing ":plugins"
+      (reset! f.completion-lib/libs* nil)
       (h/assert-submaps
         [{:label "0.1.4" :kind :text  :sort-text "001"}
          {:label "3.10.2" :kind :text :detail "latest" :sort-text "000"}]
-        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "0.1.4"}
-                                                                           #:mvn{:version "3.10.2"}])]
-          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dependency-1-r dependency-1-c (h/db)))))))
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {'com.github.clojure-lsp/lein-clojure-lsp [{:mvn/version "3.10.2"} {:mvn/version "0.1.4"}]})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'foo/bar [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                       'org.clojure/clojure [{:mvn/version "1.12.0"} {:mvn/version "1.11.0"} {:mvn/version "1.10.0-SNAPSHOT"}]
+                                                                       'org.clojure-android/foo [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {})]
+          (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") plugin-1-r plugin-1-c (h/db)))))))
 
 (deftest completing-clojure-deps-lib-versions
   (let [[[mvn-1-r mvn-1-c]
@@ -664,28 +669,32 @@
                   " :aliases {:test {:extra-paths [\"test\"]}}}")
           (h/file-uri "file:///some/my-project/deps.edn"))]
     (testing "mvn coordinate"
+      (reset! f.completion-lib/libs* nil)
       (h/assert-submaps
         [{:label "3.4.0" :kind :text :sort-text "001"}
          {:label "3.4.1" :kind :text :detail "latest" :sort-text "000"}]
-        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "1.2.0"}
-                                                                           #:mvn{:version "3.4.0"}
-                                                                           #:mvn{:version "3.4.1"}])]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {'nubank/matcher-combinators [{:mvn/version "3.4.1"} {:mvn/version "3.4.0"} {:mvn/version "1.2.0"}]})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'org.clojure/clojure [{:mvn/version "1.12.0"} {:mvn/version "1.11.0"} {:mvn/version "1.10.0-SNAPSHOT"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {})]
           (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") mvn-1-r mvn-1-c (h/db)))))
     (testing "git tag coordinate"
+      (reset! f.completion-lib/libs* nil)
       (h/assert-submaps
         [{:label "v0.3.4" :kind :text :sort-text "001"}
          {:label "v0.3.5" :kind :text :detail "latest" :sort-text "000"}]
-        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:git{:tag "v0.3.4" :sha "2345"}
-                                                                           #:git{:tag "v0.3.5" :sha "1234"}])]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'org.clojure/clojure [{:mvn/version "1.12.0"} {:mvn/version "1.11.0"} {:mvn/version "1.10.0-SNAPSHOT"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {'io.github.cognitect-labs/test-runner [#:git{:tag "v0.3.5" :sha "1234"} #:git{:tag "v0.3.4" :sha "2345"}]})]
           (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") git-tag-1-r git-tag-1-c (h/db)))))
     (testing "all coordinates"
+      (reset! f.completion-lib/libs* nil)
       (h/assert-submaps
-        [{:label ":git{:tag \"v0.3.4\", :sha \"2345\"" :kind :text :sort-text "001"}
-         {:label ":git{:tag \"v0.3.5\", :sha \"1234\"" :kind :text :detail "latest" :sort-text "000"}
-         {:label ":mvn{:version \"0.3.4\"" :kind :text :sort-text "002"}]
-        (with-redefs [tools.deps.extensions/find-all-versions (constantly [#:mvn{:version "0.3.4"}
-                                                                           #:git{:tag "v0.3.4" :sha "2345"}
-                                                                           #:git{:tag "v0.3.5" :sha "1234"}])]
+        [{:label ":git{:tag \"v0.3.4\", :sha \"2345\"" :kind :text :sort-text "002"}
+         {:label ":git{:tag \"v0.3.5\", :sha \"1234\"" :kind :text :sort-text "001"}
+         {:label ":mvn{:version \"0.3.4\"" :kind :text :sort-text "000"}]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {'foo/bar [{:mvn/version "0.3.4"}]})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'org.clojure/clojure [{:mvn/version "1.12.0"} {:mvn/version "1.11.0"} {:mvn/version "1.10.0-SNAPSHOT"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {'foo/bar [#:git{:tag "v0.3.5" :sha "1234"} #:git{:tag "v0.3.4" :sha "2345"}]})]
           (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") all-coord-r all-coord-c (h/db)))))))
 
 (deftest completing-clojure-deps-lib-names
@@ -705,15 +714,23 @@
         [{:label "org.clojure-android/foo" :kind :text}
          {:label "org.clojure/clojure" :kind :text}
          {:label "org.clojure/core.async" :kind :text}]
-        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'bar/baz 'org.clojure-android/foo])
-                      f.completion-lib/get-mvn-artifacts! (constantly ["core.async" "clojure"])]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {'foo/bar [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                        'bar/baz [{:mvn/version "1.0.2"}]
+                                                                        'org.clojure-android/foo [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'org.clojure/core.async [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                       'org.clojure/clojure [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {})]
           (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") dep-1-r dep-1-c (h/db)))))
     (testing "artifact-id completion"
       (reset! f.completion-lib/libs* nil)
       (h/assert-submaps
         [{:label "nubank/matcher-combinators" :kind :text}]
-        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'nubank/foo 'nubank/matcher-combinators])
-                      f.completion-lib/get-mvn-artifacts! (constantly ["core.async" "clojure"])]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {'foo/bar [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                        'nubank/foo [{:mvn/version "1.0.2"}]
+                                                                        'nubank/matcher-combinators [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'org.clojure/core.async [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                       'org.clojure/clojure [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {})]
           (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") dep-2-r dep-2-c (h/db)))))))
 
 (deftest completing-lein-lib-names
@@ -736,25 +753,34 @@
         [{:label "org.clojure-android/foo" :kind :text}
          {:label "org.clojure/clojure" :kind :text}
          {:label "org.clojure/core.async" :kind :text}]
-        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'bar/baz 'org.clojure-android/foo])
-                      f.completion-lib/get-mvn-artifacts! (constantly ["core.async" "clojure"])]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {'foo/bar [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                        'bar/baz [{:mvn/version "1.0.2"}]
+                                                                        'org.clojure-android/foo [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'org.clojure/core.async [{:mvn/version  "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                       'org.clojure/clojure [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {})]
           (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dep-1-r dep-1-c (h/db)))))
     (testing "empty completion"
       (reset! f.completion-lib/libs* nil)
       (h/assert-submaps
         [{:label "bar/baz" :kind :text}
-         {:label "com.cognitect/clojure" :kind :text}
          {:label "foo/bar" :kind :text}
          {:label "org.clojure/clojure" :kind :text}]
-        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'bar/baz])
-                      f.completion-lib/get-mvn-artifacts! (constantly ["clojure"])]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {'foo/bar [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                        'bar/baz [{:mvn/version "1.0.2"}]})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'org.clojure/clojure [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {})]
           (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dep-2-r dep-2-c (h/db)))))
     (testing "artifact completion"
       (reset! f.completion-lib/libs* nil)
       (h/assert-submaps
         [{:label "nubank/matcher-combinators" :kind :text}]
-        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly ['foo/bar 'bar/baz 'nubank/foo 'nubank/matcher-combinators])
-                      f.completion-lib/get-mvn-artifacts! (constantly ["core.async" "clojure"])]
+        (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {'foo/bar [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                        'nubank/foo [{:mvn/version "1.0.2"}]
+                                                                        'nubank/matcher-combinators [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/get-mvn-artifacts! (constantly {'org.clojure/core.async [{:mvn/version "0.0.1"} {:mvn/version "0.0.2"}]
+                                                                       'org.clojure/clojure [{:mvn/version "1.0.0"} {:mvn/version "1.1.0"}]})
+                      f.completion-lib/fetch-github-clojure-libs! (constantly {})]
           (f.completion/completion (h/file-uri "file:///some/my-project/project.clj") dep-3-r dep-3-c (h/db)))))))
 
 (deftest completing-sorting

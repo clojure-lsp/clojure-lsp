@@ -14,7 +14,6 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.string :as string]
-   [clojure.tools.deps]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 

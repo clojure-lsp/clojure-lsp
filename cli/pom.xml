@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2024.08.05-18.16.00</version>
+  <version>2024.11.08-17.49.29</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -17,7 +17,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.11.3</version>
+      <version>1.12.0</version>
     </dependency>
     <dependency>
       <groupId>org.benf</groupId>
@@ -43,22 +43,22 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.cli</artifactId>
-      <version>1.0.214</version>
+      <version>1.1.230</version>
     </dependency>
     <dependency>
       <groupId>rewrite-clj</groupId>
       <artifactId>rewrite-clj</artifactId>
-      <version>1.1.47</version>
+      <version>1.1.48</version>
     </dependency>
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2024.08.01</version>
+      <version>2024.09.28-20240930.094425-2</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
       <artifactId>cljfmt</artifactId>
-      <version>0.12.0</version>
+      <version>0.13.0</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-cljs</groupId>
@@ -83,7 +83,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>timbre</artifactId>
-      <version>6.3.1</version>
+      <version>6.6.0</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>
@@ -114,7 +114,7 @@
     <dependency>
       <groupId>babashka</groupId>
       <artifactId>fs</artifactId>
-      <version>0.3.17</version>
+      <version>0.5.22</version>
     </dependency>
     <dependency>
       <groupId>nrepl</groupId>
@@ -158,6 +158,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2024.08.05-18.16.00</tag>
+    <tag>2024.11.08-17.49.29</tag>
   </scm>
 </project>

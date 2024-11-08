@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2024.11.08-17.49.29
+
 - General
   - Fix client capability check that prevents test file creation.
   - Fix move-form double edit problem in cljc files.

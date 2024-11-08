@@ -4,6 +4,7 @@
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
+   [clojure-lsp.feature.completion-lib :as f.completion-lib]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -35,7 +36,7 @@
 (defn load-document! [uri text db*]
   (swap! db* update-in [:documents uri] assoc :v 0 :text text :saved-on-disk false))
 
-(defn did-open [uri text {:keys [db* edits-chan] :as components} allow-create-ns]
+(defn did-open [uri text {:keys [db* producer edits-chan] :as components} allow-create-ns]
   (load-document! uri text db*)
   (let [kondo-result* (future (lsp.kondo/run-kondo-on-text! text uri db*))
         depend-result* (future (lsp.depend/analyze-uri! uri @db*))
@@ -48,7 +49,13 @@
     (f.diagnostic/publish-diagnostics! uri components))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
-      (async/>!! edits-chan create-ns-edits))))
+      (async/>!! edits-chan create-ns-edits)))
+  (when (and (f.completion-lib/dep-file? uri)
+             (not (:libs @f.completion-lib/libs*))
+             (not (:api? @db*)))
+    (producer/publish-progress producer nil "Fetching libs for completion" "fetch-libs")
+    (f.completion-lib/fetch-libs!)
+    (producer/publish-progress producer 100 nil "fetch-libs")))
 
 (defn ^:private set-xor [a b]
   (into (set/difference a b)

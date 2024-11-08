@@ -18,10 +18,13 @@
    "bb.edn" :babashka
    "project.clj" :leiningen})
 
+(defn dep-file? [uri]
+  (get deps-files (.getName (io/file uri))))
+
 (defn lib-completion-context
   "Completion of version of libs in deps.edn, project.clj files."
   [cursor-loc uri]
-  (when-let [dep-type (and cursor-loc (get deps-files (.getName (io/file uri))))]
+  (when-let [dep-type (and cursor-loc (dep-file? uri))]
     (case dep-type
       (:clojure-deps :babashka)
       (cond
@@ -74,7 +77,7 @@
                        (some-> cursor-loc z/up z/up z/prev z/sexpr)))
         #:dep{:type :name}))))
 
-(defonce libs* (atom nil))
+(defonce libs* (atom {:loading false :libs nil}))
 
 (defn ^:private fetch-clojars-libs!
   "Return a map of libs with all its versions.
@@ -141,11 +144,19 @@
    Return a map of libs with all its versions.
    E.g. `{foo/bar [{:mvn/version \"0.1.0\"} {:git/tag \"0.1.2\" :git/sha \"123\"}]}`"
   []
-  (or @libs*
-      (let [clojars-libs* (future (fetch-clojars-libs!))
-            mvn-central-libs* (future (fetch-clojure-mvn-central-libs!))
-            github-libs* (future (fetch-github-clojure-libs!))]
-        (reset! libs* (shared/deep-merge @clojars-libs* @mvn-central-libs* @github-libs*)))))
+  (or (:libs @libs*)
+      (when-not (:loading @libs*)
+        (shared/logging-time
+          "Fechting all jar libs took %s"
+          (swap! libs* assoc :loading true)
+          (let [clojars-libs* (future (fetch-clojars-libs!))
+                mvn-central-libs* (future (fetch-clojure-mvn-central-libs!))
+                github-libs* (future (fetch-github-clojure-libs!))]
+            (reset! libs* {:loading false :libs (shared/deep-merge @clojars-libs* @mvn-central-libs* @github-libs*)}))))))
+
+(defn fetch-libs! []
+  (when-not (:libs @libs*)
+    (boolean (all-clojure-libs!))))
 
 (defn ^:private complete-lib-name [_lib-context cursor-value]
   (let [lib-names (keys (all-clojure-libs!))]

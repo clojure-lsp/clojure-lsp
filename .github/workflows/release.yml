@@ -237,10 +237,10 @@ jobs:
       - run: mv "${PWD}/artifacts/clojure-lsp" clojure-lsp
 
       - name: Integration tests aarch64
-        uses: uraimo/run-on-arch-action@v2.0.9
+        uses: uraimo/run-on-arch-action@v2
         with:
           arch: aarch64
-          distro: ubuntu20.04
+          distro: ubuntu22.04
           githubToken: ${{ github.token }}
           setup: |
             mkdir -p "${PWD}/artifacts"

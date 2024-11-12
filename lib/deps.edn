@@ -8,7 +8,7 @@
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
         medley/medley {:mvn/version "1.4.0"}
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
-        clj-kondo/clj-kondo {:mvn/version "2024.09.28-20240930.094425-2"
+        clj-kondo/clj-kondo {:mvn/version "2024.09.28-20241112.152908-13"
                              #_#_:local/root "../../clj-kondo"
                              :exclude [com.cognitect/transit-clj
                                        babashka/fs]}

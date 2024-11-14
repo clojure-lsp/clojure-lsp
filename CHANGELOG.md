@@ -4,6 +4,7 @@
 
 - General
   - Bump clj-kondo to `2024.09.28-20241112.152908-13`
+  - Add semantic version sorting in completion lib versions. #1913
 
 ## 2024.11.08-17.49.29
 

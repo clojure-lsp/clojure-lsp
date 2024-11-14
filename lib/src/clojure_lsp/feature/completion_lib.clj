@@ -6,7 +6,8 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [rewrite-clj.zip :as z])
+   [rewrite-clj.zip :as z]
+   [semver.core :as semver])
   (:import
    [clojure.lang PersistentVector]
    [java.util.zip GZIPInputStream]))
@@ -97,7 +98,10 @@
                      (let [lib-name (if (simple-symbol? lib)
                                       (symbol (str lib) (str lib))
                                       lib)]
-                       (update map lib-name conj {:mvn/version version})))) {}))
+                       (update map lib-name conj version)))) {})
+         (map (fn [[lib versions]]
+                [lib (map #(hash-map :mvn/version %) (semver/sorted versions))]))
+         (into {}))
     (catch Exception _
       [])))
 
@@ -118,7 +122,10 @@
            (reduce (fn [map [group artifact version]]
                      (if (string/ends-with? version "-SNAPSHOT")
                        map
-                       (update map (symbol group artifact) conj {:mvn/version version}))) {})))))
+                       (update map (symbol group artifact) conj version))) {})
+           (map (fn [[lib versions]]
+                  [lib (map #(hash-map :mvn/version %) (semver/sorted versions))]))
+           (into {})))))
 
 (defn ^:private fetch-github-clojure-libs!
   []

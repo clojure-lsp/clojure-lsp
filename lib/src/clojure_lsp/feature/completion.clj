@@ -462,16 +462,12 @@
           (:analysis non-local-db))))
 
 (defn ^:private with-elements-from-keyword
-  [cursor-element cursor-loc matches-fn simple-cursor? caller-var-definition db resolve-support]
+  [cursor-element cursor-loc matches-fn _simple-cursor? caller-var-definition db resolve-support]
   (if (:arglist-kws caller-var-definition)
     (with-definition-kws-args-element-items cursor-loc matches-fn caller-var-definition resolve-support)
     (into [] (comp
                q/xf-analysis->keywords
                (bucket-elems-xf :keyword-usages matches-fn cursor-element)
-               (if simple-cursor?
-                 (filter #(and (:from cursor-element)
-                               (= (:from cursor-element) (:from %))))
-                 identity)
                (map #(element->completion-item % nil (if (= (:from cursor-element) (:from %))
                                                        :keyword-same-ns
                                                        :keyword) resolve-support)))

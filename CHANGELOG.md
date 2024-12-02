@@ -6,6 +6,9 @@
   - Bump clj-kondo to `2024.09.28-20241112.152908-13`
   - Add semantic version sorting in completion lib versions. #1913
 
+- Editor
+  - Change simple keyword completion to return all known keywords. #1920
+
 ## 2024.11.08-17.49.29
 
 - General
@@ -52,7 +55,7 @@
   - Use scope location instead of name location for folding feature.
   - Fix paredit commands to consider previous element when cursor inside a closing bracket.
   - Fix paredit commands to move cursor after applying command.
-  - Fix corner case on paredit comamnds duplicating forms.
+  - Fix corner case on paredit commands duplicating forms.
   - References of a var-definition now consider full quoted qualified symbols. #1804
 
 ## 2024.03.31-19.10.13

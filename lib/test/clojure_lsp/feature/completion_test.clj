@@ -522,9 +522,10 @@
          {:label ":foo/baq" :kind :keyword}
          {:label ":foo/bar" :kind :keyword}]
         (f.completion/completion (h/file-uri "file:///b.clj") foo-r foo-c (h/db))))
-    (testing "simple keywords are available only for the current ns"
+    (testing "simple keywords are available everywhere"
       (h/assert-submaps
-        [{:label ":ba" :kind :keyword}]
+        [{:label ":ba" :kind :keyword}
+         {:label ":bar" :kind :keyword}]
         (f.completion/completion (h/file-uri "file:///b.clj") bar-r bar-c (h/db))))))
 
 (deftest completing-aliased-keywords

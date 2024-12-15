@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.diagnostics
   (:require
+   [cheshire.core :as json]
    [clj-kondo.impl.config :as kondo.config]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.logger :as logger]
@@ -8,6 +9,7 @@
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.snapshot :as snapshot]
    [clojure.core.async :as async]
    [clojure.set :as set]
    [clojure.string :as string]
@@ -174,7 +176,7 @@
                :source "clj-depend"}))
           (get-in db [:clj-depend-violations (symbol namespace)]))))
 
-(defn find-diagnostics [^String uri db]
+(defn find-diagnostics* [^String uri db]
   (let [kondo-level (settings/get db [:linters :clj-kondo :level])
         depend-level (settings/get db [:linters :clj-depend :level] :info)]
     (if (shared/jar-file? uri)
@@ -185,6 +187,41 @@
 
         (not= :off depend-level)
         (concat (clj-depend-violations->diagnostics uri depend-level db))))))
+
+(defn diagnostic->diagnostic-message [file-output raw? {:keys [message severity range code]}]
+  (cond-> (format "%s:%s:%s: %s: [%s] %s"
+                  file-output
+                  (-> range :start :line inc)
+                  (-> range :start :character inc)
+                  (name (severity->level severity))
+                  code
+                  message)
+    (not raw?) (shared/colorize (severity->color severity))))
+
+(def ^:dynamic *discard-duration* (atom []))
+
+(defn discarding-duration-ms []
+  (let [durations @*discard-duration*]
+    (reset! *discard-duration* [])
+    (float (/ (apply + durations) 1000000))))
+
+(defn find-diagnostics [^String uri db]
+  (let [diagnostics (find-diagnostics* uri db)]
+    (if @snapshot/cache
+      (let [start (System/nanoTime)
+            project-path (shared/uri->filename (shared/project-root->uri nil db))
+            filename (shared/uri->filename uri)
+            relative-path (shared/relativize-filepath filename project-path)
+            messages (snapshot/discard relative-path)
+            result (if messages
+                     (into []
+                           (remove #(contains? messages
+                                               (diagnostic->diagnostic-message relative-path true %))
+                                   diagnostics))
+                     diagnostics)]
+        (swap! *discard-duration* conj (- (System/nanoTime) start))
+        result)
+      diagnostics)))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
   (async/put! diagnostics-chan diagnostic))
@@ -306,3 +343,20 @@
   [uris db {:keys [reg-finding! config]}]
   (-> (findings-of-uris uris db config)
       (finalize-findings! reg-finding!)))
+
+(defn diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]} db]
+  (let [project-path (shared/uri->filename (shared/project-root->uri project-root db))]
+    (mapcat (fn [[uri diags]]
+              (let [filename (shared/uri->filename uri)
+                    file-output (if (:canonical-paths output)
+                                  filename
+                                  (shared/relativize-filepath filename project-path))]
+                (map #(diagnostic->diagnostic-message file-output raw? %)
+                     diags)))
+            diagnostics)))
+
+(defn serialize [format diags-by-uri options db]
+  (case format
+    :edn (with-out-str (pr diags-by-uri))
+    :json (json/generate-string diags-by-uri)
+    (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))

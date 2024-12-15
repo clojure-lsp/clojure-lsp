@@ -157,11 +157,6 @@
     (apply-workspace-rename-edit-summary! change components)
     (apply-workspace-change-edit-summary! change components)))
 
-(defn ^:private project-root->uri [project-root db]
-  (-> (or ^File project-root (io/file ""))
-      .getCanonicalPath
-      (shared/filename->uri db)))
-
 (defn ^:private setup-api! [{:keys [producer db* diagnostics-chan]}]
   (when-not (:analysis @db*)
     (swap! db* assoc :api? true)
@@ -174,7 +169,7 @@
    {:keys [db*] :as components}]
   (try
     (startup/initialize-project
-      (project-root->uri project-root @db*)
+      (shared/project-root->uri project-root @db*)
       {:workspace {:workspace-edit {:document-changes true}}}
       (settings/clean-client-settings {})
       (merge (shared/assoc-some
@@ -237,8 +232,8 @@
        (sort-by #(not= :rename (:kind %)))
        (map (fn [{:keys [kind uri old-text new-text old-uri new-uri]}]
               (if (= :rename kind)
-                (diff/rename-diff old-uri new-uri (project-root->uri project-root db))
-                (diff/unified-diff uri (find-new-uri-checking-rename uri edits) old-text new-text (project-root->uri project-root db)))))
+                (diff/rename-diff old-uri new-uri (shared/project-root->uri project-root db))
+                (diff/unified-diff uri (find-new-uri-checking-rename uri edits) old-text new-text (shared/project-root->uri project-root db)))))
        (map #(if raw? % (diff/colorize-diff %)))
        (string/join "\n")))
 
@@ -314,25 +309,6 @@
            :edits edits}))
       {:result-code 0 :message-fn (constantly "Nothing to clear!")})))
 
-(defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]} db]
-  (let [project-path (shared/uri->filename (project-root->uri project-root db))]
-    (mapcat (fn [[uri diags]]
-              (let [filename (shared/uri->filename uri)
-                    file-output (if (:canonical-paths output)
-                                  filename
-                                  (shared/relativize-filepath filename project-path))]
-                (map (fn [{:keys [message severity range code]}]
-                       (cond-> (format "%s:%s:%s: %s: [%s] %s"
-                                       file-output
-                                       (-> range :start :line inc)
-                                       (-> range :start :character inc)
-                                       (name (f.diagnostic/severity->level severity))
-                                       code
-                                       message)
-                         (not raw?) (shared/colorize (f.diagnostic/severity->color severity))))
-                     diags)))
-            diagnostics)))
-
 (defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
   (setup-project-and-clojure-only-deps-analysis! options components)
@@ -349,13 +325,11 @@
         diags (mapcat val diags-by-uri)
         errors? (some (comp #(= 1 %) :severity) diags)
         warnings? (some (comp #(= 2 %) :severity) diags)]
+    (logger/info (str "[SNAPSHOT] Discarding took " (f.diagnostic/discarding-duration-ms)) "ms")
     (if (seq diags-by-uri)
       {:result-code (cond errors? 3 warnings? 2 :else 0)
        :message-fn (fn []
-                     (case format
-                       :edn (with-out-str (pr diags-by-uri))
-                       :json (json/generate-string diags-by-uri)
-                       (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
+                     (f.diagnostic/serialize format diags-by-uri options db))
        :diagnostics diags-by-uri}
       {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
 

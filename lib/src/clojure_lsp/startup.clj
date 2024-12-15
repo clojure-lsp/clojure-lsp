@@ -8,6 +8,7 @@
    [clojure-lsp.logger :as logger]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.snapshot :as snapshot]
    [clojure-lsp.source-paths :as source-paths]
    [clojure.core.async :as async]
    [clojure.java.io :as io]
@@ -239,6 +240,7 @@
     (ensure-kondo-config-dir-exists! project-root-uri @db*)
     (publish-task-progress producer (:finding-cache task-list) progress-token)
     (load-db-cache! root-path db*)
+    (snapshot/warm-cache!)
     (let [project-hash (classpath/project-specs->hash root-path settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
           dependency-scheme (:dependency-scheme settings)

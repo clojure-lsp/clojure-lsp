@@ -8,6 +8,7 @@
 
 - Editor
   - Change simple keyword completion to return all known keywords. #1920
+  - Return textEdit to CompletionItems to fix completion in Zed #1933
 
 ## 2024.11.08-17.49.29
 

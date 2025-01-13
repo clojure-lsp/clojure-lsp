@@ -18,7 +18,7 @@
                                                    :sha "75c2216649bf5caf3ae41e7b8fc202e45b090ea9"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
-                   :extra-deps {babashka/fs {:mvn/version "0.5.22"}
+                   :extra-deps {babashka/fs {:mvn/version "0.5.24"}
                                 babashka/process {:mvn/version "0.5.22"}}
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.10.5" :sha "2a21b7a"}
                                   com.github.ericdallo/deps-bin {:mvn/version "1.0.0"}

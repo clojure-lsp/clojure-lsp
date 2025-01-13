@@ -117,7 +117,15 @@
     (is (= [{:range {:start {:line 0 :character 0}
                      :end {:line 0 :character 5}}
              :new-text "(a)"}]
-           (range-formatting "(a | |)\n(b  )\n(c d)"))))
+           (range-formatting "(a | |)\n(b  )\n(c d)")))
+    (is (= [{:range {:start {:line 0 :character 0}
+                     :end {:line 1 :character 0}}
+             :new-text "(a)\n"}]
+           (range-formatting "|(a  )|\n(b  )\n(c d)")))
+    (is (= [{:range {:start {:line 2 :character 0}
+                     :end {:line 2 :character 5}}
+             :new-text "(c d)"}]
+           (range-formatting "(a  )\n(b  )\n|(c d)|"))))
   (testing "when parens are unbalenced"
     (is (= nil
            (let [[[row col] [end-row end-col]] (h/load-code-and-locs "(str :foo :bar :baz))")]

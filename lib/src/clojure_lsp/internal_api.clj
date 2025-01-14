@@ -209,6 +209,11 @@
     (swap! db* assoc :project-analysis-type :project-only)
     (analyze! options components)))
 
+(defn ^:private setup-project-and-shallow-analysis! [options {:keys [db*] :as components}]
+  (when (not (:analysis @db*))
+    (swap! db* assoc :project-analysis-type :project-and-shallow-analysis)
+    (analyze! options components)))
+
 (defn ^:private setup-project-ns-only-analysis! [options {:keys [db*] :as components}]
   (when (not (:analysis @db*))
     (swap! db* assoc :project-analysis-type :project-namespaces-only)
@@ -217,7 +222,7 @@
 (defn ^:private dynamic-setup-project-analysis! [options default-analysis-type components]
   (case (get-in options [:analysis :type] default-analysis-type)
     :project-and-full-dependencies (setup-project-and-full-deps-analysis! options components)
-    :project-only (setup-project-only-analysis! options components)))
+    :project-only (setup-project-and-shallow-analysis! options components)))
 
 (defn ^:private open-file! [uri components]
   (f.file-management/load-document! uri (slurp uri) (:db* components))

@@ -5,9 +5,15 @@
 
 (set! *warn-on-reflection* true)
 
+(defn ^:private alias-range [alias-length {:keys [name-row name-col]}]
+  {:start (shared/row-col->position name-row name-col)
+   :end (shared/row-col->position name-row (+ name-col alias-length))})
+
 (defn ranges [uri row col db]
   (when-let [element (q/find-element-under-cursor db uri row col)]
     (when (= :namespace-alias (:bucket element))
       (when-let [elements (q/find-references db element true)]
-        {:ranges (->> elements
-                      (map shared/->range))}))))
+        (println element)
+        (let [alias-length (count (str (:alias element)))]
+          {:ranges (->> elements
+                        (map (partial alias-range alias-length)))})))))

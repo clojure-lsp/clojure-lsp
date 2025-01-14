@@ -1,6 +1,6 @@
 (ns integration.linked-editing-range-test
   (:require
-   [clojure.test :refer [deftest testing is]]
+   [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]
    [integration.lsp :as lsp]))

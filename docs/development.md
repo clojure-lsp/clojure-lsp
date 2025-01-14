@@ -123,7 +123,7 @@ The codebase consists of the `lib/` library and the `cli/` program which depends
 
 There are also `cli/` integration tests. They require `./clojure[.bat|.exe]` to have already been built with one of the above cli tasks (__NOTE:__always ensure that you rebuild the `cli/` executable every time you make changes to `lib/` or `cli/` source code so tha the integration tests use an up to date executable).
 
-1. `bb integration-tests`
+1. `bb integration-test`
 
 The same development version can be used to lint all of the source code.
 

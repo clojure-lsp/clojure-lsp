@@ -13,7 +13,6 @@
   (when-let [element (q/find-element-under-cursor db uri row col)]
     (when (= :namespace-alias (:bucket element))
       (when-let [elements (q/find-references db element true)]
-        (println element)
         (let [alias-length (count (str (:alias element)))]
           {:ranges (->> elements
                         (map (partial alias-range alias-length)))})))))

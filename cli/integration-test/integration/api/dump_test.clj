@@ -35,4 +35,10 @@
         (is (= {"project-root" h/root-project-path
                 "source-paths" #{(h/project-path->canon-path "test")
                                  (h/project-path->canon-path "src")}}
-               (update result "source-paths" set)))))))
+               (update result "source-paths" set))))))
+  (testing ":project-and-shallow-analysis"
+    (with-open [rdr (lsp/cli! "dump"
+                              "--project-root" h/root-project-path
+                              "--analysis" (str {:type :project-and-shallow-analysis}))]
+      (let [result (edn/read-string (slurp rdr))]
+        (is (seq (keys result)))))))

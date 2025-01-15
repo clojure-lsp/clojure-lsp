@@ -339,7 +339,8 @@
                 :findings
                 :settings
                 :project-root
-                :source-paths]
+                :source-paths
+                :diagnostics]
                (keys (edn/read-string (apply message-fn [])))))))
     (testing "dumping all fields as json"
       (let [{:keys [result result-code message-fn]}
@@ -354,7 +355,8 @@
                 "findings"
                 "settings"
                 "project-root"
-                "source-paths"]
+                "source-paths"
+                "diagnostics"]
                (keys (json/parse-string (apply message-fn [])))))))
     (testing "dumping specific fields"
       (let [{:keys [result result-code message-fn]}

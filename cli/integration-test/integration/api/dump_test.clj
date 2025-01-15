@@ -19,14 +19,15 @@
                 :findings
                 :settings
                 :project-root
-                :source-paths]
+                :source-paths
+                :diagnostics]
                (keys result)))
         (is (h/assert-submap
               {:project-root h/root-project-path
                :source-paths #{(h/project-path->canon-path "test")
                                (h/project-path->canon-path "src")}}
               (update result :source-paths set))))))
-  (testing "Dumping as json filtering specific keys"
+  (testing "dumping as json filtering specific keys"
     (with-open [rdr (lsp/cli! "dump"
                               "--project-root" h/root-project-path
                               "--output" (str {:format :json
@@ -36,7 +37,7 @@
                 "source-paths" #{(h/project-path->canon-path "test")
                                  (h/project-path->canon-path "src")}}
                (update result "source-paths" set))))))
-  (testing ":project-and-shallow-analysis"
+  (testing "dumping with analysis type :project-and-shallow-analysis"
     (with-open [rdr (lsp/cli! "dump"
                               "--project-root" h/root-project-path
                               "--analysis" (str {:type :project-and-shallow-analysis}))]

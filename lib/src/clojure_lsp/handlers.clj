@@ -468,8 +468,9 @@
       (f.call-hierarchy/outgoing uri row col components))))
 
 (defn linked-editing-ranges
-  [{:keys [db*]} {:keys [text-document position]}]
-  (shared/logging-task
+  [{:keys [db*] :as components} {:keys [text-document position]}]
+  (process-after-changes
+    components (:uri text-document)
     :linked-editing-range
     (let [db @db*
           [row col] (shared/position->row-col position)]

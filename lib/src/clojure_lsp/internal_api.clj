@@ -209,6 +209,11 @@
     (swap! db* assoc :project-analysis-type :project-only)
     (analyze! options components)))
 
+(defn ^:private setup-project-and-shallow-analysis! [options {:keys [db*] :as components}]
+  (when (not (:analysis @db*))
+    (swap! db* assoc :project-analysis-type :project-and-shallow-analysis)
+    (analyze! options components)))
+
 (defn ^:private setup-project-ns-only-analysis! [options {:keys [db*] :as components}]
   (when (not (:analysis @db*))
     (swap! db* assoc :project-analysis-type :project-namespaces-only)
@@ -217,6 +222,7 @@
 (defn ^:private dynamic-setup-project-analysis! [options default-analysis-type components]
   (case (get-in options [:analysis :type] default-analysis-type)
     :project-and-full-dependencies (setup-project-and-full-deps-analysis! options components)
+    :project-and-shallow-analysis (setup-project-and-shallow-analysis! options components)
     :project-only (setup-project-only-analysis! options components)))
 
 (defn ^:private open-file! [uri components]
@@ -333,19 +339,23 @@
                      diags)))
             diagnostics)))
 
+(defn ^:private diagnostics-by-uri
+  [db options]
+  (->> (options->uris options db)
+       (pmap (fn [uri]
+               {:uri uri
+                :diagnostics (f.diagnostic/find-diagnostics uri db)}))
+       (remove (comp empty? :diagnostics))
+       (reduce (fn [a {:keys [uri diagnostics]}]
+                 (assoc a uri diagnostics))
+               {})))
+
 (defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
   (setup-project-and-clojure-only-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
   (let [db @db*
-        diags-by-uri (->> (options->uris options db)
-                          (pmap (fn [uri]
-                                  {:uri uri
-                                   :diagnostics (f.diagnostic/find-diagnostics uri db)}))
-                          (remove (comp empty? :diagnostics))
-                          (reduce (fn [a {:keys [uri diagnostics]}]
-                                    (assoc a uri diagnostics))
-                                  {}))
+        diags-by-uri (diagnostics-by-uri db options)
         diags (mapcat val diags-by-uri)
         errors? (some (comp #(= 1 %) :severity) diags)
         warnings? (some (comp #(= 2 %) :severity) diags)]
@@ -442,12 +452,13 @@
          :references references})
       {:result-code 1 :message-fn (constantly (format "Symbol %s not found in project" from))})))
 
-(defn ^:private db->dump-data [db filter-keys]
+(defn ^:private db->dump-data [db {{:keys [filter-keys]} :output :as options}]
   (as-> db $
     (select-keys $ [:classpath :analysis :dep-graph :findings :settings])
     (assoc $
            :project-root (shared/uri->filename (:project-root-uri db))
-           :source-paths (-> db :settings :source-paths))
+           :source-paths (-> db :settings :source-paths)
+           :diagnostics (diagnostics-by-uri db options))
     (select-keys $
                  (if (not (coll? filter-keys))
                    (keys $)
@@ -455,11 +466,11 @@
                          :when (contains? (set filter-keys) k)]
                      k)))))
 
-(defn ^:private dump* [{{:keys [format filter-keys] :or {format :edn}} :output :as options} {:keys [db*] :as components}]
+(defn ^:private dump* [{{:keys [format] :or {format :edn}} :output :as options} {:keys [db*] :as components}]
   (setup-api! components)
   (dynamic-setup-project-analysis! options :project-only components)
   (let [db @db*
-        dump-data (db->dump-data db filter-keys)]
+        dump-data (db->dump-data db options)]
     (case format
       :edn {:result-code 0
             :result dump-data

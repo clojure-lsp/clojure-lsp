@@ -13,6 +13,10 @@
   - Return textEdit to CompletionItems to fix completion in Zed #1933
   - Restrict linked edits to namespace aliases only, and fix a few related issues #1947
 
+- API/CLI
+  - Add `:project-and-shallow-analysis` type to `dump` command
+  - Add `:diagnostics` to `dump` command output (successor of `:findings`)
+
 ## 2024.11.08-17.49.29
 
 - General

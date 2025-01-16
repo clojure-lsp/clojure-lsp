@@ -144,7 +144,8 @@
 
 (defn ^:private fetch-clojure-mvn-central-libs! []
   (->> ["org.clojure" "com.cognitect"]
-       (pmap (fn [group-id] (get-mvn-artifacts! group-id)))
+       (pmap get-mvn-artifacts!)
+       flatten
        (reduce merge)))
 
 (defn ^:private all-clojure-libs!

@@ -114,7 +114,7 @@
     <dependency>
       <groupId>babashka</groupId>
       <artifactId>fs</artifactId>
-      <version>0.5.22</version>
+      <version>0.5.24</version>
     </dependency>
     <dependency>
       <groupId>nrepl</groupId>

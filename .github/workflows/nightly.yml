@@ -92,6 +92,19 @@ jobs:
           asset_name: clojure-lsp-standalone.jar
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-standalone.jar | awk '{print $1}' > clojure-lsp-standalone.jar.sha256
+
+      - name: Upload sha256 to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: false
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp-standalone.jar.sha256
+          asset_name: clojure-lsp-standalone.jar.sha256
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
   linux-amd64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
@@ -146,6 +159,19 @@ jobs:
           repo_name: clojure-lsp/clojure-lsp-dev-builds
           file: clojure-lsp-native-linux-amd64.zip
           asset_name: clojure-lsp-native-linux-amd64.zip
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-linux-amd64.zip | awk '{print $1}' > clojure-lsp-native-linux-amd64.zip.sha256
+
+      - name: Upload sha256 to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: false
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp-native-linux-amd64.zip.sha256
+          asset_name: clojure-lsp-native-linux-amd64.zip.sha256
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
   linux-amd64-static:
@@ -207,6 +233,19 @@ jobs:
           asset_name: clojure-lsp-native-static-linux-amd64.zip
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-static-linux-amd64.zip | awk '{print $1}' > clojure-lsp-native-static-linux-amd64.zip.sha256
+
+      - name: Upload sha256 to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: false
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp-native-static-linux-amd64.zip.sha256
+          asset_name: clojure-lsp-native-static-linux-amd64.zip.sha256
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
   macos-amd64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
@@ -258,6 +297,19 @@ jobs:
           asset_name: clojure-lsp-native-macos-amd64.zip
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-macos-amd64.zip | awk '{print $1}' > clojure-lsp-native-macos-amd64.zip.sha256
+
+      - name: Upload sha256 to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: false
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp-native-macos-amd64.zip.sha256
+          asset_name: clojure-lsp-native-macos-amd64.zip.sha256
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
   macos-aarch64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
@@ -307,6 +359,19 @@ jobs:
           repo_name: clojure-lsp/clojure-lsp-dev-builds
           file: clojure-lsp-native-macos-aarch64.zip
           asset_name: clojure-lsp-native-macos-aarch64.zip
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-macos-aarch64.zip | awk '{print $1}' > clojure-lsp-native-macos-aarch64.zip.sha256
+
+      - name: Upload sha256 to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: false
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp-native-macos-aarch64.zip.sha256
+          asset_name: clojure-lsp-native-macos-aarch64.zip.sha256
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
   windows:
@@ -389,6 +454,19 @@ jobs:
           repo_name: clojure-lsp/clojure-lsp-dev-builds
           file: clojure-lsp-native-windows-amd64.zip
           asset_name: clojure-lsp-native-windows-amd64.zip
+          tag: ${{ needs.release-dev-build.outputs.tag}}
+
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-windows-amd64.zip | awk '{print $1}' > clojure-lsp-native-windows-amd64.zip.sha256
+
+      - name: Upload sha256 to dev release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          prerelease: false
+          repo_name: clojure-lsp/clojure-lsp-dev-builds
+          file: clojure-lsp-native-windows-amd64.zip.sha256
+          asset_name: clojure-lsp-native-windows-amd64.zip.sha256
           tag: ${{ needs.release-dev-build.outputs.tag}}
 
   # Change to point to clojure-lsp-dev-builds after all places are using clojure-lsp-dev-builds

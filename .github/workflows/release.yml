@@ -38,6 +38,15 @@ jobs:
           path: clojure-lsp.jar
           name: clojure-lsp.jar
 
+      - name: Generate sha256
+        run: sha256sum clojure-lsp.jar | awk '{print $1}' > clojure-lsp.jar.sha256
+
+      - name: Upload jar sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp.jar.sha256
+          name: clojure-lsp.jar.sha256
+
   build-cli-jar:
     if: startsWith(github.ref, 'refs/tags/2')
     name: Build JVM cli
@@ -70,6 +79,15 @@ jobs:
           path: clojure-lsp-server.jar
           name: clojure-lsp-server.jar
 
+      - name: Generate server sha256
+        run: sha256sum clojure-lsp-server.jar | awk '{print $1}' > clojure-lsp-server.jar.sha256
+
+      - name: Upload server sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-server.jar.sha256
+          name: clojure-lsp-server.jar.sha256
+
       - name: Generate standalone jar
         run: bb cli-prod-jar
 
@@ -79,6 +97,15 @@ jobs:
           path: clojure-lsp-standalone.jar
           name: clojure-lsp-standalone.jar
 
+      - name: Generate standalone sha256
+        run: sha256sum clojure-lsp-standalone.jar | awk '{print $1}' > clojure-lsp-standalone.jar.sha256
+
+      - name: Upload standalone sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-standalone.jar.sha256
+          name: clojure-lsp-standalone.jar.sha256
+
       - name: Generate cli bin
         run: bb prod-cli
 
@@ -87,6 +114,15 @@ jobs:
         with:
           path: clojure-lsp
           name: clojure-lsp
+
+      - name: Generate bin sha256
+        run: sha256sum clojure-lsp | awk '{print $1}' > clojure-lsp.sha256
+
+      - name: Upload bin sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp.sha256
+          name: clojure-lsp.sha256
 
   linux-amd64:
     name: Build native linux amd64 binary
@@ -142,6 +178,15 @@ jobs:
           path: clojure-lsp-native-linux-amd64.zip
           name: clojure-lsp-native-linux-amd64.zip
 
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-linux-amd64.zip | awk '{print $1}' > clojure-lsp-native-linux-amd64.zip.sha256
+
+      - name: Upload sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-native-linux-amd64.zip.sha256
+          name: clojure-lsp-native-linux-amd64.zip.sha256
+
   linux-amd64-static:
     name: Build native linux amd64 static binary
     needs: [build-lib-jar, build-cli-jar]
@@ -188,6 +233,15 @@ jobs:
         with:
           path: clojure-lsp-native-static-linux-amd64.zip
           name: clojure-lsp-native-static-linux-amd64.zip
+
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-static-linux-amd64.zip | awk '{print $1}' > clojure-lsp-native-static-linux-amd64.zip.sha256
+
+      - name: Upload sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-native-static-linux-amd64.zip.sha256
+          name: clojure-lsp-native-static-linux-amd64.zip.sha256
 
   linux-aarch64:
     name: Build native linux aarch64 binary
@@ -273,6 +327,15 @@ jobs:
           path: clojure-lsp-native-linux-aarch64.zip
           name: clojure-lsp-native-linux-aarch64.zip
 
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-linux-aarch64.zip | awk '{print $1}' > clojure-lsp-native-linux-aarch64.zip.sha256
+
+      - name: Upload sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-native-linux-aarch64.zip.sha256
+          name: clojure-lsp-native-linux-aarch64.zip.sha256
+
   macos-amd64:
     name: Build native MacOS amd64 binary
     needs: [build-lib-jar, build-cli-jar]
@@ -323,6 +386,15 @@ jobs:
           path: clojure-lsp-native-macos-amd64.zip
           name: clojure-lsp-native-macos-amd64.zip
 
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-macos-amd64.zip | awk '{print $1}' > clojure-lsp-native-macos-amd64.zip.sha256
+
+      - name: Upload sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-native-macos-amd64.zip.sha256
+          name: clojure-lsp-native-macos-amd64.zip.sha256
+
   macos-aarch64:
     name: Build native MacOS aarch64 binary
     needs: [build-lib-jar, build-cli-jar]
@@ -372,6 +444,15 @@ jobs:
         with:
           path: clojure-lsp-native-macos-aarch64.zip
           name: clojure-lsp-native-macos-aarch64.zip
+
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-macos-aarch64.zip | awk '{print $1}' > clojure-lsp-native-macos-aarch64.zip.sha256
+
+      - name: Upload sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-native-macos-aarch64.zip.sha256
+          name: clojure-lsp-native-macos-aarch64.zip.sha256
 
   windows:
     name: Build native Windows binary
@@ -447,6 +528,15 @@ jobs:
           path: clojure-lsp-native-windows-amd64.zip
           name: clojure-lsp-native-windows-amd64.zip
 
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-windows-amd64.zip | awk '{print $1}' > clojure-lsp-native-windows-amd64.zip.sha256
+
+      - name: Upload sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-native-windows-amd64.zip.sha256
+          name: clojure-lsp-native-windows-amd64.zip.sha256
+
   release:
     name: Create Release
     environment: prod-release
@@ -500,12 +590,28 @@ jobs:
           asset_name: clojure-lsp.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
 
+      - name: Upload jar sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp.jar.sha256/clojure-lsp.jar.sha256
+          asset_name: clojure-lsp.jar.sha256
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
       - name: Upload server jar
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-server.jar/clojure-lsp-server.jar
           asset_name: clojure-lsp-server.jar
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload server jar sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-server.jar.sha256/clojure-lsp-server.jar.sha256
+          asset_name: clojure-lsp-server.jar.sha256
           tag: ${{ steps.latest-tag.outputs.tag}}
 
       - name: Upload standalone JVM
@@ -516,12 +622,28 @@ jobs:
           asset_name: clojure-lsp-standalone.jar
           tag: ${{ steps.latest-tag.outputs.tag}}
 
+      - name: Upload standalone JVM sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-standalone.jar.sha256/clojure-lsp-standalone.jar.sha256
+          asset_name: clojure-lsp-standalone.jar.sha256
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
       - name: Upload JVM unix embbeded jar
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp/clojure-lsp
           asset_name: clojure-lsp
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload JVM unix embbeded sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp.sha256/clojure-lsp.sha256
+          asset_name: clojure-lsp.sha256
           tag: ${{ steps.latest-tag.outputs.tag}}
 
       - name: Upload JVM Windows embedded jar
@@ -532,6 +654,14 @@ jobs:
           asset_name: clojure-lsp.bat
           tag: ${{ steps.latest-tag.outputs.tag}}
 
+      - name: Upload JVM Windows embbeded sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp.sha256/clojure-lsp.sha256
+          asset_name: clojure-lsp.bat.sha256
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
       - name: Upload Linux amd64 native binary
         uses: svenstaro/upload-release-action@v2
         with:
@@ -540,6 +670,14 @@ jobs:
           asset_name: clojure-lsp-native-linux-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
 
+      - name: Upload Linux amd64 native sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-linux-amd64.zip.sha256/clojure-lsp-native-linux-amd64.zip.sha256
+          asset_name: clojure-lsp-native-linux-amd64.zip.sha256
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
       - name: Upload static Linux amd64 native binary
         uses: svenstaro/upload-release-action@v2
         with:
@@ -547,6 +685,14 @@ jobs:
           file: clojure-lsp-native-static-linux-amd64.zip/clojure-lsp-native-static-linux-amd64.zip
           asset_name: clojure-lsp-native-static-linux-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
+
+      - name: Upload static Linux amd64 native sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-static-linux-amd64.zip.sha256/clojure-lsp-native-static-linux-amd64.zip.sha256
+          asset_name: clojure-lsp-native-static-linux-amd64.zip.sha256
+          tag: ${{ steps.latest-tag.outputs.tag}}
 
       - name: Upload Linux aarch64 native binary
         continue-on-error: true
@@ -557,12 +703,28 @@ jobs:
           asset_name: clojure-lsp-native-linux-aarch64.zip
           tag: ${{ steps.latest-tag.outputs.tag }}
 
+      - name: Upload Linux aarch64 native sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-linux-aarch64.zip.sha256/clojure-lsp-native-linux-aarch64.zip.sha256
+          asset_name: clojure-lsp-native-linux-aarch64.zip.sha256
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
       - name: Upload MacOS amd64 native binary
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip
           asset_name: clojure-lsp-native-macos-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload MacOS amd64 native sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-macos-amd64.zip.sha256/clojure-lsp-native-macos-amd64.zip.sha256
+          asset_name: clojure-lsp-native-macos-amd64.zip.sha256
           tag: ${{ steps.latest-tag.outputs.tag}}
 
       - name: Upload MacOS aarch64 native binary
@@ -573,10 +735,26 @@ jobs:
           asset_name: clojure-lsp-native-macos-aarch64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}
 
+      - name: Upload MacOS aarch64 native sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-macos-aarch64.zip.sha256/clojure-lsp-native-macos-aarch64.zip.sha256
+          asset_name: clojure-lsp-native-macos-aarch64.zip.sha256
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
       - name: Upload Windows native binary
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-native-windows-amd64.zip/clojure-lsp-native-windows-amd64.zip
           asset_name: clojure-lsp-native-windows-amd64.zip
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload Windows native sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-windows-amd64.zip.sha256/clojure-lsp-native-windows-amd64.zip.sha256
+          asset_name: clojure-lsp-native-windows-amd64.zip.sha256
           tag: ${{ steps.latest-tag.outputs.tag}}

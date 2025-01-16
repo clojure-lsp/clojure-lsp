@@ -3,7 +3,7 @@
 ## Unreleased
 
 - General
-  - Bump clj-kondo to `2024.09.28-20241112.152908-13`
+  - Bump clj-kondo to `2025.01.16`
   - Add semantic version sorting in completion lib versions. #1913
   - Fix internal error in range formatting. #1931
   - Drop support for jdk 8. #1942

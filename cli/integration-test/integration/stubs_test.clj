@@ -20,7 +20,15 @@
 
   (testing "After stub generation we find datomic.api analysis and diagnostics."
     (h/assert-submaps
-      [{:range {:start {:line 5 :character 2} :end {:line 5 :character 21}}
+      [{:range
+        {:start {:line 3 :character 2} :end {:line 3 :character 54}}
+        :tags []
+        :message "Redundant ignore"
+        :code "redundant-ignore"
+        :langs ["clj"]
+        :severity 3
+        :source "clj-kondo"}
+       {:range {:start {:line 5 :character 2} :end {:line 5 :character 21}}
         :severity 1
         :code "invalid-arity"
         :source "clj-kondo"

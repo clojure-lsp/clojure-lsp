@@ -89,17 +89,18 @@ jobs:
           - os: macos-latest
             jdk: 11
     steps:
-      - uses: actions/checkout@v2.2.0
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
       - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
+          distribution: 'adopt'
           java-version: ${{ matrix.jdk }}
 
       - name: Install clojure build tools
-        uses: DeLaGuardo/setup-clojure@master
+        uses: DeLaGuardo/setup-clojure@13.1
         with:
           cli: '1.10.3.1013'
           lein: '2.9.1'

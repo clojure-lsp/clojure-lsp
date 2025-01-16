@@ -6,7 +6,7 @@
    [clojure.java.io :as io]
    [cognitect.transit :as transit])
   (:import
-   [java.io OutputStream]))
+   [java.io IOException OutputStream]))
 
 (set! *warn-on-reflection* true)
 
@@ -46,7 +46,9 @@
   (shared/file-exists? (transit-local-db-file db)))
 
 (defn remove-db! [db]
-  (io/delete-file (transit-local-db-file db)))
+  (try
+    (io/delete-file (transit-local-db-file db))
+    (catch IOException _ nil)))
 
 (defn ^:private no-flush-output-stream [^OutputStream os]
   (proxy [java.io.BufferedOutputStream] [os]

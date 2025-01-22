@@ -104,8 +104,8 @@ jobs:
 
       - name: Generate embedded binary
         run: |
-        clojure -A:dev -Spath
-        bb debug-cli
+          clojure -A:dev -Spath
+          bb debug-cli
 
       - name: Run integration tests
         run: bb integration-test

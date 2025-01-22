@@ -513,11 +513,6 @@ jobs:
         with:
           file: clojure-lsp.exe
 
-      - name: Run integration tests
-        run: |
-          cd cli
-          bb integration-test ../clojure-lsp.exe
-
       - name: Zip binary
         run: |
           jar -cMf clojure-lsp-native-windows-amd64.zip clojure-lsp.exe
@@ -536,6 +531,12 @@ jobs:
         with:
           path: clojure-lsp-native-windows-amd64.zip.sha256
           name: clojure-lsp-native-windows-amd64.zip.sha256
+
+      - name: Run integration tests
+        run: |
+          cd cli
+          bb integration-test ../clojure-lsp.exe
+
 
   release:
     name: Create Release

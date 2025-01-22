@@ -82,12 +82,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
-        jdk: [11, 15, 17]
-        include:
-          - os: windows-latest
-            jdk: 11
-          - os: macos-latest
-            jdk: 11
+        jdk: [17]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -108,7 +103,7 @@ jobs:
           bb: '0.9.161'
 
       - name: Generate embedded binary
-        run: bb prod-cli
+        run: bb debug-cli
 
       - name: Run integration tests
         run: bb integration-test

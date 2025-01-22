@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2024.11.08-17.49.29</version>
+  <version>2025.01.22-23.28.23</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -32,7 +32,7 @@
     <dependency>
       <groupId>com.github.clojure-lsp</groupId>
       <artifactId>lsp4clj</artifactId>
-      <version>1.10.0</version>
+      <version>1.11.0</version>
       <exclusions>
         <exclusion>
           <groupId>funcool</groupId>
@@ -51,9 +51,14 @@
       <version>1.1.48</version>
     </dependency>
     <dependency>
+      <groupId>io.forward</groupId>
+      <artifactId>semver</artifactId>
+      <version>0.1.0</version>
+    </dependency>
+    <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2024.09.28-20240930.094425-2</version>
+      <version>2025.01.16</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
@@ -158,6 +163,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2024.11.08-17.49.29</tag>
+    <tag>2025.01.22-23.28.23</tag>
   </scm>
 </project>

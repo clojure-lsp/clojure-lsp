@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.01.22-23.28.23
+
 - General
   - Bump clj-kondo to `2025.01.16`
   - Bump lsp4clj to `1.11.0`.

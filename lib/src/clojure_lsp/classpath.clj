@@ -89,7 +89,7 @@
     (if-let [up (some #(when-let [ps (locate-executable %)]
                          (when (= 0 (:exit (apply shell (psh-cmd ps "Get-Command" exec))))
                            (psh-cmd ps exec)))
-                      ["powershell" "pwsh"])]
+                      ["powershell" "pwsh" "powershell.exe" "pwsh.exe"])]
       (into up args)
 
       classpath-cmd)

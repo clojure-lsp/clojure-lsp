@@ -9,7 +9,7 @@ jobs:
   build-lib-jar:
     if: startsWith(github.ref, 'refs/tags/2')
     name: Build JVM lib
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,7 +50,7 @@ jobs:
   build-cli-jar:
     if: startsWith(github.ref, 'refs/tags/2')
     name: Build JVM cli
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -127,7 +127,7 @@ jobs:
   linux-amd64:
     name: Build native linux amd64 binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -190,7 +190,7 @@ jobs:
   linux-amd64-static:
     name: Build native linux amd64 static binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -244,79 +244,39 @@ jobs:
           name: clojure-lsp-native-static-linux-amd64.zip.sha256
 
   linux-aarch64:
-    name: Build native linux aarch64 binary
+    name: Build native linux amd64 binary
     needs: [build-lib-jar, build-cli-jar]
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
 
-      - name: Generate binary on aarch64
-        uses: uraimo/run-on-arch-action@v2
+      - name: Install clojure build tools
+        uses: DeLaGuardo/setup-clojure@master
         with:
-          arch: aarch64
-          distro: ubuntu22.04
-          githubToken: ${{ github.token }}
-          setup: |
-            mkdir -p "${PWD}/artifacts"
-            mv clojure-lsp-standalone.jar "${PWD}/artifacts/"
-            wget -q https://download.oracle.com/graalvm/21/archive/graalvm-jdk-21_linux-aarch64_bin.tar.gz
-            tar -xzf graalvm-jdk-21_linux-aarch64_bin.tar.gz
-            mv $(ls -d graalvm-jdk-21+*/) graalvm/
-          dockerRunArgs: |
-            --volume "${PWD}/graalvm:/graalvm"
-            --volume "${PWD}/artifacts:/artifacts"
-            --memory "9g"
-          install: |
-            apt-get update -q -y
-            apt-get install -q -y build-essential curl git libz-dev
-            curl -O https://download.clojure.org/install/linux-install-1.10.3.1069.sh
-            chmod +x linux-install-1.10.3.1069.sh
-            ./linux-install-1.10.3.1069.sh
-            curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | bash
-          run: |
-            mv /artifacts/clojure-lsp-standalone.jar .
-            export PATH=/graalvm/bin:$PATH
-            export JAVA_HOME=/graalvm
-            export GRAALVM_HOME=/graalvm
-            export CLOJURE_LSP_XMX="-J-Xmx9g"
-            bb native-cli
-            cp clojure-lsp "/artifacts/clojure-lsp"
-            echo "Produced artifact at /artifacts/clojure-lsp"
-      - run: mv "${PWD}/artifacts/clojure-lsp" clojure-lsp
+          cli: '1.12.0.1495'
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
 
-      - name: Integration tests aarch64
-        uses: uraimo/run-on-arch-action@v2
+      - uses: graalvm/setup-graalvm@v1
         with:
-          arch: aarch64
-          distro: ubuntu22.04
-          githubToken: ${{ github.token }}
-          setup: |
-            mkdir -p "${PWD}/artifacts"
-            cp clojure-lsp "${PWD}/artifacts/clojure-lsp"
-          dockerRunArgs: |
-            --volume "${PWD}/graalvm:/graalvm"
-            --volume "${PWD}/artifacts:/artifacts"
-            --memory "8g"
-          install: |
-            apt-get update -q -y
-            apt-get install -q -y curl git build-essential default-jre
-            curl -O https://download.clojure.org/install/linux-install-1.10.3.1069.sh
-            chmod +x linux-install-1.10.3.1069.sh
-            ./linux-install-1.10.3.1069.sh
-            curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | bash
-          run: |
-            export CLOJURE_LSP_TEST_ENV=native
-            mv /artifacts/clojure-lsp .
-            # Tests failing for some reason
-            # bb integration-test
-            # bb pod-test
-            echo "Done!"
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Linux native image
+        env:
+          CLOJURE_LSP_JAR: "../clojure-lsp-standalone.jar"
+          CLOJURE_LSP_XMX: "-J-Xmx6g"
+        run: |
+          bb native-cli
+
+      - name: Run integration tests
+        run: |
+          bb integration-test
 
       - name: Zip binary
         run: zip clojure-lsp-native-linux-aarch64.zip clojure-lsp
@@ -542,7 +502,7 @@ jobs:
     name: Create Release
     environment: prod-release
     needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, macos-amd64, macos-aarch64, windows]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -572,7 +532,7 @@ jobs:
   upload-to-release:
     name: Upload artifacts to release
     needs: [release]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:

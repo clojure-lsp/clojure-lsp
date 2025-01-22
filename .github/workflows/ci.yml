@@ -103,7 +103,9 @@ jobs:
           bb: '0.9.161'
 
       - name: Generate embedded binary
-        run: bb debug-cli
+        run: |
+        clojure -A:dev -Spath
+        bb debug-cli
 
       - name: Run integration tests
         run: bb integration-test

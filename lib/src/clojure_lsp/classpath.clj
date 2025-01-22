@@ -81,15 +81,17 @@
   If powershell.exe is available, it checks if the EXEC is installed
   in it as a module, and creates an invocation sequence as such to
   replace the EXEC. If not, it tries the same with pwsh.exe."
-  [[exec & args :as classpath-cmd]]
-
+  [[exec & args :as classpath-cmd]] 
+      (logger/info " ------------------------------------>>>")
+      (logger/info shared/windows-os? (#{"clojure" "lein"} exec) (not (locate-executable exec)))
   (if (and shared/windows-os?
            (#{"clojure" "lein"} exec)
            (not (locate-executable exec)))
+      (logger/info (locate-executable "powershell") (locate-executable "pswh"))
     (if-let [up (some #(when-let [ps (locate-executable %)]
                          (when (= 0 (:exit (apply shell (psh-cmd ps "Get-Command" exec))))
                            (psh-cmd ps exec)))
-                      ["powershell" "pwsh" "powershell.exe" "pwsh.exe"])]
+                      ["powershell" "pwsh"])]
       (into up args)
 
       classpath-cmd)
@@ -97,6 +99,10 @@
     (or (some->> (locate-executable exec)
                  (assoc classpath-cmd 0))
         classpath-cmd)))
+
+(comment
+  (apply shell (psh-cmd (locate-executable "powershell") "Get-Command" "clojure"))
+  (default-project-specs nil))
 
 (defn ^:private lookup-classpath! [root-path {:keys [classpath-cmd env]}]
   (let [command (string/join " " classpath-cmd)

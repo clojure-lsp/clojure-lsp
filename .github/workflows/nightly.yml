@@ -27,7 +27,7 @@ jobs:
     outputs:
       tag: ${{ steps.dev-tag.outputs.tag}}
     steps:
-      - uses: actions/checkout@v2.2.0
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -54,7 +54,7 @@ jobs:
     needs: release-dev-build
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2.2.0
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Prepare java
@@ -65,7 +65,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           bb: '0.9.161'
 
       - name: Update nightly version
@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
@@ -120,7 +120,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           bb: '0.9.161'
 
       - uses: graalvm/setup-graalvm@v1
@@ -181,7 +181,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
@@ -189,7 +189,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           bb: '0.9.161'
 
       - uses: graalvm/setup-graalvm@v1
@@ -253,7 +253,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
@@ -261,7 +261,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           bb: '0.9.161'
 
       - uses: graalvm/setup-graalvm@v1
@@ -317,7 +317,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
@@ -325,7 +325,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           bb: '0.9.161'
 
       - uses: graalvm/setup-graalvm@v1
@@ -381,7 +381,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: clojure-lsp-standalone.jar
@@ -400,7 +400,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           lein: '2.9.1'
           boot: '2.8.3'
           bb: '0.9.161'

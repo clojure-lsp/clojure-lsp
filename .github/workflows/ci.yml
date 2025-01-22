@@ -26,14 +26,14 @@ jobs:
   lint:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2.2.0
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           bb: '0.9.161'
 
       - name: Check if namespaces are clean
@@ -58,7 +58,7 @@ jobs:
           - os: macos-latest
             jdk: 11
     steps:
-      - uses: actions/checkout@v2.2.0
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -70,7 +70,7 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           bb: '0.9.161'
 
       - name: Run tests
@@ -89,7 +89,7 @@ jobs:
           - os: macos-latest
             jdk: 11
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -100,9 +100,9 @@ jobs:
           java-version: ${{ matrix.jdk }}
 
       - name: Install clojure build tools
-        uses: DeLaGuardo/setup-clojure@13.1
+        uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           lein: '2.9.1'
           boot: '2.8.3'
           bb: '0.9.161'
@@ -121,11 +121,11 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           bb: '0.9.161'
 
       - uses: graalvm/setup-graalvm@v1
@@ -160,12 +160,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1013'
+          cli: '1.12.0.1495'
           lein: '2.9.1'
           boot: '2.8.3'
           bb: '0.9.161'

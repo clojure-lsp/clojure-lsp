@@ -4,6 +4,7 @@
 
 - General
   - Bump clj-kondo to `2025.01.16`
+  - Bump lsp4clj to `1.11.0`.
   - Add semantic version sorting in completion lib versions. #1913
   - Fix internal error in range formatting. #1931
   - Drop support for jdk 8. #1942

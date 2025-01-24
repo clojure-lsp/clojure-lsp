@@ -297,10 +297,10 @@
               (with-db
                 settings-hide-calling
                 (is (= [{:language "clojure"
-                           :value "a/bar [x y]"}
-                          "Other cool docs :bar"
-                          (h/file-path "/a.clj")]
-                         (:contents (hover bar-row bar-col)))))))))
+                         :value "a/bar [x y]"}
+                        "Other cool docs :bar"
+                        (h/file-path "/a.clj")]
+                       (:contents (hover bar-row bar-col)))))))))
       (testing "On function definition"
         (with-db
           settings-one-line

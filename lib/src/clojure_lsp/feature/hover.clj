@@ -234,7 +234,8 @@
                        (when (pos? try-col)
                          (recur (dec try-col))))))
          definition (when element (q/find-definition db element))
-         calling (when (and element func-element (not= element func-element))
+         show-calling? (not (settings/get db [:hover :hide-signature-call?]))
+         calling (when (and show-calling? element func-element (not= element func-element))
                    (or func-definition func-element))]
      (cond
        definition

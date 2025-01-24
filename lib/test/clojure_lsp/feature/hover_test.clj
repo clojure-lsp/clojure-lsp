@@ -21,6 +21,7 @@
 (def ^:private settings-one-line {:settings {:hover {:arity-on-same-line? true}}})
 (def ^:private settings-one-line-deprecated {:settings {:show-docs-arity-on-same-line? true}})
 (def ^:private settings-hide-file {:settings {:hover {:hide-file-location? true}}})
+(def ^:private settings-hide-calling {:settings {:hover {:hide-signature-call? true}}})
 (def ^:private settings-no-clojuredocs {:settings {:hover {:clojuredocs false}}})
 (def ^:private settings-edits-warning {:settings {:completion {:additional-edits-warning-text "* includes additional edits"}}})
 
@@ -291,7 +292,15 @@
                      :value "a/foo [x y]"}
                     "Some cool docs :foo"
                     (h/file-path "/a.clj")]
-                   (:contents (hover anon-row anon-col)))))))
+                   (:contents (hover anon-row anon-col))))
+            (testing "hide-signature-call? enabled"
+              (with-db
+                settings-hide-calling
+                (is (= [{:language "clojure"
+                         :value "a/bar [x y]"}
+                        "Other cool docs :bar"
+                        (h/file-path "/a.clj")]
+                       (:contents (hover bar-row bar-col)))))))))
       (testing "On function definition"
         (with-db
           settings-one-line

@@ -2,6 +2,7 @@
   (:require
    [cheshire.core :as json]
    [clojure-lsp.http :as http]
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.shared :as shared]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -103,29 +104,32 @@
                 [lib (map #(hash-map :mvn/version %) (semver/sorted versions))]))
          (into {}))
     (catch Exception _
-      [])))
+      {})))
 
 (defn ^:private get-mvn-artifacts!
   "All the artifacts under group-id in mvn central"
   [group-id]
-  (let [search-prefix "https://search.maven.org/solrsearch/select?q=g:%22"
-        search-suffix "%22+AND+p:%22jar%22&core=gav&rows=100&wt=json"
-        search-url (str search-prefix group-id search-suffix)
-        {:keys [body status error]} (http/request! search-url)]
-    (if (or error (not= 200 status))
-      []
-      (->> (with-open [r (io/reader body)]
-             (json/parse-stream r keyword))
-           :response
-           :docs
-           (keep (juxt :g :a :v))
-           (reduce (fn [map [group artifact version]]
-                     (if (string/ends-with? version "-SNAPSHOT")
-                       map
-                       (update map (symbol group artifact) conj version))) {})
-           (map (fn [[lib versions]]
-                  [lib (map #(hash-map :mvn/version %) (semver/sorted versions))]))
-           (into {})))))
+  (try
+    (let [search-prefix "https://search.maven.org/solrsearch/select?q=g:%22"
+          search-suffix "%22+AND+p:%22jar%22&core=gav&rows=100&wt=json"
+          search-url (str search-prefix group-id search-suffix)
+          {:keys [body status error]} (http/request! search-url)]
+      (if (or error (not= 200 status))
+        {}
+        (->> (with-open [r (io/reader body)]
+               (json/parse-stream r keyword))
+             :response
+             :docs
+             (keep (juxt :g :a :v))
+             (reduce (fn [map [group artifact version]]
+                       (if (string/ends-with? version "-SNAPSHOT")
+                         map
+                         (update map (symbol group artifact) conj version))) {})
+             (map (fn [[lib versions]]
+                    [lib (map #(hash-map :mvn/version %) (semver/sorted versions))]))
+             (into {}))))
+    (catch Exception _
+      {})))
 
 (defn ^:private fetch-github-clojure-libs!
   []
@@ -140,7 +144,7 @@
          (reduce (fn [map [lib details]]
                    (assoc map lib (:versions details))) {}))
     (catch Exception _
-      [])))
+      {})))
 
 (defn ^:private fetch-clojure-mvn-central-libs! []
   (->> ["org.clojure" "com.cognitect"]
@@ -161,13 +165,17 @@
           (let [clojars-libs* (future (fetch-clojars-libs!))
                 mvn-central-libs* (future (fetch-clojure-mvn-central-libs!))
                 github-libs* (future (fetch-github-clojure-libs!))
-                libs (shared/deep-merge @clojars-libs* @mvn-central-libs* @github-libs*)]
+                libs (shared/deep-merge {} @clojars-libs* @mvn-central-libs* @github-libs*)]
             (reset! libs* {:loading false :libs libs})
             libs)))))
 
 (defn fetch-libs! []
   (when-not (:libs @libs*)
-    (boolean (all-clojure-libs!))))
+    (try
+      (boolean (all-clojure-libs!))
+      (catch Exception e
+        (logger/error "Error fetching libs for completion:" e)
+        false))))
 
 (defn ^:private complete-lib-name [_lib-context cursor-value]
   (let [lib-names (keys (all-clojure-libs!))]

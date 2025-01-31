@@ -599,6 +599,15 @@
                        [(:score %1) (:label %2) (:detail %2)]))
        not-empty))
 
+(defn ^:private add-text-edit [range items]
+  (if range
+    (map (fn [item]
+           (merge {:text-edit {:new-text (:label item)
+                               :range range}}
+                  item))
+         items)
+    items))
+
 (defn completion [uri row col db]
   (let [root-zloc (parser/safe-zloc-of-file db uri)
         ;; (dec col) because we're completing what's behind the cursor
@@ -710,7 +719,8 @@
              sorting-and-distincting-items
              ;; Limit the returned items for better performance.
              ;; If user needs more items one should be more specific in the completion query.
-             (take 600))))))
+             (take 600)
+             (add-text-edit (some-> cursor-loc z/node meta shared/->range)))))))
 
 ;;;; Resolve Completion Item (completionItem/resolve)
 

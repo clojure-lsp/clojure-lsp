@@ -813,6 +813,8 @@
                                         :new-text (h/code "(ns aaa "
                                                           "  (:require"
                                                           "    [\"@mui/material/Grid$default\" :as Grid]))")}]
+               :text-edit {:new-text "Grid",
+                           :range {:end {:character 13, :line 0}, :start {:character 9, :line 0}}}
                :score 9}]
              (f.completion/completion (h/file-uri "file:///aaa.clj") row col (h/db)))))
 
@@ -830,3 +832,50 @@
                                                                        :uri (h/file-uri "file:///aaa.clj")
                                                                        :js-require true}]]}}
                                                 (h/db*)))))
+
+(deftest text-edit-range
+  (let [[[ns-end-r ns-end-c]
+         [ns-mid-r ns-mid-c]
+         [fn-end-r fn-end-c]
+         [fn-mid-r fn-mid-c]
+         [arg-end-r arg-end-c]
+         [arg-mid-r arg-mid-c]] (h/load-code-and-locs (h/code "(ns aaa"
+                                                              "  (:require [bbb]))"
+                                                              "(defn foo [whatsit]"
+                                                              "  (bb|)"
+                                                              "  (bb|b)"
+                                                              "  (bbb/thi|)"
+                                                              "  (bbb/thi|ng)"
+                                                              "  (bbb/thingy wh|)"
+                                                              "  (bbb/thingy wh|at))")
+                                                      (h/file-uri "file:///aaa.clj"))
+        _ (h/load-code (h/code "(ns bbb)"
+                               "(defn thingy [_a _b _c] nil)")
+                       (h/file-uri "file:///bbb.clj"))]
+    (testing "At end of ns"
+      (h/assert-submap {:text-edit {:range {:start {:line 3 :character 3} :end {:line 3 :character 5}}}}
+                       (first (f.completion/completion (h/file-uri "file:///aaa.clj") ns-end-r ns-end-c (h/db)))))
+    (testing "Within ns"
+      (h/assert-submap {:text-edit {:range {:start {:line 4 :character 3} :end {:line 4 :character 6}}}}
+                       (first (f.completion/completion (h/file-uri "file:///aaa.clj") ns-mid-r ns-mid-c (h/db)))))
+    (testing "At end of fn"
+      (h/assert-submap {:text-edit {:range {:start {:line 5 :character 3} :end {:line 5 :character 10}}}}
+                       (first (f.completion/completion (h/file-uri "file:///aaa.clj") fn-end-r fn-end-c (h/db)))))
+    (testing "Within fn"
+      (h/assert-submap {:text-edit {:range {:start {:line 6 :character 3} :end {:line 6 :character 12}}}}
+                       (first (f.completion/completion (h/file-uri "file:///aaa.clj") fn-mid-r fn-mid-c (h/db)))))
+    (testing "At end of arg"
+      (h/assert-submap {:text-edit {:range {:start {:line 7 :character 14} :end {:line 7 :character 16}}}}
+                       (first (f.completion/completion (h/file-uri "file:///aaa.clj") arg-end-r arg-end-c (h/db)))))
+    (testing "Within arg"
+      (h/assert-submap {:text-edit {:range {:start {:line 8 :character 14} :end {:line 8 :character 18}}}}
+                       (first (f.completion/completion (h/file-uri "file:///aaa.clj") arg-mid-r arg-mid-c (h/db)))))))
+
+(deftest text-edit-range-invalid-syntax
+  (h/load-code-and-locs (h/code "(ns aaa"
+                                "  (:require [bbb]))"
+                                "(defn foo [whatsit]"
+                                "  (bb")
+                        (h/file-uri "file:///aaa.clj"))
+  (testing "text edit should not be added if syntax is invalid"
+    (is (nil? (get-in (first (f.completion/completion (h/file-uri "file:///aaa.clj") 3 6 (h/db))) [:text-edit])))))

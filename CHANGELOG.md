@@ -6,6 +6,7 @@
   - Add `:hover :hide-signature-call?` settings option to disable showing the surrounding call. #1954, @NoahTheDuke
   - Revert #1933, which caused a regression on completion adding extra text.
   - Fix fetching libs exception causing progress notification to be stuck. #1958
+  - Bump clj-kondo to `2025.01.17-20250207.105015-9`.
 
 ## 2025.01.22-23.28.23
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.02.07-15.18.07
+
 - Editor
   - Add `:hover :hide-signature-call?` settings option to disable showing the surrounding call. #1954, @NoahTheDuke
   - Revert #1933, which caused a regression on completion adding extra text.

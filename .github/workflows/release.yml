@@ -244,7 +244,7 @@ jobs:
           name: clojure-lsp-native-static-linux-amd64.zip.sha256
 
   linux-aarch64:
-    name: Build native linux amd64 binary
+    name: Build native linux aarch64 binary
     needs: [build-lib-jar, build-cli-jar]
     runs-on: ubuntu-24.04-arm
     steps:
@@ -274,10 +274,6 @@ jobs:
         run: |
           bb native-cli
 
-      - name: Run integration tests
-        run: |
-          bb integration-test
-
       - name: Zip binary
         run: zip clojure-lsp-native-linux-aarch64.zip clojure-lsp
 
@@ -295,6 +291,10 @@ jobs:
         with:
           path: clojure-lsp-native-linux-aarch64.zip.sha256
           name: clojure-lsp-native-linux-aarch64.zip.sha256
+
+      - name: Run integration tests
+        run: |
+          bb integration-test
 
   macos-amd64:
     name: Build native MacOS amd64 binary
@@ -501,7 +501,7 @@ jobs:
   release:
     name: Create Release
     environment: prod-release
-    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, macos-amd64, macos-aarch64, windows]
+    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, linux-aarch64, macos-amd64, macos-aarch64, windows]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -656,7 +656,6 @@ jobs:
           tag: ${{ steps.latest-tag.outputs.tag}}
 
       - name: Upload Linux aarch64 native binary
-        continue-on-error: true
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}

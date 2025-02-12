@@ -21,7 +21,13 @@
    [medley.core :as medley]
    [promesa.core :as p]
    [promesa.exec :as p.exec]
-   [taoensso.timbre :as timbre]))
+   [taoensso.timbre :as timbre]
+   [taoensso.timbre.appenders.community.otlp :as timbre.otlp])
+  (:import
+   [io.opentelemetry.api.common AttributeKey]
+   [io.opentelemetry.sdk.autoconfigure AutoConfiguredOpenTelemetrySdk]
+   [io.opentelemetry.sdk.resources Resource ResourceBuilder]
+   [io.opentelemetry.semconv ResourceAttributes]))
 
 (set! *warn-on-reflection* true)
 
@@ -79,6 +85,22 @@
 
   (set-log-path [_this log-path]
     (timbre/merge-config! {:appenders {:spit (timbre/spit-appender {:fname log-path})}}))
+  (configure-otlp [_this otlp-config]
+    (timbre/merge-config!
+      {:appenders
+       {:otlp (timbre.otlp/appender
+                {:logger-provider
+                 (-> (AutoConfiguredOpenTelemetrySdk/builder)
+                     (.setResultAsGlobal)
+                     (.addResourceCustomizer (fn [^Resource r _]
+                                               (let [r-builder ^ResourceBuilder (-> (.toBuilder r)
+                                                                                    (.put ResourceAttributes/SERVICE_NAME "clojure-lsp"))]
+                                                 (doseq [[^String key ^String val] otlp-config]
+                                                   (.put r-builder (AttributeKey/stringKey key) val))
+                                                 (.build r-builder))))
+                     (.build)
+                     .getOpenTelemetrySdk
+                     .getSdkLoggerProvider)})}}))
 
   (-info [_this fmeta arg1] (log! :info [arg1] fmeta))
   (-info [_this fmeta arg1 arg2] (log! :info [arg1 arg2] fmeta))

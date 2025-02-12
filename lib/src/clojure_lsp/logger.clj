@@ -4,6 +4,7 @@
   (setup [this])
 
   (set-log-path [_this log-path])
+  (configure-otlp [_this otlp-config])
 
   (-info [this fmeta arg1] [this fmeta arg1 arg2] [this fmeta arg1 arg2 arg3])
   (-warn [this fmeta arg1] [this fmeta arg1 arg2] [this fmeta arg1 arg2 arg3])

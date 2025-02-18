@@ -1,7 +1,9 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
-   [clojure.string :as string])
+   [clojure.string :as string]
+   [rewrite-clj.zip :as z])
   (:import
    [clojure.lang PersistentVector]))
 
@@ -230,12 +232,16 @@
        (mapcat absolute-token->relative-token)
        doall))
 
+(defn ^:private zloc->absolute-token [zloc]
+  )
+
 (defn full-tokens [uri db]
-  (let [buckets (get-in db [:analysis uri])]
-    (->> buckets
-         (mapcat val)
-         elements->absolute-tokens
-         absolute-tokens->relative-tokens)))
+  (let [buckets (get-in db [:analysis uri])
+        kondo-tokens (->> buckets (mapcat val) elements->absolute-tokens)
+        zloc (parser/zloc-of-file db uri)
+        all-uneval-zlocs []
+        rewrite-clj-tokens (map zloc->absolute-token all-uneval-zlocs)]
+    (absolute-tokens->relative-tokens (concat kondo-tokens rewrite-clj-tokens))))
 
 (defn range-tokens
   [uri range db]

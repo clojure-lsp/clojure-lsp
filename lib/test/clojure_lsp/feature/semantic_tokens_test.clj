@@ -217,7 +217,17 @@
             1 1 6 1 0
             0 6 1 8 0
             0 1 6 2 0]
-           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db))))))
+           (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
+  (testing "clojure reader dispatch"
+           (testing "ignore next form (#_)"
+                    (testing "single comment"
+                             (h/load-code-and-locs (code "#_ (def a 1)"))
+                             (is (= [0 0 12 10 0]
+                                    (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
+                    (testing "intertwined comment"
+                             (h/load-code-and-locs (code "(def a 1) #_2 3"))
+                             (is (= [] ;; FIXME: this is wrong, we need to figure out what's the right value
+                                    (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db))))))))
 
 (deftest range-tokens
   (testing "tokens only for range"

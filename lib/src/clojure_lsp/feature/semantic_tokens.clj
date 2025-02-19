@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
-   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure.string :as string]
    [rewrite-clj.zip :as z])
@@ -234,22 +233,19 @@
        doall))
 
 (defn ^:private node->absolute-token [{[[start-row start-col] [_end-row end-col]] :position-span}]
-      [(dec ^Long start-row)
-       (dec ^Long start-col)
-       (- ^Long end-col ^Long start-col) ;; FIXME: I believe this length is incorrect
-       (.indexOf ^PersistentVector token-types :comment)
-       (token-modifiers->decimal-bit [])] ;; FIXME: is this the right way to define no modifier?
-      )
+  [(dec ^Long start-row)
+   (dec ^Long start-col)
+   (- ^Long end-col ^Long start-col) ;; FIXME: I believe this length is incorrect
+   (.indexOf ^PersistentVector token-types :comment)
+   (token-modifiers->decimal-bit [])] ;; FIXME: is this the right way to define no modifier?
+  )
 
 (comment
 
   (-> "(def a 1) #_2 3"
       (z/of-string {:track-position? true})
       (z/find-tag z/next :uneval)
-      z/node)
-
-
-  )
+      z/node))
 
 (defn full-tokens [uri db]
   (let [buckets (get-in db [:analysis uri])
@@ -258,11 +254,11 @@
                           {:track-position? true})
         uneval-nodes (loop [zloc zloc
                             nodes []]
-                           (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
-                                   (recur (z/right uneval-zloc)
-                                          (conj nodes {:node (z/node uneval-zloc)
-                                                       :position-span (z/position-span uneval-zloc)}))
-                                   nodes))
+                       (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
+                         (recur (z/right uneval-zloc)
+                                (conj nodes {:node (z/node uneval-zloc)
+                                             :position-span (z/position-span uneval-zloc)}))
+                         nodes))
         rewrite-clj-tokens (map node->absolute-token uneval-nodes)]
     (absolute-tokens->relative-tokens (concat kondo-tokens rewrite-clj-tokens))))
 

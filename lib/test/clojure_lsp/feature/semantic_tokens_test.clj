@@ -225,8 +225,11 @@
         (is (= [0 0 12 10 0]
                (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
       (testing "intertwined comment"
-        (h/load-code-and-locs (code "(def a 1) #_2 3"))
-        (is (= [] ;; FIXME: this is wrong, we need to figure out what's the right value
+        (h/load-code-and-locs (code "(def a 1) #_2 :foo"))
+        (is (= [0 1 3 3 0 ;; def
+                0 4 1 2 1 ;; a
+                0 5 3 10 0 ;; #_2
+                0 5 3 4 0] ;; :foo
                (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db))))))))
 
 (deftest range-tokens

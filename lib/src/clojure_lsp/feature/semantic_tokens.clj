@@ -235,13 +235,13 @@
        doall))
 
 (defn ^:private node->absolute-token [token-type node]
-      (let [length (-> node n/string count)
-            {:keys [row col]} (meta node)]
-           [(dec ^Long row)
-            (dec ^Long col)
-            length
-            (.indexOf ^PersistentVector token-types token-type)
-            0]))
+  (let [length (-> node n/string count)
+        {:keys [row col]} (meta node)]
+    [(dec ^Long row)
+     (dec ^Long col)
+     length
+     (.indexOf ^PersistentVector token-types token-type)
+     0]))
 
 (defn full-tokens [uri db]
   (let [buckets (get-in db [:analysis uri])

@@ -246,13 +246,13 @@
 (defn full-tokens [uri db]
   (let [buckets (get-in db [:analysis uri])
         kondo-tokens (->> buckets (mapcat val) elements->absolute-tokens)
-        zloc (parser/safe-zloc-of-file db uri)
-        uneval-nodes (loop [zloc zloc
-                            nodes []]
-                       (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
-                         (recur (z/right uneval-zloc)
-                                (conj nodes (z/node uneval-zloc)))
-                         nodes))
+        uneval-nodes (when (string/includes? (get-in db [:documents uri :text]) "#_")
+                       (loop [zloc (parser/safe-zloc-of-file db uri)
+                              nodes []]
+                         (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
+                           (recur (z/right uneval-zloc)
+                                  (conj nodes (z/node uneval-zloc)))
+                           nodes)))
         rewrite-clj-tokens (map (partial node->absolute-token :comment) uneval-nodes)]
     (absolute-tokens->relative-tokens (sort-by (juxt first second) (concat kondo-tokens rewrite-clj-tokens)))))
 

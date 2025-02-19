@@ -1,7 +1,9 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure.string :as string]
+   [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z])
   (:import
    [clojure.lang PersistentVector]))
@@ -19,7 +21,7 @@
    :method
    :event
    :interface
-   :comment]) ;; FIXME: can I add types in any order? https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens
+   :comment])
 
 (def token-types-str
   (->> token-types
@@ -232,35 +234,27 @@
        (mapcat absolute-token->relative-token)
        doall))
 
-(defn ^:private node->absolute-token [{[[start-row start-col] [_end-row end-col]] :position-span}]
-  [(dec ^Long start-row)
-   (dec ^Long start-col)
-   (- ^Long end-col ^Long start-col) ;; FIXME: I believe this length is incorrect
-   (.indexOf ^PersistentVector token-types :comment)
-   (token-modifiers->decimal-bit [])] ;; FIXME: is this the right way to define no modifier?
-  )
-
-(comment
-
-  (-> "(def a 1) #_2 3"
-      (z/of-string {:track-position? true})
-      (z/find-tag z/next :uneval)
-      z/node))
+(defn ^:private node->absolute-token [token-type node]
+      (let [length (-> node n/string count)
+            {:keys [row col]} (meta node)]
+           [(dec ^Long row)
+            (dec ^Long col)
+            length
+            (.indexOf ^PersistentVector token-types token-type)
+            0]))
 
 (defn full-tokens [uri db]
   (let [buckets (get-in db [:analysis uri])
         kondo-tokens (->> buckets (mapcat val) elements->absolute-tokens)
-        zloc (z/of-string (get-in db [:documents uri :text])
-                          {:track-position? true})
+        zloc (parser/safe-zloc-of-file db uri)
         uneval-nodes (loop [zloc zloc
                             nodes []]
                        (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
                          (recur (z/right uneval-zloc)
-                                (conj nodes {:node (z/node uneval-zloc)
-                                             :position-span (z/position-span uneval-zloc)}))
+                                (conj nodes (z/node uneval-zloc)))
                          nodes))
-        rewrite-clj-tokens (map node->absolute-token uneval-nodes)]
-    (absolute-tokens->relative-tokens (concat kondo-tokens rewrite-clj-tokens))))
+        rewrite-clj-tokens (map (partial node->absolute-token :comment) uneval-nodes)]
+    (absolute-tokens->relative-tokens (sort-by (juxt first second) (concat kondo-tokens rewrite-clj-tokens)))))
 
 (defn range-tokens
   [uri range db]

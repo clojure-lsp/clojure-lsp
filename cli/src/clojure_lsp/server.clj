@@ -24,11 +24,7 @@
    [taoensso.timbre :as timbre]
    [taoensso.timbre.appenders.community.otlp :as timbre.otlp])
   (:import
-   [io.opentelemetry.api.common AttributeKey]
-   [io.opentelemetry.sdk.autoconfigure AutoConfiguredOpenTelemetrySdk]
-   [io.opentelemetry.sdk.resources Resource ResourceBuilder]
-   [io.opentelemetry.semconv ResourceAttributes]
-   [java.util.function BiFunction]))
+   [io.opentelemetry.sdk.autoconfigure AutoConfiguredOpenTelemetrySdk]))
 
 (set! *warn-on-reflection* true)
 
@@ -93,13 +89,7 @@
                 {:logger-provider
                  (-> (AutoConfiguredOpenTelemetrySdk/builder)
                      (.setResultAsGlobal)
-                     (.addResourceCustomizer ^BiFunction
-                      (fn [^Resource r _]
-                        (let [r-builder ^ResourceBuilder (-> (.toBuilder r)
-                                                             (.put ResourceAttributes/SERVICE_NAME "clojure-lsp"))]
-                          (doseq [[^String key ^String val] otlp-config]
-                            (.put r-builder (AttributeKey/stringKey key) val))
-                          (.build r-builder))))
+                     (.addPropertiesCustomizer (constantly otlp-config))
                      (.build)
                      .getOpenTelemetrySdk
                      .getSdkLoggerProvider)})}}))

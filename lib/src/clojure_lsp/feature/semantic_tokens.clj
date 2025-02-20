@@ -236,11 +236,10 @@
        doall))
 
 (defn ^:private node->absolute-token [token-type node]
-  (let [length (-> node n/string count)
-        {:keys [row col]} (meta node)]
+  (let [{:keys [row col]} (meta node)]
     [(dec ^Long row)
      (dec ^Long col)
-     length
+     (n/length node)
      (.indexOf ^PersistentVector token-types token-type)
      0]))
 

@@ -58,5 +58,7 @@
             :java {:class-definitions true
                    :member-definitions true}
             :symbols true}
+ :otlp {:enabled false
+        :config {}} ;; map with properties to configure opentelemetry log via timbre.
  :cache-path ".lsp/.cache"
  :log-path "/tmp/clojure-lsp.*.out"}

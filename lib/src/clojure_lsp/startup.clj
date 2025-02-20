@@ -286,6 +286,9 @@
                                             project-settings
                                             force-settings)
                :classpath-settings classpath-settings))
+      (when-let [otlp-config (and (-> @db* :settings :otlp :enabled)
+                                  (-> @db* :settings :otlp :config))]
+        (logger/configure-otlp logger otlp-config))
       (publish-task-progress producer (:analyzing-project task-list) progress-token)
       (logger/info startup-logger-tag "Analyzing source paths for project root" (str root-path))
       (let [analyze-source-paths-fn (if (= :project-namespaces-only (:project-analysis-type @db*))

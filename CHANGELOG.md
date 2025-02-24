@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+  
+- General
+  - Bump clj-kondo to `2025.02.20`.
 
 ## 2025.02.07-16.11.24
 

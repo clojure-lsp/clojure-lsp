@@ -58,7 +58,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2025.01.17-20250207.105015-9</version>
+      <version>2025.02.20</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>

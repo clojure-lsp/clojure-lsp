@@ -245,15 +245,18 @@
 
 (defn ^:private rewrite-clj-tokens*
   [uri db]
-  (shared/logging-time "rewrite-clj-tokens* took %s"
-                       (let [uneval-nodes (when (string/includes? (get-in db [:documents uri :text]) "#_")
-                                            (loop [zloc (parser/safe-zloc-of-file db uri)
-                                                   nodes []]
-                                              (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
-                                                (recur (z/right uneval-zloc)
-                                                       (conj nodes (z/node uneval-zloc)))
-                                                nodes)))]
-                         (map (partial node->absolute-token :comment) uneval-nodes))))
+  (shared/logging-time (str uri " rewrite-clj-tokens* took %s")
+                       (when (string/includes? (get-in db [:documents uri :text]) "#_")
+                         (let [zloc (shared/logging-time (str uri " rewrite-clj-tokens*/zloc took %s")
+                                                         (parser/safe-zloc-of-file db uri))
+                               uneval-nodes (shared/logging-time (str uri " rewrite-clj-tokens*/uneval-nodes took %s")
+                                                                 (loop [zloc zloc
+                                                                        nodes []]
+                                                                       (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
+                                                                               (recur (z/right uneval-zloc)
+                                                                                      (conj nodes (z/node uneval-zloc)))
+                                                                               nodes)))]
+                           (map (partial node->absolute-token :comment) uneval-nodes)))))
 
 (defn full-tokens [uri db]
   (let [buckets (get-in db [:analysis uri])

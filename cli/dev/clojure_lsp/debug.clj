@@ -7,6 +7,7 @@
   leave any clutter that would break the build."
   (:require
    [clj-async-profiler.core :as profiler]
+   [clj-memory-meter.core :as mm]
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.shared :as shared]
@@ -116,5 +117,20 @@
        ;; :estimate-strategy :quick-bench
        }
       (f.completion/completion (uri-in-project "lib/src/clojure_lsp/queries.clj") 24 8 @db/db*)))
+
+  (do
+    (println "\n Profiling db memory")
+    (let [db @db/db*]
+      #_(reduce
+          (fn [bytes k]
+            (if-not (identical? k :dev)
+              (+ bytes (mm/measure (k db) :bytes true))
+              bytes))
+          0 (keys db))
+
+      (doseq [key (keys db)]
+        (let [m (get db key)]
+          (when-not (identical? key :dev)
+            (println "-->" key (mm/measure m)))))))
 
   #_())

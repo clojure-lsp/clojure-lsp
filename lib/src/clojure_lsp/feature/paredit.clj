@@ -21,7 +21,7 @@
     (catch Exception e
       (logger/error e))))
 
-(def forward-slurp (partial paredit-op paredit/slurp-forward false))
+(def forward-slurp (partial paredit-op #(paredit/slurp-forward-into % {:from :current}) false))
 (def forward-barf (partial paredit-op paredit/barf-forward false))
 (def backward-slurp (partial paredit-op paredit/slurp-backward false))
 (def backward-barf (partial paredit-op paredit/barf-backward false))

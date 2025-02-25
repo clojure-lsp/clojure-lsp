@@ -231,6 +231,7 @@
 (defn- results->doc
   "Should mimic an LSP client processing results on a document"
   [doc doc-results]
+       (clojure.pprint/pprint {:doc= doc :doc-results= doc-results})
   (let [lines->count (->> doc
                           string/split-lines
                           (map-indexed vector)
@@ -255,13 +256,13 @@
                           (sort-by :start)
                           (reduce
                             (fn [{:keys [char-delta] :as accum} {:keys [loc start end]}]
-                              (-> accum
-                                  (update :char-delta + (- (count loc) (- end start)))
-                                  (update :doc (fn [d]
-                                                 (str
-                                                   (subs d 0 (+ char-delta start))
-                                                   loc
-                                                   (subs d (+ char-delta end)))))))
+                                (-> accum
+                                    (update :char-delta + (- (count loc) (- end start)))
+                                    (update :doc (fn [d]
+                                                     (str
+                                                       (subs d 0 (+ char-delta start))
+                                                       loc
+                                                       (subs d (+ char-delta end)))))))
 
                             {:char-delta 0 :doc doc}))]
     (:doc char-results)))

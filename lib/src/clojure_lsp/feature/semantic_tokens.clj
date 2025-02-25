@@ -246,7 +246,7 @@
 (defn ^:private rewrite-clj-tokens*
   [uri db]
   (shared/logging-time (str uri " rewrite-clj-tokens* took %s")
-                       (when (string/includes? (get-in db [:documents uri :text]) "#_")
+                       (when (string/includes? (or (get-in db [:documents uri :text]) "") "#_")
                          (let [zloc (shared/logging-time (str uri " rewrite-clj-tokens*/zloc took %s")
                                                          (parser/safe-zloc-of-file db uri))
                                uneval-nodes (shared/logging-time (str uri " rewrite-clj-tokens*/uneval-nodes took %s")

@@ -47,7 +47,13 @@
              (h/code "|1"))
   (assert-op f.paredit/forward-barf
              (h/code "|")
-             (h/code "|")))
+             (h/code "|"))
+  (assert-op f.paredit/forward-barf
+             (h/code "(get []|) :a")
+             (h/code "(get [] |:a)"))
+  (assert-op f.paredit/forward-barf
+             (h/code "(get []|) :a")
+             (h/code "(get []| :a)")))
 
 (deftest backward-slurp-test
   (assert-op f.paredit/backward-slurp

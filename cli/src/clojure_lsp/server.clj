@@ -24,7 +24,8 @@
    [taoensso.timbre :as timbre]
    [taoensso.timbre.appenders.community.otlp :as timbre.otlp])
   (:import
-   [io.opentelemetry.sdk.autoconfigure AutoConfiguredOpenTelemetrySdk]))
+   [io.opentelemetry.sdk.autoconfigure AutoConfiguredOpenTelemetrySdk]
+   [java.util.function Function]))
 
 (set! *warn-on-reflection* true)
 
@@ -89,7 +90,7 @@
                 {:logger-provider
                  (-> (AutoConfiguredOpenTelemetrySdk/builder)
                      (.setResultAsGlobal)
-                     (.addPropertiesCustomizer (constantly otlp-config))
+                     (.addPropertiesCustomizer ^Function (constantly otlp-config))
                      (.build)
                      .getOpenTelemetrySdk
                      .getSdkLoggerProvider)})}}))

@@ -235,8 +235,9 @@
   (let [lines->count (->> doc
                           string/split-lines
                           (map-indexed vector)
-                          (map (juxt first (comp inc count second)))
+                          (map (juxt first (comp inc count second))) ;; inc due to \n
                           (into {}))
+        _ (println 'lines->count= lines->count)
         char-results (->> doc-results
                           (reduce
                             (fn [accum {:keys [loc] {:keys [row col end-row end-col]} :range}]
@@ -254,11 +255,16 @@
 
                             [])
                           (sort-by :start)
+                          ((fn [x] (println 'x= x) x))
                           (reduce
                             (fn [{:keys [char-delta] :as accum} {:keys [loc start end]}]
                               (-> accum
                                   (update :char-delta + (- (count loc) (- end start)))
                                   (update :doc (fn [d]
+                                                 (println 'd= (pr-str d)
+                                                          'char-delta= char-delta
+                                                          'end= end
+                                                          'sum= (+ char-delta end))
                                                  (str
                                                    (subs d 0 (+ char-delta start))
                                                    loc

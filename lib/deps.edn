@@ -1,8 +1,6 @@
 {:deps {org.clojure/clojure {:mvn/version "1.12.0"}
         rewrite-clj/rewrite-clj {#_#_:mvn/version "1.1.48"
-                                 #_#_:local/root "../../rewrite-clj"
                                  :git/url "https://github.com/clj-commons/rewrite-clj"
-                                ;;  :git/tag "v1.1.49"
                                  :git/sha "3b07e600e86f70eae5cac15ae7e72a245d895371"}
         borkdude/rewrite-edn {:mvn/version "0.4.9" :exclusions [rewrite-clj/rewrite-clj]}
         org.clojure/core.async {:mvn/version "1.6.681"}

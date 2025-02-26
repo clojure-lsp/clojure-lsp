@@ -161,8 +161,8 @@
 (defmethod run-command :replace-refer-all-with-alias  [{:keys [loc uri db]}]
   (f.replace-refer-all/replace-with-alias loc uri db))
 
-(defmethod run-command :forward-slurp  [{:keys [uri loc]}]
-  (f.paredit/forward-slurp uri loc))
+(defmethod run-command :forward-slurp  [{:keys [uri loc row col]}]
+  (f.paredit/forward-slurp uri loc row col))
 
 (defmethod run-command :forward-barf  [{:keys [loc uri]}]
   (f.paredit/forward-barf uri loc))

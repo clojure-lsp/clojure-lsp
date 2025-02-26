@@ -2,24 +2,33 @@
   (:require
    [clojure-lsp.logger :as logger]
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared]
    [rewrite-clj.paredit :as paredit]
    [rewrite-clj.zip :as z]))
 
-(defn ^:private paredit-op [paredit-fn move-cursor? uri original-zloc]
+(defn ^:private paredit-op [paredit-fn move-cursor? uri original-zloc row col]
   (try
     (when original-zloc
       (let [zloc (paredit-fn original-zloc)
             root-zloc (z/up (edit/to-top zloc))]
-        (shared/assoc-some
-          {:changes-by-uri {uri [{:loc root-zloc
-                                  :range (meta (z/node root-zloc))}]}}
-          :show-document-after-edit (when move-cursor?
-                                      {:uri uri
-                                       :take-focus true
-                                       :range (meta (z/node (z/up original-zloc)))}))))
+        (println 'original-zloc= original-zloc
+                 'root-zloc= root-zloc
+                 'root-zloc-node= root-zloc)
+        (println 'root-original-zloc= (z/root original-zloc)
+                 'root-original-zloc-meta= (meta (z/root original-zloc))
+                 'root-zloc= root-zloc)
+        {:changes-by-uri {uri [{:loc root-zloc
+                                :range (meta (z/root original-zloc))}]}
+         :show-document-after-edit {:uri uri
+                                    :take-focus true
+                                    :range (if move-cursor?
+                                             (meta (z/node (z/up original-zloc)))
+                                             {:row row :col col :end-row row :end-col col})}}))
     (catch Exception e
       (logger/error e))))
+
+(comment
+
+  (paredit/slurp-forward-into (z/of-string "") {:from :current}))
 
 (def forward-slurp (partial paredit-op #(paredit/slurp-forward-into % {:from :current}) false))
 (def forward-barf (partial paredit-op paredit/barf-forward false))

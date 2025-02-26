@@ -639,6 +639,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#opentelemetry-integration" class="md-nav__link">
+    OpenTelemetry integration
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1178,6 +1185,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#opentelemetry-integration" class="md-nav__link">
+    OpenTelemetry integration
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1474,6 +1488,11 @@
 <td>Whether to enable symbols analysis for performance.</td>
 <td><code>true</code></td>
 </tr>
+<tr>
+<td><code>:otlp</code></td>
+<td><a href="https://opentelemetry.io/">OpenTelemetry</a> related settings, check the <a href="#opentelemetry-integration">Opentelemetry</a> section below.</td>
+<td><code>false</code></td>
+</tr>
 </tbody>
 </table>
 <h3 id="classpath-scan">Classpath scan<a class="headerlink" href="#classpath-scan" title="Permanent link">#</a></h3>
@@ -1708,6 +1727,15 @@ The available settings inside <code>:stubs</code> are:</p>
 <p>clojure-lsp will generate no stubs with that, but analyze that folder and consider it as manual generated stubs.</p>
 <h3 id="changing-settings">Changing settings<a class="headerlink" href="#changing-settings" title="Permanent link">#</a></h3>
 <p><code>clojure-lsp</code> supports <code>workspace/didChangeConfiguration</code> commands to change the server settings while it is running, everything inside the <code>:settings</code> map can be changed, but not outside it (the project root for example).</p>
+<h3 id="opentelemetry-integration">OpenTelemetry integration<a class="headerlink" href="#opentelemetry-integration" title="Permanent link">#</a></h3>
+<p><code>clojure-lsp</code> has support for <a href="https://opentelemetry.io/">OpenTelemetry</a>(otlp), if configured, all logs will use the otlp logger API.</p>
+<p>To configure, set <code>:otlp :enable</code> to <code>true</code> and configure your OTLP collector via <code>:otlp :config</code> map following <a href="https://opentelemetry.io/docs/languages/java/configuration/#properties-general">otlp auto-configure settings</a>. Example:</p>
+<p><code>.lsp/config.edn</code>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:otlp</span> <span class="p">{</span><span class="ss">:enable</span> <span class="nv">true</span>
+        <span class="ss">:config</span> <span class="p">{</span><span class="s">&quot;otel.exporter.otlp.logs.protocol&quot;</span> <span class="s">&quot;http/protobuf&quot;</span>
+                 <span class="s">&quot;otel.exporter.otlp.logs.endpoint&quot;</span> <span class="s">&quot;https://my-otlp-endpoint.com/foo&quot;</span>
+                 <span class="s">&quot;otel.exporter.otlp.headers&quot;</span> <span class="s">&quot;Authorization=Bearer 123456&quot;</span><span class="p">}}}</span>
+</code></pre></div></p>
                 
                   
                     

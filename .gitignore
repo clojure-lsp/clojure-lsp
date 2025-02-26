@@ -3,7 +3,7 @@
 /.lein-failures
 .nrepl-port
 **/.lsp/.cache
-/.clj-kondo/*
+.clj-kondo
 !/.clj-kondo/config.edn
 /cli/.clj-kondo/
 /out
@@ -13,7 +13,7 @@ target/
 /.cpcache
 /node_modules
 /test.clj
-/.calva/output-window
+.calva
 /clojure-lsp
 /*.jar
 clojure-lsp.build_artifacts.txt

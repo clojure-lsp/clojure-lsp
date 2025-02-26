@@ -437,3 +437,17 @@ clojure-lsp will generate no stubs with that, but analyze that folder and consid
 ### Changing settings
 
 `clojure-lsp` supports `workspace/didChangeConfiguration` commands to change the server settings while it is running, everything inside the `:settings` map can be changed, but not outside it (the project root for example).
+
+### OpenTelemetry integration
+
+`clojure-lsp` has support for [OpenTelemetry](https://opentelemetry.io/)(otlp), if configured, all logs will use the otlp logger API.
+
+To configure, set `:otlp :enable` to `true` and configure your OTLP collector via `:otlp :config` map following [otlp auto-configure settings](https://opentelemetry.io/docs/languages/java/configuration/#properties-general). Example:
+
+`.lsp/config.edn`
+```clojure
+{:otlp {:enable true
+        :config {"otel.exporter.otlp.logs.protocol" "http/protobuf"
+                 "otel.exporter.otlp.logs.endpoint" "https://my-otlp-endpoint.com/foo"
+                 "otel.exporter.otlp.headers" "Authorization=Bearer 123456"}}}
+```

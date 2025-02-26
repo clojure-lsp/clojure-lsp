@@ -534,6 +534,7 @@
                       (some-> (:root-uri params) normalize-uri)
                       (:capabilities params)
                       (client-settings params)
+                      (:client-info params)
                       (some-> params :work-done-token str))
   (when-let [trace-level (:trace params)]
     (lsp.server/set-trace-level server trace-level))

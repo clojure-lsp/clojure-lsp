@@ -92,10 +92,6 @@ nnoremap <silent> crsp :execute 'Connect' CocRequest('clojure-lsp', 'clojure/ser
 * To find the server info or the log file, use `:lua clients = vim.lsp.get_active_clients() for k, client_data in ipairs(clients) do id = client_data.id end client = vim.lsp.get_client_by_id(id) result = client.request_sync("clojure/serverInfo/raw", {}, 5000, 15) print('port = ' .. result.result.port) print('log-path = ' .. result.result['log-path'])`
 * To connect the nREPL client, run `:ConjureConnect <port>`
 
-### Your Favorite Editor
-
-TBD. PR welcome.
-
 ## Debugging & Profiling
 
 The nREPL includes tools for debugging and profiling clojure-lsp. See `cli/dev/clojure_lsp/debug.clj`.

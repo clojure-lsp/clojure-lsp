@@ -23,16 +23,16 @@
            :build {:extra-paths ["../lib/resources"]
                    :extra-deps {babashka/fs {:mvn/version "0.5.22"}
                                 babashka/process {:mvn/version "0.5.22"}}
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.5" :sha "2a21b7a"}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.7" :sha "573711e"}
                                   com.github.ericdallo/deps-bin {:mvn/version "1.0.0"}
                                   slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}
            :run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-paths ["dev"]
-                   :extra-deps {cider/cider-nrepl {:mvn/version "0.50.2"}
-                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.4.0"}
-                                com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.3.0"}
+                   :extra-deps {cider/cider-nrepl {:mvn/version "0.52.1"}
+                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.1"}
+                                com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.4.0"}
                                 criterium/criterium {:mvn/version "0.4.6"}
                                 nrepl/nrepl {:mvn/version "1.3.0"}}
                    :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}

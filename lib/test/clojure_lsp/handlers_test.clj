@@ -33,14 +33,14 @@
   (testing "detects URI format with lower-case drive letter and encoded colons"
     (h/reset-components!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
-      (handlers/initialize (h/components) "file:///c%3A/project/root" {} {} nil))
+      (handlers/initialize (h/components) "file:///c%3A/project/root" {} {} nil nil))
     (is (= {:encode-colons-in-path?   true
             :upper-case-drive-letter? false}
            (get-in (h/db) [:settings :uri-format]))))
   (testing "detects URI format with upper-case drive letter and non-encoded colons"
     (h/reset-components!)
     (with-redefs [lsp.kondo/config-hash (constantly "123")]
-      (handlers/initialize (h/components) "file:///C:/project/root" {} {} nil))
+      (handlers/initialize (h/components) "file:///C:/project/root" {} {} nil nil))
     (is (= {:encode-colons-in-path?   false
             :upper-case-drive-letter? true}
            (get-in (h/db) [:settings :uri-format])))))

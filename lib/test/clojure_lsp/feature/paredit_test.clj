@@ -18,7 +18,7 @@
         {{actual-row :row actual-col :col} :range} (:show-document-after-edit transformations)
         result (h/changes->code (-> transformations :changes-by-uri first second) (h/db))]
     (if transformations
-      (h/cursor-at result actual-row actual-col)
+      (h/put-cursor-at result actual-row actual-col)
       "|")))
 
 (comment

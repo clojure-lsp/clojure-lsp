@@ -168,7 +168,7 @@
 
     [(str text) positions]))
 
-(defn cursor-at
+(defn put-cursor-at
   "Position the cursor at the given row and column.
    row and col are 1-based.
 

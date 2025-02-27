@@ -22,7 +22,7 @@
 
 (def forward-slurp (partial paredit-op #(paredit/slurp-forward-into % {:from :current}) false))
 (def forward-barf (partial paredit-op paredit/barf-forward false))
-(def backward-slurp (partial paredit-op paredit/slurp-backward false))
+(def backward-slurp (partial paredit-op #(paredit/slurp-backward-into % {:from :current}) false))
 (def backward-barf (partial paredit-op paredit/barf-backward false))
 (def raise (partial paredit-op paredit/raise true))
 (def kill (partial paredit-op paredit/kill false))

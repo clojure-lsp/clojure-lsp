@@ -53,21 +53,12 @@
              (h/code "|")))
 
 (deftest backward-slurp-test
-  (assert-op f.paredit/backward-slurp
-             (h/code "[[1 |2 3] 4]")
-             (h/code "[1 [|2 3] 4]"))
-  (assert-op f.paredit/backward-slurp
-             (h/code "[1 [[2 |3 4] 5] 6]")
-             (h/code "[1 [2 [|3 4] 5] 6]"))
-  (assert-op f.paredit/backward-slurp
-             (h/code "[|1] 2")
-             (h/code "[|1] 2"))
-  (assert-op f.paredit/backward-slurp
-             (h/code "|1")
-             (h/code "|1"))
-  (assert-op f.paredit/backward-slurp
-             (h/code "|")
-             (h/code "|")))
+  (are [expected code] (= expected (edit f.paredit/backward-slurp code))
+    "[[1 |2 3] 4]" "[1 [|2 3] 4]"
+    "[1 [[2 |3 4] 5] 6]" "[1 [2 [|3 4] 5] 6]"
+    "[|1] 2" "[|1] 2"
+    "|1" "|1"
+    "|" "|"))
 
 (deftest backward-barf-test
   (assert-op f.paredit/backward-barf

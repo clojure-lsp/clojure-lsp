@@ -167,8 +167,8 @@
 (defmethod run-command :forward-barf  [{:keys [loc uri]}]
   (f.paredit/forward-barf uri loc))
 
-(defmethod run-command :backward-slurp  [{:keys [loc uri]}]
-  (f.paredit/backward-slurp uri loc))
+(defmethod run-command :backward-slurp  [{:keys [loc uri row col]}]
+  (f.paredit/backward-slurp uri loc row col))
 
 (defmethod run-command :backward-barf  [{:keys [loc uri]}]
   (f.paredit/backward-barf uri loc))

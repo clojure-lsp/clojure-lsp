@@ -247,11 +247,10 @@
 (defn- results->doc
   "Should mimic an LSP client processing results on a document"
   [doc doc-results]
-  (clojure.pprint/pprint {:doc= doc :doc-results= doc-results})
   (let [lines->count (->> doc
                           string/split-lines
                           (map-indexed vector)
-                          (map (juxt first (comp inc count second))) ;; inc due to \n
+                          (map (juxt first (comp inc count second)))
                           (into {}))
         char-results (->> doc-results
                           (reduce

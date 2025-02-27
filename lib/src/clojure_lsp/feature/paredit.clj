@@ -11,7 +11,7 @@
       (let [zloc (paredit-fn original-zloc)
             root-zloc (z/up (edit/to-top zloc))]
         {:changes-by-uri {uri [{:loc root-zloc
-                                :range (meta (z/root original-zloc))}]}
+                                :range (meta (z/node root-zloc))}]} ;; FIXME: range is always the whole document
          :show-document-after-edit {:uri uri
                                     :take-focus true
                                     :range (if move-cursor?

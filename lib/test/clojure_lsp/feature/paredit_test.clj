@@ -2,8 +2,7 @@
   (:require
    [clojure-lsp.feature.paredit :as f.paredit]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [are deftest is]]
-   [rewrite-clj.zip :as z]))
+   [clojure.test :refer [are deftest is]]))
 
 (defmacro ^:private assert-op [op expected code]
   `(let [applied# (~op h/default-uri (:zloc (h/load-code-into-zloc-and-position ~code)))
@@ -20,96 +19,6 @@
     (if transformations
       (h/put-cursor-at result actual-row actual-col)
       "|")))
-
-(comment
-  (require '[rewrite-clj.paredit :as paredit]
-           '[rewrite-clj.zip :as z])
-
-  (-> "(get {}) :a"
-      z/of-string*
-      z/node
-      meta)
-
-  ;;   12
-  (-> ":a"
-      z/of-string
-      z/root
-      meta)
-
-  ;;   12345
-  (-> ":a :b"
-      z/of-string
-      z/root
-      meta)
-
-  ;;   123456789 0123 4
-  (-> "(get {}) \"foo\""
-      z/of-string
-      z/root
-      meta)
-  ;;   12345678901
-  (-> "(get {}) :a"
-      z/of-string
-      z/root
-      meta)
-  ;;   12345678901234
-  (-> "(get {}) ::b/c"
-      z/of-string
-      z/root
-      meta)
-  ;;   1234567890
-  (-> "(get []) 0"
-      z/of-string
-      z/root
-      meta)
-  ;;   12345678901
-  (-> "(get []) 'a"
-      z/of-string
-      z/root
-      meta)
-  ;;   12345678901
-  (-> "(get []) {}"
-      z/of-string
-      z/root
-      meta)
-  ;;   12345678901
-  (-> "(get []) ()"
-      z/of-string
-      z/root
-      meta)
-  ;;   1234567890123
-  (-> "(get []) #_{}"
-      z/of-string
-      z/root
-      meta)
-
-  (count "(get []) 0")
-  (count "(get {}) :a")
-
-  (-> "(get {}|) :a"
-      (h/load-code-into-zloc-and-position)
-      ;; :zloc
-      ;; (paredit/slurp-forward-into {:from :current})
-      ;; z/root-string
-      #_())
-
-  (-> "(get {}| :a)"
-      #_"(get {}|) :a"
-      h/positions-from-text)
-
-  (h/changes->code (->> "(get {}|) :a"
-                        h/load-code-into-zloc-and-position
-                        :zloc
-                        (f.paredit/forward-slurp h/default-uri)
-                        :changes-by-uri
-                        first
-                        second)
-                   (h/db))
-
-  (macroexpand-1 '(assert-op2 f.paredit/forward-slurp
-                              (h/code "(get {}| :a)")
-                              (h/code "(get {}|) :a")))
-  #_())
 
 (deftest forward-slurp-test
   (are [expected code] (= expected (edit f.paredit/forward-slurp code))

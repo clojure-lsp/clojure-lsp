@@ -289,10 +289,10 @@
       (when-let [otlp-config (and (-> @db* :settings :otlp :enabled)
                                   (-> @db* :settings :otlp :config))]
         (logger/configure-otlp logger otlp-config)
-        (logger/info (format "OTLP configured for client '%s' version '%s' for username '%s'"
-                             (-> @db* :client-info :name)
-                             (-> @db* :client-info :version)
-                             (System/getProperty "user.name"))))
+        (logger/info "OTLP configured:" {:client (-> @db* :client-info :name)
+                                         :version (-> @db* :client-info :version)
+                                         :username (System/getProperty "user.name")
+                                         :project project-root-uri}))
       (publish-task-progress producer (:analyzing-project task-list) progress-token)
       (logger/info startup-logger-tag "Analyzing source paths for project root" (str root-path))
       (let [analyze-source-paths-fn (if (= :project-namespaces-only (:project-analysis-type @db*))

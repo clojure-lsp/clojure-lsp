@@ -4,6 +4,7 @@
   
 - General
   - Bump clj-kondo to `2025.02.20`.
+  - Add support for OpenTelemetry(otlp) log, enabled if configured. #1963
 
 ## 2025.02.07-16.11.24
 

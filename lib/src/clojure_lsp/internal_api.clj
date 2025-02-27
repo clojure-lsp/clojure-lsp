@@ -40,6 +40,7 @@
   (setup [this]
     (logger/set-logger! this))
   (set-log-path [_ _])
+  (configure-otlp [_ _])
   (-info [_ _fmeta arg1] (log-print "[INFO]" options arg1))
   (-info [_ _fmeta arg1 arg2] (log-print "[INFO]" options arg1 arg2))
   (-info [_ _fmeta arg1 arg2 arg3] (log-print "[INFO]" options arg1 arg2 arg3))

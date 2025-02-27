@@ -161,10 +161,13 @@
    project-root-uri
    client-capabilities
    client-settings
+   client-info
    work-done-token]
   (shared/logging-task
     :initialize
-    (swap! db* assoc :project-analysis-type :project-and-full-dependencies)
+    (swap! db* assoc
+           :project-analysis-type :project-and-full-dependencies
+           :client-info client-info)
     (if project-root-uri
       (do
         (startup/initialize-project

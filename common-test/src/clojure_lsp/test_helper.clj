@@ -59,6 +59,7 @@
   (setup [_])
 
   (set-log-path [_this _log-path])
+  (configure-otlp [_this _otlp-config])
 
   (-info [_this _fmeta _arg1])
   (-info [_this _fmeta _arg1 _arg2])

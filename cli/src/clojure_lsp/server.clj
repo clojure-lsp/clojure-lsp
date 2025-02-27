@@ -21,7 +21,11 @@
    [medley.core :as medley]
    [promesa.core :as p]
    [promesa.exec :as p.exec]
-   [taoensso.timbre :as timbre]))
+   [taoensso.timbre :as timbre]
+   [taoensso.timbre.appenders.community.otlp :as timbre.otlp])
+  (:import
+   [io.opentelemetry.sdk.autoconfigure AutoConfiguredOpenTelemetrySdk]
+   [java.util.function Function]))
 
 (set! *warn-on-reflection* true)
 
@@ -79,6 +83,17 @@
 
   (set-log-path [_this log-path]
     (timbre/merge-config! {:appenders {:spit (timbre/spit-appender {:fname log-path})}}))
+  (configure-otlp [_this otlp-config]
+    (timbre/merge-config!
+      {:appenders
+       {:otlp (timbre.otlp/appender
+                {:logger-provider
+                 (-> (AutoConfiguredOpenTelemetrySdk/builder)
+                     (.setResultAsGlobal)
+                     (.addPropertiesCustomizer ^Function (constantly otlp-config))
+                     (.build)
+                     .getOpenTelemetrySdk
+                     .getSdkLoggerProvider)})}}))
 
   (-info [_this fmeta arg1] (log! :info [arg1] fmeta))
   (-info [_this fmeta arg1 arg2] (log! :info [arg1 arg2] fmeta))
@@ -520,6 +535,7 @@
                       (some-> (:root-uri params) normalize-uri)
                       (:capabilities params)
                       (client-settings params)
+                      (:client-info params)
                       (some-> params :work-done-token str))
   (when-let [trace-level (:trace params)]
     (lsp.server/set-trace-level server trace-level))

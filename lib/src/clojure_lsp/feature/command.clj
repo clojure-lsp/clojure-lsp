@@ -164,20 +164,20 @@
 (defmethod run-command :forward-slurp  [{:keys [uri loc row col]}]
   (f.paredit/forward-slurp uri loc row col))
 
-(defmethod run-command :forward-barf  [{:keys [loc uri]}]
-  (f.paredit/forward-barf uri loc))
+(defmethod run-command :forward-barf  [{:keys [loc uri row col]}]
+  (f.paredit/forward-barf uri loc row col))
 
 (defmethod run-command :backward-slurp  [{:keys [loc uri row col]}]
   (f.paredit/backward-slurp uri loc row col))
 
-(defmethod run-command :backward-barf  [{:keys [loc uri]}]
-  (f.paredit/backward-barf uri loc))
+(defmethod run-command :backward-barf  [{:keys [loc uri row col]}]
+  (f.paredit/backward-barf uri loc row col))
 
-(defmethod run-command :raise-sexp  [{:keys [loc uri]}]
-  (f.paredit/raise uri loc))
+(defmethod run-command :raise-sexp  [{:keys [loc uri row col]}]
+  (f.paredit/raise uri loc row col))
 
-(defmethod run-command :kill-sexp  [{:keys [loc uri]}]
-  (f.paredit/kill uri loc))
+(defmethod run-command :kill-sexp  [{:keys [loc uri row col]}]
+  (f.paredit/kill uri loc row col))
 
 (defmethod run-command :server-info  [{:keys [components]}]
   (f.development-info/server-info-log components))

@@ -169,6 +169,22 @@
 
     [(str text) positions]))
 
+(defn put-cursor-at
+  "Position the cursor at the given row and column.
+   row and col are 1-based.
+
+   (position-cursor \"[1 [2 [3]]]\" 1 8) => \"[1 [2 [|3]]]\""
+  [s row col]
+  (let [lines (string/split s #"\n" -1)
+        line (nth lines (dec row))]
+    (string/join "\n"
+                 (concat
+                   (subvec lines 0 (dec row))
+                   [(str (subs line 0 (dec col))
+                         "|"
+                         (subs line (dec col)))]
+                   (subvec lines row)))))
+
 (def default-uri (file-uri "file:///a.clj"))
 
 (defn load-code

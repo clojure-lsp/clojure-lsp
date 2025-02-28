@@ -1,10 +1,12 @@
 # Changelog
 
 ## Unreleased
-  
+
 - General
   - Bump clj-kondo to `2025.02.20`.
   - Add support for OpenTelemetry(otlp) log, enabled if configured. #1963
+- Editor
+  - Improve paredit slurp corner cases. #1973
 
 ## 2025.02.07-16.11.24
 

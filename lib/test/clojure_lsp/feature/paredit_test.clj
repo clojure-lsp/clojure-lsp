@@ -11,7 +11,7 @@
      (is (= text#
             (h/changes->code (-> applied# :changes-by-uri first second) (h/db))))))
 
-(defn ^:private edit
+(defn ^:private apply-paredit
   [paredit-fn code]
   (let [{{row :row col :col} :position zloc :zloc} (h/load-code-into-zloc-and-position code)
         transformations (paredit-fn h/default-uri zloc row col)
@@ -22,7 +22,7 @@
       "|")))
 
 (deftest forward-slurp-test
-  (are [expected code] (= expected (edit f.paredit/forward-slurp code))
+  (are [expected code] (= expected (apply-paredit f.paredit/forward-slurp code))
     "[1 [2 3| 4]]" "[1 [2 3|] 4]"
     "[1 [2 [|3 4 5]] 6]" "[1 [2 [|3 4] 5] 6]"
     "[|1 2]" "[|1] 2"
@@ -54,7 +54,7 @@
              (h/code "|")))
 
 (deftest backward-slurp-test
-  (are [expected code] (= expected (edit f.paredit/backward-slurp code))
+  (are [expected code] (= expected (apply-paredit f.paredit/backward-slurp code))
     "[[1 |2 3] 4]" "[1 [|2 3] 4]"
     "[1 [[2 |3 4] 5] 6]" "[1 [2 [|3 4] 5] 6]"
     "[|1] 2" "[|1] 2"

@@ -91,7 +91,8 @@
                                                        "variable"
                                                        "method"
                                                        "event"
-                                                       "interface"]
+                                                       "interface"
+                                                       "comment"]
                                           :tokenModifiers ["definition"
                                                            "defaultLibrary"
                                                            "implementation"]}

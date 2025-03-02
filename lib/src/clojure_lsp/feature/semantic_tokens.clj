@@ -1,7 +1,11 @@
 (ns clojure-lsp.feature.semantic-tokens
   (:require
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
-   [clojure.string :as string])
+   [clojure-lsp.shared :as shared]
+   [clojure.string :as string]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z])
   (:import
    [clojure.lang PersistentVector]))
 
@@ -17,7 +21,8 @@
    :variable
    :method
    :event
-   :interface])
+   :interface
+   :comment])
 
 (def token-types-str
   (->> token-types
@@ -230,12 +235,36 @@
        (mapcat absolute-token->relative-token)
        doall))
 
+(defn ^:private node->absolute-token [token-type node]
+  (let [{:keys [row col]} (meta node)]
+    [(dec ^Long row)
+     (dec ^Long col)
+     (n/length node)
+     (.indexOf ^PersistentVector token-types token-type)
+     0]))
+
+(defn ^:private rewrite-clj-tokens*
+  [uri db]
+  (shared/logging-time (str uri " rewrite-clj-tokens* took %s")
+                       (when (string/includes? (or (get-in db [:documents uri :text]) "") "#_")
+                         (let [zloc (shared/logging-time (str uri " rewrite-clj-tokens*/zloc took %s")
+                                                         (parser/safe-zloc-of-file db uri))
+                               uneval-nodes (shared/logging-time (str uri " rewrite-clj-tokens*/uneval-nodes took %s")
+                                                                 (loop [zloc zloc
+                                                                        nodes []]
+                                                                       (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
+                                                                               (recur (z/right uneval-zloc)
+                                                                                      (conj nodes (z/node uneval-zloc)))
+                                                                               nodes)))]
+                           (map (partial node->absolute-token :comment) uneval-nodes)))))
+
 (defn full-tokens [uri db]
-  (let [buckets (get-in db [:analysis uri])]
-    (->> buckets
-         (mapcat val)
-         elements->absolute-tokens
-         absolute-tokens->relative-tokens)))
+  (let [buckets (get-in db [:analysis uri])
+        kondo-tokens (->> buckets (mapcat val) elements->absolute-tokens)
+        rewrite-clj-tokens (rewrite-clj-tokens* uri db)
+        tokens (sort-by (juxt first second)
+                        (concat kondo-tokens rewrite-clj-tokens))]
+    (absolute-tokens->relative-tokens tokens)))
 
 (defn range-tokens
   [uri range db]

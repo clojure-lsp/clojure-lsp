@@ -38,6 +38,7 @@
 (deftest forward-barf-test
   (are [expected code] (= expected (pareditfy f.paredit/forward-barf code))
     "[1 [2] 3| 4]" "[1 [2 3|] 4]"
+    "[12 [34] 5|6 78]" "[12 [34 5|6] 78]"
     "[1 [2 [|3 4] 5] 6]" "[1 [2 [|3 4 5]] 6]"
     "[|1] 2" "[|1 2]"
     "|1" "|1"

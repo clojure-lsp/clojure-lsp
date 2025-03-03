@@ -8,14 +8,14 @@
 (defn ^:private paredit-op [paredit-fn move-cursor? uri original-zloc row col]
   (try
     (when original-zloc
-      (let [pos-zloc (-> original-zloc
+      (let [{original-row :row original-col :col} (-> original-zloc z/node meta)
+            offset-row (- row original-row)
+            offset-col (- col original-col)
+            pos-zloc (-> original-zloc
                          z/root-string
                          (z/of-string {:track-position? true}) ;; https://clojurians.slack.com/archives/CHB5Q2XUJ/p1740958982303849
                          (edit/find-at-pos row col))
             zloc (paredit-fn pos-zloc)
-            {original-row :row original-col :col} (-> original-zloc z/node meta)
-            offset-row (- row original-row)
-            offset-col (- col original-col)
             [row' col'] (z/position zloc)
             new-row (+ row' offset-row)
             new-col (+ col' offset-col)

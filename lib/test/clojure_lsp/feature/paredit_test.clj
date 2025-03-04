@@ -66,19 +66,13 @@
     #_()))
 
 (deftest raise-test
-  (assert-op f.paredit/raise
-             (h/code "[1 [2 |3 5] 6]")
-             (h/code "[1 [2 [|3 4] 5] 6]"))
-  ;; FIXME: the scenario below fails
-  ;; (assert-op f.paredit/raise
-  ;;            (h/code "[1 [2 3| 5] 6]")
-  ;;            (h/code "[1 [2 [3| 4] 5] 6]"))
-  (assert-op f.paredit/raise
-             (h/code "|1")
-             (h/code "|1"))
-  (assert-op f.paredit/raise
-             (h/code "|")
-             (h/code "|")))
+  (are [expected code] (= expected (pareditfy f.paredit/raise code))
+    "[1 [2 |3 5] 6]" "[1 [2 [|3 4] 5] 6]"
+    ;; FIXME: the scenario below fails
+    ;; "[1 [2 3| 5] 6]" "[1 [2 [3| 4] 5] 6]"
+    "|1" "|1"
+    "|" "|"
+    #_()))
 
 (deftest kill-test
   (assert-op f.paredit/kill

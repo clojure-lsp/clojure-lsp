@@ -2,14 +2,7 @@
   (:require
    [clojure-lsp.feature.paredit :as f.paredit]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [are deftest is]]))
-
-(defmacro ^:private assert-op [op expected code]
-  `(let [{{row# :row col# :col} :position zloc# :zloc} (h/load-code-into-zloc-and-position ~code)
-         applied# (~op h/default-uri zloc# row# col#)
-         [text# _#] (h/positions-from-text ~expected)]
-     (is (= text#
-            (h/changes->code (-> applied# :changes-by-uri first second) (h/db))))))
+   [clojure.test :refer [are deftest]]))
 
 (defn ^:private pareditfy
   [paredit-fn code]

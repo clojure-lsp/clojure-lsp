@@ -57,21 +57,13 @@
     #_()))
 
 (deftest backward-barf-test
-  (assert-op f.paredit/backward-barf
-             (h/code "[1 |2 [3] 4]")
-             (h/code "[1 [|2 3] 4]"))
-  (assert-op f.paredit/backward-barf
-             (h/code "[1 [2 [|3 4] 5] 6]")
-             (h/code "[1 [[2 |3 4] 5] 6]"))
-  (assert-op f.paredit/backward-barf
-             (h/code "1 [] 2")
-             (h/code "[|1] 2"))
-  (assert-op f.paredit/backward-barf
-             (h/code "|1")
-             (h/code "|1"))
-  (assert-op f.paredit/backward-barf
-             (h/code "|")
-             (h/code "|")))
+  (are [expected code] (= expected (pareditfy f.paredit/backward-barf code))
+    "[1 |2 [3] 4]" "[1 [|2 3] 4]"
+    "[1 [2 [|3 4] 5] 6]" "[1 [[2 |3 4] 5] 6]"
+    "|1 [] 2" "[|1] 2"
+    "|1" "|1"
+    "|" "|"
+    #_()))
 
 (deftest raise-test
   (assert-op f.paredit/raise

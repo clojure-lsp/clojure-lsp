@@ -75,12 +75,8 @@
     #_()))
 
 (deftest kill-test
-  (assert-op f.paredit/kill
-             (h/code "[1 [2 [|] 5] 6]")
-             (h/code "[1 [2 [|3 4] 5] 6]"))
-  (assert-op f.paredit/kill
-             (h/code "|1")
-             (h/code "|1"))
-  (assert-op f.paredit/kill
-             (h/code "|")
-             (h/code "|")))
+  (are [expected code] (= expected (pareditfy f.paredit/kill code))
+    "[1 [2 |[] 5] 6]" "[1 [2 [|3 4] 5] 6]"
+    "|1" "|1"
+    "|" "|"
+    #_()))

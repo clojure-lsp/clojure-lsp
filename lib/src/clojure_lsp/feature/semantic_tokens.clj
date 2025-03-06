@@ -2,7 +2,6 @@
   (:require
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z])
@@ -245,18 +244,15 @@
 
 (defn ^:private rewrite-clj-tokens*
   [uri db]
-  (shared/logging-time (str uri " rewrite-clj-tokens* took %s")
-                       (when (string/includes? (or (get-in db [:documents uri :text]) "") "#_")
-                         (let [zloc (shared/logging-time (str uri " rewrite-clj-tokens*/zloc took %s")
-                                                         (parser/safe-zloc-of-file db uri))
-                               uneval-nodes (shared/logging-time (str uri " rewrite-clj-tokens*/uneval-nodes took %s")
-                                                                 (loop [zloc zloc
-                                                                        nodes []]
-                                                                       (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
-                                                                               (recur (z/right uneval-zloc)
-                                                                                      (conj nodes (z/node uneval-zloc)))
-                                                                               nodes)))]
-                           (map (partial node->absolute-token :comment) uneval-nodes)))))
+  (when (string/includes? (or (get-in db [:documents uri :text]) "") "#_")
+    (let [zloc (parser/safe-zloc-of-file db uri)
+          uneval-nodes (loop [zloc zloc
+                              nodes []]
+                         (if-let [uneval-zloc (z/find-tag zloc z/next :uneval)]
+                           (recur (z/right uneval-zloc)
+                                  (conj nodes (z/node uneval-zloc)))
+                           nodes))]
+      (map (partial node->absolute-token :comment) uneval-nodes))))
 
 (defn full-tokens [uri db]
   (let [buckets (get-in db [:analysis uri])

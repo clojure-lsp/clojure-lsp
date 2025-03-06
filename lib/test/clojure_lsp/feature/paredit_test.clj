@@ -26,7 +26,8 @@
     ;; "(get {}| :a)" "(get {}|) :a"
     ;; "(get {} |:a)" "(get {} |) :a"
     "(get []| 0)" "(get []|) 0"
-    "(get [] |0)" "(get [] |) 0"))
+    "(get [] |0)" "(get [] |) 0"
+    #_()))
 
 (deftest forward-barf-test
   (are [expected code] (= expected (pareditfy f.paredit/forward-barf code))

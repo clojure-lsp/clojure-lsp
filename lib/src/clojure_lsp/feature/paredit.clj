@@ -17,8 +17,9 @@
                          (edit/find-at-pos row col))
             zloc (paredit-fn pos-zloc)
             [row' col'] (z/position zloc)
-            new-row (+ row' offset-row)
-            new-col (+ col' offset-col)
+            [new-row new-col] (if (= (z/node original-zloc) (z/node zloc)) ;; if the node where the cursor is has changed
+                                [(+ row' offset-row) (+ col' offset-col)]  ;; move the cursor to the new node position
+                                [row col])                                 ;; otherwise keep the cursor in the same place
             root-zloc (z/up (edit/to-top zloc))]
         {:changes-by-uri {uri [{:loc root-zloc
                                 :range (meta (z/node root-zloc))}]} ;; FIXME: range is always the whole document

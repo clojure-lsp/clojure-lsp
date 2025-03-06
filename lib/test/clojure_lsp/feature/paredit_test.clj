@@ -38,7 +38,7 @@
     "|1" "|1"
     "|" "|"
     "(get []) |:a" "(get [] |:a)"
-    "(get []) |:a" "(get []| :a)"
+    "(get []|) :a" "(get []| :a)"
     #_()))
 
 (deftest backward-slurp-test
@@ -70,7 +70,7 @@
 
 (deftest kill-test
   (are [expected code] (= expected (pareditfy f.paredit/kill code))
-    "[1 [2 |[] 5] 6]" "[1 [2 [|3 4] 5] 6]"
+    "[1 [2 [|] 5] 6]" "[1 [2 [|3 4] 5] 6]"
     "|1" "|1"
     "|" "|"
     #_()))

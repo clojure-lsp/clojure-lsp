@@ -7,6 +7,7 @@
   - Add support for OpenTelemetry(otlp) log, enabled if configured. #1963
 - Editor
   - Improve paredit slurp and barf corner cases. #1973 #1976
+  - Add Semantic Tokens support for the Clojure Reader Dispatch macro `#_` (ignore next form). #1965
 
 ## 2025.02.07-16.11.24
 

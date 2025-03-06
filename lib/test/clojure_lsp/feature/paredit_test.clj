@@ -63,7 +63,7 @@
   (are [expected code] (= expected (pareditfy f.paredit/raise code))
     "[1 [2 |3 5] 6]" "[1 [2 [|3 4] 5] 6]"
     ;; FIXME: the scenario below fails
-    ;; "[1 [2 3| 5] 6]" "[1 [2 [3| 4] 5] 6]"
+    ;; "[1 [2 |4 5] 6]" "[1 [2 [3| 4] 5] 6]"
     "|1" "|1"
     "|" "|"
     #_()))

@@ -2,27 +2,19 @@
   (:require
    [clojure-lsp.feature.paredit :as f.paredit]
    [clojure-lsp.test-helper :as h]
-   [clojure.test :refer [are deftest is]]))
+   [clojure.test :refer [are deftest]]))
 
-(defmacro ^:private assert-op [op expected code]
-  `(let [{{row# :row col# :col} :position zloc# :zloc} (h/load-code-into-zloc-and-position ~code)
-         applied# (~op h/default-uri zloc# row# col#)
-         [text# _#] (h/positions-from-text ~expected)]
-     (is (= text#
-            (h/changes->code (-> applied# :changes-by-uri first second) (h/db))))))
-
-(defn ^:private apply-paredit
+(defn ^:private pareditfy
   [paredit-fn code]
-  (let [{{row :row col :col} :position zloc :zloc} (h/load-code-into-zloc-and-position code)
-        transformations (paredit-fn h/default-uri zloc row col)
-        {{actual-row :row actual-col :col} :range} (:show-document-after-edit transformations)
-        result (h/changes->code (-> transformations :changes-by-uri first second) (h/db))]
-    (if transformations
-      (h/put-cursor-at result actual-row actual-col)
-      "|")))
+  (let [{{row :row col :col} :position zloc :zloc} (h/load-code-into-zloc-and-position code)]
+    (if-let [transformations (paredit-fn h/default-uri zloc row col)]
+      (let [{{actual-row :row actual-col :col} :range} (:show-document-after-edit transformations)
+            result (h/changes->code (-> transformations :changes-by-uri first second) (h/db))]
+        (h/put-cursor-at result actual-row actual-col))
+      code)))
 
 (deftest forward-slurp-test
-  (are [expected code] (= expected (apply-paredit f.paredit/forward-slurp code))
+  (are [expected code] (= expected (pareditfy f.paredit/forward-slurp code))
     "[1 [2 3| 4]]" "[1 [2 3|] 4]"
     "[1 [2 [|3 4 5]] 6]" "[1 [2 [|3 4] 5] 6]"
     "[|1 2]" "[|1] 2"
@@ -34,72 +26,51 @@
     ;; "(get {}| :a)" "(get {}|) :a"
     ;; "(get {} |:a)" "(get {} |) :a"
     "(get []| 0)" "(get []|) 0"
-    "(get [] |0)" "(get [] |) 0"))
+    "(get [] |0)" "(get [] |) 0"
+    #_()))
 
 (deftest forward-barf-test
-  (assert-op f.paredit/forward-barf
-             (h/code "[1 [2] 3| 4]")
-             (h/code "[1 [2 3|] 4]"))
-  (assert-op f.paredit/forward-barf
-             (h/code "[1 [2 [|3 4] 5] 6]")
-             (h/code "[1 [2 [|3 4 5]] 6]"))
-  (assert-op f.paredit/forward-barf
-             (h/code "[|1] 2")
-             (h/code "[|1 2]"))
-  (assert-op f.paredit/forward-barf
-             (h/code "|1")
-             (h/code "|1"))
-  (assert-op f.paredit/forward-barf
-             (h/code "|")
-             (h/code "|")))
+  (are [expected code] (= expected (pareditfy f.paredit/forward-barf code))
+    "[1 [2] 3| 4]" "[1 [2 3|] 4]"
+    "[12 [34] 5|6 78]" "[12 [34 5|6] 78]"
+    "[1 [2 [|3 4] 5] 6]" "[1 [2 [|3 4 5]] 6]"
+    "[|1] 2" "[|1 2]"
+    "|1" "|1"
+    "|" "|"
+    "(get []) |:a" "(get [] |:a)"
+    "(get []|) :a" "(get []| :a)"
+    #_()))
 
 (deftest backward-slurp-test
-  (are [expected code] (= expected (apply-paredit f.paredit/backward-slurp code))
+  (are [expected code] (= expected (pareditfy f.paredit/backward-slurp code))
     "[[1 |2 3] 4]" "[1 [|2 3] 4]"
     "[1 [[2 |3 4] 5] 6]" "[1 [2 [|3 4] 5] 6]"
     "[|1] 2" "[|1] 2"
     "|1" "|1"
-    "|" "|"))
+    "|" "|"
+    #_()))
 
 (deftest backward-barf-test
-  (assert-op f.paredit/backward-barf
-             (h/code "[1 |2 [3] 4]")
-             (h/code "[1 [|2 3] 4]"))
-  (assert-op f.paredit/backward-barf
-             (h/code "[1 [2 [|3 4] 5] 6]")
-             (h/code "[1 [[2 |3 4] 5] 6]"))
-  (assert-op f.paredit/backward-barf
-             (h/code "1 [] 2")
-             (h/code "[|1] 2"))
-  (assert-op f.paredit/backward-barf
-             (h/code "|1")
-             (h/code "|1"))
-  (assert-op f.paredit/backward-barf
-             (h/code "|")
-             (h/code "|")))
+  (are [expected code] (= expected (pareditfy f.paredit/backward-barf code))
+    "[1 |2 [3] 4]" "[1 [|2 3] 4]"
+    "[1 [2 [|3 4] 5] 6]" "[1 [[2 |3 4] 5] 6]"
+    "|1 [] 2" "[|1] 2"
+    "|1" "|1"
+    "|" "|"
+    #_()))
 
 (deftest raise-test
-  (assert-op f.paredit/raise
-             (h/code "[1 [2 |3 5] 6]")
-             (h/code "[1 [2 [|3 4] 5] 6]"))
-  ;; FIXME: the scenario below fails
-  ;; (assert-op f.paredit/raise
-  ;;            (h/code "[1 [2 3| 5] 6]")
-  ;;            (h/code "[1 [2 [3| 4] 5] 6]"))
-  (assert-op f.paredit/raise
-             (h/code "|1")
-             (h/code "|1"))
-  (assert-op f.paredit/raise
-             (h/code "|")
-             (h/code "|")))
+  (are [expected code] (= expected (pareditfy f.paredit/raise code))
+    "[1 [2 |3 5] 6]" "[1 [2 [|3 4] 5] 6]"
+    ;; FIXME: the scenario below fails
+    ;; "[1 [2 |4 5] 6]" "[1 [2 [3| 4] 5] 6]"
+    "|1" "|1"
+    "|" "|"
+    #_()))
 
 (deftest kill-test
-  (assert-op f.paredit/kill
-             (h/code "[1 [2 [|] 5] 6]")
-             (h/code "[1 [2 [|3 4] 5] 6]"))
-  (assert-op f.paredit/kill
-             (h/code "|1")
-             (h/code "|1"))
-  (assert-op f.paredit/kill
-             (h/code "|")
-             (h/code "|")))
+  (are [expected code] (= expected (pareditfy f.paredit/kill code))
+    "[1 [2 [|] 5] 6]" "[1 [2 [|3 4] 5] 6]"
+    "|1" "|1"
+    "|" "|"
+    #_()))

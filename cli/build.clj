@@ -75,7 +75,7 @@
   [opts]
   (println "Generating bin...")
 
-  (let [jvm-opts (concat (:jvm-opts opts []) ["-Xmx2g" "-server"])]
+  (let [jvm-opts (concat (:jvm-opts opts []) ["-Xmx3g" "-server"])]
     ((requiring-resolve 'deps-bin.impl.bin/build-bin)
      {:jar standalone-file
       :name "clojure-lsp"

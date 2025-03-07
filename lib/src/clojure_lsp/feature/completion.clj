@@ -602,7 +602,7 @@
 (defn ^:private add-text-edit [range items]
   (if range
     (map (fn [item]
-           (merge {:text-edit {:new-text (:label item)
+           (merge {:text-edit {:new-text (or (:insert-text item) (:label item))
                                :range range}}
                   item))
          items)

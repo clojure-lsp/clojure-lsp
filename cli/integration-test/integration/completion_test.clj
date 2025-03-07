@@ -53,6 +53,9 @@
         [{:label "defn"
           :kind 15
           :detail "Insert public defn"
+          :textEdit {:newText "defn ${1:name} [$2]\n  $0"
+                     :range {:start {:line 2, :character 1},
+                             :end {:line 2, :character 4}}}
           :insertText "defn ${1:name} [$2]\n  $0"
           :insertTextFormat 2
           :data {:unresolved [["documentation" {:uri "file:///clojure.core.clj"

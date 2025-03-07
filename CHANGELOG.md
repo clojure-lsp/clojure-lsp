@@ -10,6 +10,7 @@
 - Editor
   - Improve paredit slurp and barf corner cases. #1973 #1976
   - Add Semantic Tokens support for the Clojure Reader Dispatch macro `#_` (ignore next form). #1965
+  - Fix regression on previous version on snippets completion. #1978
 
 ## 2025.02.07-16.11.24
 

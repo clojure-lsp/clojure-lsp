@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2025.02.07-16.11.24</version>
+  <version>2025.03.07-17.42.36</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -46,9 +46,9 @@
       <version>1.1.230</version>
     </dependency>
     <dependency>
-      <groupId>rewrite-clj</groupId>
-      <artifactId>rewrite-clj</artifactId>
-      <version>1.1.48</version>
+      <groupId>com.github.steffan-westcott</groupId>
+      <artifactId>clj-otel-api</artifactId>
+      <version>0.2.7</version>
     </dependency>
     <dependency>
       <groupId>io.forward</groupId>
@@ -58,7 +58,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2025.01.17-20250207.105015-9</version>
+      <version>2025.02.20</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
@@ -66,14 +66,19 @@
       <version>0.13.0</version>
       <exclusions>
         <exclusion>
-          <groupId>rewrite-cljs</groupId>
-          <artifactId>rewrite-cljs</artifactId>
+          <groupId>rewrite-clj</groupId>
+          <artifactId>rewrite-clj</artifactId>
         </exclusion>
         <exclusion>
           <groupId>com.googlecode.java-diff-utils</groupId>
           <artifactId>diffutils</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
+      <version>1.47.0</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>
@@ -88,7 +93,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>timbre</artifactId>
-      <version>6.6.0</version>
+      <version>6.7.0-alpha1</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>
@@ -108,13 +113,18 @@
     <dependency>
       <groupId>borkdude</groupId>
       <artifactId>rewrite-edn</artifactId>
-      <version>0.4.8</version>
+      <version>0.4.9</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-clj</groupId>
           <artifactId>rewrite-clj</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
+      <version>1.47.0</version>
     </dependency>
     <dependency>
       <groupId>babashka</groupId>
@@ -163,6 +173,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2025.02.07-16.11.24</tag>
+    <tag>2025.03.07-17.42.36</tag>
   </scm>
 </project>

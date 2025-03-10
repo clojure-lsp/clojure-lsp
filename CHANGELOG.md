@@ -6,6 +6,7 @@
 
 - General
   - Bump clj-kondo to `2025.02.20`.
+  - Bump rewrite-clj to `2cf05893ed7af8c0cfe569077ceb12a45738cf2a`. #1984
   - Add support for OpenTelemetry(otlp) log, enabled if configured. #1963
 - Editor
   - Improve paredit slurp and barf corner cases. #1973 #1976

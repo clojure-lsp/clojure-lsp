@@ -78,7 +78,7 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
-      <version>1.47.0</version>
+      <version>1.48.0</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>

@@ -1,4 +1,4 @@
-name: "Update deps-lock.json"
+name: "Update nix deps-lock.json"
 on:
   push:
     branches:

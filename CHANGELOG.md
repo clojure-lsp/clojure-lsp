@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Bump rewrite-clj to `2cf05893ed7af8c0cfe569077ceb12a45738cf2a`. #1984
+
 ## 2025.03.07-17.42.36
 
 - General

@@ -22,9 +22,8 @@
     "|" "|"
     "{:a {|:b 1} 2}" "{:a {|:b 1}} 2"
     "{:a {:b {|:c :d}} 2}" "{:a {:b {|:c :d}}} 2"
-    ;; These two below are going to fail because of a bug in rewrite-clj
-    ;; "(get {}| :a)" "(get {}|) :a"
-    ;; "(get {} |:a)" "(get {} |) :a"
+    "(get {}| :a)" "(get {}|) :a"
+    "(get {} |:a)" "(get {} |) :a"
     "(get []| 0)" "(get []|) 0"
     "(get [] |0)" "(get [] |) 0"
     #_()))

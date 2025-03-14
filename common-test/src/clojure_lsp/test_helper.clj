@@ -171,18 +171,27 @@
 
 (defn put-cursor-at
   "Position the cursor at the given row and column.
-   row and col are 1-based.
 
-   (position-cursor \"[1 [2 [3]]]\" 1 8) => \"[1 [2 [|3]]]\""
-  [s row col]
+   if end-col are different than col,
+   understand as a selected range in editor.
+
+   positions are 1-based.
+
+   (position-cursor \"[1 [2 [3]]]\" 1 8 9) => \"[1 [2 [|3|]]]\""
+  [s row col end-col]
   (let [lines (string/split s #"\n" -1)
-        line (nth lines (dec row))]
+        line (nth lines (dec row))
+        same-range? (= col end-col)]
     (string/join "\n"
                  (concat
                    (subvec lines 0 (dec row))
                    [(str (subs line 0 (dec col))
                          "|"
-                         (subs line (dec col)))]
+                         (when-not same-range?
+                           (subs line (dec col) (dec end-col)))
+                         (when-not same-range?
+                           "|")
+                         (subs line (dec end-col)))]
                    (subvec lines row)))))
 
 (def default-uri (file-uri "file:///a.clj"))

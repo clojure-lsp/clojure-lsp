@@ -351,8 +351,9 @@
       (if error
         result
         (do
-          ;; waits for client to apply edit before showing doc/moving cursor
-          (producer/publish-workspace-edit producer edit)
+          (when edit
+            ;; waits for client to apply edit before showing doc/moving cursor
+            (producer/publish-workspace-edit producer edit))
           (when show-document-after-edit
             (->> (update show-document-after-edit :range #(or (some-> % shared/->range)
                                                               shared/full-file-range))

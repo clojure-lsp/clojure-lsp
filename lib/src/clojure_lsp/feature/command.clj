@@ -179,6 +179,18 @@
 (defmethod run-command :kill-sexp  [{:keys [loc uri row col]}]
   (f.paredit/kill uri loc row col))
 
+(defmethod run-command :forward  [{:keys [loc uri row col]}]
+  (f.paredit/forward uri loc row col))
+
+(defmethod run-command :forward-select  [{:keys [loc uri row col]}]
+  (f.paredit/forward-select uri loc row col))
+
+(defmethod run-command :backward  [{:keys [loc uri row col]}]
+  (f.paredit/backward uri loc row col))
+
+(defmethod run-command :backward-select  [{:keys [loc uri row col]}]
+  (f.paredit/backward-select uri loc row col))
+
 (defmethod run-command :server-info  [{:keys [components]}]
   (f.development-info/server-info-log components))
 
@@ -239,7 +251,7 @@
         (when-let [change (first (filter #(= "create" (:kind %)) resource-changes))]
           (swap! db* assoc-in [:create-ns-blank-files-denylist (:uri change)] (:kind change)))
         {:show-document-after-edit show-document-after-edit
-         :edit (shared/client-changes changes db)})
+         :edit (some-> (seq changes) (shared/client-changes db))})
 
       (seq result)
       {:edit (command-client-seq-changes uri version result db)}

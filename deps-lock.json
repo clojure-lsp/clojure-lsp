@@ -62,9 +62,9 @@
     {
       "lib": "rewrite-clj/rewrite-clj",
       "url": "https://github.com/clj-commons/rewrite-clj",
-      "rev": "2cf05893ed7af8c0cfe569077ceb12a45738cf2a",
+      "rev": "9f30832c00b28068d8cf9e8d71002d79b9044f1d",
       "git-dir": "https/github.com/clj-commons/rewrite-clj",
-      "hash": "sha256-IymtlLZTuNsFd1FXGm0YGcML/qExwZIk4Xu63zISGjU="
+      "hash": "sha256-bkOnHXB/pczgBB4fGg+ZKWBDvcWCAmJBg/1NL5lcCsk="
     }
   ],
   "mvn-deps": [
@@ -2959,14 +2959,14 @@
       "hash": "sha256-YasqEjhSBObFi4fT2OpHjpSYaiAKs6+yWuJ56q3DqZo="
     },
     {
-      "mvn-path": "org/clojure/tools.reader/1.5.1/tools.reader-1.5.1.jar",
+      "mvn-path": "org/clojure/tools.reader/1.5.2/tools.reader-1.5.2.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-cpWc1pK8lhXkH7W9pvx1A6BoEqLPCNpRM8tAqTWLfDk="
+      "hash": "sha256-y5btDv3wuLw2JjLLdAZ+8iX2sD8/R4yLpEGC9qF6N7Y="
     },
     {
-      "mvn-path": "org/clojure/tools.reader/1.5.1/tools.reader-1.5.1.pom",
+      "mvn-path": "org/clojure/tools.reader/1.5.2/tools.reader-1.5.2.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-hfWLTFc/hL1ihapeGKmkuFOLNm+BTTRJUWlEbFnpKcQ="
+      "hash": "sha256-uZlvXJtX4jSGPzlfzmT5fTBQtPWFMKYhWllpsILSFOc="
     },
     {
       "mvn-path": "org/codehaus/codehaus-parent/4/codehaus-parent-4.pom",

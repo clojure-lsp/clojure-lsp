@@ -178,6 +178,8 @@
    positions are 1-based.
 
    (position-cursor \"[1 [2 [3]]]\" 1 8 9) => \"[1 [2 [|3|]]]\""
+  ;; FIXME support a end-row, currently it supports
+  ;; only ranges in same line
   [s row col end-col]
   (let [lines (string/split s #"\n" -1)
         line (nth lines (dec row))

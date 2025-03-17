@@ -7,6 +7,7 @@
   - Bump clj-kondo to `2025.02.21-20250314.135629-7`.
 - Editor
   - Add `forward`, `forward-select`, `backward` and `backward-select` paredit actions.
+  - Show add require code action for invalid syntax codes like `my-alias/`. #1957
 
 ## 2025.03.07-17.42.36
 

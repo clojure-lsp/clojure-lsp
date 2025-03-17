@@ -27,7 +27,7 @@
 (defn ^:private resolvable-diagnostics [diagnostics root-zloc]
   (when root-zloc
     (->> diagnostics
-         (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "unresolved-var" "refer-all"})
+         (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "unresolved-var" "refer-all" "syntax"})
          (keep (fn [{{position :start} :range :as diagnostic}]
                  (let [[row col] (shared/position->row-col position)]
                    (when-let [zloc (parser/to-pos root-zloc row col)]
@@ -385,7 +385,7 @@
         can-get-in-less?* (future (f.thread-get/can-get-in-less? zloc))
         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
-        resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol"} resolvable-diagnostics)
+        resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "syntax"} resolvable-diagnostics)
         resolvable-refer-all-diagnostics (diagnostics-with-code #{"refer-all"} resolvable-diagnostics)
         missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
         missing-imports* (future (find-missing-imports resolvable-require-diagnostics db))

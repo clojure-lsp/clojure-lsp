@@ -250,17 +250,110 @@
                            (some #{alias} (get inconsistencies to))))]
           (namespace-alias->finding namespace-alias inconsistencies kondo-config))))))
 
-(defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
+(comment
+
+  (require '[clojure-lsp.db])
+  (-> clojure-lsp.db/db* deref keys)
+  (-> clojure-lsp.db/db* deref :settings clojure.pprint/pprint)
+
+  (def kondo-config {:linters
+                     {:clojure-lsp/unused-public-var
+                      {:level :info
+                       :ignore-test-references? true}}})
+
+  (def narrowed-db nil)
+
+  (def project-db (q/db-with-internal-analysis @clojure-lsp.db/db*))
+
+  (time (count (unused-public-vars project-db
+                                   project-db
+                                   {:linters
+                                    {:clojure-lsp/unused-public-var
+                                     {:level :info
+                                      :ignore-test-references? false}}})))
+
+  (time (first (unused-public-vars-old project-db
+                                       project-db
+                                       {:linters
+                                        {:clojure-lsp/unused-public-var
+                                         {:level :info
+                                          :ignore-test-references? false}}})))
+
+
+
+
+  #_())
+
+(defn ^:private unused-public-vars-new [narrowed-db project-db kondo-config]
   (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/unused-public-var :level))
     (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
+          ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
+          _ (println '__________________ignore-test-references? ignore-test-references?)
           var-definitions (->> (q/find-all-var-definitions narrowed-db)
                                (remove exclude-def?))
           var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
           var-usages (into #{}
+                           (q/xf-all-var-usages-to-namespaces var-nses)
+                           (q/nses-and-dependents-analysis project-db var-nses))
+          uri->source-uri (fn [uri]
+                            (some-> uri
+                                    (shared/uri->source-path (settings/get project-db [:source-paths]))
+                                    (shared/filename->uri project-db)))
+          var-used? (fn [var-def]
+                      (let [source-uri (uri->source-uri (:uri var-def))
+                            usages (if ignore-test-references?
+                                     (set (remove #(shared/test-reference? source-uri (:uri %)) var-usages))
+                                     var-usages)]
+                        (some (set (map q/var-usage-signature usages)) (q/var-definition-signatures var-def))))
+          kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
+                              (remove exclude-def?))
+          kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords
+                      (into #{}
+                            (comp
+                              q/xf-all-keyword-usages
+                              (map q/kw-signature))
+                            (:analysis project-db))
+                      #{})
+          kw-used? (fn [kw-def]
+                     (contains? kw-usages (q/kw-signature kw-def)))
+          start (System/nanoTime)
+          _ (println 'removed-var-used?====)
+          removed-var-used? (vec (remove var-used? var-definitions))
+          _ (println 'removed-var-used?____ (shared/start-time->end-time-ms start))
+          start (System/nanoTime)
+          _ (println 'removed-kw-used?====)
+          removed-kw-used? (vec (remove kw-used? kw-definitions))
+          _ (println 'removed-kw-used?____ (shared/start-time->end-time-ms start))
+          #_()]
+      (->> (concat removed-var-used?
+                   removed-kw-used?)
+           (map (fn [unused-var]
+                  (unused-public-var->finding unused-var kondo-config)))))))
+
+(defn ^:private unused-public-vars-old [narrowed-db project-db kondo-config]
+  (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/unused-public-var :level))
+    (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
+          ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
+          _ (println 'OLD__________________ignore-test-references? ignore-test-references?)
+          var-definitions (->> (q/find-all-var-definitions narrowed-db)
+                               (remove exclude-def?))
+          var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
+          dependents (q/nses-and-dependents-analysis project-db var-nses)
+          _ (clojure.pprint/pprint {:nses-and-dependents-analysis {#_#_:first (first dependents)
+                                                                   :count (count dependents)
+                                                                   :type (type dependents)
+                                                                   #_#_:test (first (filter (fn [[k _v]] (string/ends-with? k "_test.clj")) dependents))
+                                                                   #_#_:keys (keys dependents)}})
+          dependents' (if ignore-test-references?
+                        (into {}
+                              (remove (fn [[k _v]] (string/ends-with? k "_test.clj")) dependents))
+                        dependents)
+          _ (clojure.pprint/pprint {:dependents' {:count (count dependents')}})
+          var-usages (into #{}
                            (comp
                              (q/xf-all-var-usages-to-namespaces var-nses)
                              (map q/var-usage-signature))
-                           (q/nses-and-dependents-analysis project-db var-nses))
+                           dependents')
           var-used? (fn [var-def]
                       (some var-usages (q/var-definition-signatures var-def)))
           kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
@@ -274,10 +367,17 @@
                       #{})
           kw-used? (fn [kw-def]
                      (contains? kw-usages (q/kw-signature kw-def)))]
+      (clojure.pprint/pprint {:var-definitions {:count (count var-definitions)
+                                                :first (first var-definitions)
+                                                :var-definition-signatures (q/var-definition-signatures (first var-definitions))}})
+      (clojure.pprint/pprint {:var-usages {:count (count var-usages)
+                                           :first (first var-usages)}})
       (->> (concat (remove var-used? var-definitions)
                    (remove kw-used? kw-definitions))
            (map (fn [unused-var]
                   (unused-public-var->finding unused-var kondo-config)))))))
+
+(def unused-public-vars unused-public-vars-old)
 
 (defn ^:private findings-of-project
   [db kondo-config]

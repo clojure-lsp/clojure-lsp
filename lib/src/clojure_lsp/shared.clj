@@ -558,3 +558,9 @@
 (defn ignore-path? [settings path]
   (let [paths-ignore-regex (set (get settings :paths-ignore-regex #{}))]
     (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))
+
+(defn test-reference? [source-uri reference-uri]
+  (and source-uri
+       ;; when in test file, don't count usages of helpers as test references
+       (not (string/starts-with? reference-uri source-uri))
+       (string/includes? reference-uri "_test.")))

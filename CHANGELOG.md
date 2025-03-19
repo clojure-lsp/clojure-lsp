@@ -5,6 +5,7 @@
 - General
   - Bump rewrite-clj to `2cf05893ed7af8c0cfe569077ceb12a45738cf2a`. #1984
   - Bump clj-kondo to `2025.02.21-20250314.135629-7`.
+  - Add support for ignoring tests references for the `clojure-lsp/unused-public-var` linter. #1878
 - Editor
   - Add `forward`, `forward-select`, `backward` and `backward-select` paredit actions.
   - Show add require code action for invalid syntax codes like `my-alias/`. #1957

@@ -1565,6 +1565,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <li><code>:exclude-when-defined-by</code> excludes this linter when your var is defined by a macro for example, like <code>#{my-ns/deftest}</code>.</li>
 <li><code>:exclude-when-defined-by-regex</code> same as above but with support for regex, like <code>#{"my-ns/.*"}</code>.</li>
 <li><code>:exclude-when-contains-meta</code> excludes this linter when your var has any of these metas, like <code>#{:my-meta}</code>.</li>
+<li><code>:ignore-test-references?</code> whether to ignore test references of a var-definition when considering if the var is unused. Useful to check functions that have tests but are not being used in the source code. Default: <code>false</code>.</li>
 </ul>
 <p>Example:</p>
 <p><code>.clj-kondo/config.edn</code>
@@ -1576,7 +1577,8 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
                                            <span class="ss">:exclude-regex</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;my-integration-tests.*&quot;</span><span class="p">}</span>
                                            <span class="ss">:exclude-when-defined-by</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/defflow</span><span class="p">}</span>
                                            <span class="ss">:exclude-when-defined-by-regex</span> <span class="o">#</span><span class="p">{</span><span class="s">&quot;my.custom/macro-.*&quot;</span><span class="p">}</span>
-                                           <span class="ss">:exclude-when-contains-meta</span> <span class="o">#</span><span class="p">{</span><span class="ss">:my-cool-meta</span><span class="p">}}}}</span>
+                                           <span class="ss">:exclude-when-contains-meta</span> <span class="o">#</span><span class="p">{</span><span class="ss">:my-cool-meta</span><span class="p">}</span>
+                                           <span class="ss">:ignore-test-references?</span> <span class="nv">true</span><span class="p">}}}</span>
 </code></pre></div></p>
 <h6 id="clojure-lspdifferent-aliases">clojure-lsp/different-aliases<a class="headerlink" href="#clojure-lspdifferent-aliases" title="Permanent link">#</a></h6>
 <p>Sometimes, it's desirable to use the same alias across namespaces to enhance readability and reduce cognitive load.</p>
@@ -1608,7 +1610,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <p>Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.</p>
 <ul>
 <li>
-<p>By default, clojure-lsp will infer source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check next items. </p>
+<p>By default, clojure-lsp will infer source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check next items.</p>
 </li>
 <li>
 <p>You can specify a <code>source-aliases</code> setting, making clojure-lsp use those alias when conmputing the classpath, e.g. <code>#{:src :test :my-alias}</code></p>
@@ -1635,15 +1637,15 @@ Check <code>;; good</code> on <a href="https://github.com/bbatsov/clojure-style-
 <p>How to indent classes inside package imports from :import form.
 Note: package imports with only one class will keep indentation: Ex: <code>[java.io File]</code></p>
 <h5 id="next-line_1"><code>next-line</code><a class="headerlink" href="#next-line_1" title="Permanent link">#</a></h5>
-<p>Keep the first class inside a package import on the next line and next children following the same indentation. Ex: </p>
-<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="ss">:import</span> 
+<p>Keep the first class inside a package import on the next line and next children following the same indentation. Ex:</p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="ss">:import</span>
   <span class="p">[</span><span class="nv">java.io</span>
     <span class="nv">File</span>
     <span class="nv">Foo</span><span class="p">])</span>
 </code></pre></div>
 <h5 id="same-line_1"><code>same-line</code><a class="headerlink" href="#same-line_1" title="Permanent link">#</a></h5>
-<p>Keep the first class inside a package import on the same line and next children following the same indentation. Ex: </p>
-<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="ss">:import</span> 
+<p>Keep the first class inside a package import on the same line and next children following the same indentation. Ex:</p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="ss">:import</span>
   <span class="p">[</span><span class="nv">java.io</span> <span class="nv">File</span>
            <span class="nv">Foo</span><span class="p">])</span>
 </code></pre></div>
@@ -1744,7 +1746,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 17, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 19, 2025</span>
     
   </small>
 </div>

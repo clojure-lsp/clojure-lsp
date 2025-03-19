@@ -208,6 +208,7 @@ It has the possible key/values:
 - `:exclude-when-defined-by` excludes this linter when your var is defined by a macro for example, like `#{my-ns/deftest}`.
 - `:exclude-when-defined-by-regex` same as above but with support for regex, like `#{"my-ns/.*"}`.
 - `:exclude-when-contains-meta` excludes this linter when your var has any of these metas, like `#{:my-meta}`.
+- `:ignore-test-references?` whether to ignore test references of a var-definition when considering if the var is unused. Useful to check functions that have tests but are not being used in the source code. Default: `false`.
 
 Example:
 
@@ -221,7 +222,8 @@ Example:
                                            :exclude-regex #{"my-integration-tests.*"}
                                            :exclude-when-defined-by #{my-ns/defflow}
                                            :exclude-when-defined-by-regex #{"my.custom/macro-.*"}
-                                           :exclude-when-contains-meta #{:my-cool-meta}}}}
+                                           :exclude-when-contains-meta #{:my-cool-meta}
+                                           :ignore-test-references? true}}}
 ```
 
 ###### clojure-lsp/different-aliases
@@ -269,7 +271,7 @@ For information on how to troubleshoot the linter, check the [troubleshooting se
 
 Some features require know the available source paths of your project, where your code lives, clojure-lsp has some settings for that.
 
-- By default, clojure-lsp will infer source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check next items. 
+- By default, clojure-lsp will infer source-paths from the classpath, excluding files that are jar and not under project-root, this usually works for most cases, if not, check next items.
 
 - You can specify a `source-aliases` setting, making clojure-lsp use those alias when conmputing the classpath, e.g. `#{:src :test :my-alias}`
 
@@ -308,10 +310,10 @@ Note: package imports with only one class will keep indentation: Ex: `[java.io F
 
 ##### `next-line`
 
-Keep the first class inside a package import on the next line and next children following the same indentation. Ex: 
+Keep the first class inside a package import on the next line and next children following the same indentation. Ex:
 
 ```clojure
-(:import 
+(:import
   [java.io
     File
     Foo])
@@ -319,10 +321,10 @@ Keep the first class inside a package import on the next line and next children 
 
 ##### `same-line`
 
-Keep the first class inside a package import on the same line and next children following the same indentation. Ex: 
+Keep the first class inside a package import on the same line and next children following the same indentation. Ex:
 
 ```clojure
-(:import 
+(:import
   [java.io File
            Foo])
 ```

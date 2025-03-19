@@ -253,20 +253,20 @@
 (defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
   (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/unused-public-var :level))
     (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
-          ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
           var-definitions (->> (q/find-all-var-definitions narrowed-db)
                                (remove exclude-def?))
           var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
-          dependents (q/nses-and-dependents-analysis project-db var-nses)
-          dependents' (if ignore-test-references?
-                        (into {}
-                              (remove (fn [[k _v]] (string/ends-with? k "_test.clj")) dependents))
-                        dependents)
+          all-dependents (q/nses-and-dependents-analysis project-db var-nses)
+          ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
+          dependents (if ignore-test-references?
+                       (into {}
+                             (remove (fn [[uri _]] (string/ends-with? uri "_test.clj")) all-dependents))
+                       all-dependents)
           var-usages (into #{}
                            (comp
                              (q/xf-all-var-usages-to-namespaces var-nses)
                              (map q/var-usage-signature))
-                           dependents')
+                           dependents)
           var-used? (fn [var-def]
                       (some var-usages (q/var-definition-signatures var-def)))
           kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)

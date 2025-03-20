@@ -98,6 +98,49 @@
        {:uri (h/file-uri "file:///d.clj")}]
       @findings)))
 
+(deftest public-var-ignore-test-references
+  (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
+                        :settings {:source-paths [(h/file-path "/project/src")
+                                                  (h/file-path "/project/test/integration")]}})
+  (h/load-code-and-locs "(ns foo) (defn bar [])"
+                        (h/file-uri "file:///project/src/foo.clj"))
+  (h/load-code-and-locs "(ns integration.foo (:require [foo])) (foo/bar)"
+                        (h/file-uri "file:///project/test/integration/foo.clj"))
+  (testing "disabled"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///project/src/foo.clj")
+       (h/file-uri "file:///project/test/integration/foo.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters
+                {:clojure-lsp/unused-public-var
+                 {:ignore-test-references? false
+                  :test-uri-regex "/test/integration/"}}}})
+    (h/assert-submaps [] @findings))
+  (testing "enabled"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///project/src/foo.clj")
+       (h/file-uri "file:///project/test/integration/foo.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters
+                {:clojure-lsp/unused-public-var
+                 {:ignore-test-references? true
+                  :test-uri-regex "/test/integration/"}}}})
+    (h/assert-submaps
+      [{:end-row 1,
+        :type :clojure-lsp/unused-public-var
+        :level :info
+        :filename "/project/src/foo.clj"
+        :col 16
+        :uri "file:///project/src/foo.clj"
+        :end-col 19
+        :message "Unused public var 'foo/bar'"
+        :row 1}]
+      @findings)))
+
 (deftest lint-project-public-vars
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                         :settings {:source-paths [(h/file-path "/project/src") (h/file-path "/project/cool-test")]}})

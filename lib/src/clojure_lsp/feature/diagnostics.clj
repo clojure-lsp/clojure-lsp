@@ -258,10 +258,11 @@
           var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
           all-dependents (q/nses-and-dependents-analysis project-db var-nses)
           ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
-          test-uri-regex (re-pattern (get-in kondo-config [:linters :clojure-lsp/unused-public-var :test-uri-regex] "_test.clj[s]?$"))
+          test-uri-regex (into #{}
+                               (map re-pattern (get-in kondo-config [:linters :clojure-lsp/unused-public-var :test-uri-regex] #{"_test.clj[s]?$"})))
           dependents (if ignore-test-references?
                        (into {}
-                             (remove (fn [[uri _]] (re-find test-uri-regex uri)) all-dependents))
+                             (remove (fn [[uri _]] (some #(re-find % uri) test-uri-regex)) all-dependents))
                        all-dependents)
           var-usages (into #{}
                            (comp

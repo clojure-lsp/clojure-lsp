@@ -32,6 +32,7 @@
 
 (defn ^:private test-reference? [test-uri-regex source-uri reference-uri]
   (and source-uri
+       ;; when in test file, don't count usages of helpers as test references
        (not (string/starts-with? reference-uri source-uri))
        (some #(re-find % reference-uri) test-uri-regex)))
 

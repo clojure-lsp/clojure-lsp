@@ -120,8 +120,7 @@
        :config {:linters
                 {:clojure-lsp/unused-public-var
                  {:level :info
-                  :ignore-test-references? false
-                  :test-uri-regex #{"_test.clj[s]?$"}}}}})
+                  :ignore-test-references? false}}}})
     (h/assert-submaps [] @findings))
   (testing "Given a public var foo/bar in a src namespace
             And being referenced in a test namespace foo-test
@@ -137,8 +136,7 @@
        :config {:linters
                 {:clojure-lsp/unused-public-var
                  {:level :info
-                  :ignore-test-references? true
-                  :test-uri-regex #{"_test.clj[s]?$"}}}}})
+                  :ignore-test-references? true}}}})
     (h/assert-submaps
       [{:end-row 1
         :type :clojure-lsp/unused-public-var
@@ -168,8 +166,7 @@
        :config {:linters
                 {:clojure-lsp/unused-public-var
                  {:level :info
-                  :ignore-test-references? false
-                  :test-uri-regex #{"_test.clj[s]?$"}}}}})
+                  :ignore-test-references? false}}}})
     (h/assert-submaps
       [{:end-row 1
         :type :clojure-lsp/unused-public-var
@@ -192,8 +189,7 @@
       {:reg-finding! #(swap! findings conj %)
        :config {:linters {:clojure-lsp/unused-public-var
                           {:level :info
-                           :ignore-test-references? true
-                           :test-uri-regex #{"_test.clj[s]?$"}}}}})
+                           :ignore-test-references? true}}}})
     (h/assert-submaps
       [{:end-row 1
         :type :clojure-lsp/unused-public-var

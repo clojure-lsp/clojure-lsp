@@ -1,7 +1,7 @@
 ;; All available settings and its default values
 ;; Check the settings documentation section for more details of each one.
 {:source-paths #{"src" "test"} ;; auto-resolved for deps.edn, project.clj or bb.edn projects
- :test-uri-regex #{"_test\.clj[a-z]?$"}
+ :test-uri-regex #{"_test\.clj[a-z]?$"} ;; Match the patterns with clojure.core/re-find
  :source-aliases #{:dev :test}
  :project-specs [] ;; Check the default at clojure-lsp.classpath/default-project-specs
  :source-paths-ignore-regex ["target.*"]

@@ -259,7 +259,7 @@
           all-dependents (q/nses-and-dependents-analysis project-db var-nses)
           ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
           test-uri-regex (into #{}
-                               (map re-pattern (get-in kondo-config [:linters :clojure-lsp/unused-public-var :test-uri-regex] #{"_test.clj[a-z]?$"})))
+                               (map re-pattern (settings/get project-db [:test-uri-regex] #{"_test\\.clj[a-z]?$"})))
           dependents-without-tests (into {}
                                          (remove (fn [[uri _]] (some #(re-find % uri) test-uri-regex)) all-dependents))
           dependents (if ignore-test-references?

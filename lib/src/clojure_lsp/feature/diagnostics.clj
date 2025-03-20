@@ -257,11 +257,18 @@
                                (remove exclude-def?))
           var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
           all-dependents (q/nses-and-dependents-analysis project-db var-nses)
-          ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
-          test-uri-regex (into #{}
-                               (map re-pattern (settings/get project-db [:test-uri-regex] shared/test-uri-regex-default)))
+          ignore-test-references? (get-in kondo-config
+                                          [:linters :clojure-lsp/unused-public-var :ignore-test-references?]
+                                          false)
+          test-locations-regex (into #{}
+                                     (map re-pattern
+                                          (settings/get project-db
+                                                        [:test-locations-regex]
+                                                        shared/test-locations-regex-default)))
           dependents-without-tests (into {}
-                                         (remove (fn [[uri _]] (some #(re-find % uri) test-uri-regex)) all-dependents))
+                                         (remove (fn [[uri _]]
+                                                   (some #(re-find % uri) test-locations-regex))
+                                                 all-dependents))
           dependents (if ignore-test-references?
                        dependents-without-tests
                        all-dependents)

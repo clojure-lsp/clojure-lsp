@@ -559,4 +559,4 @@
   (let [paths-ignore-regex (set (get settings :paths-ignore-regex #{}))]
     (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))
 
-(def test-uri-regex-default #{"_test\\.clj[a-z]?$"})
+(def test-locations-regex-default #{"_test\\.clj[a-z]?$"})

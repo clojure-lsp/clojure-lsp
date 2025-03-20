@@ -38,7 +38,7 @@
 
 (defn resolve-code-lens [uri row col range db]
   (let [segregate-lens? (settings/get db [:code-lens :segregate-test-references] true)
-        test-uri-regex (map re-pattern (settings/get db [:test-uri-regex] #{"_test\\.clj[a-z]?$"}))
+        test-uri-regex (map re-pattern (settings/get db [:test-uri-regex] shared/test-uri-regex-default))
         references (q/find-references-from-cursor db uri row col false)]
     (if segregate-lens?
       (let [source-uri (some-> uri

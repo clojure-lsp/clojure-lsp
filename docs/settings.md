@@ -209,6 +209,7 @@ It has the possible key/values:
 - `:exclude-when-defined-by-regex` same as above but with support for regex, like `#{"my-ns/.*"}`.
 - `:exclude-when-contains-meta` excludes this linter when your var has any of these metas, like `#{:my-meta}`.
 - `:ignore-test-references?` whether to ignore test references of a var-definition when considering if the var is unused. Useful to check functions that have tests but are not being used in the source code. Default: `false`.
+- `:test-uri-regex` specifies the location of test files using regular expressions. Used in conjunction with `:ignore-test-references? true` to ignore public variable references in file URIs matching the provided pattern using [clojure.core/re-find](https://clojuredocs.org/clojure.core/re-find). Default: `#{"_test.clj[a-z]?$"}`
 
 Example:
 
@@ -223,7 +224,9 @@ Example:
                                            :exclude-when-defined-by #{my-ns/defflow}
                                            :exclude-when-defined-by-regex #{"my.custom/macro-.*"}
                                            :exclude-when-contains-meta #{:my-cool-meta}
-                                           :ignore-test-references? true}}}
+                                           :ignore-test-references? true
+                                           :test-uri-regex #{"/test/unit/"
+                                                             "/test/integration/"}}}}
 ```
 
 ###### clojure-lsp/different-aliases

@@ -98,6 +98,110 @@
        {:uri (h/file-uri "file:///d.clj")}]
       @findings)))
 
+(deftest unused-public-var-declared-outside-test-namespaces
+  (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
+                        :settings {:source-paths [(h/file-path "/project/src")
+                                                  (h/file-path "/project/test")]}})
+  (h/load-code-and-locs "(ns foo) (defn bar [a b] (+ a b))"
+                        (h/file-uri "file:///project/src/foo.clj"))
+  (h/load-code-and-locs "(ns foo-test (:require [foo])) (foo/bar 1 2)"
+                        (h/file-uri "file:///project/test/foo_test.clj"))
+  (testing "Given a public var foo/bar in a src namespace
+            And being referenced in a test namespace foo-test
+            When linter level is :info
+            And the :ignore-test-references? flag is off
+            Then it returns no findings because foo/bar is being used"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///project/src/foo.clj")
+       (h/file-uri "file:///project/test/foo_test.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters
+                {:clojure-lsp/unused-public-var
+                 {:level :info
+                  :ignore-test-references? false}}}})
+    (h/assert-submaps [] @findings))
+  (testing "Given a public var foo/bar in a src namespace
+            And being referenced in a test namespace foo-test
+            When linter level is :info
+            And the :ignore-test-references? flag is on
+            Then it returns a finding because the test namespace is ignored"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///project/src/foo.clj")
+       (h/file-uri "file:///project/test/foo_test.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters
+                {:clojure-lsp/unused-public-var
+                 {:level :info
+                  :ignore-test-references? true}}}})
+    (h/assert-submaps
+      [{:end-row 1
+        :type :clojure-lsp/unused-public-var
+        :level :info
+        :filename "/project/src/foo.clj"
+        :col 16
+        :uri "file:///project/src/foo.clj"
+        :end-col 19
+        :message "Unused public var 'foo/bar'"
+        :row 1}]
+      @findings)))
+
+(deftest unused-public-var-declared-inside-test-namespace
+  (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
+                        :settings {:source-paths [(h/file-path "/project/test")]}})
+  (h/load-code-and-locs "(ns foo-test) (defn helper [])"
+                        (h/file-uri "file:///project/test/foo_test.clj"))
+  (testing "Given a public var foo-test/helper in a test namespace
+            When linter level is :info
+            And the :ignore-test-references? flag is off
+            Then it returns a finding because foo-test/helper is not being used"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///project/test/foo_test.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters
+                {:clojure-lsp/unused-public-var
+                 {:level :info
+                  :ignore-test-references? false}}}})
+    (h/assert-submaps
+      [{:end-row 1
+        :type :clojure-lsp/unused-public-var
+        :level :info
+        :filename "/project/test/foo_test.clj"
+        :col 21
+        :uri "file:///project/test/foo_test.clj"
+        :end-col 27
+        :message "Unused public var 'foo-test/helper'"
+        :row 1}]
+      @findings))
+  (testing "Given a public var foo-test/helper in a test namespace
+            When linter level is :info
+            And the :ignore-test-references? flag is on
+            Then it returns a finding because it is not being used although it is in a test namespace"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///project/test/foo_test.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var
+                          {:level :info
+                           :ignore-test-references? true}}}})
+    (h/assert-submaps
+      [{:end-row 1
+        :type :clojure-lsp/unused-public-var
+        :level :info
+        :filename "/project/test/foo_test.clj"
+        :col 21
+        :uri "file:///project/test/foo_test.clj"
+        :end-col 27
+        :message "Unused public var 'foo-test/helper'"
+        :row 1}]
+      @findings)))
+
 (deftest lint-project-public-vars
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                         :settings {:source-paths [(h/file-path "/project/src") (h/file-path "/project/cool-test")]}})

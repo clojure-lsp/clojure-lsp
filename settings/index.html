@@ -1454,6 +1454,11 @@
 <td></td>
 </tr>
 <tr>
+<td><code>:test-locations-regex</code></td>
+<td>A set of patterns (regex strings) specifying where the tests live. Patterns are matched with <a href="https://clojuredocs.org/clojure.core/re-find">clojure.core/re-find</a> against file URI strings.</td>
+<td><code>#{"_test\.clj[a-z]?$"}</code></td>
+</tr>
+<tr>
 <td><code>:text-document-sync-kind</code></td>
 <td>The sync kind during document changes, if client should send whole buffer or just related changes. Should be <code>:full</code> or <code>:incremental</code></td>
 <td><code>:full</code></td>
@@ -1565,7 +1570,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <li><code>:exclude-when-defined-by</code> excludes this linter when your var is defined by a macro for example, like <code>#{my-ns/deftest}</code>.</li>
 <li><code>:exclude-when-defined-by-regex</code> same as above but with support for regex, like <code>#{"my-ns/.*"}</code>.</li>
 <li><code>:exclude-when-contains-meta</code> excludes this linter when your var has any of these metas, like <code>#{:my-meta}</code>.</li>
-<li><code>:ignore-test-references?</code> whether to ignore test references of a var-definition when considering if the var is unused. Useful to check functions that have tests but are not being used in the source code. Default: <code>false</code>.</li>
+<li><code>:ignore-test-references?</code> whether to ignore test references of a var-definition when considering if the var is unused. Useful to check functions that have tests but are not being used in the source code. Relies on Clojure-LSP's <code>:test-locations-regex</code> setting to locate test files. Default: <code>false</code>.</li>
 </ul>
 <p>Example:</p>
 <p><code>.clj-kondo/config.edn</code>
@@ -1746,7 +1751,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 19, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 21, 2025</span>
     
   </small>
 </div>

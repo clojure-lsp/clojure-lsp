@@ -71,7 +71,7 @@
        ~spec
        ~value)))
 
-(defrecord TimbreLogger []
+(defrecord TimbreLogger [db*]
   logger/ILogger
   (setup [this]
     (let [log-id (str (random-uuid))
@@ -79,7 +79,8 @@
       (timbre/merge-config! {:middleware [(fn [data] (-> data
                                                          (assoc :hostname_ "")
                                                          (assoc-in [:context :log-id] log-id)
-                                                         (assoc-in [:context :hostname] (timbre/get-hostname))))]
+                                                         (assoc-in [:context :hostname] (timbre/get-hostname))
+                                                         (assoc-in [:context :project-root-uri] (:project-root-uri @db*))))]
                              :appenders {:println {:enabled? false}
                                          :spit (timbre/spit-appender {:fname log-path})}})
       (timbre/handle-uncaught-jvm-exceptions!)
@@ -627,14 +628,15 @@
     (alter-var-root #'db/db* (constantly db*))))
 
 (defn start-server! [server log-path]
-  (let [timbre-logger (->TimbreLogger)
+  (let [db* (atom db/initial-db)
+        timbre-logger (->TimbreLogger db*)
         log-path (if log-path
                    (do
                      (logger/setup timbre-logger)
                      (logger/set-log-path timbre-logger log-path)
                      log-path)
                    (logger/setup timbre-logger))
-        db* (atom (assoc db/initial-db :log-path log-path))
+        _ (swap! db* assoc :log-path log-path)
         producer (ClojureLspProducer. server db*)
         components {:db* db*
                     :logger timbre-logger

@@ -206,8 +206,8 @@
 (defn publish-all-diagnostics! [uris publish-empty? {:keys [db*] :as components}]
   (let [db @db*
         all-diagnostics (->> uris
-                         (remove #(= :unknown (shared/uri->file-type %)))
-                         (map #(diagnostics-of-uri % db)))
+                             (remove #(= :unknown (shared/uri->file-type %)))
+                             (map #(diagnostics-of-uri % db)))
         diagnostics (if publish-empty?
                       all-diagnostics
                       (filter #(not-empty (:diagnostics %)) all-diagnostics))]

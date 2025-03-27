@@ -94,8 +94,8 @@
                  :delay/end now}))))))))
 
 (defmacro logging-delayed-task [delay-data task-id & body]
-  (let [cancelled-msg (str task-id " cancelled - waited %s")
-        timed-out-msg (format "Timeout in %s waiting for changes to %%s" task-id)
+  (let [cancelled-msg (str ":internal/cancelled-request in " task-id " - waited %s")
+        timed-out-msg (format ":internal/timeout-request in %s waiting for changes to %%s" task-id)
         immediate-msg (str task-id " %s")
         waited-msg (str immediate-msg " - waited %s")
         msg-sym (gensym "log-message")]

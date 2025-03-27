@@ -19,7 +19,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def startup-logger-tag "[Startup]")
+(def startup-logger-tag "[startup]")
 
 (defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
 
@@ -68,12 +68,12 @@
 
 (defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
   (let [kondo-result* (future
-                        (shared/logging-time
-                          (str startup-logger-tag " Project only paths analyzed by clj-kondo, took %s")
+                        (shared/logging-task
+                          :internal/project-paths-analyzed-by-clj-kondo
                           (lsp.kondo/run-kondo-on-paths! paths db* {:external? false} file-analyzed-fn)))
         depend-result* (future
-                         (shared/logging-time
-                           (str startup-logger-tag " Project only paths analyzed by clj-depend, took %s")
+                         (shared/logging-task
+                           :internal/project-paths-analyzed-by-clj-depend
                            (lsp.depend/analyze-paths! paths @db*)))
         kondo-result @kondo-result*
         depend-result @depend-result*]
@@ -110,7 +110,7 @@
                  (lsp.kondo/db-with-results state-db namespace-definitions-result)))))
 
 (defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* producer]}]
-  (logger/info "Analyzing classpath for project root" (str root-path))
+  (logger/info startup-logger-tag "Analyzing classpath for project root" (str root-path))
   (when classpath
     (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
           external-paths (->> classpath
@@ -125,39 +125,39 @@
           normalization-config {:external? true
                                 :filter-analysis (fn [analysis]
                                                    (update analysis :var-definitions #(remove :private %)))}
-          kondo-result (shared/logging-time
-                         "External classpath paths analyzed, took %s"
+          kondo-result (shared/logging-task
+                         :internal/external-classpath-analysis
                          (lsp.kondo/run-kondo-on-paths-batch! paths-not-on-checksum normalization-config batch-update-callback db*))]
       (swap! db* #(-> %
                       (update :analysis-checksums merge new-checksums)
                       (lsp.kondo/db-with-results kondo-result)))
-      (shared/logging-time
-        "Manual GC after classpath scan took %s"
+      (shared/logging-task
+        :internal/manual-gc-after-classpath-scan
         (System/gc))
       (swap! db* assoc :full-scan-analysis-startup true))))
 
 (defn ^:private copy-configs-from-classpath! [classpath settings db*]
   (when (and (get settings :copy-kondo-configs? true)
-             (not (= :project-namespaces-only (:project-analysis-type @db*))))
-    (logger/info "Copying kondo configs from classpath to project if any...")
-    (when classpath
-      (when-let [{:keys [config]} (shared/logging-time
-                                    "Copied kondo configs, took %s secs."
-                                    (lsp.kondo/run-kondo-copy-configs! classpath @db*))]
-        (swap! db* shared/assoc-some :kondo-config config)))))
+             (not (= :project-namespaces-only (:project-analysis-type @db*)))
+             classpath)
+    (when-let [{:keys [config]} (shared/logging-task
+                                  :internal/copy-kondo-configs
+                                  (lsp.kondo/run-kondo-copy-configs! classpath @db*))]
+      (swap! db* shared/assoc-some :kondo-config config))))
 
 (defn ^:private create-kondo-folder! [^java.io.File clj-kondo-folder]
   (try
-    (logger/info (format "Folder %s not found, creating for necessary clj-kondo analysis..." (.getCanonicalPath clj-kondo-folder)))
     (.mkdir clj-kondo-folder)
     (catch Exception e
-      (logger/error "Error when creating '.clj-kondo' dir on project-root" e))))
+      (logger/error startup-logger-tag "Error when creating '.clj-kondo' dir on project-root" e))))
 
 (defn ^:private ensure-kondo-config-dir-exists!
   [project-root-uri db]
   (let [project-root-filename (shared/uri->filename project-root-uri)
         clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
     (when-not (shared/file-exists? clj-kondo-folder)
+      (logger/info startup-logger-tag (format "Folder %s not found, creating for necessary clj-kondo analysis..."
+                                              (.getCanonicalPath clj-kondo-folder)))
       (create-kondo-folder! clj-kondo-folder)
       (when (db/db-exists? db)
         (logger/info startup-logger-tag "Removing outdated cached lsp db...")
@@ -251,7 +251,7 @@
           task-list (if fast-startup? fast-tasks slow-tasks)]
       (if use-db-analysis?
         (let [classpath (:classpath @db*)]
-          (logger/info startup-logger-tag (format "Using cached classpath %s" classpath))
+          (logger/debug startup-logger-tag (format "Using cached classpath %s" classpath))
           (swap! db* assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
           (publish-task-progress producer (:copying-kondo fast-tasks) progress-token)
@@ -274,7 +274,7 @@
                                :project-and-shallow-analysis} (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
-            (logger/info "Caching db for next startup...")
+            (logger/info startup-logger-tag "Caching db for next startup...")
             (upsert-db-cache! @db*))))
       (publish-task-progress producer (:resolving-config task-list) progress-token)
       (when-let [classpath-settings (and (config/classpath-config-paths? settings)
@@ -289,10 +289,10 @@
       (when-let [otlp-config (and (-> @db* :settings :otlp :enabled)
                                   (-> @db* :settings :otlp :config))]
         (logger/configure-otlp logger otlp-config)
-        (logger/info "OTLP configured:" {:client (-> @db* :client-info :name)
-                                         :version (-> @db* :client-info :version)
-                                         :username (System/getProperty "user.name")
-                                         :project project-root-uri}))
+        (logger/info startup-logger-tag "OTLP configured:" {:client (-> @db* :client-info :name)
+                                                            :version (-> @db* :client-info :version)
+                                                            :username (System/getProperty "user.name")
+                                                            :project project-root-uri}))
       (publish-task-progress producer (:analyzing-project task-list) progress-token)
       (logger/info startup-logger-tag "Analyzing source paths for project root" (str root-path))
       (let [analyze-source-paths-fn (if (= :project-namespaces-only (:project-analysis-type @db*))

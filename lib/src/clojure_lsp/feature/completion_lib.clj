@@ -159,8 +159,8 @@
   []
   (or (:libs @libs*)
       (when-not (:loading @libs*)
-        (shared/logging-time
-          "Fechting all jar libs took %s"
+        (shared/logging-task
+          :internal/fetch-all-jar-libs-for-completion
           (swap! libs* assoc :loading true)
           (let [clojars-libs* (future (fetch-clojars-libs!))
                 mvn-central-libs* (future (fetch-clojure-mvn-central-libs!))

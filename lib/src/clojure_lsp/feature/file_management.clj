@@ -8,7 +8,6 @@
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.logger :as logger]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
@@ -142,12 +141,11 @@
 (defn ^:private notify-references [uri db-before db-after {:keys [db* producer] :as components}]
   (async/thread
     (shared/logging-task
-      :notify-references
+      :internal/notify-references
       (let [uris (shared/logging-task
                    :reference-files/find
                    (reference-uris uri db-before db-after))]
         (when (seq uris)
-          (logger/debug "Analyzing references for files:" uris)
           (shared/logging-task
             :reference-files/analyze
             ;; TODO: We process the dependent and dependency files together, but
@@ -250,12 +248,12 @@
   (loop [state-db @db*]
     (when (>= version (get-in state-db [:documents uri :v] -1))
       (let [kondo-result* (future
-                            (shared/logging-time
-                              (str "changes analyzed by clj-kondo took %s")
+                            (shared/logging-task
+                              :internal/uri-analyzed-by-clj-kondo
                               (lsp.kondo/run-kondo-on-text! text uri db*)))
             depend-result* (future
-                             (shared/logging-time
-                               (str "changes analyzed by clj-depend took %s")
+                             (shared/logging-task
+                               :internal/uri-analyzed-by-clj-depend
                                (lsp.depend/analyze-uri! uri state-db)))
             kondo-result @kondo-result*
             depend-result @depend-result*
@@ -288,9 +286,7 @@
                        ;; we check if file still exists/should be linted
                        (filter #(get-in @db* [:documents %]))
                        (map shared/uri->filename))
-        result (shared/logging-time
-                 "Watched files analyzed, took %s"
-                 (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil))]
+        result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
     (swap! db* lsp.kondo/db-with-results result)
     (f.diagnostic/publish-all-diagnostics! uris components)
     (producer/refresh-test-tree producer uris)
@@ -342,7 +338,7 @@
       (async/>!! watched-files-chan created-or-changed))
     (when (seq deleted)
       (shared/logging-task
-        :delete-watched-files
+        :internal/delete-watched-files
         (files-deleted components deleted)))))
 
 (defn did-close [uri {:keys [db*] :as components}]

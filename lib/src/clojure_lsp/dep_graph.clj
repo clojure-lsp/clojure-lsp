@@ -278,7 +278,7 @@
 
 (defn refresh-analysis [db old-analysis new-analysis internal?]
   (shared/logging-task
-    :maintain-dep-graph
+    :internal/maintain-dep-graph
     (let [[old-definitions old-usages] (ns-definitions-and-usages old-analysis)
           [new-definitions new-usages] (ns-definitions-and-usages new-analysis)]
       (-> db

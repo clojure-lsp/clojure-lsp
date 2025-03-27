@@ -15,11 +15,9 @@
   "Optional logger state to avoid having component available everywhere."
   nil)
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn set-logger! [logger]
   (alter-var-root #'*logger* (constantly logger)))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defmacro info [& args]
   (let [fmeta (assoc (meta &form)
                      :file *file*
@@ -27,7 +25,6 @@
     `(when *logger*
        (-info *logger* ~fmeta ~@args))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defmacro warn [& args]
   (let [fmeta (assoc (meta &form)
                      :file *file*
@@ -35,7 +32,6 @@
     `(when *logger*
        (-warn *logger* ~fmeta ~@args))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defmacro error [& args]
   (let [fmeta (assoc (meta &form)
                      :file *file*
@@ -43,7 +39,6 @@
     `(when *logger*
        (-error *logger* ~fmeta ~@args))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defmacro debug [& args]
   (let [fmeta (assoc (meta &form)
                      :file *file*

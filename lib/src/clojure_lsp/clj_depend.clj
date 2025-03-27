@@ -8,17 +8,19 @@
 
 (set! *warn-on-reflection* true)
 
+(def logger-tag "[clj-depend]")
+
 (defn ^:private violations-grouped-by-namespace
   [{:keys [violations]}]
   {:violations (group-by :namespace violations)})
 
 (defn ^:private analyze
   [options]
-  (logger/info "Running clj-depend analysis with the following options:" options)
+  (logger/debug logger-tag "Running clj-depend analysis with the following options:" options)
   (try
     (clj-depend/analyze options)
     (catch Exception e
-      (logger/error "Error while running clj-depend analysis" e))))
+      (logger/error logger-tag "Error while running clj-depend analysis" e))))
 
 (defn ^:private with-files
   [options paths]

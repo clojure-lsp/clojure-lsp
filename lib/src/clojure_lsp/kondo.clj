@@ -16,6 +16,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def logger-tag "[clj-kondo]")
+
 (defn clj-kondo-version []
   (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
 
@@ -243,8 +245,8 @@
 (defn ^:private custom-lint-project!
   [db {:keys [config] :as kondo-ctx} normalization-config]
   (when (run-custom-lint? config)
-    (shared/logging-time
-      "Custom linting the whole project took %s"
+    (shared/logging-task
+      :internal/custom-lint-project
       (let [db (db-with-analysis db (normalize kondo-ctx normalization-config db))]
         (f.diagnostic/custom-lint-project! db kondo-ctx)))))
 
@@ -364,10 +366,10 @@
       (let [result (binding [*err* err-writer]
                      (kondo/run! config))]
         (when-not (string/blank? (str err-writer))
-          (logger/warn "Non-fatal error from clj-kondo:" (str err-writer)))
+          (logger/warn logger-tag (str "log: " (string/trim-newline (str err-writer)))))
         result)
       (catch Exception e
-        (logger/error e "Error running clj-kondo on" err-hint)))))
+        (logger/error e (str logger-tag " error analysing " err-hint))))))
 
 (defn run-kondo-on-paths! [paths db* {:keys [external?] :as normalization-config} file-analyzed-fn]
   (let [db @db*
@@ -396,6 +398,7 @@
                                      :paths batch-paths})))
         batch-count (count batches)]
     (logger/info
+      logger-tag
       (case batch-count
         0 "No new paths to analyze"
         1 (str "Analyzing " total " paths with clj-kondo")
@@ -405,7 +408,7 @@
       1 (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn 1 1))
       (->> batches
            (map (fn [{:keys [index paths]}]
-                  (logger/info "Analyzing batch" (str index "/" batch-count))
+                  (logger/info logger-tag "Analyzing batch" (str index "/" batch-count))
                   (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn index batch-count))))
            (reduce shared/deep-merge)))))
 

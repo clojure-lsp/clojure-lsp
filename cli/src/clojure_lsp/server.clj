@@ -12,6 +12,7 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
+   [clojure-lsp.startup :as startup]
    [clojure.core.async :as async]
    [lsp4clj.coercer :as coercer]
    [lsp4clj.io-server :as lsp.io-server]
@@ -74,8 +75,7 @@
   logger/ILogger
   (setup [this]
     (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
-      (timbre/merge-config! {:middleware [#(assoc % :hostname_ "")]
-                             :appenders {:println {:enabled? false}
+      (timbre/merge-config! {:appenders {:println {:enabled? false}
                                          :spit (timbre/spit-appender {:fname log-path})}})
       (timbre/handle-uncaught-jvm-exceptions!)
       (logger/set-logger! this)
@@ -115,7 +115,7 @@
   (publish-diagnostic [_this diagnostic]
     (lsp.server/discarding-stdout
       (shared/logging-task
-        :publish-diagnostics
+        :lsp/publish-diagnostics
         (->> diagnostic
              (conform-or-log ::coercer/publish-diagnostics-params)
              (lsp.server/send-notification server "textDocument/publishDiagnostics")))))
@@ -132,16 +132,17 @@
                          (lsp.server/send-request server "workspace/applyEdit"))
             response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
         (if (= ::timeout response)
-          (logger/error "No reponse from client after 10 seconds while applying workspace-edit.")
+          (logger/error ":apply-workspace-edit No response from client after 10 seconds while applying workspace-edit.")
           response))))
 
   (show-document-request [_this document-request]
     (lsp.server/discarding-stdout
       (when (get-in @db* [:client-capabilities :window :show-document])
-        (logger/info "Requesting to show on editor the document" document-request)
-        (->> document-request
-             (conform-or-log ::coercer/show-document-request)
-             (lsp.server/send-request server "window/showDocument")))))
+        (shared/logging-task
+          :lsp/show-document-request
+          (->> document-request
+               (conform-or-log ::coercer/show-document-request)
+               (lsp.server/send-request server "window/showDocument"))))))
 
   (publish-progress [_this percentage message progress-token]
     (lsp.server/discarding-stdout
@@ -166,10 +167,11 @@
       (let [message-content {:message message
                              :type type
                              :extra extra}]
-        (logger/info message-content)
-        (->> message-content
-             (conform-or-log ::coercer/show-message)
-             (lsp.server/send-notification server "window/showMessage")))))
+        (shared/logging-task
+          :lsp/show-message
+          (->> message-content
+               (conform-or-log ::coercer/show-message)
+               (lsp.server/send-notification server "window/showMessage"))))))
 
   (refresh-test-tree [_this uris]
     (async/thread
@@ -177,7 +179,7 @@
         (let [db @db*]
           (when (some-> db :client-capabilities :experimental :test-tree)
             (shared/logging-task
-              :refreshing-test-tree
+              :lsp/refresh-test-tree
               (doseq [uri uris]
                 (some->> (f.test-tree/tree uri db)
                          (conform-or-log ::clojure-coercer/publish-test-tree-params)
@@ -514,14 +516,8 @@
       (or {})
       (settings/clean-client-settings)))
 
-(defn ^:private exit [server]
-  (logger/info "Exiting...")
-  (lsp.server/shutdown server) ;; blocks, waiting up to 10s for previously received messages to be processed
-  (shutdown-agents)
-  (System/exit 0))
-
 (defmethod lsp.server/receive-request "initialize" [_ {:keys [db* server] :as components} params]
-  (logger/info "Initializing...")
+  (logger/info startup/startup-logger-tag "Initializing...")
   ;; TODO: According to the spec, we shouldn't process any other requests or
   ;; notifications until we've received this request. Furthermore, we shouldn't
   ;; send any requests or notifications (except for $/progress and a few others)
@@ -540,27 +536,22 @@
   (when-let [trace-level (:trace params)]
     (lsp.server/set-trace-level server trace-level))
   (when-let [parent-process-id (:process-id params)]
-    (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(exit server)))
+    (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(handler/exit components)))
   {:capabilities (capabilities (settings/all @db*))})
 
-(defmethod lsp.server/receive-notification "initialized" [_ {:keys [server db*]} _params]
-  (logger/info "Initialized!")
-  (when (-> @db* :client-capabilities :workspace :did-change-watched-files)
-    (->> {:registrations [{:id "id"
-                           :method "workspace/didChangeWatchedFiles"
-                           :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
-         (lsp.server/send-request server "client/registerCapability"))))
+(defmethod lsp.server/receive-notification "initialized" [_ components _params]
+  (handler/initialized components known-files-pattern))
 
-(defmethod lsp.server/receive-request "shutdown" [_ {:keys [db*]} _params]
-  (logger/info "Shutting down...")
-  (reset! db* db/initial-db) ;; resets db for dev
-  nil)
+(defmethod lsp.server/receive-request "shutdown" [_ components _params]
+  (handler/shutdown components))
 
-(defmethod lsp.server/receive-notification "exit" [_ {:keys [server]} _params]
-  (exit server))
+(defmethod lsp.server/receive-notification "exit" [_ components _params]
+  (handler/exit components))
 
 (defmethod lsp.server/receive-notification "$/setTrace" [_ {:keys [server]} {:keys [value]}]
-  (lsp.server/set-trace-level server value))
+  (shared/logging-task
+    :set-trace
+    (lsp.server/set-trace-level server value)))
 
 (defn- spawn-async-loop! [task-name ch f]
   (async/thread
@@ -590,13 +581,13 @@
       :changes debounced-changes
       (fn [changes]
         (shared/logging-task
-          :analyze-file
+          :internal/analyze-file
           (f.file-management/analyze-changes changes components))))
     (spawn-async-loop!
       :watched-files debounced-watched-files
       (fn [watched-files]
         (shared/logging-task
-          :analyze-files-in-watched-dir
+          :internal/analyze-watched-files
           (f.file-management/analyze-watched-files! watched-files components))))))
 
 (defn ^:private monitor-server-logs [log-ch]
@@ -640,7 +631,7 @@
                     :diagnostics-chan (async/chan 1)
                     :watched-files-chan (async/chan 1)
                     :edits-chan (async/chan 1)}]
-    (logger/info "[SERVER]" "Starting server...")
+    (logger/info "[server]" "Starting server...")
     (monitor-server-logs (:log-ch server))
     (setup-dev-environment db* components)
     (spawn-async-tasks! components)

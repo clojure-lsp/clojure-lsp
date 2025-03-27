@@ -10,7 +10,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:private clojuredocs-logger-tag "[Clojuredocs]")
+(def ^:private clojuredocs-logger-tag "[clojuredocs]")
 
 (def ^:private clojuredocs-edn-file-url
   "https://github.com/clojure-emacs/clojuredocs-export-edn/raw/master/exports/export.compact.edn")
@@ -18,11 +18,10 @@
 (defn refresh-cache! [db*]
   (when (and (settings/get @db* [:hover :clojuredocs] true)
              (not (-> @db* :clojuredocs :refreshing?)))
-    (logger/info clojuredocs-logger-tag "Refreshing clojuredocs cache...")
-    (swap! db* assoc-in [:clojuredocs :refreshing?] true)
-    (shared/logging-time
-      (str clojuredocs-logger-tag " Refreshing clojuredocs cache took %s.")
+    (shared/logging-task
+      :internal/refresh-clojuredocs-cache
       (try
+        (swap! db* assoc-in [:clojuredocs :refreshing?] true)
         (let [;; connection check not to wait too long
               [downloadable? conn-ex] (http/test-remote-url! clojuredocs-edn-file-url)]
           (if (not downloadable?)

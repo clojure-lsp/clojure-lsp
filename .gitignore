@@ -19,6 +19,7 @@ target/
 clojure-lsp.build_artifacts.txt
 lib/clojure-lsp.integration-test.out
 cli/integration-test/sample-test/clojure-lsp.integration-test.out
+/clojure-lsp.old
 
 /.classpath
 /.project

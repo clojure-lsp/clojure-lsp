@@ -63,7 +63,7 @@
                (str ns "/" replacement-name)
 
                local-element
-               (str replacement-name)
+               replacement-name
 
                alias
                (str "::" alias "/" replacement-name)

@@ -7,6 +7,7 @@
   - Bump clj-kondo to `2025.02.21-20250314.135629-7`.
   - Add support for ignoring tests references for the `clojure-lsp/unused-public-var` linter. #1878
   - Add `:test-locations-regex` configuration to allow customizing test file detection for the `unused-public-var` linter's `:ignore-test-references?` and test code lenses. #1878
+  - Improve and standardize all logs for better troubleshooting and metrics collection.
 - Editor
   - Add `forward`, `forward-select`, `backward` and `backward-select` paredit actions.
   - Show add require code action for invalid syntax codes like `my-alias/`. #1957

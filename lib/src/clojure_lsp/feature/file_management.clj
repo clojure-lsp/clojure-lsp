@@ -168,7 +168,7 @@
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
             ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
             (analyze-reference-uris! uris db*))
-          (f.diagnostic/publish-all-diagnostics! uris components)
+          (f.diagnostic/publish-all-diagnostics! uris true components)
           (producer/refresh-code-lens producer))))))
 
 (defn ^:private offsets [lines line character end-line end-character]
@@ -288,7 +288,7 @@
                        (map shared/uri->filename))
         result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
     (swap! db* lsp.kondo/db-with-results result)
-    (f.diagnostic/publish-all-diagnostics! uris components)
+    (f.diagnostic/publish-all-diagnostics! uris true components)
     (producer/refresh-test-tree producer uris)
     (doseq [uri uris]
       (when (get-in @db* [:documents uri :v])
@@ -375,7 +375,7 @@
                                  (keep (fn [[uri document]] (when (:v document) uri)))
                                  set)]
         (analyze-reference-uris! all-opened-uris db*)
-        (f.diagnostic/publish-all-diagnostics! all-opened-uris components)
+        (f.diagnostic/publish-all-diagnostics! all-opened-uris true components)
         (producer/refresh-code-lens producer)))))
 
 (defn did-save [uri {:keys [db*] :as components}]

@@ -11,6 +11,7 @@
 - Editor
   - Add `forward`, `forward-select`, `backward` and `backward-select` paredit actions.
   - Show add require code action for invalid syntax codes like `my-alias/`. #1957
+  - Improve startup performance for huge projects avoiding publish empty diagnostics for every file of the project unnecessarily.
 
 ## 2025.03.07-17.42.36
 

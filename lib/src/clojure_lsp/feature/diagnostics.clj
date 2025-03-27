@@ -200,16 +200,18 @@
   {:uri uri
    :diagnostics []})
 
-(defn publish-diagnostics! [uri {:keys [db*], :as components}]
+(defn publish-diagnostics! [uri {:keys [db*] :as components}]
   (publish-diagnostic!* components (diagnostics-of-uri uri @db*)))
 
-(defn publish-all-diagnostics! [uris {:keys [db*], :as components}]
-  (let [db @db*]
-    (publish-all-diagnostics!*
-      components
-      (->> uris
-           (remove #(= :unknown (shared/uri->file-type %)))
-           (map #(diagnostics-of-uri % db))))))
+(defn publish-all-diagnostics! [uris publish-empty? {:keys [db*] :as components}]
+  (let [db @db*
+        all-diagnostics (->> uris
+                         (remove #(= :unknown (shared/uri->file-type %)))
+                         (map #(diagnostics-of-uri % db)))
+        diagnostics (if publish-empty?
+                      all-diagnostics
+                      (filter #(not-empty (:diagnostics %)) all-diagnostics))]
+    (publish-all-diagnostics!* components diagnostics)))
 
 (defn publish-empty-diagnostics! [uris components]
   (publish-all-diagnostics!* components (map empty-diagnostics-of-uri uris)))

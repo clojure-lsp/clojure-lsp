@@ -74,8 +74,13 @@
 (defrecord TimbreLogger []
   logger/ILogger
   (setup [this]
-    (let [log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
-      (timbre/merge-config! {:appenders {:println {:enabled? false}
+    (let [log-id (str (random-uuid))
+          log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
+      (timbre/merge-config! {:middleware [(fn [data] (-> data
+                                                         (assoc :hostname_ "")
+                                                         (assoc-in [:context :log-id] log-id)
+                                                         (assoc-in [:context :hostname] (timbre/get-hostname))))]
+                             :appenders {:println {:enabled? false}
                                          :spit (timbre/spit-appender {:fname log-path})}})
       (timbre/handle-uncaught-jvm-exceptions!)
       (logger/set-logger! this)

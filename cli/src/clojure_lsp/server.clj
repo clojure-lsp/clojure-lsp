@@ -530,7 +530,7 @@
     (System/exit 0)))
 
 (defmethod lsp.server/receive-request "initialize" [_ {:keys [db* server] :as components} params]
-  (logger/info startup/startup-logger-tag "Initializing...")
+  (logger/info startup/logger-tag "Initializing...")
   ;; TODO: According to the spec, we shouldn't process any other requests or
   ;; notifications until we've received this request. Furthermore, we shouldn't
   ;; send any requests or notifications (except for $/progress and a few others)

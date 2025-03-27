@@ -19,7 +19,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def startup-logger-tag "[startup]")
+(def logger-tag "[startup]")
 
 (defn lerp "Linear interpolation" [a b t] (+ a (* (- b a) t)))
 
@@ -110,7 +110,7 @@
                  (lsp.kondo/db-with-results state-db namespace-definitions-result)))))
 
 (defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* producer]}]
-  (logger/info startup-logger-tag "Analyzing classpath for project root" (str root-path))
+  (logger/info logger-tag "Analyzing classpath for project root" (str root-path))
   (when classpath
     (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
           external-paths (->> classpath
@@ -149,18 +149,18 @@
   (try
     (.mkdir clj-kondo-folder)
     (catch Exception e
-      (logger/error startup-logger-tag "Error when creating '.clj-kondo' dir on project-root" e))))
+      (logger/error logger-tag "Error when creating '.clj-kondo' dir on project-root" e))))
 
 (defn ^:private ensure-kondo-config-dir-exists!
   [project-root-uri db]
   (let [project-root-filename (shared/uri->filename project-root-uri)
         clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
     (when-not (shared/file-exists? clj-kondo-folder)
-      (logger/info startup-logger-tag (format "Folder %s not found, creating for necessary clj-kondo analysis..."
+      (logger/info logger-tag (format "Folder %s not found, creating for necessary clj-kondo analysis..."
                                               (.getCanonicalPath clj-kondo-folder)))
       (create-kondo-folder! clj-kondo-folder)
       (when (db/db-exists? db)
-        (logger/info startup-logger-tag "Removing outdated cached lsp db...")
+        (logger/info logger-tag "Removing outdated cached lsp db...")
         (db/remove-db! db)))))
 
 (defn ^:private consider-local-db-cache? [db db-cache]
@@ -251,7 +251,7 @@
           task-list (if fast-startup? fast-tasks slow-tasks)]
       (if use-db-analysis?
         (let [classpath (:classpath @db*)]
-          (logger/debug startup-logger-tag (format "Using cached classpath %s" classpath))
+          (logger/debug logger-tag (format "Using cached classpath %s" classpath))
           (swap! db* assoc
                  :settings (update settings :source-paths (partial source-paths/process-source-paths settings root-path classpath)))
           (publish-task-progress producer (:copying-kondo fast-tasks) progress-token)
@@ -274,7 +274,7 @@
                                :project-and-shallow-analysis} (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
               (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
-            (logger/info startup-logger-tag "Caching db for next startup...")
+            (logger/info logger-tag "Caching db for next startup...")
             (upsert-db-cache! @db*))))
       (publish-task-progress producer (:resolving-config task-list) progress-token)
       (when-let [classpath-settings (and (config/classpath-config-paths? settings)
@@ -289,12 +289,9 @@
       (when-let [otlp-config (and (-> @db* :settings :otlp :enabled)
                                   (-> @db* :settings :otlp :config))]
         (logger/configure-otlp logger otlp-config)
-        (logger/info startup-logger-tag "OTLP configured:" {:client (-> @db* :client-info :name)
-                                                            :version (-> @db* :client-info :version)
-                                                            :username (System/getProperty "user.name")
-                                                            :project project-root-uri}))
+        (logger/info logger-tag "OTLP configured sucessfully."))
       (publish-task-progress producer (:analyzing-project task-list) progress-token)
-      (logger/info startup-logger-tag "Analyzing source paths for project root" (str root-path))
+      (logger/info logger-tag "Analyzing source paths for project root" (str root-path))
       (let [analyze-source-paths-fn (if (= :project-namespaces-only (:project-analysis-type @db*))
                                       analyze-source-paths-namespaces-only!
                                       analyze-source-paths!)]

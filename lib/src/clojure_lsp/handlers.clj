@@ -23,6 +23,7 @@
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
+   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
@@ -30,7 +31,8 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.startup :as startup]
-   [clojure.core.async :as async]))
+   [clojure.core.async :as async]
+   [cheshire.core :as json]))
 
 (set! *warn-on-reflection* true)
 
@@ -193,13 +195,20 @@
               (startup/publish-task-progress producer (:generate-stubs post-startup-tasks) work-done-token)
               (stubs/generate-and-analyze-stubs! settings db*))
             (startup/publish-task-progress producer (:done post-startup-tasks) work-done-token))
-          (logger/info startup/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
+          (logger/info startup/logger-tag "Analyzing test paths for project root" project-root-uri)
           (producer/refresh-test-tree producer internal-uris)))
       (producer/show-message producer "No project-root-uri was specified, some features will be limited." :warning nil))))
 
 (defn initialized [{:keys [db*]} known-files-pattern]
   (shared/logging-task
     :lsp/initialized
+    (logger/info startup/logger-tag "Server info:" (json/generate-string
+                                                     {:client (-> @db* :client-info :name)
+                                                      :version (-> @db* :client-info :version)
+                                                      :username (System/getProperty "user.name")
+                                                      :server-version (shared/clojure-lsp-version)
+                                                      :clj-kondo-version (lsp.kondo/clj-kondo-version)
+                                                      :project (:project-root-uri @db*)}))
     (when (-> @db* :client-capabilities :workspace :did-change-watched-files)
       {:registrations [{:id "id"
                         :method "workspace/didChangeWatchedFiles"

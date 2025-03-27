@@ -673,6 +673,9 @@
           (xf-var-defs false))
         (:analysis db)))
 
+(defn find-var-usages [db uri]
+  (get-in db [:analysis uri :var-usages]))
+
 (defn find-all-path-namespace-definitions [db path-uri]
   (into []
         (comp

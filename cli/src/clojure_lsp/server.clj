@@ -416,6 +416,13 @@
        (conform-or-log ::coercer/folding-ranges-or-error)
        eventually))
 
+(defmethod lsp.server/receive-request "textDocument/inlayHint" [_ components params]
+  (->> params
+       normalize-doc-uri
+       (handler/inlay-hint components)
+       (conform-or-log ::coercer/inlay-hints)
+       eventually))
+
 ;;;; Workspace features
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceFeatures
@@ -472,6 +479,7 @@
      :implementation-provider true
      :signature-help-provider []
      :call-hierarchy-provider true
+     :inlay-hint-provider true
      :linked-editing-range-provider true
      :code-action-provider (vec (vals coercer/code-action-kind))
      :code-lens-provider true

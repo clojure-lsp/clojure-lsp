@@ -521,6 +521,13 @@
       (or {})
       (settings/clean-client-settings)))
 
+(defn ^:private exit [server]
+  (shared/logging-task
+    :lsp/exit
+    (lsp.server/shutdown server) ;; blocks, waiting up to 10s for previously received messages to be processed
+    (shutdown-agents)
+    (System/exit 0)))
+
 (defmethod lsp.server/receive-request "initialize" [_ {:keys [db* server] :as components} params]
   (logger/info startup/startup-logger-tag "Initializing...")
   ;; TODO: According to the spec, we shouldn't process any other requests or
@@ -541,17 +548,18 @@
   (when-let [trace-level (:trace params)]
     (lsp.server/set-trace-level server trace-level))
   (when-let [parent-process-id (:process-id params)]
-    (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(handler/exit components)))
+    (lsp.liveness-probe/start! parent-process-id log-wrapper-fn #(exit server)))
   {:capabilities (capabilities (settings/all @db*))})
 
-(defmethod lsp.server/receive-notification "initialized" [_ components _params]
-  (handler/initialized components known-files-pattern))
+(defmethod lsp.server/receive-notification "initialized" [_ {:keys [server] :as components} _params]
+  (when-let [register-capability (handler/initialized components known-files-pattern)]
+    (lsp.server/send-request server "client/registerCapability" register-capability)))
 
 (defmethod lsp.server/receive-request "shutdown" [_ components _params]
   (handler/shutdown components))
 
-(defmethod lsp.server/receive-notification "exit" [_ components _params]
-  (handler/exit components))
+(defmethod lsp.server/receive-notification "exit" [_ {:keys [server]} _params]
+  (exit server))
 
 (defmethod lsp.server/receive-notification "$/setTrace" [_ {:keys [server]} {:keys [value]}]
   (shared/logging-task

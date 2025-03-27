@@ -30,8 +30,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.startup :as startup]
-   [clojure.core.async :as async]
-   [lsp4clj.server :as lsp.server]))
+   [clojure.core.async :as async]))
 
 (set! *warn-on-reflection* true)
 
@@ -198,27 +197,19 @@
           (producer/refresh-test-tree producer internal-uris)))
       (producer/show-message producer "No project-root-uri was specified, some features will be limited." :warning nil))))
 
-(defn initialized [{:keys [server db*]} known-files-pattern]
+(defn initialized [{:keys [db*]} known-files-pattern]
   (shared/logging-task
     :lsp/initialized
     (when (-> @db* :client-capabilities :workspace :did-change-watched-files)
-      (->> {:registrations [{:id "id"
-                             :method "workspace/didChangeWatchedFiles"
-                             :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]}
-           (lsp.server/send-request server "client/registerCapability")))))
+      {:registrations [{:id "id"
+                        :method "workspace/didChangeWatchedFiles"
+                        :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]})))
 
 (defn shutdown [{:keys [db*]}]
   (shared/logging-task
     :lsp/shutdown
     (reset! db* db/initial-db)
     nil))
-
-(defn exit [{:keys [server]}]
-  (shared/logging-task
-    :lsp/exit
-    (lsp.server/shutdown server) ;; blocks, waiting up to 10s for previously received messages to be processed
-    (shutdown-agents)
-    (System/exit 0)))
 
 (defn did-open [{:keys [producer] :as components} {:keys [text-document]}]
   (shared/logging-task

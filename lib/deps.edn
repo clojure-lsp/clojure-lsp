@@ -1,7 +1,6 @@
 {:deps {org.clojure/clojure {:mvn/version "1.12.0"}
-        rewrite-clj/rewrite-clj {#_#_:mvn/version "1.1.48"
-                                 :git/url "https://github.com/clj-commons/rewrite-clj"
-                                 :git/sha "9f30832c00b28068d8cf9e8d71002d79b9044f1d"}
+        rewrite-clj/rewrite-clj {:git/url "https://github.com/clj-commons/rewrite-clj"
+                                 :git/sha "0bb572a03c0025c01f9c36bfca2815254683fbde"}
         borkdude/rewrite-edn {:mvn/version "0.4.9" :exclusions [rewrite-clj/rewrite-clj]}
         org.clojure/core.async {:mvn/version "1.6.681"}
         dev.weavejester/cljfmt {:mvn/version "0.13.0"
@@ -39,7 +38,7 @@
                        :exec-fn cognitect.test-runner.api/test}
            :build {:extra-paths ["resources"]
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
-                                                         :tag "v0.10.7"
-                                                         :sha "573711e"}
+                                                         :tag "v0.10.8"
+                                                         :sha "2fdfd66"}
                           slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}}}

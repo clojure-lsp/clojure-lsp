@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.03.27-20.21.36
+
 - General
   - Bump rewrite-clj to `0bb572a03c0025c01f9c36bfca2815254683fbde`. #1984
   - Bump clj-kondo to `2025.02.21-20250314.135629-7`.

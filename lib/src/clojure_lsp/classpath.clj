@@ -16,6 +16,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def logger-tag "[classpath]")
+
 (defn ^:private md5 [^java.io.File file]
   (let [bytes'
         (with-open [xin (io/input-stream file)
@@ -101,7 +103,7 @@
 (defn ^:private lookup-classpath! [root-path {:keys [classpath-cmd env]}]
   (let [command (string/join " " classpath-cmd)
         env-with-default (merge {} (System/getenv) env)]
-    (logger/info (format "Finding classpath via `%s`" command))
+    (logger/info logger-tag (format "Finding classpath via `%s`" command))
     (try
       (let [sep (re-pattern (System/getProperty "path.separator"))
             {:keys [exit out err]} (apply shell (into classpath-cmd
@@ -113,7 +115,7 @@
                           last
                           string/trim-newline
                           (string/split sep))]
-            (logger/debug "Classpath found, paths: " paths)
+            (logger/debug logger-tag "Classpath found, paths: " paths)
             {:command command
              :paths (set paths)})
           {:command command
@@ -130,8 +132,8 @@
         ignore-action "Ignore"]
     (if error
       (do
-        (logger/error (format "Error while looking up classpath info in %s. Error: %s" (str root-path) error))
-        (logger/debug (format "Env used for classpath lookup:\nSHELL: %s\nPATH: %s" (get env "SHELL") (get env "PATH")))
+        (logger/error logger-tag (format "Error while looking up classpath info in %s. Error: %s" (str root-path) error))
+        (logger/debug logger-tag (format "Env used for classpath lookup:\nSHELL: %s\nPATH: %s" (get env "SHELL") (get env "PATH")))
         (if-let [chosen-action (producer/show-message-request
                                  producer
                                  (format (str "LSP classpath lookup failed when running `%s`. Some features may not work properly if ignored.\n\n"
@@ -142,7 +144,7 @@
           (if (= retry-action chosen-action)
             (recur project-spec root-path producer)
             (do
-              (logger/warn (format "Classpath lookup retry skipped by user"))
+              (logger/warn logger-tag (format "Classpath lookup retry skipped by user"))
               paths))
           (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly." command) :error error)))
       paths)))

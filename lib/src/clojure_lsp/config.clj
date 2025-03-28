@@ -86,7 +86,7 @@
                  (let [[_ group artifact] (string/split (.getName config-entry) #"/")]
                    (when (some #(and (string/starts-with? % group)
                                      (string/ends-with? % artifact)) config-paths)
-                     (logger/info (format "Resolving found clojure-lsp config for '%s/%s' in classpath" group artifact))
+                     (logger/info "[classpath-config]" (format "Found config for '%s/%s' in classpath" group artifact))
                      (edn/read-string {:readers {'re re-pattern}}
                                       (slurp (.getInputStream jar config-entry))))))))))
 
@@ -134,8 +134,8 @@
        (seq classpath-config-paths)))
 
 (defn resolve-from-classpath-config-paths [classpath settings]
-  (shared/logging-time
-    "Finding classpath configs took %s"
+  (shared/logging-task
+    :internal/find-classpath-configs
     (loop [{:keys [classpath-config-paths] :as cp-settings} (resolve-from-classpath-config-paths-impl classpath settings)
            merge-config nil]
       (if (and (coll? classpath-config-paths)

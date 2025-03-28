@@ -10,7 +10,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def startup-paths-logger-tag "[Startup]")
+(def logger-tag "[startup]")
 
 (def default-source-paths #{"src" "test"})
 (def default-source-aliases #{:dev :test})
@@ -81,7 +81,7 @@
   (let [source-paths-ignore-regex (get settings :source-paths-ignore-regex config/default-source-path-ignore-regexs)
         {:keys [origins source-paths]} (resolve-source-paths root-path classpath given-source-paths)
         final-source-paths (absolutize-source-paths source-paths root-path source-paths-ignore-regex)]
-    (when (contains? origins :settings) (logger/info startup-paths-logger-tag "Using given source-paths:" final-source-paths))
-    (when (contains? origins :classpath) (logger/info startup-paths-logger-tag "Using source-paths from classpath:" final-source-paths))
-    (when (contains? origins :default) (logger/info startup-paths-logger-tag "Using default source-paths:" final-source-paths))
+    (when (contains? origins :settings) (logger/info logger-tag "Using given source-paths:" final-source-paths))
+    (when (contains? origins :classpath) (logger/info logger-tag "Using source-paths from classpath:" final-source-paths))
+    (when (contains? origins :default) (logger/info logger-tag "Using default source-paths:" final-source-paths))
     final-source-paths))

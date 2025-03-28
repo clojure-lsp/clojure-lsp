@@ -21,7 +21,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:private java-logger-tag "[Java]")
+(def ^:private java-logger-tag "[java]")
 
 (defn ^:private decompile! [^String input-path ^String output-path]
   (let [driver ^CfrDriver (.. (CfrDriver$Builder.)
@@ -91,7 +91,7 @@
         (io/make-parents pom-file)
         (spit pom-file pom-content)
         (spit projectile-file "")
-        (shared/logging-task :decompile-jar
+        (shared/logging-task :internal/decompile-jar
                              (decompile! jar-path (.getCanonicalPath project-source-folder)))
         (logger/info java-logger-tag (format "Decompiled jar %s" jar-path))))
     dest-uri))
@@ -148,8 +148,8 @@
 (defn ^:private download-jdk!
   [^String jdk-download-url
    ^File dest-jdk-file]
-  (shared/logging-time
-    (str java-logger-tag " Downloading JDK source took %s")
+  (shared/logging-task
+    :java-interop/download-jdk
     (try
       (let [{:keys [body content-type status error]} (http/request! jdk-download-url)]
         (if (or error
@@ -177,8 +177,8 @@
         (logger/error java-logger-tag "Error Downloading JDK source." e)))))
 
 (defn ^:private analyze-and-cache-jdk-source! [paths new-checksums db*]
-  (let [results (shared/logging-time
-                  (str java-logger-tag " Analyzing JDK source with clj-kondo took %s")
+  (let [results (shared/logging-task
+                  :java-interop/analyze-jdk-source
                   (lsp.kondo/run-kondo-on-jdk-source! paths @db*))]
     (swap! db* #(-> %
                     (lsp.kondo/db-with-results results)

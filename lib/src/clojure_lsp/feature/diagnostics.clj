@@ -200,16 +200,18 @@
   {:uri uri
    :diagnostics []})
 
-(defn publish-diagnostics! [uri {:keys [db*], :as components}]
+(defn publish-diagnostics! [uri {:keys [db*] :as components}]
   (publish-diagnostic!* components (diagnostics-of-uri uri @db*)))
 
-(defn publish-all-diagnostics! [uris {:keys [db*], :as components}]
-  (let [db @db*]
-    (publish-all-diagnostics!*
-      components
-      (->> uris
-           (remove #(= :unknown (shared/uri->file-type %)))
-           (map #(diagnostics-of-uri % db))))))
+(defn publish-all-diagnostics! [uris publish-empty? {:keys [db*] :as components}]
+  (let [db @db*
+        all-diagnostics (->> uris
+                             (remove #(= :unknown (shared/uri->file-type %)))
+                             (map #(diagnostics-of-uri % db)))
+        diagnostics (if publish-empty?
+                      all-diagnostics
+                      (filter #(not-empty (:diagnostics %)) all-diagnostics))]
+    (publish-all-diagnostics!* components diagnostics)))
 
 (defn publish-empty-diagnostics! [uris components]
   (publish-all-diagnostics!* components (map empty-diagnostics-of-uri uris)))
@@ -257,10 +259,20 @@
                                (remove exclude-def?))
           var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
           all-dependents (q/nses-and-dependents-analysis project-db var-nses)
-          ignore-test-references? (get-in kondo-config [:linters :clojure-lsp/unused-public-var :ignore-test-references?] false)
+          ignore-test-references? (get-in kondo-config
+                                          [:linters :clojure-lsp/unused-public-var :ignore-test-references?]
+                                          false)
+          test-locations-regex (into #{}
+                                     (map re-pattern
+                                          (settings/get project-db
+                                                        [:test-locations-regex]
+                                                        shared/test-locations-regex-default)))
+          dependents-without-tests (into {}
+                                         (remove (fn [[uri _]]
+                                                   (some #(re-find % uri) test-locations-regex))
+                                                 all-dependents))
           dependents (if ignore-test-references?
-                       (into {}
-                             (remove (fn [[uri _]] (string/ends-with? uri "_test.clj")) all-dependents))
+                       dependents-without-tests
                        all-dependents)
           var-usages (into #{}
                            (comp

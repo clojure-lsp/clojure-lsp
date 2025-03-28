@@ -1,5 +1,6 @@
 (ns clojure-lsp.handlers
   (:require
+   [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
@@ -23,6 +24,7 @@
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.stubs :as stubs]
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
+   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
@@ -30,7 +32,8 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.startup :as startup]
-   [clojure.core.async :as async]))
+   [clojure.core.async :as async]
+   [cheshire.core :as json]))
 
 (set! *warn-on-reflection* true)
 
@@ -93,8 +96,8 @@
                  :delay/end now}))))))))
 
 (defmacro logging-delayed-task [delay-data task-id & body]
-  (let [cancelled-msg (str task-id " cancelled - waited %s")
-        timed-out-msg (format "Timeout in %s waiting for changes to %%s" task-id)
+  (let [cancelled-msg (str ":internal/cancelled-request in " task-id " - waited %s")
+        timed-out-msg (format ":internal/timeout-request in %s waiting for changes to %%s" task-id)
         immediate-msg (str task-id " %s")
         waited-msg (str immediate-msg " - waited %s")
         msg-sym (gensym "log-message")]
@@ -165,7 +168,7 @@
    client-info
    work-done-token]
   (shared/logging-task
-    :initialize
+    :lsp/initialize
     (swap! db* assoc
            :project-analysis-type :project-and-full-dependencies
            :client-info client-info)
@@ -182,7 +185,7 @@
               internal-uris (dep-graph/internal-uris db)
               settings (settings/all db)]
           (when (settings/get db [:lint-project-files-after-startup?] true)
-            (f.diagnostic/publish-all-diagnostics! internal-uris components))
+            (f.diagnostic/publish-all-diagnostics! internal-uris false components))
           (async/thread
             (startup/publish-task-progress producer (:refresh-clojuredocs post-startup-tasks) work-done-token)
             (f.clojuredocs/refresh-cache! db*)
@@ -193,13 +196,34 @@
               (startup/publish-task-progress producer (:generate-stubs post-startup-tasks) work-done-token)
               (stubs/generate-and-analyze-stubs! settings db*))
             (startup/publish-task-progress producer (:done post-startup-tasks) work-done-token))
-          (logger/info startup/startup-logger-tag "Analyzing test paths for project root" project-root-uri)
+          (logger/info startup/logger-tag "Analyzing test paths for project root" project-root-uri)
           (producer/refresh-test-tree producer internal-uris)))
       (producer/show-message producer "No project-root-uri was specified, some features will be limited." :warning nil))))
 
+(defn initialized [{:keys [db*]} known-files-pattern]
+  (shared/logging-task
+    :lsp/initialized
+    (logger/info startup/logger-tag "Server info:" (json/generate-string
+                                                     {:client (-> @db* :client-info :name)
+                                                      :version (-> @db* :client-info :version)
+                                                      :username (System/getProperty "user.name")
+                                                      :server-version (shared/clojure-lsp-version)
+                                                      :clj-kondo-version (lsp.kondo/clj-kondo-version)
+                                                      :project (:project-root-uri @db*)}))
+    (when (-> @db* :client-capabilities :workspace :did-change-watched-files)
+      {:registrations [{:id "id"
+                        :method "workspace/didChangeWatchedFiles"
+                        :register-options {:watchers [{:glob-pattern known-files-pattern}]}}]})))
+
+(defn shutdown [{:keys [db*]}]
+  (shared/logging-task
+    :lsp/shutdown
+    (reset! db* db/initial-db)
+    nil))
+
 (defn did-open [{:keys [producer] :as components} {:keys [text-document]}]
   (shared/logging-task
-    :did-open
+    :lsp/did-open
     (let [uri (:uri text-document)
           text (:text text-document)]
       (f.file-management/did-open uri text components true)
@@ -208,7 +232,7 @@
 
 (defn did-save [components {:keys [text-document]}]
   (shared/logging-task
-    :did-save
+    :lsp/did-save
     (f.file-management/did-save (:uri text-document) components)))
 
 ;; TODO implement it, do we need to do anything?
@@ -221,7 +245,7 @@
 
 (defn did-close [components {:keys [text-document]}]
   (shared/logging-task
-    :did-close
+    :lsp/did-close
     (f.file-management/did-close (:uri text-document) components)))
 
 (defn did-change-watched-files [components {:keys [changes]}]
@@ -231,7 +255,7 @@
   (when-not (skip-feature-for-uri? :completion (:uri text-document) components)
     (letfn [(completion-fn []
               (shared/logging-results
-                (str :completion " %s - total items: %s")
+                (str :lsp/completion " %s - total items: %s")
                 count
                 (let [db @db*
                       [row col] (shared/position->row-col position)]
@@ -239,31 +263,31 @@
       (if (identical? :slow-but-accurate (get-in @db* [:settings :completion :analysis-type] :fast-but-stale))
         (process-after-changes
           components (:uri text-document)
-          :completion
+          :lsp/completion
           (completion-fn))
         (completion-fn)))))
 
 (defn completion-resolve-item [{:keys [db*]} item]
   (shared/logging-task
-    :resolve-completion-item
+    :lsp/completion-item-resolve
     (f.completion/resolve-item item db*)))
 
 (defn prepare-rename [{:keys [db*] :as components} {:keys [text-document position]}]
   (process-after-changes
     components (:uri text-document)
-    :prepare-rename
+    :lsp/prepare-rename
     (let [[row col] (shared/position->row-col position)]
       (f.rename/prepare-rename (:uri text-document) row col @db*))))
 
 (defn rename [{:keys [db*]} {:keys [text-document position new-name]}]
   (shared/logging-task
-    :rename
+    :lsp/rename
     (let [[row col] (shared/position->row-col position)]
       (f.rename/rename-from-position (:uri text-document) new-name row col @db*))))
 
 (defn definition [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
-    :definition
+    :lsp/definition
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (when-let [definition (q/find-definition-from-cursor db (:uri text-document) row col)]
@@ -271,7 +295,7 @@
 
 (defn declaration [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
-    :declaration
+    :lsp/declaration
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (when-let [declaration (q/find-declaration-from-cursor db (:uri text-document) row col)]
@@ -279,7 +303,7 @@
 
 (defn implementation [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
-    :implementation
+    :lsp/implementation
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (mapv #(element->location db producer %)
@@ -287,7 +311,7 @@
 
 (defn references [{:keys [db* producer]} {:keys [text-document position context]}]
   (shared/logging-task
-    :references
+    :lsp/references
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (mapv #(element->location db producer %1)
@@ -297,7 +321,7 @@
   (when-not (skip-feature-for-uri? :hover (:uri text-document) components)
     (process-after-changes
       components (:uri text-document)
-      :document-symbol
+      :lsp/document-symbol
       (let [db @db*]
         (f.document-symbol/document-symbols db (:uri text-document))))))
 
@@ -305,7 +329,7 @@
   (when-not (skip-feature-for-uri? :document-highlight (:uri text-document) components)
     (process-after-changes
       components (:uri text-document)
-      :document-highlight
+      :lsp/document-highlight
       (let [db @db*
             [row col] (shared/position->row-col position)
             uri (:uri text-document)
@@ -317,37 +341,37 @@
 
 (defn workspace-symbols [{:keys [db*]} {:keys [query]}]
   (shared/logging-task
-    :workspace-symbol
+    :lsp/workspace-symbol
     (f.workspace-symbols/workspace-symbols query @db*)))
 
 (defn server-info-log [components]
   (shared/logging-task
-    :server-info-log
+    :lsp/server-info-log
     (f.development-info/server-info-log components)))
 
 (defn server-info-raw [components]
   (shared/logging-task
-    :server-info-raw
+    :lsp/server-info-raw
     (f.development-info/server-info-raw components)))
 
 (defn cursor-info-log [components {:keys [text-document position]}]
   (shared/logging-task
-    :cursor-info-log
+    :lsp/cursor-info-log
     (f.development-info/cursor-info-log (:uri text-document) components (inc (:line position)) (inc (:character position)))))
 
 (defn cursor-info-raw [components {:keys [text-document position]}]
   (shared/logging-task
-    :cursor-info-raw
+    :lsp/cursor-info-raw
     (f.development-info/cursor-info-raw (:uri text-document) components (inc (:line position)) (inc (:character position)))))
 
 (defn clojuredocs-raw [{:keys [db*]} {:keys [sym-name sym-ns]}]
   (shared/logging-task
-    :clojuredocs-raw
+    :lsp/clojuredocs-raw
     (f.clojuredocs/find-docs-for sym-name sym-ns db*)))
 
 (defn execute-command [{:keys [producer] :as components} {:keys [command arguments]}]
   (shared/logging-task
-    :execute-command
+    :lsp/execute-command
     (when-let [{:keys [edit show-document-after-edit error] :as result} (f.command/call-command (keyword command) arguments components)]
       (if error
         result
@@ -364,27 +388,27 @@
 (defn hover [components {:keys [text-document position]}]
   (when-not (skip-feature-for-uri? :hover (:uri text-document) components)
     (shared/logging-task
-      :hover
+      :lsp/hover
       (let [[row col] (shared/position->row-col position)]
         (f.hover/hover (:uri text-document) row col components)))))
 
 (defn signature-help [components {:keys [text-document position _context]}]
   (shared/logging-task
-    :signature-help
+    :lsp/signature-help
     (let [[row col] (shared/position->row-col position)]
       (f.signature-help/signature-help (:uri text-document) row col components))))
 
 (defn formatting [components {:keys [text-document]}]
   (when-not (skip-feature-for-uri? :formatting (:uri text-document) components)
     (shared/logging-task
-      :formatting
+      :lsp/formatting
       (f.format/formatting (:uri text-document) components))))
 
 (defn range-formatting [{:keys [db*] :as components} {:keys [text-document range]}]
   (when-not (skip-feature-for-uri? :range-formatting (:uri text-document) components)
     (process-after-changes
       components (:uri text-document)
-      :range-formatting
+      :lsp/range-formatting
       (let [db @db*
             [row col] (shared/position->row-col (:start range))
             [end-row end-col] (shared/position->row-col (:end range))
@@ -396,7 +420,7 @@
 
 (defn dependency-contents [{:keys [db* producer]} {:keys [uri]}]
   (shared/logging-task
-    :dependency-contents
+    :lsp/dependency-contents
     (f.java-interop/read-content! uri @db* producer)))
 
 (defn code-actions
@@ -404,7 +428,7 @@
   (when-not (skip-feature-for-uri? :code-actions (:uri text-document) components)
     (process-after-changes
       components (:uri text-document)
-      :code-actions
+      :lsp/code-actions
       (let [db @db*
             diagnostics (-> context :diagnostics)
             [row col] (shared/position->row-col (:start range))
@@ -417,13 +441,13 @@
   (when-not (skip-feature-for-uri? :code-lens (:uri text-document) components)
     (process-after-changes
       components (:uri text-document)
-      :code-lens
+      :lsp/code-lens
       (f.code-lens/reference-code-lens (:uri text-document) @db*))))
 
 (defn code-lens-resolve
   [{:keys [db*]} {[uri row col] :data range :range}]
   (shared/logging-task
-    :resolve-code-lens
+    :lsp/code-lens-resolve
     (f.code-lens/resolve-code-lens uri row col range @db*)))
 
 (defn semantic-tokens-full
@@ -431,7 +455,7 @@
   (when-not (skip-feature-for-uri? :semantic-tokens-full (:uri text-document) components)
     (process-after-changes
       components (:uri text-document)
-      :semantic-tokens-full
+      :lsp/semantic-tokens-full
       (let [data (f.semantic-tokens/full-tokens (:uri text-document) @db*)]
         {:data data}))))
 
@@ -440,7 +464,7 @@
   (when-not (skip-feature-for-uri? :semantic-tokens-range (:uri text-document) components)
     (process-after-changes
       components (:uri text-document)
-      :semantic-tokens-range
+      :lsp/semantic-tokens-range
       (let [db @db*
             [row col] (shared/position->row-col start)
             [end-row end-col] (shared/position->row-col end)
@@ -454,21 +478,21 @@
 (defn prepare-call-hierarchy
   [{:keys [db*]} {:keys [text-document position]}]
   (shared/logging-task
-    :prepare-call-hierarchy
+    :lsp/call-hierarchy-prepare
     (let [[row col] (shared/position->row-col position)]
       (f.call-hierarchy/prepare (:uri text-document) row col @db*))))
 
 (defn call-hierarchy-incoming
   [components {{:keys [uri range]} :item}]
   (shared/logging-task
-    :call-hierarchy-incoming-calls
+    :lsp/call-hierarchy-incoming
     (let [[row col] (shared/position->row-col (:start range))]
       (f.call-hierarchy/incoming uri row col components))))
 
 (defn call-hierarchy-outgoing
   [components {{:keys [uri range]} :item}]
   (shared/logging-task
-    :call-hierarchy-outgoing-calls
+    :lsp/call-hierarchy-outgoing
     (let [[row col] (shared/position->row-col (:start range))]
       (f.call-hierarchy/outgoing uri row col components))))
 
@@ -476,7 +500,7 @@
   [{:keys [db*] :as components} {:keys [text-document position]}]
   (process-after-changes
     components (:uri text-document)
-    :linked-editing-range
+    :lsp/linked-editing-range
     (let [db @db*
           [row col] (shared/position->row-col position)]
       (f.linked-editing-range/ranges (:uri text-document) row col db))))
@@ -484,9 +508,9 @@
 (defn folding-range
   [{:keys [db*]} {:keys [text-document]}]
   (shared/logging-task
-      :folding-range
-      (let [db @db*]
-        (f.folding/folding-range (:uri text-document) db))))
+    :lsp/folding-range
+    (let [db @db*]
+      (f.folding/folding-range (:uri text-document) db))))
 
 (defn inlay-hint
   [{:keys [db*] :as components} {:keys [text-document]}]
@@ -494,27 +518,27 @@
     []
     (process-after-changes
       components (:uri text-document)
-      :inlay-hint
+      :lsp/inlay-hint
       (f.inlay-hint/inlay-hint (:uri text-document) @db*))))
 
 (defn will-rename-files [{:keys [db*] :as components} {:keys [files]}]
   (process-after-all-changes
     components (map :old-uri files)
-    :will-rename-files
+    :lsp/will-rename-files
     (f.file-management/will-rename-files files @db*)))
 
 (defn did-rename-files [components {:keys [files]}]
   (shared/logging-task
-    :did-rename-files
+    :lsp/did-rename-files
     (f.file-management/did-rename-files files components)))
 
 (defn did-change-configuration
   [{:keys [db*]} settings]
   (shared/logging-task
-    :did-change-configuration
+    :lsp/did-change-configuration
     (settings/set-all db* settings)))
 
 (defn project-tree-nodes [{:keys [db*]} current-node]
   (shared/logging-task
-    :project-tree-nodes
+    :lsp/project-tree-nodes
     (f.project-tree/nodes @db* current-node)))

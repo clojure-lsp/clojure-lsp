@@ -13,6 +13,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def ^:private stub-logger-tag "[stub]")
+
 (defn ^:private stubs-output-dir [settings]
   (or (-> settings :stubs :generation :output-dir)
       ".lsp/.cache/stubs"))
@@ -31,9 +33,9 @@
                              "java")
             output-dir ^File (io/file (stubs-output-dir settings))]
         (delete-directory-recursive output-dir)
-        (logger/info (str  "Generating stubs for analysis for namespaces " namespaces " on " (str output-dir)))
-        (shared/logging-time
-          "Stub generation process took %s."
+        (logger/info stub-logger-tag (str "Generating stubs for analysis for namespaces " namespaces " on " output-dir))
+        (shared/logging-task
+          :stub/generate
           (stub/generate! {:output-dir output-dir
                            :namespaces namespaces
                            :classpath classpath
@@ -48,8 +50,8 @@
   [dirs db*]
   (let [normalization-config {:external? true
                               :filter-analysis #(dissoc % :namespace-usages)}
-        result (shared/logging-time
-                 "Stubs analyzed, took %s."
+        result (shared/logging-task
+                 :stub/analyze
                  (lsp.kondo/run-kondo-on-paths! dirs db* normalization-config nil))]
     (swap! db* lsp.kondo/db-with-results result)
     (db/read-and-update-cache!
@@ -70,7 +72,7 @@
           (analyze-stubs! (concat [(stubs-output-dir settings)]
                                   extra-dirs)
                           db*)
-          (logger/error (str "Stub generation failed." message))))
+          (logger/error stub-logger-tag (str "Generation failed." message))))
       (when (seq extra-dirs)
         (analyze-stubs! extra-dirs db*)))))
 

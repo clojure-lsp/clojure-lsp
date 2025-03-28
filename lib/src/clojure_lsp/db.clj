@@ -60,30 +60,30 @@
 
 (defn ^:private upsert-cache! [cache cache-file]
   (try
-    (shared/logging-time
-      "Manual GC before upsert db took %s"
+    (shared/logging-task
+      :db/manual-gc-before-update-db
       ;; Reduce a little bit Out of memory exceptions when writing the cache for huge caches.
       (System/gc))
-    (shared/logging-time
-      (str db-logger-tag " Upserting transit analysis to " cache-file " cache took %s")
+    (shared/logging-task
+      :db/upsert-cache
       (io/make-parents cache-file)
       ;; https://github.com/cognitect/transit-clj/issues/43
       (with-open [os ^OutputStream (no-flush-output-stream (io/output-stream cache-file))]
         (let [writer (transit/writer os :json)]
           (transit/write writer cache))))
     (catch Throwable e
-      (logger/error db-logger-tag "Could not upsert db cache" e))))
+      (logger/error db-logger-tag (str "Could not upsert db cache to " cache-file) e))))
 
 (defn ^:private read-cache [cache-file]
   (try
-    (shared/logging-time
-      (str db-logger-tag " Reading transit analysis cache from " cache-file " db took %s")
+    (shared/logging-task
+      :db/read-cache
       (if (shared/file-exists? cache-file)
         (let [cache (with-open [is (io/input-stream cache-file)]
                       (transit/read (transit/reader is :json)))]
           (when (= version (:version cache))
             cache))
-        (logger/error db-logger-tag "No cache DB file found")))
+        (logger/error db-logger-tag (str "No cache DB file found for " cache-file))))
     (catch Throwable e
       (logger/error db-logger-tag "Could not load global cache from DB" e))))
 

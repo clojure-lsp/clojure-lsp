@@ -462,8 +462,10 @@
                               [(:uri text-document) edits])
                             changes))}))
 
-(defn clojure-lsp-version []
+(defn ^:private clojure-lsp-version* []
   (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
+
+(def clojure-lsp-version (memoize clojure-lsp-version*))
 
 (defn format-time-delta-ms [start-time end-time]
   (format "%.0fms" (float (/ (- end-time start-time) 1000000))))

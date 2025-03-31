@@ -71,16 +71,25 @@
        ~spec
        ~value)))
 
+(defn ^:private enhance-timbre-log-data [log-id db* data]
+  (-> data
+      (assoc :hostname_ "")
+      (assoc-in [:context :log-id] log-id)
+      (assoc-in [:context :hostname] (timbre/get-hostname))
+      (assoc-in [:context :client-name] (-> @db* :client-info :name))
+      (assoc-in [:context :client-version] (-> @db* :client-info :version))
+      (assoc-in [:context :server-version] (shared/clojure-lsp-version))
+      (assoc-in [:context :os-name] (System/getProperty "os.name"))
+      (assoc-in [:context :os-version] (System/getProperty "os.version"))
+      (assoc-in [:context :os-arch] (System/getProperty "os.arch"))
+      (assoc-in [:context :project-root-uri] (:project-root-uri @db*))))
+
 (defrecord TimbreLogger [db*]
   logger/ILogger
   (setup [this]
     (let [log-id (str (random-uuid))
           log-path (str (java.io.File/createTempFile "clojure-lsp." ".out"))]
-      (timbre/merge-config! {:middleware [(fn [data] (-> data
-                                                         (assoc :hostname_ "")
-                                                         (assoc-in [:context :log-id] log-id)
-                                                         (assoc-in [:context :hostname] (timbre/get-hostname))
-                                                         (assoc-in [:context :project-root-uri] (:project-root-uri @db*))))]
+      (timbre/merge-config! {:middleware [(partial enhance-timbre-log-data log-id db*)]
                              :appenders {:println {:enabled? false}
                                          :spit (timbre/spit-appender {:fname log-path})}})
       (timbre/handle-uncaught-jvm-exceptions!)

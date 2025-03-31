@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Improve timbre context log.
+
 ## 2025.03.27-20.21.36
 
 - General

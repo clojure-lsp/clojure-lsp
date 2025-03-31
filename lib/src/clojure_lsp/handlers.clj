@@ -1,5 +1,6 @@
 (ns clojure-lsp.handlers
   (:require
+   [cheshire.core :as json]
    [clojure-lsp.db :as db]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.call-hierarchy :as f.call-hierarchy]
@@ -31,8 +32,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.startup :as startup]
-   [clojure.core.async :as async]
-   [cheshire.core :as json]))
+   [clojure.core.async :as async]))
 
 (set! *warn-on-reflection* true)
 

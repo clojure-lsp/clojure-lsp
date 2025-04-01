@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- General
+  - Fix `unused-public-var` false positives when `:ignore-test-references? true`.
 - Editor
   - Improve timbre context log.
 

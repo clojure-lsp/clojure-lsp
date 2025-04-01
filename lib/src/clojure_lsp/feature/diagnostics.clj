@@ -252,14 +252,21 @@
                            (some #{alias} (get inconsistencies to))))]
           (namespace-alias->finding namespace-alias inconsistencies kondo-config))))))
 
+(defn ^:private usages
+  [var-definitions nses-and-dependents]
+  (let [var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
+        usages (into #{}
+                     (comp
+                       (q/xf-all-var-usages-to-namespaces var-nses)
+                       (map q/var-usage-signature))
+                     nses-and-dependents)
+        var-used? (fn [var-def]
+                    (some usages (q/var-definition-signatures var-def)))]
+    (remove var-used? var-definitions)))
+
 (defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
   (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/unused-public-var :level))
-    (let [exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
-          var-definitions (->> (q/find-all-var-definitions narrowed-db)
-                               (remove exclude-def?))
-          var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
-          all-dependents (q/nses-and-dependents-analysis project-db var-nses)
-          ignore-test-references? (get-in kondo-config
+    (let [ignore-test-references? (get-in kondo-config
                                           [:linters :clojure-lsp/unused-public-var :ignore-test-references?]
                                           false)
           test-locations-regex (into #{}
@@ -267,20 +274,25 @@
                                           (settings/get project-db
                                                         [:test-locations-regex]
                                                         shared/test-locations-regex-default)))
-          dependents-without-tests (into {}
-                                         (remove (fn [[uri _]]
-                                                   (some #(re-find % uri) test-locations-regex))
-                                                 all-dependents))
-          dependents (if ignore-test-references?
-                       dependents-without-tests
-                       all-dependents)
-          var-usages (into #{}
-                           (comp
-                             (q/xf-all-var-usages-to-namespaces var-nses)
-                             (map q/var-usage-signature))
-                           dependents)
-          var-used? (fn [var-def]
-                      (some var-usages (q/var-definition-signatures var-def)))
+          exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
+          var-definitions (->> (q/find-all-var-definitions narrowed-db)
+                               (remove exclude-def?))
+          test-uri? (fn [{uri :uri}] (some #(re-find % uri) test-locations-regex))
+          var-definitions-src (remove test-uri? var-definitions)
+          var-definitions-test (filter test-uri? var-definitions)
+          var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
+          nses-and-dependents (q/nses-and-dependents-analysis project-db var-nses)
+          nses-and-dependents-src (into {}
+                                        (remove (fn [[uri _]]
+                                                  (some #(re-find % uri) test-locations-regex))
+                                                nses-and-dependents))
+          unused-vars (if ignore-test-references?
+                        (concat (usages var-definitions-src
+                                        nses-and-dependents-src)
+                                (usages var-definitions-test
+                                        nses-and-dependents))
+                        (usages var-definitions
+                                nses-and-dependents))
           kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
                               (remove exclude-def?))
           kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords
@@ -292,7 +304,7 @@
                       #{})
           kw-used? (fn [kw-def]
                      (contains? kw-usages (q/kw-signature kw-def)))]
-      (->> (concat (remove var-used? var-definitions)
+      (->> (concat unused-vars
                    (remove kw-used? kw-definitions))
            (map (fn [unused-var]
                   (unused-public-var->finding unused-var kondo-config)))))))

@@ -157,7 +157,7 @@
         clj-kondo-folder (io/file project-root-filename ".clj-kondo")]
     (when-not (shared/file-exists? clj-kondo-folder)
       (logger/info logger-tag (format "Folder %s not found, creating for necessary clj-kondo analysis..."
-                                              (.getCanonicalPath clj-kondo-folder)))
+                                      (.getCanonicalPath clj-kondo-folder)))
       (create-kondo-folder! clj-kondo-folder)
       (when (db/db-exists? db)
         (logger/info logger-tag "Removing outdated cached lsp db...")

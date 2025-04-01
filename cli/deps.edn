@@ -6,7 +6,7 @@
         io.opentelemetry/opentelemetry-sdk-extension-autoconfigure {:mvn/version "1.47.0"}
         io.opentelemetry/opentelemetry-exporter-otlp {:mvn/version "1.47.0"}
         clojure-lsp/lib {:local/root "../lib"}
-        funcool/promesa {:mvn/version "10.0.594"}}
+        funcool/promesa {:mvn/version "11.0.678"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}}

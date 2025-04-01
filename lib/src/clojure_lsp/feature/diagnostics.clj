@@ -252,7 +252,9 @@
                            (some #{alias} (get inconsistencies to))))]
           (namespace-alias->finding namespace-alias inconsistencies kondo-config))))))
 
-(defn ^:private usages
+(defn ^:private orphans
+  "Given a vector of var-definitions and a map of nses and their dependents,
+   returns the var-definitions that are not used in any of the dependents."
   [var-definitions nses-and-dependents]
   (let [var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
         usages (into #{}
@@ -287,12 +289,12 @@
                                                   (some #(re-find % uri) test-locations-regex))
                                                 nses-and-dependents))
           unused-vars (if ignore-test-references?
-                        (concat (usages var-definitions-src
-                                        nses-and-dependents-src)
-                                (usages var-definitions-test
-                                        nses-and-dependents))
-                        (usages var-definitions
-                                nses-and-dependents))
+                        (concat (orphans var-definitions-src
+                                         nses-and-dependents-src)
+                                (orphans var-definitions-test
+                                         nses-and-dependents))
+                        (orphans var-definitions
+                                 nses-and-dependents))
           kw-definitions (->> (q/find-all-keyword-definitions narrowed-db)
                               (remove exclude-def?))
           kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords

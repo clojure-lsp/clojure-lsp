@@ -281,6 +281,9 @@
        :file-analyzed-fn file-analyzed-fn}
       (with-additional-config settings)))
 
+(def ^:private exclude-var-usage-args-ns
+  '#{clojure.core cljs.core clojure.string})
+
 (defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
   (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))
         settings (settings/all db)]
@@ -288,6 +291,7 @@
         (assoc :custom-lint-fn custom-lint-fn)
         (assoc-in [:config :analysis] {:arglists full-analysis?
                                        :locals full-analysis?
+                                       :var-usages-args {:exclude-when-definition-ns exclude-var-usage-args-ns}
                                        :keywords (and full-analysis? (get-in settings [:analysis :keywords] true))
                                        :protocol-impls full-analysis?
                                        :java-class-definitions (and full-analysis? (get-in settings [:analysis :java :class-definitions] true))
@@ -345,6 +349,7 @@
          :config {:output {:canonical-paths true}
                   :analysis {:arglists true
                              :locals true
+                             :var-usages-args {:exclude-when-definition-ns exclude-var-usage-args-ns}
                              :keywords (get-in settings [:analysis :keywords] true)
                              :protocol-impls true
                              :java-class-definitions (get-in settings [:analysis :java :class-definitions] true)

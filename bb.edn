@@ -4,7 +4,7 @@
                                       :git/sha "4a9a74f0e50e897c45df8cc70684360eb30fce80"}
 
         medley/medley {:mvn/version "1.4.0"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.11.0"
+        com.github.clojure-lsp/lsp4clj {:mvn/version "1.12.0"
                                         #_#_:local/root "../../lsp4clj"}
         org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
                                  :git/sha "b6eb0f2208ab036c0a5d0e7235cb0b09d2feabb7"}}

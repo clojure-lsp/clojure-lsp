@@ -4,6 +4,7 @@
 
 - General
   - Fix `unused-public-var` false positives when `:ignore-test-references? true`.
+  - Bump clj-kondo to `2025.04.07`.
 - Editor
   - Improve timbre context log.
 

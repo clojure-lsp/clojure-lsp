@@ -47,10 +47,10 @@
                 ["fn-defn-varargs"                           :function]
                 ["fn-defmacro"                               :function]
                 ["interface-defmulti"                        :interface]
-                ["InterfaceDefprotocol"                      :interface]
                 ["fn-defprotocol"                            :function]
-                ["InterfaceDefinterface"                     :interface]
+                ["InterfaceDefprotocol"                      :interface]
                 ["fn-definterface"                           :function]
+                ["InterfaceDefinterface"                     :interface]
                 ;; TODO: should defmethods be sorted by line number?
                 ["interface-defmulti :fn-defmethod"          :function]
                 ;; b.clj

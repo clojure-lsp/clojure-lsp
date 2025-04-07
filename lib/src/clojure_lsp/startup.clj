@@ -3,6 +3,7 @@
    [clojure-lsp.classpath :as classpath]
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.config :as config]
+   [clojure-lsp.custom-linters :as lsp.custom-linters]
    [clojure-lsp.db :as db]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
@@ -80,7 +81,8 @@
     (swap! db* (fn [state-db]
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
-                     (lsp.depend/db-with-results depend-result))))))
+                     (lsp.depend/db-with-results depend-result)
+                     (lsp.custom-linters/db-with-results #(lsp.custom-linters/analyze-paths! paths %)))))))
 
 (defn ^:private analyze-source-paths-namespaces-only! [paths db* _file-analyzed-fn]
   (let [db @db*

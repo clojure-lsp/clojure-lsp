@@ -26,7 +26,8 @@
  :aliases {:test {:extra-deps {clojure-lsp/common-test {:local/root "../common-test"}
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}
                                com.taoensso/timbre {:mvn/version "6.7.0-alpha1"}
-                               org.clojure/test.check {:mvn/version "1.1.1"}}
+                               org.clojure/test.check {:mvn/version "1.1.1"}
+                               nubank/matcher-combinators {:mvn/version "3.9.1"}}
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}

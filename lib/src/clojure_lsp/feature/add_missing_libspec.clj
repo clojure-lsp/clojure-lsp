@@ -576,6 +576,12 @@
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
                                   (find-alias-ns-pairs db uri))
+          uri-nses (-> db
+                       :analysis
+                       (get uri)
+                       :namespace-definitions
+                       (->> (map :name))
+                       set)
           suggestions (if (namespace cursor-sym)
                         namespace-suggestions
                         (concat
@@ -584,6 +590,7 @@
                             [{:ns (name common-refer)
                               :refer cursor-name-str}]
                             (->> (q/find-all-var-definitions db)
+                                 (remove #(uri-nses (:ns %)))
                                  (filter #(= cursor-name-str (str (:name %))))
                                  (map (fn [element]
                                         {:ns (str (:ns element))

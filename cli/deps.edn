@@ -1,7 +1,7 @@
 {:deps {org.clojure/tools.cli {:mvn/version "1.1.230"}
         borkdude/dynaload {:mvn/version "0.3.5"}
         nrepl/bencode {:mvn/version "1.2.0"}
-        com.taoensso/timbre {:mvn/version "6.7.0-alpha1"}
+        com.taoensso/timbre {:mvn/version "6.7.0"}
         com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.7"}
         io.opentelemetry/opentelemetry-sdk-extension-autoconfigure {:mvn/version "1.47.0"}
         io.opentelemetry/opentelemetry-exporter-otlp {:mvn/version "1.47.0"}

@@ -5,7 +5,8 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.core.async :as async]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is testing]]
+   [matcher-combinators.test :refer [match?]]))
 
 (def findings (atom []))
 
@@ -121,7 +122,7 @@
                 {:clojure-lsp/unused-public-var
                  {:level :info
                   :ignore-test-references? false}}}})
-    (h/assert-submaps [] @findings))
+    (is (match? [] @findings)))
   (testing "Given a public var foo/bar in a src namespace
             And being referenced in a test namespace foo-test
             When linter level is :info
@@ -137,17 +138,20 @@
                 {:clojure-lsp/unused-public-var
                  {:level :info
                   :ignore-test-references? true}}}})
-    (h/assert-submaps
-      [{:end-row 1
-        :type :clojure-lsp/unused-public-var
-        :level :info
-        :filename "/project/src/foo.clj"
-        :col 16
-        :uri "file:///project/src/foo.clj"
-        :end-col 19
-        :message "Unused public var 'foo/bar'"
-        :row 1}]
-      @findings)))
+    (is (match? [{:end-row 1
+                  :type :clojure-lsp/unused-public-var
+                  :level :info
+                  :filename (if h/windows?
+                              "C:\\project\\src\\foo.clj"
+                              "/project/src/foo.clj")
+                  :col 16
+                  :uri (if h/windows?
+                         "file:///C:/project/src/foo.clj"
+                         "file:///project/src/foo.clj")
+                  :end-col 19
+                  :message "Unused public var 'foo/bar'"
+                  :row 1}]
+                @findings))))
 
 (deftest unused-public-var-declared-inside-test-namespace
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
@@ -167,17 +171,20 @@
                 {:clojure-lsp/unused-public-var
                  {:level :info
                   :ignore-test-references? false}}}})
-    (h/assert-submaps
-      [{:end-row 1
-        :type :clojure-lsp/unused-public-var
-        :level :info
-        :filename "/project/test/foo_test.clj"
-        :col 21
-        :uri "file:///project/test/foo_test.clj"
-        :end-col 27
-        :message "Unused public var 'foo-test/helper'"
-        :row 1}]
-      @findings))
+    (is (match? [{:end-row 1
+                  :type :clojure-lsp/unused-public-var
+                  :level :info
+                  :filename (if h/windows?
+                              "C:\\project\\test\\foo_test.clj"
+                              "/project/test/foo_test.clj")
+                  :col 21
+                  :uri (if h/windows?
+                         "file:///C:/project/test/foo_test.clj"
+                         "file:///project/test/foo_test.clj")
+                  :end-col 27
+                  :message "Unused public var 'foo-test/helper'"
+                  :row 1}]
+                @findings)))
   (testing "Given a public var foo-test/helper in a test namespace
             When linter level is :info
             And the :ignore-test-references? flag is on
@@ -190,17 +197,20 @@
        :config {:linters {:clojure-lsp/unused-public-var
                           {:level :info
                            :ignore-test-references? true}}}})
-    (h/assert-submaps
-      [{:end-row 1
-        :type :clojure-lsp/unused-public-var
-        :level :info
-        :filename "/project/test/foo_test.clj"
-        :col 21
-        :uri "file:///project/test/foo_test.clj"
-        :end-col 27
-        :message "Unused public var 'foo-test/helper'"
-        :row 1}]
-      @findings))
+    (is (match? [{:end-row 1
+                  :type :clojure-lsp/unused-public-var
+                  :level :info
+                  :filename (if h/windows?
+                              "C:\\project\\test\\foo_test.clj"
+                              "/project/test/foo_test.clj")
+                  :col 21
+                  :uri (if h/windows?
+                         "file:///C:/project/test/foo_test.clj"
+                         "file:///project/test/foo_test.clj")
+                  :end-col 27
+                  :message "Unused public var 'foo-test/helper'"
+                  :row 1}]
+                @findings)))
   (testing "Given a public var bar-test/baz in a test namespace
             When linter level is :info
             And the :ignore-test-references? flag is on
@@ -215,7 +225,7 @@
        :config {:linters {:clojure-lsp/unused-public-var
                           {:level :info
                            :ignore-test-references? true}}}})
-    (h/assert-submaps [] @findings)))
+    (is (match? [] @findings))))
 
 (deftest lint-project-public-vars
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")

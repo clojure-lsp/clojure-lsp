@@ -35,6 +35,33 @@
                                  {:workspace {:workspace-edit true}}
                                  (h/db))))))
 
+;; {:title "Add require '[baz :refer [func-1]]'",
+;;  :kind :quick-fix,
+;;  :is-preferred true,
+;;  :command
+;;  {:title "Add require suggestion",
+;;   :command "add-require-suggestion",
+;;   :arguments ["file:///a.clj" 2 3 "baz" nil "func-1" nil]}}
+
+(deftest avoid-self-refer-suggestion
+  (h/load-code-and-locs (h/code "(ns baz)"
+                                "(defn func-2 []"
+                                "  (func-1))"
+                                "(defn func-1 [] ())"))
+  (testing "Given a unresolved-var because the function is declared after its use
+            When I ask for code actions
+            Then I don't get an 'Add require' suggestion"
+    (is (not-any? #(= (:title %) "Add require '[baz :refer [func-1]]'")
+                  (f.code-actions/all (zloc-of h/default-uri)
+                                      h/default-uri
+                                      3
+                                      4
+                                      [{:code "unresolved-symbol"
+                                        :message "Unresolved symbol: func-1"
+                                        :range {:start {:line 2 :character 3}}}]
+                                      {}
+                                      (h/db))))))
+
 (deftest add-alias-suggestion-code-actions
   (h/load-code-and-locs "(ns clojure.set)" (h/file-uri "file:///clojure.core.clj"))
   (h/load-code-and-locs "(ns medley.core)" (h/file-uri "file:///medley.core.clj"))

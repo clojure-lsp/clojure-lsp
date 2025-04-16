@@ -7,6 +7,7 @@
   - Bump clj-kondo to `2025.04.07`.
 - Editor
   - Improve timbre context log.
+  - Fix suggestion for add require code action. #2017
 
 ## 2025.03.27-20.21.36
 

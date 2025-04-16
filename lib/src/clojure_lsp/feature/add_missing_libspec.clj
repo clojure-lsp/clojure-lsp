@@ -576,6 +576,9 @@
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
                                   (find-alias-ns-pairs db uri))
+          uri-nses (->> (get-in db [:analysis uri :namespace-definitions])
+                        (map :name)
+                        set)
           suggestions (if (namespace cursor-sym)
                         namespace-suggestions
                         (concat
@@ -583,11 +586,14 @@
                           (if-let [common-refer (get common-sym/common-refers->info (symbol cursor-name-str))]
                             [{:ns (name common-refer)
                               :refer cursor-name-str}]
-                            (->> (q/find-all-var-definitions db)
-                                 (filter #(= cursor-name-str (str (:name %))))
-                                 (map (fn [element]
-                                        {:ns (str (:ns element))
-                                         :refer cursor-name-str}))))))]
+                            (into []
+                                  (comp
+                                    (remove #(uri-nses (:ns %)))
+                                    (filter #(= cursor-name-str (str (:name %))))
+                                    (map (fn [element]
+                                           {:ns (str (:ns element))
+                                            :refer cursor-name-str})))
+                                  (q/find-all-var-definitions db)))))]
       suggestions)))
 
 (defn ^:private find-forms [zloc p?]

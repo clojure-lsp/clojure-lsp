@@ -141,13 +141,9 @@
     (is (match? [{:end-row 1
                   :type :clojure-lsp/unused-public-var
                   :level :info
-                  :filename (if h/windows?
-                              "C:\\project\\src\\foo.clj"
-                              "/project/src/foo.clj")
+                  :filename (h/file-path "/project/src/foo.clj")
                   :col 16
-                  :uri (if h/windows?
-                         "file:///C:/project/src/foo.clj"
-                         "file:///project/src/foo.clj")
+                  :uri (h/file-uri "file:///project/src/foo.clj")
                   :end-col 19
                   :message "Unused public var 'foo/bar'"
                   :row 1}]
@@ -174,13 +170,9 @@
     (is (match? [{:end-row 1
                   :type :clojure-lsp/unused-public-var
                   :level :info
-                  :filename (if h/windows?
-                              "C:\\project\\test\\foo_test.clj"
-                              "/project/test/foo_test.clj")
+                  :filename (h/file-path "/project/test/foo_test.clj")
                   :col 21
-                  :uri (if h/windows?
-                         "file:///C:/project/test/foo_test.clj"
-                         "file:///project/test/foo_test.clj")
+                  :uri (h/file-uri "file:///project/test/foo_test.clj")
                   :end-col 27
                   :message "Unused public var 'foo-test/helper'"
                   :row 1}]
@@ -200,13 +192,9 @@
     (is (match? [{:end-row 1
                   :type :clojure-lsp/unused-public-var
                   :level :info
-                  :filename (if h/windows?
-                              "C:\\project\\test\\foo_test.clj"
-                              "/project/test/foo_test.clj")
+                  :filename (h/file-path "/project/test/foo_test.clj")
                   :col 21
-                  :uri (if h/windows?
-                         "file:///C:/project/test/foo_test.clj"
-                         "file:///project/test/foo_test.clj")
+                  :uri (h/file-uri "file:///project/test/foo_test.clj")
                   :end-col 27
                   :message "Unused public var 'foo-test/helper'"
                   :row 1}]

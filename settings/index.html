@@ -1370,12 +1370,12 @@
 </tr>
 <tr>
 <td><code>:source-paths-ignore-regex</code></td>
-<td>list of regex to filter source-paths. By default, source-paths are retrieved from classpath, and usually the classpath contains folders that are not directly project code or it's auto-generated like cljs <code>resources</code> or <code>target</code> folders but it's inside your project. Replace old <code>:ignore-classpath-directories</code> setting.</td>
+<td>list of regex to filter source-paths. By default, source-paths are retrieved from classpath , and usually the classpath contains folders that are not directly project code or it's auto-generated like cljs <code>resources</code> or <code>target</code> folders but it's inside your project. Replace old <code>:ignore-classpath-directories</code> setting. This operates on relative paths.</td>
 <td><code>["target.*"]</code></td>
 </tr>
 <tr>
 <td><code>:paths-ignore-regex</code></td>
-<td>list of regex to filter paths to be analyzed. Useful for excluding huge files or folders that may affect final analysis size and performance, like huge edn files.</td>
+<td>list of regex to filter paths to be analyzed. Useful for excluding huge files or folders that may affect final analysis size and performance, like huge edn files. These are absolute paths, so make sure that regex pattern matches fully expanded path.</td>
 <td><code>[]</code></td>
 </tr>
 <tr>
@@ -1751,7 +1751,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 7, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 16, 2025</span>
     
   </small>
 </div>

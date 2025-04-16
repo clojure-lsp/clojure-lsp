@@ -460,11 +460,6 @@
       "hash": "sha256-lR2zV/nEmlyId8CJYMSoroa9jJqohwYmZL0E96/+6pU="
     },
     {
-      "mvn-path": "com/fasterxml/jackson/core/jackson-core/2.6.6/jackson-core-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-FBG05nI1xvoyhdFIbk8zj/wRqPksm1CBOOwimQCnbBs="
-    },
-    {
       "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.12.4/jackson-databind-2.12.4.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-6Zp7S4kHS8aJqrzZ6x8sExi2jMXDSXna8+NO3FWMegE="
@@ -473,11 +468,6 @@
       "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.12.4/jackson-databind-2.12.4.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-mUN+jfYJpvJRoMHUrAYQO2qklT6MLJyG90TNcQXIJGg="
-    },
-    {
-      "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.6.6/jackson-databind-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-JVEXkl7QzmBeKiLGeSuW8IBjxoplCC3Hurkrp/C9ags="
     },
     {
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.10.2/jackson-dataformat-cbor-2.10.2.jar",
@@ -518,11 +508,6 @@
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.17.0/jackson-dataformat-cbor-2.17.0.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-Niz1VWDxh5GL5n6L0ej33T5VKZU/uPKNv1x/m8MInQE="
-    },
-    {
-      "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.6.6/jackson-dataformat-cbor-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-HSZtuGTqrQ99EbEsQA14+a2pyxSvVc54/3zc2pgVt78="
     },
     {
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-smile/2.10.2/jackson-dataformat-smile-2.10.2.jar",
@@ -1568,6 +1553,16 @@
       "mvn-path": "nrepl/bencode/1.2.0/bencode-1.2.0.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-NBSNvm3GwieCW7VGk5cVlIkpMemClxivFUhxhiGf+iE="
+    },
+    {
+      "mvn-path": "nubank/matcher-combinators/3.9.1/matcher-combinators-3.9.1.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-zyQ6dVoti+/H+F7892s9Q90m1mgM66OhrZ0gXSF+TOY="
+    },
+    {
+      "mvn-path": "nubank/matcher-combinators/3.9.1/matcher-combinators-3.9.1.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-fPDTsH3ROOuVoYUeXlx5NHW6fRDxr0HNCicxWwSRvuc="
     },
     {
       "mvn-path": "org/apache/activemq/artemis-commons/1.4.0/artemis-commons-1.4.0.jar",
@@ -2628,6 +2623,16 @@
       "mvn-path": "org/clojure/java.classpath/1.1.0/java.classpath-1.1.0.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-Nwuh0X+VbHy+/R8X5bQKl4InY+qqpWMvSaQ0nxMTdo4="
+    },
+    {
+      "mvn-path": "org/clojure/math.combinatorics/0.2.0/math.combinatorics-0.2.0.jar",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-sIzH3pFeSK/V2mGUuYgXxHqlCvZ3RyHMv7lKn0vWbWM="
+    },
+    {
+      "mvn-path": "org/clojure/math.combinatorics/0.2.0/math.combinatorics-0.2.0.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-9jURjWWI35hOA+nLRKjWuuL9x7nGrnub7QAqkoOex+U="
     },
     {
       "mvn-path": "org/clojure/pom.contrib/0.0.26/pom.contrib-0.0.26.pom",

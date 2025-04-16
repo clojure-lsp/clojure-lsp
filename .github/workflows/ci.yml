@@ -24,7 +24,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         jdk: [11, 15, 17, 19]
         include:
           - os: windows-latest
@@ -81,7 +81,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         jdk: [11, 15, 17]
         include:
           - os: windows-latest
@@ -117,7 +117,7 @@ jobs:
         run: bb pod-test
 
   graalvm-build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
     steps:
@@ -156,7 +156,7 @@ jobs:
 
   graalvm-integration-test:
     needs: graalvm-build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
     steps:

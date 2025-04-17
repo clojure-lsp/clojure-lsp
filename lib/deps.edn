@@ -2,7 +2,7 @@
         rewrite-clj/rewrite-clj {:git/url "https://github.com/clj-commons/rewrite-clj"
                                  :git/sha "0bb572a03c0025c01f9c36bfca2815254683fbde"}
         borkdude/rewrite-edn {:mvn/version "0.4.9" :exclusions [rewrite-clj/rewrite-clj]}
-        org.clojure/core.async {:mvn/version "1.6.681"}
+        org.clojure/core.async {:mvn/version "1.8.741"}
         dev.weavejester/cljfmt {:mvn/version "0.13.0"
                                 :exclusions [rewrite-clj/rewrite-clj
                                              com.googlecode.java-diff-utils/diffutils]}

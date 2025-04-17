@@ -16,6 +16,7 @@
    [clojure-lsp.feature.folding :as f.folding]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.feature.inlay-hint :as f.inlay-hint]
    [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.feature.project-tree :as f.project-tree]
@@ -510,6 +511,15 @@
     :lsp/folding-range
     (let [db @db*]
       (f.folding/folding-range (:uri text-document) db))))
+
+(defn inlay-hint
+  [{:keys [db*] :as components} {:keys [text-document]}]
+  (if (skip-feature-for-uri? :inlay-hint (:uri text-document) components)
+    []
+    (process-after-changes
+      components (:uri text-document)
+      :lsp/inlay-hint
+      (f.inlay-hint/inlay-hint (:uri text-document) @db*))))
 
 (defn will-rename-files [{:keys [db*] :as components} {:keys [files]}]
   (process-after-all-changes

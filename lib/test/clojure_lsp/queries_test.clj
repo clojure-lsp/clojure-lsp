@@ -732,7 +732,18 @@
           db (h/db)]
       (h/assert-submap
         {:name 'bar :uri (h/file-uri "file:///a.clj") :defined-by 'clojure.core/declare :row decl-r}
-        (q/find-definition-from-cursor db (h/file-uri "file:///a.clj") usage-r usage-c)))))
+        (q/find-definition-from-cursor db (h/file-uri "file:///a.clj") usage-r usage-c))))
+  (testing "navigating from declare to definition"
+    (let [positions (h/load-code-and-locs
+                      (h/code "(ns foo)"
+                              "(declare |bar)"
+                              "(defn something [] (bar))"
+                              "(defn |bar [] 1)") (h/file-uri "file:///a.clj"))
+          [decl-r decl-c] (first positions)
+          definition (q/find-definition-from-cursor (h/db) (h/file-uri "file:///a.clj") decl-r decl-c)]
+      (h/assert-submap
+        {:name 'bar :uri (h/file-uri "file:///a.clj") :defined-by 'clojure.core/defn}
+        definition))))
 
 (deftest find-definition-from-namespace-alias
   (h/load-code-and-locs (h/code "(ns foo.bar) (def a 1)") (h/file-uri "file:///a.clj"))

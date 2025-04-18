@@ -8,6 +8,7 @@
 - Editor
   - Improve timbre context log.
   - Fix suggestion for add require code action. #2017
+  - Improve find definition so it works on `declare` forms too. #1986
 
 ## 2025.03.27-20.21.36
 

@@ -320,13 +320,12 @@
 
 (defmethod find-definition :var-definitions
   [db {:keys [imported-ns defined-by name ns] :as var-definition}]
-  (let [xf-declared-definition (comp xf-analysis->var-definitions
-                                     (xf-same-fqn ns name)
-                                     (filter #(not= 'clojure.core/declare (:defined-by %)))
-                                     (xf-same-lang var-definition))
-        actual-definition (find-last-order-by-project-analysis
-                            xf-declared-definition
-                            (db-with-ns-analysis db ns))]
+  (let [actual-definition (delay (find-last-order-by-project-analysis
+                                   (comp xf-analysis->var-definitions
+                                         (xf-same-fqn ns name)
+                                         (filter #(not= 'clojure.core/declare (:defined-by %)))
+                                         (xf-same-lang var-definition))
+                                   (db-with-ns-analysis db ns)))]
     (cond
       ;; Handle potemkin/import-vars
       (some #(safe-equal? 'potemkin/import-vars %) (defined-bys var-definition))
@@ -336,8 +335,8 @@
 
       ;; Handle navigating from declare to actual definition
       (and (= defined-by 'clojure.core/declare)
-           actual-definition)
-      actual-definition
+           @actual-definition)
+      @actual-definition
 
       ;; Default case, return the definition as-is
       :else var-definition)))

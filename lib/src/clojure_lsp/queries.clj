@@ -319,12 +319,27 @@
       keyword-usage))
 
 (defmethod find-definition :var-definitions
-  [db {:keys [imported-ns] :as var-definition}]
-  (if (some #(safe-equal? 'potemkin/import-vars %) (defined-bys var-definition))
-    (find-definition db (assoc var-definition
-                               :bucket :var-usages
-                               :to imported-ns))
-    var-definition))
+  [db {:keys [imported-ns defined-by name ns] :as var-definition}]
+  (let [actual-definition (delay (find-last-order-by-project-analysis
+                                   (comp xf-analysis->var-definitions
+                                         (xf-same-fqn ns name)
+                                         (filter #(not= 'clojure.core/declare (:defined-by %)))
+                                         (xf-same-lang var-definition))
+                                   (db-with-ns-analysis db ns)))]
+    (cond
+      ;; Handle potemkin/import-vars
+      (some #(safe-equal? 'potemkin/import-vars %) (defined-bys var-definition))
+      (find-definition db (assoc var-definition
+                                 :bucket :var-usages
+                                 :to imported-ns))
+
+      ;; Handle navigating from declare to actual definition
+      (and (= defined-by 'clojure.core/declare)
+           @actual-definition)
+      @actual-definition
+
+      ;; Default case, return the definition as-is
+      :else var-definition)))
 
 (defmethod find-definition :protocol-impls
   [db protocol-impl]

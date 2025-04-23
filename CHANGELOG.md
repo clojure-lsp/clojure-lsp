@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.04.23-18.16.46
+
 - General
   - Fix `unused-public-var` false positives when `:ignore-test-references? true`.
   - Bump clj-kondo to `2025.04.07`.

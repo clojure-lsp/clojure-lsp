@@ -16,6 +16,7 @@
    [clojure-lsp.startup :as startup]
    [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
+   [clojure.java.shell :as sh]
    [clojure.string :as string])
   (:import
    [java.io File]))
@@ -351,24 +352,109 @@
                  (assoc a uri diagnostics))
                {})))
 
-(defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
-  (setup-api! components)
-  (setup-project-and-clojure-only-deps-analysis! options components)
-  (cli-println options "Finding diagnostics...")
-  (let [db @db*
-        diags-by-uri (diagnostics-by-uri db options)
-        diags (mapcat val diags-by-uri)
-        errors? (some (comp #(= 1 %) :severity) diags)
-        warnings? (some (comp #(= 2 %) :severity) diags)]
-    (if (seq diags-by-uri)
-      {:result-code (cond errors? 3 warnings? 2 :else 0)
-       :message-fn (fn []
-                     (case format
-                       :edn (with-out-str (pr diags-by-uri))
-                       :json (json/generate-string diags-by-uri)
-                       (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
-       :diagnostics diags-by-uri}
-      {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
+(comment
+
+  (def diff-txt (slurp "../diff.txt"))
+  (println diff-txt)
+  (def hunks (diff/->chunks diff-txt))
+  (println hunks)
+
+  (println hunks)
+  (def internal-api-txt (slurp "../internal_api.diff"))
+  (println internal-api-txt)
+  (def hunks (diff/->chunks internal-api-txt))
+  (println hunks)
+  (first hunks)
+  (second hunks)
+  (nth hunks 5)
+  (count hunks)
+
+  (update-in {} :a (fnil conj [:b]))
+
+  (reduce (fn [acc {:keys [file] :as item}]
+            (println '____ (some #(when (string/ends-with? % file) file)
+                                 #{"file:///a.clj"}))
+            (if-let [uri (some #(when (string/ends-with? % file) file)
+                               #{"file:///a.clj"})]
+              (update-in acc
+                         [uri]
+                         (fnil conj [])
+                         item)
+              acc))
+          {}
+          [{:file "/a.clj" :row 1} {:file "/b.clj"} {:file "/a.clj" :row 2}])
+
+  #_())
+
+(defn ^:private filter-diff
+  [diff-out diags-by-uri]
+  (let [diags-by-uri-keys (keys diags-by-uri)
+        chunks (diff/->chunks diff-out)
+        chunks-by-file (reduce (fn [acc {:keys [file] :as hunk}]
+                                 (update acc file (fnil conj []) hunk))
+                               {}
+                               chunks)
+        chunks-by-uri (reduce (fn [acc [file hunks]]
+                                (if-let [uri (some #(when (string/ends-with? % file) %)
+                                                   diags-by-uri-keys)]
+                                  (assoc acc uri hunks)
+                                  acc))
+                              {}
+                              chunks-by-file)
+        diffed-diags (reduce (fn [acc [uri hunks]]
+                               (assoc acc
+                                      uri
+                                      (filter (fn [{{{line :line} :start} :range}]
+                                                (some (fn [{:keys [row-start row-end]}]
+                                                        (and (> line row-start)
+                                                             (< line row-end)))
+                                                      hunks))
+                                              (get diags-by-uri uri))))
+                             {}
+                             chunks-by-uri)]
+    diffed-diags))
+
+(defn ^:private diagnostics* [{{:keys [format]} :output diff :diff :as options} {:keys [db*] :as components}]
+  (let [{diff-exit :exit diff-out :out diff-err :err :as process}
+        (if diff
+          (sh/sh "git" "diff" diff "--" "*.clj")
+          {:exit 0 :out ""})]
+    (if (= 0 diff-exit)
+      (do #_(let [patch (DiffUtils/parseUnifiedDiff (str/split-lines diff-out))]
+              (println "Successfully parsed diff:")
+              ;; The 'patch' object now contains the parsed diff information.
+              ;; You can inspect its methods to get details about the changes (deltas).
+              ;; For example, to see the list of deltas:
+              (println "Number of deltas:" (count (.getDeltas patch)))
+
+              ;; You can iterate through the deltas to see the changes
+              (doseq [delta (.getDeltas patch)]
+                (println "Delta type:" (.getType delta))
+                (println "  Original position:" (.getPosition (.getOriginal delta)))
+                (println "  Original lines:" (.getLines (.getOriginal delta)))
+                (println "  Revised position:" (.getPosition (.getRevised delta)))
+                (println "  Revised lines:" (.getLines (.getRevised delta)))))
+       (setup-api! components)
+          (setup-project-and-clojure-only-deps-analysis! options components)
+          (cli-println options (if diff
+                                 (str "Finding diagnostics on " diff)
+                                 "Finding diagnostics..."))
+          (let [db @db*
+                diags-by-uri (filter-diff diff-out
+                                          (diagnostics-by-uri db options))
+                diags (mapcat val diags-by-uri)
+                errors? (some (comp #(= 1 %) :severity) diags)
+                warnings? (some (comp #(= 2 %) :severity) diags)]
+            (if (seq diags-by-uri)
+              {:result-code (cond errors? 3 warnings? 2 :else 0)
+               :message-fn (fn []
+                             (case format
+                               :edn (with-out-str (pr diags-by-uri))
+                               :json (json/generate-string diags-by-uri)
+                               (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
+               :diagnostics diags-by-uri}
+              {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
+      {:result-code 1 :message-fn (constantly diff-err)})))
 
 (defn ^:private format!* [{:keys [dry?] :as options} {:keys [db*] :as components}]
   (setup-api! components)

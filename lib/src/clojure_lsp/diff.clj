@@ -53,3 +53,44 @@
       (string/replace #"(?m)^(@@.*@@)$"       (shared/colorize "$1" :cyan))
       (string/replace #"(?m)^(\+(?!\+\+).*)$" (shared/colorize "$1" :green))
       (string/replace #"(?m)^(-(?!--).*)$"    (shared/colorize "$1" :red))))
+
+(defn ->chunks
+  "Given a diff output text,
+   return a sequence of maps with the following keys:
+   - :file - the file name
+   - :diff - the diff content
+   - :content - the content of the diff
+   - :row-start - the starting line number of the diff
+   - :row-end - the ending line number of the diff
+   - :new-start - the starting line number of the new content
+   - :new-count - the number of lines in the new content"
+  [diff-output]
+  (let [file-fn (fn [diff]
+                  (let [[_ file] (re-find #"^a/([^ ]+)" diff)]
+                    {:file file
+                     :diff diff}))
+        files (->> (string/split (str "\n" diff-output) #"\ndiff --git ")
+                   (remove string/blank?)
+                   (map file-fn))
+        assoc-content-fn (fn [{diff :diff :as file}]
+                           (map #(assoc file :content (str "@@ " %)) (rest (string/split diff #"\n@@ "))))
+        chunks (mapcat assoc-content-fn files)
+        parse-fn (fn [{content :content :as chunk}]
+                   (let [single (re-find #"@@ -\d+ \+(\d+)" content)
+                         multiple (re-find #"@@ -\d+,\d+ \+(\d+),(\d+)" content)
+                         [_ new-start new-count] (or single multiple)
+                         new-start' (try (Integer. new-start) (catch Exception _ -999999))
+                         new-count' (if (nil? new-count)
+                                      0
+                                      (try (Integer. new-count) (catch Exception _ -888888)))]
+                     (assoc chunk
+                            :row-start new-start'
+                            :row-end (+ new-start' new-count')
+                            :new-start new-start'
+                            :new-count new-count')))
+        details (map parse-fn chunks)
+        only-additions (remove (fn [{:keys [row-start row-end]}]
+                                 (and (zero? row-start)
+                                      (zero? row-end)))
+                               details)]
+    only-additions))

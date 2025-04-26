@@ -66,7 +66,11 @@
       (is (= 1 (:analysis (:options (#'main/parse ["--analysis" "1"])))))
       (is (= {} (:analysis (:options (#'main/parse ["--analysis" "{}"])))))
       (is (= nil (:analysis (:options (#'main/parse ["--analysis" "}"])))))
-      (is (= {:a {:b 1} :c 2} (:analysis (:options (#'main/parse ["--analysis" "{:a {:b 1} :c 2}"])))))))
+      (is (= {:a {:b 1} :c 2} (:analysis (:options (#'main/parse ["--analysis" "{:a {:b 1} :c 2}"]))))))
+    (testing "diff"
+      (is (= nil (:diff (:options (#'main/parse [])))))
+      (is (= "origin/HEAD..HEAD" (:diff (:options (#'main/parse ["--diff" "origin/HEAD..HEAD"])))))
+      (is (= nil (:diff (:options (#'main/parse ["-diff" "$(rm -rf)"])))))))
   (testing "commands"
     (is (= "listen" (:action (#'main/parse []))))
     (is (= "listen" (:action (#'main/parse ["listen"]))))

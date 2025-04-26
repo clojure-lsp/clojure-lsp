@@ -103,7 +103,10 @@
     :id :analysis
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
                "Invalid --analysis EDN"]
-    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]])
+    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
+   ["-d" "--diff REV_RANGE" "Diagnose only the changes between the two revisions. REV_RANGE is a git revision range, e.g. origin/HEAD..HEAD or origin/HEAD"
+    :id :diff
+    :validate [#(re-matches #"^[\w navigating around the git history \-./~^@{}]+(?:(?:\.\.|\.\.\.)[\w navigating around the git history \-./~^@{}]+)?$" %) "Invalid git revision range"]]])
 
 (defn ^:private error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"

@@ -380,20 +380,22 @@
                              chunks-by-uri)]
     diffed-diags))
 
-(defn ^:private diagnostics* [{{:keys [format]} :output diff :diff :as options} {:keys [db*] :as components}]
+(defn ^:private diagnostics* [{{:keys [format]} :output rev-range :diff :as options} {:keys [db*] :as components}]
   (let [{diff-exit :exit diff-out :out diff-err :err}
-        (if diff
-          (sh/sh "git" "diff" diff "--" "*.clj")
+        (if rev-range
+          (sh/sh "git" "diff" rev-range "--" "*.clj")
           {:exit 0 :out ""})]
     (if (= 0 diff-exit)
       (do (setup-api! components)
           (setup-project-and-clojure-only-deps-analysis! options components)
-          (cli-println options (if diff
-                                 (str "Finding diagnostics on " diff)
+          (cli-println options (if rev-range
+                                 (str "Finding diagnostics on " rev-range)
                                  "Finding diagnostics..."))
           (let [db @db*
-                diags-by-uri (filter-diff diff-out
-                                          (diagnostics-by-uri db options))
+                diags-by-uri (if rev-range
+                               (filter-diff diff-out
+                                            (diagnostics-by-uri db options))
+                               (diagnostics-by-uri db options))
                 diags (mapcat val diags-by-uri)
                 errors? (some (comp #(= 1 %) :severity) diags)
                 warnings? (some (comp #(= 2 %) :severity) diags)]

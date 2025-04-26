@@ -352,40 +352,6 @@
                  (assoc a uri diagnostics))
                {})))
 
-(comment
-
-  (def diff-txt (slurp "../diff.txt"))
-  (println diff-txt)
-  (def hunks (diff/->chunks diff-txt))
-  (println hunks)
-
-  (println hunks)
-  (def internal-api-txt (slurp "../internal_api.diff"))
-  (println internal-api-txt)
-  (def hunks (diff/->chunks internal-api-txt))
-  (println hunks)
-  (first hunks)
-  (second hunks)
-  (nth hunks 5)
-  (count hunks)
-
-  (update-in {} :a (fnil conj [:b]))
-
-  (reduce (fn [acc {:keys [file] :as item}]
-            (println '____ (some #(when (string/ends-with? % file) file)
-                                 #{"file:///a.clj"}))
-            (if-let [uri (some #(when (string/ends-with? % file) file)
-                               #{"file:///a.clj"})]
-              (update-in acc
-                         [uri]
-                         (fnil conj [])
-                         item)
-              acc))
-          {}
-          [{:file "/a.clj" :row 1} {:file "/b.clj"} {:file "/a.clj" :row 2}])
-
-  #_())
-
 (defn ^:private filter-diff
   [diff-out diags-by-uri]
   (let [diags-by-uri-keys (keys diags-by-uri)
@@ -415,26 +381,12 @@
     diffed-diags))
 
 (defn ^:private diagnostics* [{{:keys [format]} :output diff :diff :as options} {:keys [db*] :as components}]
-  (let [{diff-exit :exit diff-out :out diff-err :err :as process}
+  (let [{diff-exit :exit diff-out :out diff-err :err}
         (if diff
           (sh/sh "git" "diff" diff "--" "*.clj")
           {:exit 0 :out ""})]
     (if (= 0 diff-exit)
-      (do #_(let [patch (DiffUtils/parseUnifiedDiff (str/split-lines diff-out))]
-              (println "Successfully parsed diff:")
-              ;; The 'patch' object now contains the parsed diff information.
-              ;; You can inspect its methods to get details about the changes (deltas).
-              ;; For example, to see the list of deltas:
-              (println "Number of deltas:" (count (.getDeltas patch)))
-
-              ;; You can iterate through the deltas to see the changes
-              (doseq [delta (.getDeltas patch)]
-                (println "Delta type:" (.getType delta))
-                (println "  Original position:" (.getPosition (.getOriginal delta)))
-                (println "  Original lines:" (.getLines (.getOriginal delta)))
-                (println "  Revised position:" (.getPosition (.getRevised delta)))
-                (println "  Revised lines:" (.getLines (.getRevised delta)))))
-       (setup-api! components)
+      (do (setup-api! components)
           (setup-project-and-clojure-only-deps-analysis! options components)
           (cli-println options (if diff
                                  (str "Finding diagnostics on " diff)

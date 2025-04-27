@@ -63,7 +63,8 @@
    - :row-start - the starting line number of the diff
    - :row-end - the ending line number of the diff
    - :new-start - the starting line number of the new content
-   - :new-count - the number of lines in the new content"
+   - :new-count - the number of lines in the new content
+   - :added-lines - vector of added line numbers"
   [diff-output]
   (let [file-fn (fn [diff]
                   (let [[_ file] (re-find #"^a/([^ ]+)" diff)]
@@ -79,18 +80,26 @@
                    (let [single (re-find #"@@ -\d+ \+(\d+)" content)
                          multiple (re-find #"@@ -\d+,\d+ \+(\d+),(\d+)" content)
                          [_ new-start new-count] (or single multiple)
-                         new-start' (try (Integer. new-start) (catch Exception _ -999999))
+                         new-start' (Integer/parseInt new-start)
                          new-count' (if (nil? new-count)
                                       0
-                                      (try (Integer. new-count) (catch Exception _ -888888)))]
+                                      (Integer/parseInt new-count))
+                         added-lines (loop [[head & tail] (rest (string/split-lines content))
+                                            current-line new-start'
+                                            result []]
+                                       (if (nil? head)
+                                         result
+                                         (cond (string/starts-with? head "+")
+                                               (recur tail (inc current-line) (conj result current-line))
+                                               (string/starts-with? head " ")
+                                               (recur tail (inc current-line) result)
+                                               :else
+                                               (recur tail current-line result))))]
                      (assoc chunk
                             :row-start new-start'
                             :row-end (+ new-start' new-count')
                             :new-start new-start'
-                            :new-count new-count')))
-        details (map parse-fn chunks)
-        only-additions (remove (fn [{:keys [row-start row-end]}]
-                                 (and (zero? row-start)
-                                      (zero? row-end)))
-                               details)]
-    only-additions))
+                            :new-count new-count'
+                            :added-lines added-lines)))
+        hunks (map parse-fn chunks)]
+    hunks))

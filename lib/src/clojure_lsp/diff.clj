@@ -60,11 +60,9 @@
    - :file - the file name
    - :diff - the diff content
    - :content - the content of the diff
-   - :row-start - the starting line number of the diff
-   - :row-end - the ending line number of the diff
-   - :new-start - the starting line number of the new content
-   - :new-count - the number of lines in the new content
-   - :added-lines - vector of added line numbers"
+   - :hunk-additions-start - the starting line number of the diff
+   - :hunk-additions-end - the ending line number of the diff
+   - :added-line-numbers - vector of added line numbers"
   [diff-output]
   (let [file-fn (fn [diff]
                   (let [[_ file] (re-find #"^a/([^ ]+)" diff)]
@@ -74,18 +72,20 @@
                    (remove string/blank?)
                    (map file-fn))
         assoc-content-fn (fn [{diff :diff :as file}]
-                           (map #(assoc file :content (str "@@ " %)) (rest (string/split diff #"\n@@ "))))
+                           (map #(assoc file :content (str "@@ " %))
+                                (rest (string/split diff #"\n@@ "))))
         chunks (mapcat assoc-content-fn files)
         parse-fn (fn [{content :content :as chunk}]
-                   (let [single (re-find #"@@ -\d+ \+(\d+)" content)
-                         multiple (re-find #"@@ -\d+,\d+ \+(\d+),(\d+)" content)
-                         [_ new-start new-count] (or single multiple)
-                         new-start' (Integer/parseInt new-start)
-                         new-count' (if (nil? new-count)
-                                      0
-                                      (Integer/parseInt new-count))
+                   (let [single-line-range (re-find #"@@ -\d+ \+(\d+)" content)
+                         multiple-lines-range (re-find #"@@ -\d+,\d+ \+(\d+),(\d+)" content)
+                         [_ added-lines-start added-lines-span] (or single-line-range
+                                                                    multiple-lines-range)
+                         additions-start (Integer/parseInt added-lines-start)
+                         additions-span (if (nil? added-lines-span)
+                                          0
+                                          (Integer/parseInt added-lines-span))
                          added-lines (loop [[head & tail] (rest (string/split-lines content))
-                                            current-line new-start'
+                                            current-line additions-start
                                             result []]
                                        (if (nil? head)
                                          result
@@ -96,10 +96,8 @@
                                                :else
                                                (recur tail current-line result))))]
                      (assoc chunk
-                            :row-start new-start'
-                            :row-end (+ new-start' new-count')
-                            :new-start new-start'
-                            :new-count new-count'
-                            :added-lines added-lines)))
+                            :hunk-additions-start additions-start
+                            :hunk-additions-end (+ additions-start additions-span)
+                            :added-line-numbers added-lines)))
         hunks (map parse-fn chunks)]
     hunks))

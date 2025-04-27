@@ -356,7 +356,7 @@
   [diff-out diags-by-uri]
   (let [diags-by-uri-keys (keys diags-by-uri)
         chunks (diff/->chunks diff-out)
-        chunks-with-additions (filter #(-> % :added-lines seq) chunks)
+        chunks-with-additions (filter #(-> % :added-line-numbers seq) chunks)
         chunks-by-file (reduce (fn [acc {:keys [file] :as hunk}]
                                  (update acc file (fnil conj []) hunk))
                                {}

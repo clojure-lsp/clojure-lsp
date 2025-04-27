@@ -19,7 +19,7 @@
                        ""
                        " repo_name: clojure-lsp/clojure-lsp"])
         mkdocs-expected {:file "mkdocs.yml"
-                         :added-line-numbers []}
+                         :added-line-numbers #{}}
         internal-api-diff (string/join
                             "\n"
                             ["diff --git a/lib/src/clojure_lsp/internal_api.clj b/lib/src/clojure_lsp/internal_api.clj"
@@ -40,7 +40,7 @@
                              "                                 (if-let [uri (some #(when (string/ends-with? % file) %)"
                              "                                                    diags-by-uri-keys)]"])
         internal-api-expected {:file "lib/src/clojure_lsp/internal_api.clj"
-                               :added-line-numbers [359 363]}]
+                               :added-line-numbers #{359 363}}]
     (testing "Given a diff output with only a deletion
               When parse the text
               Then it has empty :added-line-numbers"

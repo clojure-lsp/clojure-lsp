@@ -62,7 +62,7 @@
    - :content - the content of the diff
    - :hunk-additions-start - the starting line number of the diff
    - :hunk-additions-end - the ending line number of the diff
-   - :added-line-numbers - vector of added line numbers"
+   - :added-line-numbers - set of added line numbers"
   [diff-output]
   (let [file-fn (fn [diff]
                   (let [[_ file] (re-find #"^a/([^ ]+)" diff)]
@@ -98,6 +98,6 @@
                      (assoc chunk
                             :hunk-additions-start additions-start
                             :hunk-additions-end (+ additions-start additions-span)
-                            :added-line-numbers added-lines)))
+                            :added-line-numbers (set added-lines))))
         hunks (map parse-fn chunks)]
     hunks))

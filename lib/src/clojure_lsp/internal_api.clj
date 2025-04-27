@@ -355,31 +355,31 @@
 (defn ^:private filter-diff
   [diff-out diags-by-uri]
   (let [diags-by-uri-keys (keys diags-by-uri)
+        diags-by-uri-keys (keys diags-by-uri)
         chunks (diff/->chunks diff-out)
         chunks-with-additions (filter #(-> % :added-line-numbers seq) chunks)
-        chunks-by-file (reduce (fn [acc {:keys [file] :as hunk}]
-                                 (update acc file (fnil conj []) hunk))
-                               {}
-                               chunks-with-additions)
-        chunks-by-uri (reduce (fn [acc [file hunks]]
-                                (if-let [uri (some #(when (string/ends-with? % file) %)
-                                                   diags-by-uri-keys)]
-                                  (assoc acc uri hunks)
-                                  acc))
-                              {}
-                              chunks-by-file)
-        diffed-diags (reduce (fn [acc [uri hunks]]
-                               (assoc acc
-                                      uri
-                                      (filter (fn [{{{line :line} :start} :range}]
-                                                (some (fn [{:keys [row-start row-end]}]
-                                                        (and (> line row-start)
-                                                             (< line row-end)))
-                                                      hunks))
-                                              (get diags-by-uri uri))))
-                             {}
-                             chunks-by-uri)]
-    diffed-diags))
+        additions-by-file (reduce (fn [acc {:keys [file] :as hunk}]
+                                    (update acc file (fnil conj []) hunk))
+                                  {}
+                                  chunks-with-additions)
+        additions-by-uri (reduce (fn [acc [file hunks]]
+                                   (if-let [uri (some #(when (string/ends-with? % file) %)
+                                                      diags-by-uri-keys)]
+                                     (assoc acc uri hunks)
+                                     acc))
+                                 {}
+                                 additions-by-file)
+        diags-by-uri-added (reduce (fn [acc [uri hunks]]
+                                     (assoc acc
+                                            uri
+                                            (filter (fn [{{{line :line} :start} :range}]
+                                                      (some (fn [{:keys [added-line-numbers]}]
+                                                              (contains? added-line-numbers line))
+                                                            hunks))
+                                                    (get diags-by-uri uri))))
+                                   {}
+                                   additions-by-uri)]
+    diags-by-uri-added))
 
 (defn ^:private diagnostics* [{{:keys [format]} :output rev-range :diff :as options} {:keys [db*] :as components}]
   (let [{diff-exit :exit diff-out :out diff-err :err}

@@ -20,6 +20,7 @@
    [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.feature.project-tree :as f.project-tree]
    [clojure-lsp.feature.rename :as f.rename]
+   [clojure-lsp.feature.selection-range :as f.selection-range]
    [clojure-lsp.feature.semantic-tokens :as f.semantic-tokens]
    [clojure-lsp.feature.signature-help :as f.signature-help]
    [clojure-lsp.feature.stubs :as stubs]
@@ -510,6 +511,14 @@
     :lsp/folding-range
     (let [db @db*]
       (f.folding/folding-range (:uri text-document) db))))
+
+(defn selection-range
+  [components {:keys [text-document positions]}]
+  (shared/logging-task
+    :lsp/selection-range
+    (f.selection-range/selection-ranges (:uri text-document)
+                                        (mapv shared/position->row-col positions)
+                                        components)))
 
 (defn will-rename-files [{:keys [db*] :as components} {:keys [files]}]
   (process-after-all-changes

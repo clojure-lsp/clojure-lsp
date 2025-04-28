@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Editor
+  - Add support for LSP feature `textDocument/selectionRange`. #1961
+
 ## 2025.04.23-18.16.46
 
 - General

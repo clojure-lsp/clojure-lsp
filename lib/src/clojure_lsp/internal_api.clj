@@ -380,35 +380,39 @@
                                    additions-by-uri)]
     diags-by-uri-added))
 
+(defn ^:private serialize-diags
+  [format options db diags-by-uri]
+  (let [diags (mapcat val diags-by-uri)
+        errors? (some (comp #(= 1 %) :severity) diags)
+        warnings? (some (comp #(= 2 %) :severity) diags)]
+    (if (seq diags-by-uri)
+      {:result-code (cond errors? 3 warnings? 2 :else 0)
+       :message-fn (fn []
+                     (case format
+                       :edn (with-out-str (pr diags-by-uri))
+                       :json (json/generate-string diags-by-uri)
+                       (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
+       :diagnostics diags-by-uri}
+      {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
+
+(defn ^:private diags-by-uri*
+  [options components]
+  (setup-api! components)
+  (setup-project-and-clojure-only-deps-analysis! options components)
+  (cli-println options "Finding diagnostics...")
+  (let [db @db*]
+    (diagnostics-by-uri db options)))
+
 (defn ^:private diagnostics* [{{:keys [format]} :output rev-range :diff :as options} {:keys [db*] :as components}]
-  (let [{diff-exit :exit diff-out :out diff-err :err}
-        (if rev-range
-          (sh/sh "git" "diff" rev-range "--" "*.clj")
-          {:exit 0 :out ""})]
-    (if (= 0 diff-exit)
-      (do (setup-api! components)
-          (setup-project-and-clojure-only-deps-analysis! options components)
-          (cli-println options (if rev-range
-                                 (str "Finding diagnostics on " rev-range)
-                                 "Finding diagnostics..."))
-          (let [db @db*
-                diags-by-uri (if rev-range
-                               (filter-diff diff-out
-                                            (diagnostics-by-uri db options))
-                               (diagnostics-by-uri db options))
-                diags (mapcat val diags-by-uri)
-                errors? (some (comp #(= 1 %) :severity) diags)
-                warnings? (some (comp #(= 2 %) :severity) diags)]
-            (if (seq diags-by-uri)
-              {:result-code (cond errors? 3 warnings? 2 :else 0)
-               :message-fn (fn []
-                             (case format
-                               :edn (with-out-str (pr diags-by-uri))
-                               :json (json/generate-string diags-by-uri)
-                               (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
-               :diagnostics diags-by-uri}
-              {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
-      {:result-code 1 :message-fn (constantly diff-err)})))
+  (let [diags-by-uri (diags-by-uri* options components)]
+    (if rev-range
+      (let [command ["git" "diff" rev-range]
+            {:keys [exit out err]} (apply sh/sh command)]
+        (cli-println options (string/join " " command))
+        (if (= exit 0)
+          (serialize-diags format options @db* (filter-diff out diags-by-uri))
+          {:result-code 1 :message-fn (constantly err)}))
+      (serialize-diags format options @db* diags-by-uri))))
 
 (defn ^:private format!* [{:keys [dry?] :as options} {:keys [db*] :as components}]
   (setup-api! components)

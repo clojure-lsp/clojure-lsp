@@ -357,18 +357,14 @@
   (let [diags-by-uri-keys (keys diags-by-uri)
         chunks (diff/->chunks diff-out)
         chunks-with-additions (filter #(-> % :added-line-numbers seq) chunks)
-        additions-by-file (reduce (fn [acc {:keys [file] :as hunk}]
-                                    (update acc file (fnil conj []) hunk))
-                                  {}
-                                  chunks-with-additions)
-        additions-by-uri (reduce (fn [acc [file hunks]]
+        additions-by-uri (reduce (fn [acc {:keys [file] :as hunk}]
                                    (if-let [uri (some #(when (string/ends-with? % file) %)
                                                       diags-by-uri-keys)]
-                                     (assoc acc uri hunks)
+                                     (update acc uri (fnil conj []) hunk)
                                      acc))
                                  {}
-                                 additions-by-file)
-        diags-by-uri-added (reduce (fn [acc [uri hunks]]
+                                 chunks-with-additions)
+        added-diags-by-uri (reduce (fn [acc [uri hunks]]
                                      (assoc acc
                                             uri
                                             (filter (fn [{{{line :line} :start} :range}]
@@ -378,7 +374,7 @@
                                                     (get diags-by-uri uri))))
                                    {}
                                    additions-by-uri)]
-    diags-by-uri-added))
+    added-diags-by-uri))
 
 (defn ^:private serialize-diags
   [format options db diags-by-uri]

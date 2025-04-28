@@ -75,16 +75,17 @@
                            (map #(assoc file :content (str "@@ " %))
                                 (rest (string/split diff #"\n@@ "))))
         chunks (mapcat assoc-content-fn files)
-        parse-fn (fn [{content :content :as chunk}]
-                   (let [single-line-range (re-find #"@@ -\d+ \+(\d+)" content)
-                         multiple-lines-range (re-find #"@@ -\d+,\d+ \+(\d+),(\d+)" content)
+        parse-fn (fn [{hunk-header :content :as chunk}]
+                   (let [single-line-range (re-find #"@@ -\d+ \+(\d+)" hunk-header)
+                         multiple-lines-range (re-find #"@@ -\d+,\d+ \+(\d+),(\d+)" hunk-header)
                          [_ added-lines-start added-lines-span] (or single-line-range
                                                                     multiple-lines-range)
                          additions-start (Integer/parseInt added-lines-start)
                          additions-span (if (nil? added-lines-span)
                                           0
                                           (Integer/parseInt added-lines-span))
-                         added-lines (loop [[head & tail] (rest (string/split-lines content))
+                         hunk-content (rest (string/split-lines hunk-header))
+                         added-lines (loop [[head & tail] hunk-content
                                             current-line additions-start
                                             result []]
                                        (if (nil? head)

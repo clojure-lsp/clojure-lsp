@@ -396,12 +396,11 @@
       {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
 
 (defn ^:private diags-by-uri*
-  [options components]
+  [options {:keys [db*] :as components}]
   (setup-api! components)
   (setup-project-and-clojure-only-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
-  (let [db @db*]
-    (diagnostics-by-uri db options)))
+  (diagnostics-by-uri @db* options))
 
 (defn ^:private diagnostics* [{{:keys [format]} :output rev-range :diff :as options} {:keys [db*] :as components}]
   (let [diags-by-uri (diags-by-uri* options components)]
@@ -409,7 +408,7 @@
       (let [command ["git" "diff" rev-range]
             {:keys [exit out err]} (apply sh/sh command)]
         (cli-println options (string/join " " command))
-        (if (= exit 0)
+        (if (zero? exit)
           (serialize-diags format options @db* (filter-diff out diags-by-uri))
           {:result-code 1 :message-fn (constantly err)}))
       (serialize-diags format options @db* diags-by-uri))))

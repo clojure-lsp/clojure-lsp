@@ -23,7 +23,7 @@
               :parent acc))
           nil
           (drop-last (reverse (interleave (map range->inner-range new-tree)
-                                       new-tree))))
+                                          new-tree))))
         (recur (z/up* cur-zloc) new-tree)))))
 
 (defn selection-ranges [uri positions components]

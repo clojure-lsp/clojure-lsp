@@ -1,6 +1,7 @@
 (ns clojure-lsp.main
   (:refer-clojure :exclude [run!])
   (:require
+   [babashka.cli :as cli]
    borkdude.dynaload
    [clojure-lsp.internal-api :as internal-api]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -9,8 +10,7 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.tools.cli :refer [parse-opts]]
-   [babashka.cli :as cli]
+   [clojure.tools.cli :as tools.cli]
    [pod.clojure-lsp.api :as pod])
   (:gen-class))
 
@@ -107,46 +107,94 @@
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]])
 
 (def cli-spec
-  {:spec {:diff {:ref "<rev-range>"
-                 :desc "Enable code diagnostics focused on the changes between revisions. <rev-range> is a git revision range, e.g. origin/HEAD..HEAD or HEAD~5..HEAD~1"
-                 :alias :d
-                 :default-desc "origin/HEAD"
-                 :coerce (fn [v]
-                           (println 'v====== (type v) v (if (= "true" v)
-                                                          "origin/HEAD"
-                                                          v))
-                           (if (= "true" v)
-                             "origin/HEAD"
-                             v))
-                 :validate #(re-matches #"^[\w navigating around the git history \-./~^@{}]+(?:(?:\.\.|\.\.\.)[\w navigating around the git history \-./~^@{}]+)?$" %)
-                 }}})
+  {:spec {:help {:alias :h
+                 :desc "Print the available commands and its options"}
+          :version {:desc "Print clojure-lsp version"}
+          :verbose {:desc "Use stdout for clojure-lsp logs instead of default log settings"}
+          :trace {:desc "Deprecated: use --trace-level instead."}
+          :trace-level {:ref "LEVELS"
+                        :desc "Enable trace logs between client and server, for debugging. Set to 'messages' for basic traces, or 'verbose' for more detailed traces. Defaults to 'off' for no traces."
+                        :default "off"
+                        :validate trace-levels}
+          :settings {:alias :s
+                     :ref "SETTINGS"
+                     :desc "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
+                     :coerce :edn}
+          :log-path {:desc "Path to use as the log path for clojure-lsp.out, debug purposes only."}
+          :dry {:desc "Make no changes to files, only report diffs"
+                :default false}
+          :raw {:desc "Print only necessary data"
+                :default false}
+          :project-root {:alias :p
+                         :ref "PATH"
+                         :desc "Specify the path to the project root to clojure-lsp consider during analysis startup."
+                         :coerce io/file
+                         :validate #(-> % io/file .exists)}
+          :namespace {:alias :n
+                      :ref "NS"
+                      :desc "Optional namespace to apply the action, all if not supplied. This flag accepts multiple values"
+                      :default []
+                      :coerce [:symbol]}
+          :filenames {:ref "FILENAMES"
+                      :desc "Optional filenames to apply the action. FILENAMES can be either absolute/relatetive files or directories. This flag accepts filenames separated by comma or double colon."
+                      :validate (fn [files] (println (pr-str files) (every? #(.exists ^java.io.File %) files)) (every? #(.exists ^java.io.File %) files))
+                      :coerce #(->> (if (string/includes? % ",")
+                                      (string/split % #",")
+                                      (string/split % #":"))
+                                    (mapv io/file))}
+          :ns-exclude-regex {:ref "REGEX"
+                             :desc "Optional regex representing the namespaces to be excluded during a command"
+                             :coerce re-pattern
+                             :validate #(instance? java.util.regex.Pattern %)}
+          :output {:alias :o
+                   :ref "EDN"
+                   :desc "Optional settings as edn on how the result should be printed. Check `clojure-lsp.api/diagnostics`/`clojure-lsp.api/dump` for all available options to this flag."
+                   :coerce :edn}
+          :from {:ref "FROM"
+                 :desc "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename/references"
+                 :coerce :symbol}
+          :to {:ref "TO"
+               :desc "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename"
+               :coerce :symbol}
+          :analysis {:ref "EDN"
+                     :desc "Optional settings as edn on how clojure-lsp should consider the analysis. Check `clojure-lsp.api/dump` for all available options to this flag."
+                     :coerce :edn}}})
 
 (comment
 
-  (cli/parse-opts [] {:spec {:diff {:default "origin/HEAD"}}})
-  (cli/parse-opts [] {:spec {:diff {}}})
-   (cli/parse-opts ["--diff"] {:spec {:diff {}}})
+  (cli/parse-args ["diagnostics"  "--to"] cli-spec)
 
-  (cli/parse-opts ["--diff" "maoe"] {:spec {:diff {}}})
+  (parse-opts ["diagnostics" "--to"])
 
-  (cli/parse-opts ["--diff"] {:spec {:diff {:coerce #(if (= "true" %) "origin/HEAD" %)}}})
-  (cli/parse-opts ["--diff" "maoe"] {:spec {:diff {:coerce #(if (= "true" %) "origin/HEAD" %)}}})
-  (cli/parse-opts [] {:spec {:diff {:coerce #(if (= "true" %) "origin/HEAD" %)}}})
+  (parse ["--settings" "1"])
 
-  (cli/parse-opts ["--diff" "origin/HEAD..HEAD"] cli-spec)
+  (parse ["--analysis" "{:a {:b 1} :c 2"])
+  (tools.cli/parse-opts ["--filenames" "deps.edn,cli"] (cli-options))
+  (cli/parse-args ["--filenames" "deps.edn,src"] cli-spec)
 
-  (cli/parse-opts ["--diff" "maoe"] {:spec {:diff {:coerce :boolean}}})
+  (:errors (tools.cli/parse-opts ["dump"] (cli-options))))
 
-  (cli/parse-opts ["--diff"] {:spec {:diff {}}}) => {:diff "origin/HEAD"}
-
-  (cli/parse-args ["--diff" "origin/bar"] {:spec {:diff {:coerce :boolean}}})
-  )
 (defn ^:private error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"
        (string/join \newline errors)))
 
+(defn ^:private parse-opts
+  [args]
+  ;; (tools.cli/parse-opts args (cli-options))
+  (let [errors (atom [])
+        {:keys [args opts]} (cli/parse-args args (assoc cli-spec
+                                                        :error-fn (fn [error] (swap! errors conj error))))]
+    {:options (-> opts
+                  (assoc :dry? (:dry opts))
+                  (dissoc :dry)
+                  (assoc :raw? (:raw opts))
+                  (dissoc :raw))
+     :arguments args
+     :errors (when (seq @errors) @errors)
+     :summary (cli/format-opts cli-spec)}))
+
 (defn ^:private parse [args]
-  (let [{:keys [options arguments errors summary]} (parse-opts args (cli-options))
+  (let [{:keys [options arguments errors summary]} (parse-opts args)
         pod? (= "true" (System/getenv "BABASHKA_POD"))]
     (cond
       pod?

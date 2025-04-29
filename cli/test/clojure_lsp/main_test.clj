@@ -41,8 +41,8 @@
       (is (= nil (:filenames (:options (#'main/parse ["--filenames"])))))
       (is (= nil (:filenames (:options (#'main/parse ["--filenames" "some-file" "other-file"])))))
       (is (= nil (:filenames (:options (#'main/parse ["--filenames" "some-file other-file"])))))
-      (is (= '["some-file" "other-file"] (map str (:filenames (:options (#'main/parse ["--filenames" "some-file:other-file"]))))))
-      (is (= '["some-file" "other-file"] (map str (:filenames (:options (#'main/parse ["--filenames" "some-file,other-file"])))))))
+      (is (= '["deps.edn" "src"] (map str (:filenames (:options (#'main/parse ["--filenames" "deps.edn:src"])))))) ;; these file and directory exists at cli dir
+      (is (= '["deps.edn" "src"] (map str (:filenames (:options (#'main/parse ["--filenames" "deps.edn,src"])))))))
     (testing "ns-exclude-regex"
       (is (= "foo" (str (:ns-exclude-regex (:options (#'main/parse ["--ns-exclude-regex" "foo"]))))))
       (is (= nil (:ns-exclude-regex (:options (#'main/parse [])))))

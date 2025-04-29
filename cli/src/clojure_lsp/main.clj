@@ -185,29 +185,29 @@
 
 (defn ^:private parse-opts
   [args]
-  ;; (tools.cli/parse-opts args (cli-options))
-  (let [errors (atom [])
-        {:keys [args opts]} (cli/parse-args args (assoc cli-spec
-                                                        :error-fn (fn [error] (swap! errors conj error))))]
-    {:options (-> opts
-                  (assoc :dry? (:dry opts))
-                  (dissoc :dry)
-                  (assoc :raw? (:raw opts))
-                  (dissoc :raw))
-     :arguments args
-     :errors (when (seq @errors)
-               (map (fn [{:keys [spec type cause msg option value] :as data}]
-                      (when (= :org.babashka/cli type)
-                        (case cause
-                          :require
-                          (format "Missing required argument: %s\n" option)
-                          :validate
-                          (format "Failed to validate \"--%s %s\": %s"
-                                  (name option)
-                                  value
-                                  msg))))
-                    @errors))
-     :summary (cli/format-opts cli-spec)}))
+  (tools.cli/parse-opts args (cli-options))
+  #_(let [errors (atom [])
+          {:keys [args opts]} (cli/parse-args args (assoc cli-spec
+                                                          :error-fn (fn [error] (swap! errors conj error))))]
+      {:options (-> opts
+                    (assoc :dry? (:dry opts))
+                    (dissoc :dry)
+                    (assoc :raw? (:raw opts))
+                    (dissoc :raw))
+       :arguments args
+       :errors (when (seq @errors)
+                 (map (fn [{:keys [_spec type cause msg option value] :as _data}]
+                        (when (= :org.babashka/cli type)
+                          (case cause
+                            :require
+                            (format "Missing required argument: %s\n" option)
+                            :validate
+                            (format "Failed to validate \"--%s %s\": %s"
+                                    (name option)
+                                    value
+                                    msg))))
+                      @errors))
+       :summary (cli/format-opts cli-spec)}))
 
 (defn ^:private parse [args]
   (let [{:keys [options arguments errors summary]} (parse-opts args)

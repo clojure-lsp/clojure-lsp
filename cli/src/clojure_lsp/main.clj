@@ -10,6 +10,7 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.tools.cli :refer [parse-opts]]
+   [babashka.cli :as cli]
    [pod.clojure-lsp.api :as pod])
   (:gen-class))
 
@@ -105,6 +106,41 @@
                "Invalid --analysis EDN"]
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]])
 
+(def cli-spec
+  {:spec {:diff {:ref "<rev-range>"
+                 :desc "Enable code diagnostics focused on the changes between revisions. <rev-range> is a git revision range, e.g. origin/HEAD..HEAD or HEAD~5..HEAD~1"
+                 :alias :d
+                 :default-desc "origin/HEAD"
+                 :coerce (fn [v]
+                           (println 'v====== (type v) v (if (= "true" v)
+                                                          "origin/HEAD"
+                                                          v))
+                           (if (= "true" v)
+                             "origin/HEAD"
+                             v))
+                 :validate #(re-matches #"^[\w navigating around the git history \-./~^@{}]+(?:(?:\.\.|\.\.\.)[\w navigating around the git history \-./~^@{}]+)?$" %)
+                 }}})
+
+(comment
+
+  (cli/parse-opts [] {:spec {:diff {:default "origin/HEAD"}}})
+  (cli/parse-opts [] {:spec {:diff {}}})
+   (cli/parse-opts ["--diff"] {:spec {:diff {}}})
+
+  (cli/parse-opts ["--diff" "maoe"] {:spec {:diff {}}})
+
+  (cli/parse-opts ["--diff"] {:spec {:diff {:coerce #(if (= "true" %) "origin/HEAD" %)}}})
+  (cli/parse-opts ["--diff" "maoe"] {:spec {:diff {:coerce #(if (= "true" %) "origin/HEAD" %)}}})
+  (cli/parse-opts [] {:spec {:diff {:coerce #(if (= "true" %) "origin/HEAD" %)}}})
+
+  (cli/parse-opts ["--diff" "origin/HEAD..HEAD"] cli-spec)
+
+  (cli/parse-opts ["--diff" "maoe"] {:spec {:diff {:coerce :boolean}}})
+
+  (cli/parse-opts ["--diff"] {:spec {:diff {}}}) => {:diff "origin/HEAD"}
+
+  (cli/parse-args ["--diff" "origin/bar"] {:spec {:diff {:coerce :boolean}}})
+  )
 (defn ^:private error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"
        (string/join \newline errors)))

@@ -4,6 +4,8 @@
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961
+- API/CLI
+  - `diagnostics`: Add --diff and --diff-rev-range options to limit diagnostics to a revision range.
 
 ## 2025.04.23-18.16.46
 

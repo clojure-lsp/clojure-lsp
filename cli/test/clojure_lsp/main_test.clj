@@ -69,8 +69,9 @@
       (is (= {:a {:b 1} :c 2} (:analysis (:options (#'main/parse ["--analysis" "{:a {:b 1} :c 2}"]))))))
     (testing "diff"
       (is (= nil (:diff (:options (#'main/parse [])))))
-      (is (= "origin/HEAD..HEAD" (:diff (:options (#'main/parse ["--diff" "origin/HEAD..HEAD"])))))
-      (is (= nil (:diff (:options (#'main/parse ["-diff" "$(rm -rf)"])))))))
+      (is (= true (:diff (:options (#'main/parse ["--diff"])))))
+      (is (= "origin/HEAD..HEAD" (:diff-rev-range (:options (#'main/parse ["--diff-rev-range" "origin/HEAD..HEAD"])))))
+      (is (= nil (:diff-rev-range (:options (#'main/parse ["-diff-rev-range" "$(rm -rf)"])))))))
   (testing "commands"
     (is (= "listen" (:action (#'main/parse []))))
     (is (= "listen" (:action (#'main/parse ["listen"]))))

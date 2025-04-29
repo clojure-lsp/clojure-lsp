@@ -104,8 +104,11 @@
     :validate [#(try (edn/read-string %) true (catch Exception _ false))
                "Invalid --analysis EDN"]
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
-   ["-d" "--diff REV_RANGE" "Diagnose only the changes between the two revisions. REV_RANGE is a git revision range, e.g. origin/HEAD..HEAD or origin/HEAD"
-    :id :diff
+   ["-d" "--diff" "Enable code diagnostics focused on the changes between revisions."
+    :id :diff]
+   [nil "--diff-rev-range REV_RANGE" "Specify the Git revision range for the diff diagnostics."
+    :id :diff-rev-range
+    :default "origin/HEAD"
     :validate [#(re-matches #"^[\w navigating around the git history \-./~^@{}]+(?:(?:\.\.|\.\.\.)[\w navigating around the git history \-./~^@{}]+)?$" %) "Invalid git revision range"]]])
 
 (defn ^:private error-msg [errors]

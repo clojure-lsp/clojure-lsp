@@ -398,10 +398,11 @@
   (cli-println options "Finding diagnostics...")
   (diagnostics-by-uri @db* options))
 
-(defn ^:private diagnostics* [{{:keys [format]} :output rev-range :diff :as options} {:keys [db*] :as components}]
+(defn ^:private diagnostics*
+  [{{:keys [format]} :output :keys [diff diff-rev-range] :as options} {:keys [db*] :as components}]
   (let [diags-by-uri (diags-by-uri* options components)]
-    (if rev-range
-      (let [command ["git" "diff" rev-range]
+    (if diff
+      (let [command ["git" "diff" diff-rev-range]
             {:keys [exit out err]} (apply sh/sh command)]
         (cli-println options (string/join " " command))
         (if (zero? exit)

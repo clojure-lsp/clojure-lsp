@@ -3,11 +3,18 @@
    [clojure-lsp.main :as main]
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is testing]]
+   [matcher-combinators.test :refer [match?]]))
 
 (h/reset-components-before-test)
 
 (def default-root (.getAbsolutePath (io/file "src")))
+
+(deftest parse-opts-test
+  (testing "trace-level"
+    (is (match? {:options {:trace-level "unknown"}
+                 :errors ["Failed to validate \"--trace-level unknown\": Must be in #{\"off\" \"messages\" \"verbose\"}"]}
+                (#'main/parse-opts ["--trace-level" "unknown"])))))
 
 (deftest parse
   (testing "parsing options"

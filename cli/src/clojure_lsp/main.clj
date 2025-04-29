@@ -117,7 +117,9 @@
           :trace-level {:ref "<LEVEL>"
                         :desc "Enable trace logs between client and server, for debugging. Set to 'messages' for basic traces, or 'verbose' for more detailed traces. Defaults to 'off' for no traces."
                         :default "off"
-                        :validate trace-levels}
+                        :validate {:pred trace-levels
+                                   :ex-msg (fn [{:keys [_option _value]}]
+                                             (format "Must be in %s" trace-levels))}}
           :settings {:alias :s
                      :ref "<EDN>"
                      :desc "Optional settings as EDN to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
@@ -193,7 +195,18 @@
                   (assoc :raw? (:raw opts))
                   (dissoc :raw))
      :arguments args
-     :errors (when (seq @errors) @errors)
+     :errors (when (seq @errors)
+               (map (fn [{:keys [spec type cause msg option value] :as data}]
+                      (when (= :org.babashka/cli type)
+                        (case cause
+                          :require
+                          (format "Missing required argument: %s\n" option)
+                          :validate
+                          (format "Failed to validate \"--%s %s\": %s"
+                                  (name option)
+                                  value
+                                  msg))))
+                    @errors))
      :summary (cli/format-opts cli-spec)}))
 
 (defn ^:private parse [args]

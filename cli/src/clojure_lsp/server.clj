@@ -433,6 +433,13 @@
        (conform-or-log ::coercer/folding-ranges-or-error)
        eventually))
 
+(defmethod lsp.server/receive-request "textDocument/selectionRange" [_ components params]
+  (->> params
+       normalize-doc-uri
+       (handler/selection-range components)
+       (conform-or-log ::coercer/selection-ranges-response)
+       eventually))
+
 ;;;; Workspace features
 
 ;; https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceFeatures
@@ -515,6 +522,7 @@
      :text-document-sync (:text-document-sync-kind settings)
      :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
      :folding-range-provider true
+     :selection-range-provider true
      :experimental {:test-tree true
                     :project-tree true
                     :cursor-info true

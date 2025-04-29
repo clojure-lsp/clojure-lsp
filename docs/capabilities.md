@@ -10,7 +10,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | initialized                            | √    |                                                                               |
 | shutdown                               | √    |                                                                               |
 | exit                                   | √    |                                                                               |
-| $/cancelRequest                        |      |                                                                               |
+| $/cancelRequest                        | √    |                                                                               |
 | $/progress                             | √    |                                                                               |
 | window/showDocument                    | √    |                                                                               |
 | window/showMessage                     | √    |                                                                               |
@@ -66,8 +66,8 @@ Below are all the currently supported LSP capabilities and their implementation 
 | textDocument/onTypeFormatting          |      |                                                                               |
 | textDocument/rename                    | √    |                                                                               |
 | textDocument/prepareRename             | √    |                                                                               |
-| textDocument/foldingRange              |      |                                                                               |
-| textDocument/selectionRange            |      |                                                                               |
+| textDocument/foldingRange              | √    |                                                                               |
+| textDocument/selectionRange            | √    |                                                                               |
 | textDocument/semanticTokens/full       | √    |                                                                               |
 | textDocument/semanticTokens/full/delta |      |                                                                               |
 | textDocument/semanticTokens/range      | √    |                                                                               |

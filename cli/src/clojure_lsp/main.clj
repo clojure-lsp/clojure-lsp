@@ -107,56 +107,59 @@
     :assoc-fn #(assoc %1 %2 (edn/read-string %3))]])
 
 (def cli-spec
-  {:spec {:help {:alias :h
+  {:order [:help :version :verbose :trace :trace-level :settings :log-path :dry :raw :project-root :namespace :filenames
+           :ns-exclude-regex :output :from :to :analysis]
+   :spec {:help {:alias :h
                  :desc "Print the available commands and its options"}
           :version {:desc "Print clojure-lsp version"}
           :verbose {:desc "Use stdout for clojure-lsp logs instead of default log settings"}
           :trace {:desc "Deprecated: use --trace-level instead."}
-          :trace-level {:ref "LEVELS"
+          :trace-level {:ref "<LEVEL>"
                         :desc "Enable trace logs between client and server, for debugging. Set to 'messages' for basic traces, or 'verbose' for more detailed traces. Defaults to 'off' for no traces."
                         :default "off"
                         :validate trace-levels}
           :settings {:alias :s
-                     :ref "SETTINGS"
-                     :desc "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
+                     :ref "<EDN>"
+                     :desc "Optional settings as EDN to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
                      :coerce :edn}
-          :log-path {:desc "Path to use as the log path for clojure-lsp.out, debug purposes only."}
+          :log-path {:ref "<PATH>"
+                     :desc "Path to use as the log path for clojure-lsp.out, debug purposes only."}
           :dry {:desc "Make no changes to files, only report diffs"
                 :default false}
           :raw {:desc "Print only necessary data"
                 :default false}
           :project-root {:alias :p
-                         :ref "PATH"
+                         :ref "<PATH>"
                          :desc "Specify the path to the project root to clojure-lsp consider during analysis startup."
                          :coerce io/file
                          :validate #(-> % io/file .exists)}
           :namespace {:alias :n
-                      :ref "NS"
+                      :ref "<NS>"
                       :desc "Optional namespace to apply the action, all if not supplied. This flag accepts multiple values"
                       :default []
                       :coerce [:symbol]}
-          :filenames {:ref "FILENAMES"
+          :filenames {:ref "<FILENAMES>"
                       :desc "Optional filenames to apply the action. FILENAMES can be either absolute/relatetive files or directories. This flag accepts filenames separated by comma or double colon."
                       :validate (fn [files] (println (pr-str files) (every? #(.exists ^java.io.File %) files)) (every? #(.exists ^java.io.File %) files))
                       :coerce #(->> (if (string/includes? % ",")
                                       (string/split % #",")
                                       (string/split % #":"))
                                     (mapv io/file))}
-          :ns-exclude-regex {:ref "REGEX"
+          :ns-exclude-regex {:ref "<REGEX>"
                              :desc "Optional regex representing the namespaces to be excluded during a command"
                              :coerce re-pattern
                              :validate #(instance? java.util.regex.Pattern %)}
           :output {:alias :o
-                   :ref "EDN"
+                   :ref "<EDN>"
                    :desc "Optional settings as edn on how the result should be printed. Check `clojure-lsp.api/diagnostics`/`clojure-lsp.api/dump` for all available options to this flag."
                    :coerce :edn}
-          :from {:ref "FROM"
+          :from {:ref "<FQNS>"
                  :desc "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename/references"
                  :coerce :symbol}
-          :to {:ref "TO"
+          :to {:ref "<FQNS>"
                :desc "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename"
                :coerce :symbol}
-          :analysis {:ref "EDN"
+          :analysis {:ref "<EDN>"
                      :desc "Optional settings as edn on how clojure-lsp should consider the analysis. Check `clojure-lsp.api/dump` for all available options to this flag."
                      :coerce :edn}}})
 

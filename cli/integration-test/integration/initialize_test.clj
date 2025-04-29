@@ -76,6 +76,7 @@
                                             "thread-last-all"
                                             "unwind-all"
                                             "unwind-thread"]}
+        :selectionRangeProvider true
         :signatureHelpProvider {:triggerCharacters []}
         :foldingRangeProvider true
         :codeActionProvider {:codeActionKinds ["quickfix"

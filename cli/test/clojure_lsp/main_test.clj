@@ -60,7 +60,7 @@
     ["--project-root" "src"] {:options {:project-root (io/file "src")}}
     ["-p" "src"] {:options {:project-root (io/file "src")}}
     ["-p" "1"] {:errors ["Failed to validate \"--project-root 1\": Specify a valid path after --project-root"]}
-    ["-p" "/this/is/not/a/valid/path"] {:errors [(str "Failed to validate \"--project-root " (h/file-path "/this/is/not/a/valid/path") "\": Specify a valid path after --project-root")]}
+    ["-p" "/this/is/not/a/valid/path"] {:errors [(str "Failed to validate \"--project-root " (io/file "/this/is/not/a/valid/path") "\": Specify a valid path after --project-root")]}
     ;; namespace
     [] {:options {:namespace []}}
     ["--namespace" "abc"] {:options {:namespace '[abc]}}

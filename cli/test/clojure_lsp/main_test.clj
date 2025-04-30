@@ -60,7 +60,7 @@
     ["--project-root" "src"] {:options {:project-root (io/file "src")}}
     ["-p" "src"] {:options {:project-root (io/file "src")}}
     ["-p" "1"] {:errors ["Failed to validate \"--project-root 1\": Specify a valid path after --project-root"]}
-    ["-p" "/this/is/not/a/valid/path"] {:errors ["Failed to validate \"--project-root /this/is/not/a/valid/path\": Specify a valid path after --project-root"]}
+    ["-p" "/this/is/not/a/valid/path"] {:errors [(str "Failed to validate \"--project-root " (h/file-path "/this/is/not/a/valid/path") "\": Specify a valid path after --project-root")]}
     ;; namespace
     [] {:options {:namespace []}}
     ["--namespace" "abc"] {:options {:namespace '[abc]}}
@@ -79,7 +79,7 @@
     ["--ns-exclude-regex" "foo"] {:options {:ns-exclude-regex #(= (str %) (str #"foo"))}
                                   :errors nil}
     ["--ns-exclude-regex" "*invalid-regex*"] {:options {:ns-exclude-regex "*invalid-regex*"}
-                                              :errors ["Error while parsing option \"--ns-exclude-regex *invalid-regex*\": Dangling meta character '*' near index 0\n*invalid-regex*\n^"]}
+                                              :errors [(h/lf->sys "Error while parsing option \"--ns-exclude-regex *invalid-regex*\": Dangling meta character '*' near index 0\n*invalid-regex*\n^")]}
     ;; output
     [] {:options {:output m/absent}}
     ["--output" "1"] {:options {:output 1}

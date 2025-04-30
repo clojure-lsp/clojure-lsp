@@ -10,8 +10,6 @@
 
 (h/reset-components-before-test)
 
-(def default-root (.getAbsolutePath (io/file "src")))
-
 (use-fixtures :once #(binding [matcher-combinators.config/*use-abbreviation* true] (%)))
 
 (deftest parse-opts-test

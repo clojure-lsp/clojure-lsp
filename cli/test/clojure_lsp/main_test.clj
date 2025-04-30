@@ -35,13 +35,19 @@
                                   :errors nil}
     ["--trace-level" "verbose"] {:options {:trace-level "verbose"}
                                  :errors nil}
-    ["--trace-level" "unknown"] {:errors ["Failed to validate \"--trace-level unknown\": Must be in #{\"off\" \"messages\" \"verbose\"}"]}
+    ["--trace-level" "unknown"] {:options {:trace-level "unknown"}
+                                 :errors ["Failed to validate \"--trace-level unknown\": Must be in #{\"off\" \"messages\" \"verbose\"}"]}
     ;; settings
-    [] {:options {:settings m/absent}}
-    ["--settings" "1"] {:options {:settings 1}}
-    ["-s" "{}"] {:options {:settings {}}}
-    ["-s" "}"] {:errors ["Failed to validate \"--settings }\": Invalid --settings EDN"]}
-    ["-s" "{:a {:b 1} :c 2}"] {:options {:settings {:a {:b 1} :c 2}}}
+    [] {:options {:settings m/absent}
+        :errors nil}
+    ["--settings" "1"] {:options {:settings 1}
+                        :errors ["Failed to validate \"--settings 1\": Invalid --settings EDN"]}
+    ["-s" "{}"] {:options {:settings {}}
+                 :errors nil}
+    ["-s" "}"] {:options {:settings "}"}
+                :errors ["Failed to validate \"--settings }\": Invalid --settings EDN"]}
+    ["-s" "{:a {:b 1} :c 2}"] {:options {:settings {:a {:b 1} :c 2}}
+                               :errors nil}
     ;; log-path
     [] {:options {:log-path m/absent}}
     ["--log-path" "/custom/path"] {:options {:log-path "/custom/path"}}
@@ -72,29 +78,48 @@
                                     :errors nil}
     ;; ns-exclude-regex
     [] {:options {:ns-exclude-regex m/absent}}
-    ["--ns-exclude-regex" "foo"] {:options {:ns-exclude-regex #(= (str %) (str #"foo"))}}
-    ["--ns-exclude-regex" "*invalid-regex*"] {:errors ["Error while parsing option \"--ns-exclude-regex *invalid-regex*\": Dangling meta character '*' near index 0\n*invalid-regex*\n^"]}
+    ["--ns-exclude-regex" "foo"] {:options {:ns-exclude-regex #(= (str %) (str #"foo"))}
+                                  :errors nil}
+    ["--ns-exclude-regex" "*invalid-regex*"] {:options {:ns-exclude-regex "*invalid-regex*"}
+                                              :errors ["Error while parsing option \"--ns-exclude-regex *invalid-regex*\": Dangling meta character '*' near index 0\n*invalid-regex*\n^"]}
     ;; output
     [] {:options {:output m/absent}}
-    ["--output" "1"] {:options {:output 1}}
-    ["-o" "{}"] {:options {:output {}}}
-    ["-o" "}"] {:errors ["Failed to validate \"--output }\": Invalid --output EDN"]}
-    ["-o" "{:a {:b 1} :c 2}"] {:options {:output {:a {:b 1} :c 2}}}
+    ["--output" "1"] {:options {:output 1}
+                      :errors ["Failed to validate \"--output 1\": Invalid --output EDN"]}
+    ["--output" "{:canonical-paths true}"] {:options {:output {:canonical-paths true}}
+                                            :errors nil}
+    ["-o" "{}"] {:options {:output {}}
+                 :errors nil}
+    ["--output" "{:format :edn}"] {:options {:output {:format :edn}}
+                                   :errors nil}
+    ["-o" "}"] {:options {:output "}"}
+                :errors ["Failed to validate \"--output }\": Invalid --output EDN"]}
+    ["-o" "{:a {:b 1} :c 2}"] {:options {:output {:a {:b 1} :c 2}}
+                               :errors nil}
     ;; from
     [] {:options {:from m/absent}}
-    ["--from" "abc"] {:options {:from 'abc}}
-    ["--from" "bla/abc"] {:options {:from 'bla/abc}}
+    ["--from" "abc"] {:options {:from 'abc}
+                      :errors nil}
+    ["--from" "bla/abc"] {:options {:from 'bla/abc}
+                          :errors nil}
     ;; to
     [] {:options {:to m/absent}}
-    ["--to" "1"] {:options {:to (symbol "1")}}
-    ["--to" "abc"] {:options {:to 'abc}}
-    ["--to" "bla/abc"] {:options {:to 'bla/abc}}
+    ["--to" "1"] {:options {:to (symbol "1")}
+                  :errors nil}
+    ["--to" "abc"] {:options {:to 'abc}
+                    :errors nil}
+    ["--to" "bla/abc"] {:options {:to 'bla/abc}
+                        :errors nil}
     ;; analysis
     [] {:options {:analysis m/absent}}
-    ["--analysis" "1"] {:options {:analysis 1}}
-    ["--analysis" "{}"] {:options {:analysis {}}}
-    ["--analysis" "}"] {:errors ["Failed to validate \"--analysis }\": Invalid --analysis EDN"]}
-    ["--analysis" "{:a {:b 1} :c 2}"] {:options {:analysis {:a {:b 1} :c 2}}}
+    ["--analysis" "1"] {:options {:analysis 1}
+                        :errors ["Failed to validate \"--analysis 1\": Invalid --analysis EDN"]}
+    ["--analysis" "{}"] {:options {:analysis {}}
+                         :errors nil}
+    ["--analysis" "}"] {:options {:analysis "}"}
+                        :errors ["Failed to validate \"--analysis }\": Invalid --analysis EDN"]}
+    ["--analysis" "{:a {:b 1} :c 2}"] {:options {:analysis {:a {:b 1} :c 2}}
+                                       :errors nil}
     #_()))
 
 (deftest parse

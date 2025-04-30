@@ -62,7 +62,7 @@
                      :ref "<EDN>"
                      :desc "Optional settings as EDN to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
                      :coerce #(try (edn/read-string %) (catch Exception _ %))
-                     :validate {:pred #(try (edn/read-string %) true (catch Exception _ false))
+                     :validate {:pred map?
                                 :ex-msg (fn [_] "Invalid --settings EDN")}}
           :log-path {:ref "<PATH>"
                      :desc "Path to use as the log path for clojure-lsp.out, debug purposes only."}
@@ -100,7 +100,7 @@
                    :ref "<EDN>"
                    :desc "Optional settings as edn on how the result should be printed. Check `clojure-lsp.api/diagnostics`/`clojure-lsp.api/dump` for all available options to this flag."
                    :coerce #(try (edn/read-string %) (catch Exception _ %))
-                   :validate {:pred #(try (edn/read-string %) true (catch Exception _ false))
+                   :validate {:pred map?
                               :ex-msg (fn [_] "Invalid --output EDN")}}
           :from {:ref "<FQNS>"
                  :desc "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename/references"
@@ -111,7 +111,7 @@
           :analysis {:ref "<EDN>"
                      :desc "Optional settings as edn on how clojure-lsp should consider the analysis. Check `clojure-lsp.api/dump` for all available options to this flag."
                      :coerce #(try (edn/read-string %) (catch Exception _ %))
-                     :validate {:pred #(try (edn/read-string %) true (catch Exception _ false))
+                     :validate {:pred map?
                                 :ex-msg (fn [_] "Invalid --analysis EDN")}}}})
 
 (defn ^:private error-msg [errors]

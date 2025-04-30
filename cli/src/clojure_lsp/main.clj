@@ -10,7 +10,6 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.tools.cli :as tools.cli]
    [pod.clojure-lsp.api :as pod])
   (:gen-class))
 
@@ -44,67 +43,6 @@
 
 (def ^:private trace-levels
   #{"off" "messages" "verbose"})
-
-(defn ^:private cli-options []
-  [["-h" "--help" "Print the available commands and its options"]
-   [nil "--version" "Print clojure-lsp version"]
-   [nil "--verbose" "Use stdout for clojure-lsp logs instead of default log settings"]
-   [nil "--trace" "Deprecated: use --trace-level instead."]
-   [nil "--trace-level LEVEL" "Enable trace logs between client and server, for debugging. Set to 'messages' for basic traces, or 'verbose' for more detailed traces. Defaults to 'off' for no traces."
-    :default "off"
-    :validate [trace-levels (str "Must be in " trace-levels)]]
-   ["-s" "--settings SETTINGS" "Optional settings as edn to use for the specified command. For all available settings, check https://clojure-lsp.io/settings"
-    :id :settings
-    :validate [#(try (edn/read-string %) true (catch Exception _ false))
-               "Invalid --settings EDN"]
-    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
-   [nil "--log-path PATH" "Path to use as the log path for clojure-lsp.out, debug purposes only."
-    :id :log-path]
-   [nil "--dry" "Make no changes to files, only report diffs"
-    :id :dry?
-    :default false]
-   [nil "--raw" "Print only necessary data"
-    :id :raw?
-    :default false]
-   ["-p" "--project-root PATH" "Specify the path to the project root to clojure-lsp consider during analysis startup."
-    :id :project-root
-    :parse-fn io/file
-    :validate [#(-> % io/file .exists) "Specify a valid path after --project-root"]]
-   ["-n" "--namespace NS" "Optional namespace to apply the action, all if not supplied. This flag accepts multiple values"
-    :id :namespace
-    :default []
-    :parse-fn symbol
-    :multi true
-    :update-fn conj]
-   [nil "--filenames FILENAMES" "Optional filenames to apply the action. Filenames can be either absolute/relatetive files or directories. This flag accepts filenames separated by comma or double colon."
-    :id :filenames
-    :validate [#(not (string/includes? (str %) " ")) "Filenames should be separated by comma or double colon."]
-    :assoc-fn #(assoc %1 %2 (->> (if (string/includes? %3 ",")
-                                   (string/split %3 #",")
-                                   (string/split %3 #":"))
-                                 (map io/file)))]
-   [nil "--ns-exclude-regex REGEX" "Optional regex representing the namespaces to be excluded during a command"
-    :id :ns-exclude-regex
-    :parse-fn re-pattern
-    :validate [#(instance? java.util.regex.Pattern %) "Specify a valid string regex after --ns-exclude-regex"]]
-   ["-o" "--output EDN" "Optional settings as edn on how the result should be printed. Check `clojure-lsp.api/diagnostics`/`clojure-lsp.api/dump` for all available options to this flag."
-    :id :output
-    :validate [#(try (edn/read-string %) true (catch Exception _ false))
-               "Invalid --output EDN"]
-    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]
-   [nil "--from FROM" "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename/references"
-    :id :from
-    :parse-fn symbol
-    :validate [symbol? "Specify a valid clojure full qualified symbol or the namespace after --from"]]
-   [nil "--to TO" "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename"
-    :id :to
-    :parse-fn symbol
-    :validate [symbol? "Specify a valid clojure full qualified symbol or the namespace after --to"]]
-   [nil "--analysis EDN" "Optional settings as edn on how clojure-lsp should consider the analysis. Check `clojure-lsp.api/dump` for all available options to this flag."
-    :id :analysis
-    :validate [#(try (edn/read-string %) true (catch Exception _ false))
-               "Invalid --analysis EDN"]
-    :assoc-fn #(assoc %1 %2 (edn/read-string %3))]])
 
 (def cli-spec
   {:order [:help :version :verbose :trace :trace-level :settings :log-path :dry :raw :project-root :namespace :filenames
@@ -182,7 +120,6 @@
 
 (defn ^:private parse-opts
   [args]
-  #_(tools.cli/parse-opts args (cli-options))
   (let [errors (atom [])
         {:keys [args opts]} (cli/parse-args args (assoc cli-spec
                                                         :error-fn (fn [error] (swap! errors conj error))))]

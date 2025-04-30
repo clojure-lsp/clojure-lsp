@@ -40,7 +40,7 @@
     [] {:options {:settings m/absent}}
     ["--settings" "1"] {:options {:settings 1}}
     ["-s" "{}"] {:options {:settings {}}}
-    ["-s" "}"] {:errors ["Failed to validate \"-s }\": Invalid --settings EDN"]}
+    ["-s" "}"] {:errors ["Failed to validate \"--settings }\": Invalid --settings EDN"]}
     ["-s" "{:a {:b 1} :c 2}"] {:options {:settings {:a {:b 1} :c 2}}}
     ;; log-path
     [] {:options {:log-path m/absent}}
@@ -55,8 +55,8 @@
     [] {:options {:project-root m/absent}}
     ["--project-root" "src"] {:options {:project-root (io/file "src")}}
     ["-p" "src"] {:options {:project-root (io/file "src")}}
-    ["-p" "1"] {:errors ["Failed to validate \"-p 1\": Specify a valid path after --project-root"]}
-    ["-p" "/this/is/not/a/valid/path"] {:errors ["Failed to validate \"-p /this/is/not/a/valid/path\": Specify a valid path after --project-root"]}
+    ["-p" "1"] {:errors ["Failed to validate \"--project-root 1\": Specify a valid path after --project-root"]}
+    ["-p" "/this/is/not/a/valid/path"] {:errors ["Failed to validate \"--project-root /this/is/not/a/valid/path\": Specify a valid path after --project-root"]}
     ;; namespace
     [] {:options {:namespace []}}
     ["--namespace" "abc"] {:options {:namespace '[abc]}}
@@ -65,8 +65,7 @@
     ;; filenames
     [] {:options {:filenames m/absent}}
     ["--filenames"] {:options {:filenames m/absent}}
-    ["--filenames" "some-file other-file"] {:options {:filenames m/absent}
-                                            :errors ["Failed to validate \"--filenames some-file other-file\": Filenames should be separated by comma or double colon."]}
+    ["--filenames" "some-file other-file"] {:errors ["Failed to validate \"--filenames some-file other-file\": Filenames should be separated by comma or double colon."]}
     ["--filenames" "deps.edn:src"] {:options {:filenames [(io/file "deps.edn") (io/file "src")]}
                                     :errors nil}
     ["--filenames" "deps.edn,src"] {:options {:filenames [(io/file "deps.edn") (io/file "src")]}
@@ -74,12 +73,12 @@
     ;; ns-exclude-regex
     [] {:options {:ns-exclude-regex m/absent}}
     ["--ns-exclude-regex" "foo"] {:options {:ns-exclude-regex #(= (str %) (str #"foo"))}}
-    ["--ns-exclude-regex" "*invalid-regex*"] {:errors ["Error while parsing option \"--ns-exclude-regex *invalid-regex*\": java.util.regex.PatternSyntaxException: Dangling meta character '*' near index 0\n*invalid-regex*\n^"]}
+    ["--ns-exclude-regex" "*invalid-regex*"] {:errors ["Error while parsing option \"--ns-exclude-regex *invalid-regex*\": Dangling meta character '*' near index 0\n*invalid-regex*\n^"]}
     ;; output
     [] {:options {:output m/absent}}
     ["--output" "1"] {:options {:output 1}}
     ["-o" "{}"] {:options {:output {}}}
-    ["-o" "}"] {:errors ["Failed to validate \"-o }\": Invalid --output EDN"]}
+    ["-o" "}"] {:errors ["Failed to validate \"--output }\": Invalid --output EDN"]}
     ["-o" "{:a {:b 1} :c 2}"] {:options {:output {:a {:b 1} :c 2}}}
     ;; from
     [] {:options {:from m/absent}}

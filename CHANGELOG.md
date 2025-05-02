@@ -7,11 +7,15 @@
 - API/CLI
   - `diagnostics`: Add --diff and --diff-rev-range options to limit diagnostics to a revision range.
 
+- API/CLI
+  - Replace `tools.cli` with `babashka.cli`. #2036
+
 ## 2025.04.23-18.16.46
 
 - General
   - Fix `unused-public-var` false positives when `:ignore-test-references? true`.
   - Bump clj-kondo to `2025.04.07`.
+
 - Editor
   - Improve timbre context log.
   - Fix suggestion for add require code action. #2017
@@ -25,6 +29,7 @@
   - Add support for ignoring tests references for the `clojure-lsp/unused-public-var` linter. #1878
   - Add `:test-locations-regex` configuration to allow customizing test file detection for the `unused-public-var` linter's `:ignore-test-references?` and test code lenses. #1878
   - Improve and standardize all logs for better troubleshooting and metrics collection.
+
 - Editor
   - Add `forward`, `forward-select`, `backward` and `backward-select` paredit actions.
   - Show add require code action for invalid syntax codes like `my-alias/`. #1957
@@ -35,6 +40,7 @@
 - General
   - Bump clj-kondo to `2025.02.20`.
   - Add support for OpenTelemetry(otlp) log, enabled if configured. #1963
+
 - Editor
   - Improve paredit slurp and barf corner cases. #1973 #1976
   - Add Semantic Tokens support for the Clojure Reader Dispatch macro `#_` (ignore next form). #1965

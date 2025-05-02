@@ -2310,6 +2310,16 @@
       "hash": "sha256-XIWwb6VsUlVLPJa1kPhHg1Enx37MUOUKaARKmPFa4Hw="
     },
     {
+      "mvn-path": "org/babashka/cli/0.8.65/cli-0.8.65.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-0UTuNSB3Ma6T40c1iqgjR33v1ePzooGG/Ydw30ZAxrI="
+    },
+    {
+      "mvn-path": "org/babashka/cli/0.8.65/cli-0.8.65.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-4rtIKUQTIq7mjH4Kh5IfavjMP86hhylM+3Od9bUs9vw="
+    },
+    {
       "mvn-path": "org/babashka/http-client/0.1.8/http-client-0.1.8.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-1M6kl8iRysWHThpU2f96v9jrG0WycJnhDG1FqGHLYLk="

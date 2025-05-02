@@ -46,7 +46,7 @@
 
 (def cli-spec
   {:order [:help :version :verbose :trace :trace-level :settings :log-path :dry :raw :project-root :namespace :filenames
-           :ns-exclude-regex :output :from :to :analysis]
+           :ns-exclude-regex :output :from :to :analysis :diff]
    :spec {:help {:alias :h
                  :desc "Print the available commands and its options"}
           :version {:desc "Print clojure-lsp version"}
@@ -114,7 +114,7 @@
                      :validate {:pred map?
                                 :ex-msg (fn [_] "Invalid --analysis EDN")}}
           :diff {:ref "[REV_RANGE]"
-                 :desc "Enable code diagnostics focused on the changes between revisions. [REV_RANGE] is the git revision range to be used. Defaults to origin/HEAD."
+                 :desc "Enable code diagnostics focused on the changes between revisions. [REV_RANGE] is the git revision range to be used. Defaults to `origin/HEAD`."
                  :alias :d
                  :validate {:pred #(or (true? %)
                                        (re-matches #"^[\w navigating around the git history \-./~^@{}]+(?:(?:\.\.|\.\.\.)[\w navigating around the git history \-./~^@{}]+)?$" %))

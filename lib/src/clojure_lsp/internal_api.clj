@@ -399,10 +399,10 @@
   (diagnostics-by-uri @db* options))
 
 (defn ^:private diagnostics*
-  [{{:keys [format]} :output :keys [diff diff-rev-range] :as options} {:keys [db*] :as components}]
+  [{{:keys [format]} :output :keys [diff] :as options} {:keys [db*] :as components}]
   (let [diags-by-uri (diags-by-uri* options components)]
     (if diff
-      (let [command ["git" "diff" diff-rev-range]
+      (let [command ["git" "diff" diff]
             {:keys [exit out err]} (apply sh/sh command)]
         (cli-println options (string/join " " command))
         (if (zero? exit)

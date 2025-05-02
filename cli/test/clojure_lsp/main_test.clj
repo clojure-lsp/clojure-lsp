@@ -3,70 +3,124 @@
    [clojure-lsp.main :as main]
    [clojure-lsp.test-helper :as h]
    [clojure.java.io :as io]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [are deftest is testing use-fixtures]]
+   [matcher-combinators.config]
+   [matcher-combinators.matchers :as m]
+   [matcher-combinators.test :refer [match?]]))
 
 (h/reset-components-before-test)
 
-(def default-root (.getAbsolutePath (io/file "src")))
+(use-fixtures :once #(binding [matcher-combinators.config/*use-abbreviation* true] (%)))
+
+(deftest parse-opts-test
+  (are [args expected] (match? expected (#'main/parse-opts args))
+    ;; help
+    [] {:options {:help m/absent}}
+    ["--help"] {:options {:help true}}
+    ["-h"] {:options {:help true}}
+    ;; version
+    [] {:options {:version m/absent}}
+    ["--version"] {:options {:version true}}
+    ["-v"] {:options {:version m/absent}}
+    ;; verbose
+    [] {:options {:verbose m/absent}}
+    ["--verbose"] {:options {:verbose true}}
+    ["-v"] {:options {:verbose m/absent}}
+    ;; trace-level
+    ["--trace-level" "off"] {:options {:trace-level "off"}
+                             :errors nil}
+    ["--trace-level" "messages"] {:options {:trace-level "messages"}
+                                  :errors nil}
+    ["--trace-level" "verbose"] {:options {:trace-level "verbose"}
+                                 :errors nil}
+    ["--trace-level" "unknown"] {:options {:trace-level "unknown"}
+                                 :errors ["Failed to validate \"--trace-level unknown\": Must be in #{\"off\" \"messages\" \"verbose\"}"]}
+    ;; settings
+    [] {:options {:settings m/absent}
+        :errors nil}
+    ["--settings" "1"] {:options {:settings 1}
+                        :errors ["Failed to validate \"--settings 1\": Invalid --settings EDN"]}
+    ["-s" "{}"] {:options {:settings {}}
+                 :errors nil}
+    ["-s" "}"] {:options {:settings "}"}
+                :errors ["Failed to validate \"--settings }\": Invalid --settings EDN"]}
+    ["-s" "{:a {:b 1} :c 2}"] {:options {:settings {:a {:b 1} :c 2}}
+                               :errors nil}
+    ;; log-path
+    [] {:options {:log-path m/absent}}
+    ["--log-path" "/custom/path"] {:options {:log-path "/custom/path"}}
+    ;; dry?
+    [] {:options {:dry? false}}
+    ["--dry"] {:options {:dry? true}}
+    ;; raw?
+    [] {:options {:raw? false}}
+    ["--raw"] {:options {:raw? true}}
+    ;; project-root
+    [] {:options {:project-root m/absent}}
+    ["--project-root" "src"] {:options {:project-root (io/file "src")}}
+    ["-p" "src"] {:options {:project-root (io/file "src")}}
+    ["-p" "1"] {:errors ["Failed to validate \"--project-root 1\": Specify a valid path after --project-root"]}
+    ["-p" "/this/is/not/a/valid/path"] {:errors [(str "Failed to validate \"--project-root " (io/file "/this/is/not/a/valid/path") "\": Specify a valid path after --project-root")]}
+    ;; namespace
+    [] {:options {:namespace []}}
+    ["--namespace" "abc"] {:options {:namespace '[abc]}}
+    ["-n" "abc"] {:options {:namespace '[abc]}}
+    ["-n" "abc" "-n" "bcd"] {:options {:namespace '[abc bcd]}}
+    ;; filenames
+    [] {:options {:filenames m/absent}}
+    ["--filenames"] {:options {:filenames m/absent}}
+    ["--filenames" "some-file other-file"] {:errors ["Failed to validate \"--filenames some-file other-file\": Filenames should be separated by comma or double colon."]}
+    ["--filenames" "deps.edn:src"] {:options {:filenames [(io/file "deps.edn") (io/file "src")]}
+                                    :errors nil}
+    ["--filenames" "deps.edn,src"] {:options {:filenames [(io/file "deps.edn") (io/file "src")]}
+                                    :errors nil}
+    ;; ns-exclude-regex
+    [] {:options {:ns-exclude-regex m/absent}}
+    ["--ns-exclude-regex" "foo"] {:options {:ns-exclude-regex #(= (str %) (str #"foo"))}
+                                  :errors nil}
+    ["--ns-exclude-regex" "*invalid-regex*"] {:options {:ns-exclude-regex "*invalid-regex*"}
+                                              :errors [(h/lf->sys "Error while parsing option \"--ns-exclude-regex *invalid-regex*\": Dangling meta character '*' near index 0\n*invalid-regex*\n^")]}
+    ;; output
+    [] {:options {:output m/absent}}
+    ["--output" "1"] {:options {:output 1}
+                      :errors ["Failed to validate \"--output 1\": Invalid --output EDN"]}
+    ["--output" "{:canonical-paths true}"] {:options {:output {:canonical-paths true}}
+                                            :errors nil}
+    ["-o" "{}"] {:options {:output {}}
+                 :errors nil}
+    ["--output" "{:format :edn}"] {:options {:output {:format :edn}}
+                                   :errors nil}
+    ["-o" "}"] {:options {:output "}"}
+                :errors ["Failed to validate \"--output }\": Invalid --output EDN"]}
+    ["-o" "{:a {:b 1} :c 2}"] {:options {:output {:a {:b 1} :c 2}}
+                               :errors nil}
+    ;; from
+    [] {:options {:from m/absent}}
+    ["--from" "abc"] {:options {:from 'abc}
+                      :errors nil}
+    ["--from" "bla/abc"] {:options {:from 'bla/abc}
+                          :errors nil}
+    ;; to
+    [] {:options {:to m/absent}}
+    ["--to" "1"] {:options {:to (symbol "1")}
+                  :errors nil}
+    ["--to" "abc"] {:options {:to 'abc}
+                    :errors nil}
+    ["--to" "bla/abc"] {:options {:to 'bla/abc}
+                        :errors nil}
+    ;; analysis
+    [] {:options {:analysis m/absent}}
+    ["--analysis" "1"] {:options {:analysis 1}
+                        :errors ["Failed to validate \"--analysis 1\": Invalid --analysis EDN"]}
+    ["--analysis" "{}"] {:options {:analysis {}}
+                         :errors nil}
+    ["--analysis" "}"] {:options {:analysis "}"}
+                        :errors ["Failed to validate \"--analysis }\": Invalid --analysis EDN"]}
+    ["--analysis" "{:a {:b 1} :c 2}"] {:options {:analysis {:a {:b 1} :c 2}}
+                                       :errors nil}
+    #_()))
 
 (deftest parse
-  (testing "parsing options"
-    (testing "settings"
-      (is (= nil (:settings (:options (#'main/parse [])))))
-      (is (= 1 (:settings (:options (#'main/parse ["--settings" "1"])))))
-      (is (= {} (:settings (:options (#'main/parse ["-s" "{}"])))))
-      (is (= nil (:settings (:options (#'main/parse ["-s" "}"])))))
-      (is (= {:a {:b 1} :c 2} (:settings (:options (#'main/parse ["-s" "{:a {:b 1} :c 2}"]))))))
-    (testing "log-path"
-      (is (= "/custom/path" (:log-path (:options (#'main/parse ["--log-path" "/custom/path"])))))
-      (is (= nil (:log-path (:options (#'main/parse []))))))
-    (testing "dry"
-      (is (not (:dry? (:options (#'main/parse [])))))
-      (is (:dry? (:options (#'main/parse ["--dry"])))))
-    (testing "raw"
-      (is (not (:raw? (:options (#'main/parse [])))))
-      (is (:raw? (:options (#'main/parse ["--raw"])))))
-    (testing "project-root"
-      (is (= default-root (.getAbsolutePath (:project-root (:options (#'main/parse ["--project-root" "src"]))))))
-      (is (= default-root (.getAbsolutePath (:project-root (:options (#'main/parse ["-p" "src"]))))))
-      (is (= nil (:project-root (:options (#'main/parse ["-p" "1"])))))
-      (is (= nil (:project-root (:options (#'main/parse ["p" "/this/is/not/a/valid/path"]))))))
-    (testing "namespace"
-      (is (= [] (:namespace (:options (#'main/parse [])))))
-      (is (= '[abc] (:namespace (:options (#'main/parse ["--namespace" "abc"])))))
-      (is (= '[abc] (:namespace (:options (#'main/parse ["-n" "abc"])))))
-      (is (= '[abc bcd] (:namespace (:options (#'main/parse ["-n" "abc" "-n" "bcd"]))))))
-    (testing "filenames"
-      (is (= nil (:filenames (:options (#'main/parse [])))))
-      (is (= nil (:filenames (:options (#'main/parse ["--filenames"])))))
-      (is (= nil (:filenames (:options (#'main/parse ["--filenames" "some-file" "other-file"])))))
-      (is (= nil (:filenames (:options (#'main/parse ["--filenames" "some-file other-file"])))))
-      (is (= '["some-file" "other-file"] (map str (:filenames (:options (#'main/parse ["--filenames" "some-file:other-file"]))))))
-      (is (= '["some-file" "other-file"] (map str (:filenames (:options (#'main/parse ["--filenames" "some-file,other-file"])))))))
-    (testing "ns-exclude-regex"
-      (is (= "foo" (str (:ns-exclude-regex (:options (#'main/parse ["--ns-exclude-regex" "foo"]))))))
-      (is (= nil (:ns-exclude-regex (:options (#'main/parse [])))))
-      (is (= nil (:ns-exclude-regex (:options (#'main/parse ["--ns-exclude-regex" "*invalid-regex*"]))))))
-    (testing "output"
-      (is (= nil (:output (:options (#'main/parse [])))))
-      (is (= 1 (:output (:options (#'main/parse ["--output" "1"])))))
-      (is (= {} (:output (:options (#'main/parse ["-o" "{}"])))))
-      (is (= nil (:output (:options (#'main/parse ["-o" "}"])))))
-      (is (= {:a {:b 1} :c 2} (:output (:options (#'main/parse ["-o" "{:a {:b 1} :c 2}"]))))))
-    (testing "from"
-      (is (= nil (:from (:options (#'main/parse [])))))
-      (is (= 'abc (:from (:options (#'main/parse ["--from" "abc"])))))
-      (is (= 'bla/abc (:from (:options (#'main/parse ["--from" "bla/abc"]))))))
-    (testing "to"
-      (is (= nil (:to (:options (#'main/parse [])))))
-      (is (= 'abc (:to (:options (#'main/parse ["--to" "abc"])))))
-      (is (= 'bla/abc (:to (:options (#'main/parse ["--to" "bla/abc"]))))))
-    (testing "analysis"
-      (is (= nil (:analysis (:options (#'main/parse [])))))
-      (is (= 1 (:analysis (:options (#'main/parse ["--analysis" "1"])))))
-      (is (= {} (:analysis (:options (#'main/parse ["--analysis" "{}"])))))
-      (is (= nil (:analysis (:options (#'main/parse ["--analysis" "}"])))))
-      (is (= {:a {:b 1} :c 2} (:analysis (:options (#'main/parse ["--analysis" "{:a {:b 1} :c 2}"])))))))
   (testing "commands"
     (is (= "listen" (:action (#'main/parse []))))
     (is (= "listen" (:action (#'main/parse ["listen"]))))

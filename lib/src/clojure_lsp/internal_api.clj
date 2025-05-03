@@ -16,6 +16,7 @@
    [clojure-lsp.startup :as startup]
    [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
+   [clojure.java.shell :as sh]
    [clojure.string :as string])
   (:import
    [java.io File]))
@@ -351,13 +352,33 @@
                  (assoc a uri diagnostics))
                {})))
 
-(defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
-  (setup-api! components)
-  (setup-project-and-clojure-only-deps-analysis! options components)
-  (cli-println options "Finding diagnostics...")
-  (let [db @db*
-        diags-by-uri (diagnostics-by-uri db options)
-        diags (mapcat val diags-by-uri)
+(defn ^:private filter-diff
+  [diff-out diags-by-uri]
+  (let [diags-by-uri-keys (keys diags-by-uri)
+        chunks (diff/->chunks diff-out)
+        chunks-with-additions (filter #(-> % :added-line-numbers seq) chunks)
+        additions-by-uri (reduce (fn [acc {:keys [file] :as hunk}]
+                                   (if-let [uri (some #(when (string/ends-with? % file) %)
+                                                      diags-by-uri-keys)]
+                                     (update acc uri (fnil conj []) hunk)
+                                     acc))
+                                 {}
+                                 chunks-with-additions)
+        added-diags-by-uri (reduce (fn [acc [uri hunks]]
+                                     (assoc acc
+                                            uri
+                                            (filter (fn [{{{line :line} :start} :range}]
+                                                      (some (fn [{:keys [added-line-numbers]}]
+                                                              (contains? added-line-numbers line))
+                                                            hunks))
+                                                    (get diags-by-uri uri))))
+                                   {}
+                                   additions-by-uri)]
+    added-diags-by-uri))
+
+(defn ^:private serialize-diags
+  [format options db diags-by-uri]
+  (let [diags (mapcat val diags-by-uri)
         errors? (some (comp #(= 1 %) :severity) diags)
         warnings? (some (comp #(= 2 %) :severity) diags)]
     (if (seq diags-by-uri)
@@ -369,6 +390,25 @@
                        (string/join "\n" (diagnostics->diagnostic-messages diags-by-uri options db))))
        :diagnostics diags-by-uri}
       {:result-code 0 :message-fn (constantly "No diagnostics found!")})))
+
+(defn ^:private diags-by-uri*
+  [options {:keys [db*] :as components}]
+  (setup-api! components)
+  (setup-project-and-clojure-only-deps-analysis! options components)
+  (cli-println options "Finding diagnostics...")
+  (diagnostics-by-uri @db* options))
+
+(defn ^:private diagnostics*
+  [{{:keys [format]} :output :keys [diff] :as options} {:keys [db*] :as components}]
+  (let [diags-by-uri (diags-by-uri* options components)]
+    (if diff
+      (let [command ["git" "diff" diff]
+            {:keys [exit out err]} (apply sh/sh command)]
+        (cli-println options (string/join " " command))
+        (if (zero? exit)
+          (serialize-diags format options @db* (filter-diff out diags-by-uri))
+          {:result-code 1 :message-fn (constantly err)}))
+      (serialize-diags format options @db* diags-by-uri))))
 
 (defn ^:private format!* [{:keys [dry?] :as options} {:keys [db*] :as components}]
   (setup-api! components)

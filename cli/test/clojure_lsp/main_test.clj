@@ -118,6 +118,15 @@
                         :errors ["Failed to validate \"--analysis }\": Invalid --analysis EDN"]}
     ["--analysis" "{:a {:b 1} :c 2}"] {:options {:analysis {:a {:b 1} :c 2}}
                                        :errors nil}
+    ;; diff
+    [] {:options {:diff false
+                  :errors m/absent}}
+    ["-d"] {:options {:diff "origin/HEAD"
+                      :errors m/absent}}
+    ["--diff" "origin/HEAD..HEAD"] {:options {:diff "origin/HEAD..HEAD"}
+                                    :errors nil}
+    ["-d" "$(rm -rf)"] {:options {:diff "$(rm -rf)"}
+                        :errors ["Failed to validate \"--diff $(rm -rf)\": Invalid git revision range: $(rm -rf)"]}
     #_()))
 
 (deftest parse

@@ -46,7 +46,7 @@
 
 (def cli-spec
   {:order [:help :version :verbose :trace :trace-level :settings :log-path :dry :raw :project-root :namespace :filenames
-           :ns-exclude-regex :output :from :to :analysis]
+           :ns-exclude-regex :output :from :to :analysis :diff]
    :spec {:help {:alias :h
                  :desc "Print the available commands and its options"}
           :version {:desc "Print clojure-lsp version"}
@@ -112,7 +112,15 @@
                      :desc "Optional settings as edn on how clojure-lsp should consider the analysis. Check `clojure-lsp.api/dump` for all available options to this flag."
                      :coerce #(try (edn/read-string %) (catch Exception _ %))
                      :validate {:pred map?
-                                :ex-msg (fn [_] "Invalid --analysis EDN")}}}})
+                                :ex-msg (fn [_] "Invalid --analysis EDN")}}
+          :diff {:ref "[REV_RANGE]"
+                 :desc "Enable code diagnostics focused on the changes between revisions. [REV_RANGE] is the git revision range to be used."
+                 :alias :d
+                 :default-desc "origin/HEAD"
+                 :validate {:pred #(or (true? %)
+                                       (re-matches #"^[\w navigating around the git history \-./~^@{}]+(?:(?:\.\.|\.\.\.)[\w navigating around the git history \-./~^@{}]+)?$" %))
+                            :ex-msg (fn [{:keys [value]}]
+                                      (format "Invalid git revision range: %s" value))}}}})
 
 (defn ^:private error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"
@@ -124,6 +132,9 @@
         {:keys [args opts]} (cli/parse-args args (assoc cli-spec
                                                         :error-fn (fn [error] (swap! errors conj error))))]
     {:options (-> opts
+                  (update :diff #(cond (true? %) "origin/HEAD"
+                                       (nil? %) false
+                                       :else %))
                   (assoc :dry? (:dry opts))
                   (dissoc :dry)
                   (assoc :raw? (:raw opts))

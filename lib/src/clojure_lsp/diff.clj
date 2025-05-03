@@ -53,3 +53,52 @@
       (string/replace #"(?m)^(@@.*@@)$"       (shared/colorize "$1" :cyan))
       (string/replace #"(?m)^(\+(?!\+\+).*)$" (shared/colorize "$1" :green))
       (string/replace #"(?m)^(-(?!--).*)$"    (shared/colorize "$1" :red))))
+
+(defn ->chunks
+  "Given a diff output text,
+   return a sequence of maps with the following keys:
+   - :file - the file name
+   - :diff - the diff content
+   - :content - the content of the diff
+   - :hunk-additions-start - the starting line number of the diff
+   - :hunk-additions-end - the ending line number of the diff
+   - :added-line-numbers - set of added line numbers"
+  [diff-output]
+  (let [file-fn (fn [diff]
+                  (let [[_ file] (re-find #"^a/([^ ]+)" diff)]
+                    {:file file
+                     :diff diff}))
+        files (->> (string/split (str "\n" diff-output) #"\ndiff --git ")
+                   (remove string/blank?)
+                   (map file-fn))
+        assoc-content-fn (fn [{diff :diff :as file}]
+                           (map #(assoc file :content (str "@@ " %))
+                                (rest (string/split diff #"\n@@ "))))
+        chunks (mapcat assoc-content-fn files)
+        parse-fn (fn [{hunk-header :content :as chunk}]
+                   (let [single-line-range (re-find #"@@ -\d+ \+(\d+)" hunk-header)
+                         multiple-lines-range (re-find #"@@ -\d+,\d+ \+(\d+),(\d+)" hunk-header)
+                         [_ added-lines-start added-lines-span] (or single-line-range
+                                                                    multiple-lines-range)
+                         additions-start (Integer/parseInt added-lines-start)
+                         additions-span (if (nil? added-lines-span)
+                                          0
+                                          (Integer/parseInt added-lines-span))
+                         hunk-content (rest (string/split-lines hunk-header))
+                         added-lines (loop [[head & tail] hunk-content
+                                            current-line additions-start
+                                            result []]
+                                       (if (nil? head)
+                                         result
+                                         (cond (string/starts-with? head "+")
+                                               (recur tail (inc current-line) (conj result current-line))
+                                               (string/starts-with? head " ")
+                                               (recur tail (inc current-line) result)
+                                               :else
+                                               (recur tail current-line result))))]
+                     (assoc chunk
+                            :hunk-additions-start additions-start
+                            :hunk-additions-end (+ additions-start additions-span)
+                            :added-line-numbers (set added-lines))))
+        hunks (map parse-fn chunks)]
+    hunks))

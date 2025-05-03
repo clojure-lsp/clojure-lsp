@@ -114,8 +114,9 @@
                      :validate {:pred map?
                                 :ex-msg (fn [_] "Invalid --analysis EDN")}}
           :diff {:ref "[REV_RANGE]"
-                 :desc "Enable code diagnostics focused on the changes between revisions. [REV_RANGE] is the git revision range to be used. Defaults to `origin/HEAD`."
+                 :desc "Enable code diagnostics focused on the changes between revisions. [REV_RANGE] is the git revision range to be used."
                  :alias :d
+                 :default-desc "origin/HEAD"
                  :validate {:pred #(or (true? %)
                                        (re-matches #"^[\w navigating around the git history \-./~^@{}]+(?:(?:\.\.|\.\.\.)[\w navigating around the git history \-./~^@{}]+)?$" %))
                             :ex-msg (fn [{:keys [value]}]

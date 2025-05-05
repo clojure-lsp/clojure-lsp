@@ -4,7 +4,7 @@
         com.taoensso/timbre {:mvn/version "6.7.0-alpha1"}
         com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.7"}
         io.opentelemetry/opentelemetry-sdk-extension-autoconfigure {:mvn/version "1.47.0"}
-        io.opentelemetry/opentelemetry-exporter-otlp {:mvn/version "1.47.0"}
+        io.opentelemetry/opentelemetry-exporter-otlp {:mvn/version "1.48.0"}
         clojure-lsp/lib {:local/root "../lib"}
         funcool/promesa {:mvn/version "10.0.594"}}
  :paths ["src" "resources"]

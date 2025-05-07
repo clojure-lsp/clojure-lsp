@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.custom-linters
   (:require
+   [clojure-lsp.custom-linters-api :as custom-linters-api]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -40,7 +41,9 @@
                            :info 3))))
 
 (defn ^:private analyze [fqns params uris db]
-  (let [sci-ctx (sci/init {:classes {'java.io.Exception Exception
+  (sci/create-ns 'clojure-lsp.custom-linters-api nil)
+  (let [sci-ctx (sci/init {:namespaces {'clojure-lsp.custom-linters-api custom-linters-api/api-fns}
+                           :classes {'java.io.Exception Exception
                                      'java.lang.System System
                                      ;; enable with-in-str:
                                      'java.io.StringReader java.io.StringReader
@@ -66,7 +69,8 @@
                       (catch Exception e
                         (logger/error logger-tag (str "Error requiring custom linter " fqns) e)
                         identity))
-        diagnostics* (atom {})
+        empty-diagnostics (reduce #(assoc %1 %2 []) {} uris)
+        diagnostics* (atom empty-diagnostics)
         reg-diagnostic!-fn (fn [diagnostic]
                              (if-let [missing-fields (missing-required-fields diagnostic)]
                                (logger/warn logger-tag (format "Ignoring diagnostic, missing required fields: %s for diagnostic %s" missing-fields diagnostic))
@@ -77,7 +81,7 @@
                   :reg-diagnostic! reg-diagnostic!-fn})
     @diagnostics*))
 
-(defn analyze-uris!
+(defn ^:private analyze-uris!
   [uris db]
   (let [custom-linters (settings/get db [:linters :custom] {})
         uri+diagnostics (if (seq custom-linters)

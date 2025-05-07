@@ -306,7 +306,7 @@
           kw-usages (if (seq kw-definitions) ;; avoid looking up thousands of keyword usages if these files don't define any keywords
                       (into #{}
                             (comp
-                              q/xf-all-keyword-usages
+                              q/xf-analysis->keyword-usages
                               (map q/kw-signature))
                             (:analysis project-db))
                       #{})

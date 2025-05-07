@@ -1,6 +1,5 @@
 (ns clojure-lsp.feature.custom-linters
   (:require
-   [babashka.fs :as fs]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -9,6 +8,8 @@
    [sci.core :as sci])
   (:import
    [java.util.jar JarFile]))
+
+(def ^:private logger-tag "[custom-linter]")
 
 (def ^:dynamic *reload* false)
 
@@ -24,6 +25,19 @@
       (if (shared/file-exists? (io/file head path))
         (slurp (io/file head path))
         (recur path tail)))))
+
+(def ^:private required-fields #{:uri :range :severity :message :source :code})
+
+(defn ^:private missing-required-fields [diagnostic]
+  (seq (remove (set (keys diagnostic)) required-fields)))
+
+(defn ^:private custom-diagnostic->lsp [diagnostic]
+  (-> diagnostic
+      (dissoc :uri)
+      (update :severity #(case %
+                           :error 1
+                           :warning 2
+                           :info 3))))
 
 (defn ^:private analyze [fqns params uris db]
   (let [sci-ctx (sci/init {:classes {'java.io.Exception Exception
@@ -50,32 +64,31 @@
                                              fqns))]
                           (sci/eval-string* sci-ctx code)))
                       (catch Exception e
-                        (logger/error "Error requiring custom linter" fqns e)
+                        (logger/error logger-tag (str "Error requiring custom linter " fqns) e)
                         identity))
-        diagnostics* (atom [])
+        diagnostics* (atom {})
         reg-diagnostic!-fn (fn [diagnostic]
-                             (swap! diagnostics* conj diagnostic))]
+                             (if-let [missing-fields (missing-required-fields diagnostic)]
+                               (logger/warn logger-tag (format "Ignoring diagnostic, missing required fields: %s for diagnostic %s" missing-fields diagnostic))
+                               (swap! diagnostics* update (:uri diagnostic) (fnil conj []) (custom-diagnostic->lsp diagnostic))))]
     (analyzer-fn {:db db
                   :params params
                   :uris uris
                   :reg-diagnostic! reg-diagnostic!-fn})
     @diagnostics*))
 
-(comment
-  (require '[clojure-lsp.db :as db])
-  (binding [*reload* true]
-    (analyze 'foo.bar/baz {} ["file:///home/greg/dev/clojure-lsp/lib/src/clojure_lsp/feature/custom_linters.clj"] @db/db*)))
-
 (defn analyze-uris!
   [uris db]
   (let [custom-linters (settings/get db [:linters :custom] {})
         uri+diagnostics (if (seq custom-linters)
                           (shared/logging-task
-                            :internal/custom-lint-total
+                            :internal/all-custom-linters
                             (reduce (fn [all-diags [fqns params]]
-                                      (if (contains? #{:error :warn :info} (:severity params))
+                                      (if (contains? #{:error :warning :info} (:severity params))
                                         (shared/deep-merge all-diags
-                                                           (analyze fqns params uris db))
+                                                           (shared/logging-task
+                                                             (keyword "custom-lint" (string/replace (str fqns) "/" "."))
+                                                             (analyze fqns params uris db)))
                                         all-diags))
                                     {}
                                     custom-linters))

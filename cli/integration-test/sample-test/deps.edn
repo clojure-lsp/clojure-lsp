@@ -1,4 +1,4 @@
-{:paths ["src"]
+{:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         com.datomic/datomic-free {:mvn/version "0.9.5697"}
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}

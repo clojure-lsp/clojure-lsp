@@ -45,18 +45,21 @@
   (let [sci-ctx (sci/init {:namespaces {'clojure-lsp.custom-linters-api custom-linters-api/api-fns}
                            :classes {'java.io.Exception Exception
                                      'java.lang.System System
+                                     'java.io.File java.io.File
                                      ;; enable with-in-str:
                                      'java.io.StringReader java.io.StringReader
                                      'clojure.lang.LineNumberingPushbackReader clojure.lang.LineNumberingPushbackReader
                                      ;; enable assert
                                      'java.lang.AssertionError java.lang.AssertionError}
                            :imports {'Exception 'java.io.Exception
-                                     'System java.lang.System}
+                                     'System java.lang.System
+                                     'File java.io.File}
                            :load-fn (fn [{:keys [namespace]}]
                                       (let [package (namespace-munge (name namespace))
-                                            path (str "clojure-lsp.exports/linters/" (string/replace package "." "/") ".clj")]
+                                            path (str "clojure-lsp.exports/linters/" (string/replace package "." "/") ".clj")
+                                            source-code (file-content-from-classpath path (:classpath db))]
                                         {:file path
-                                         :source (file-content-from-classpath path (:classpath db))}))})
+                                         :source source-code}))})
         analyzer-fn (try
                       (sci/binding [sci/out *out*
                                     sci/err *err*]
@@ -91,7 +94,10 @@
                                       (if (contains? #{:error :warning :info} (:severity params))
                                         (shared/deep-merge all-diags
                                                            (shared/logging-task
-                                                             (keyword "custom-lint" (string/replace (str fqns) "/" "."))
+                                                             (keyword "custom-lint" (-> fqns
+                                                                                        str
+                                                                                        (string/replace ":" "")
+                                                                                        (string/replace "/" "#")))
                                                              (analyze fqns params uris db)))
                                         all-diags))
                                     {}

@@ -42,7 +42,8 @@
 
 (defn ^:private analyze [fqns params uris db]
   (sci/create-ns 'clojure-lsp.custom-linters-api nil)
-  (let [sci-ctx (sci/init {:namespaces {'clojure-lsp.custom-linters-api custom-linters-api/api-fns}
+  (let [sci-ctx (sci/init {:namespaces {'clojure-lsp.custom-linters-api custom-linters-api/api-fns
+                                        'clojure.java.io {'file io/file}}
                            :classes {'java.io.Exception Exception
                                      'java.lang.System System
                                      'java.io.File java.io.File

@@ -1,11 +1,13 @@
 (ns foo.my-bar
   (:require
-   [clojure-lsp.custom-linters-api :as api])
-  (:import
-   [java.io File]))
+   [clojure-lsp.custom-linters-api :as api]
+   [clojure.java.io :as io]))
 
 (defn baz [{:keys [params db reg-diagnostic!]}]
-  (reg-diagnostic! {:uri (str (:project-root-uri db) "src" File/separator "sample_test" File/separator "diagnostics" File/separator "custom_linters.clj")
+  (reg-diagnostic! {:uri (api/filename->uri
+                           (.getCanonicalPath
+                             (io/file (api/uri->filename (:project-root-uri db)) "src" "sample_test" "diagnostics" "custom_linters.clj"))
+                           db)
                     :severity (:severity params)
                     :message (str "external analysis count: " (->> db
                                                                    api/internal-analysis

@@ -1,7 +1,8 @@
 (ns clojure-lsp.custom-linters-api
   "Public API used by custom linters, avoid breaking changes."
   (:require
-   [clojure-lsp.queries :as q]))
+   [clojure-lsp.queries :as q]
+   [clojure-lsp.shared :as shared]))
 
 (defn external-analysis
   "Filter only dependencies analysis, that are not related to project code."
@@ -48,6 +49,16 @@
   [db ns-sym name-sym]
   (q/find-element-from-sym db ns-sym name-sym))
 
+(defn filename->uri
+  "Convert a absolute filename path to a uri."
+  [filename db]
+  (shared/filename->uri filename db))
+
+(defn uri->filename
+  "Convert a uri to an absolute filename path."
+  [uri]
+  (shared/uri->filename uri))
+
 (def api-fns
   {'external-analysis external-analysis
    'internal-analysis internal-analysis
@@ -57,4 +68,6 @@
    'find-references find-references
    'find-element find-element
    'find-var-definitions find-var-definitions
-   'find-element-from-sym find-element-from-sym})
+   'find-element-from-sym find-element-from-sym
+   'filename->uri filename->uri
+   'uri->filename uri->filename})

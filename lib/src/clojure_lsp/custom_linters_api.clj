@@ -11,7 +11,7 @@
 (defn internal-analysis
   "Filter only project related analysis, that are not related to dependencies code."
   [db]
-  (q/external-analysis db))
+  (q/internal-analysis db))
 
 (defn find-definition
   "Find the analysis element definition."

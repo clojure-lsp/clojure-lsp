@@ -372,7 +372,8 @@
         (h/assert-submap
           {:project-root (str (fs/canonicalize (io/file "../cli/integration-test/sample-test")))
            :source-paths #{(str (fs/canonicalize (io/file "../cli/integration-test/sample-test/test")))
-                           (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/src")))}}
+                           (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/src")))
+                           (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/resources")))}}
           (update output :source-paths set))))
     (testing "dumping with different analysis type"
       (let [{:keys [result result-code]}

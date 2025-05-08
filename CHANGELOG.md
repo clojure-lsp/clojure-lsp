@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - New feature: Add support for custom project linters. #2043
+
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961
 

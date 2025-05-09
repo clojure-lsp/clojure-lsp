@@ -5,6 +5,7 @@
    [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.completion-lib :as f.completion-lib]
+   [clojure-lsp.feature.custom-linters :as f.custom-linters]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
@@ -44,7 +45,8 @@
     (swap! db* (fn [state-db]
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
-                     (lsp.depend/db-with-results depend-result))))
+                     (lsp.depend/db-with-results depend-result)
+                     (f.custom-linters/db-with-results #(f.custom-linters/analyze-uri! uri %)))))
     (f.diagnostic/publish-diagnostics! uri components))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
@@ -262,6 +264,7 @@
                               (-> state-db
                                   (lsp.kondo/db-with-results kondo-result)
                                   (lsp.depend/db-with-results depend-result)
+                                  (f.custom-linters/db-with-results #(f.custom-linters/analyze-uri! uri %))
                                   (update-in [:documents uri :analyzed-version]
                                              bump-version version)))
           (let [db @db*]

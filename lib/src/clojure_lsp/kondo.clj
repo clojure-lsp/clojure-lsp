@@ -246,7 +246,7 @@
   [db {:keys [config] :as kondo-ctx} normalization-config]
   (when (run-custom-lint? config)
     (shared/logging-task
-      :internal/custom-lint-project
+      :internal/custom-lint-project-via-kondo
       (let [db (db-with-analysis db (normalize kondo-ctx normalization-config db))]
         (f.diagnostic/custom-lint-project! db kondo-ctx)))))
 

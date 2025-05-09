@@ -188,16 +188,16 @@ linter enabled via `ale` will only conflict with the built-in clj-kondo bundled 
 
 </details>
 
-Also, clojure-lsp by default pass `copy-configs` flag as `true` to clj-kondo to copy configurations exported from libs on classpath, to disable this behavior, set `copy-kondo-configs?` setting to false.
+Also, clojure-lsp by default pass `copy-configs` flag as `true` to clj-kondo to copy configurations exported from libs on classpath, to disable this behavior, set `:copy-kondo-configs?` setting to false.
 
 For more information about all clj-kondo available configurations,
 check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
 
-##### Custom clj-kondo linters
+#### clojure-lsp built-in linters
 
 Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (`<project>/.clj-kondo/config.edn`). Note that configuring these custom linters via clj-kondo's [ns metadata config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#metadata-config) is *not* supported. Below are the custom linters used:
 
-###### clojure-lsp/unused-public-var
+##### clojure-lsp/unused-public-var
 
 A custom linter that reports public functions/vars not used over the project.
 
@@ -227,7 +227,7 @@ Example:
                                            :ignore-test-references? true}}}
 ```
 
-###### clojure-lsp/different-aliases
+##### clojure-lsp/different-aliases
 
 Sometimes, it's desirable to use the same alias across namespaces to enhance readability and reduce cognitive load.
 
@@ -256,7 +256,37 @@ When you need to inform some other parameter for clj-depend that is not a config
  :snapshot? true}
 ```
 
-#### Disable linter
+#### Custom linters
+
+clojure-lsp supports defining custom linters in a project or lib (via [classpath-config](#classpath-config-paths)) where one can create their own kind of diagnostics, more about the rationale [here](https://github.com/clojure-lsp/clojure-lsp/issues/2043).
+
+1. If clojure-lsp finds in its config a custom-linter like:
+
+`.lsp/config.edn` or any classpath config
+```clojure
+{:linters {:custom {my-org.my-linter/lint {:severity :info}}}}
+```
+
+2. clojure-lsp will then search for a clojure file that defines that linter in the classpath:
+
+`clojure-lsp.exports/linters/my_org/my_linter.clj`
+```clojure
+(ns my-org.my-linter
+  (:require [clojure-lsp.custom-linters-api :as api])) ;; this ns has multiple helpers for handling the analysis.
+
+(defn lint [{:keys [db uris params reg-diagnostic!]}]
+  ,,,
+  (reg-diagnostic! {:uri (first uris)
+                    :severity (:severity params)
+                    :code "my-org/missing-unit-test"
+                    :message "Logic function missing unit test"
+                    :source "my-org/codestyle"
+                    :range {:start {:line 1 :character 2} :end {:line 3 :character 4}}}))
+```
+
+3. When clojure-lsp analyze your project or file, it will consider that custom lint.
+
+#### Disable a linter
 
 It's not recommended to disable a linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:
 

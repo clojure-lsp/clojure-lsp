@@ -267,9 +267,10 @@
 (defn external-filename? [filename source-paths]
   (boolean
     (and filename
-         (or (-> filename name jar-file?)
-             (and (seq source-paths)
-                  (not (seq (filename->source-paths filename source-paths))))))))
+         (when-not (string/ends-with? filename (str ".lsp" fs/file-separator "config.edn"))
+           (or (-> filename name jar-file?)
+               (and (seq source-paths)
+                    (not (seq (filename->source-paths filename source-paths)))))))))
 
 (def ^:private jar-file-with-filename-regex #"^(.*\.jar):(.*)")
 

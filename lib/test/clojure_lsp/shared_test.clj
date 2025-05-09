@@ -22,7 +22,8 @@
   (is (shared/external-filename? (h/file-path "/some/place/file.jar:some/path/to/file.clj") #{(h/file-path "/some/project/src/a.clj")}))
   (is (shared/external-filename? (h/file-path "/some/place/file.jar:some/path/to/file.clj") #{}))
   (is (shared/external-filename? (h/file-path "/some/place/file.jar:some/path/to/file.clj") #{(h/file-path "/some/place/file.jar:some/path")}))
-  (is (shared/external-filename? (h/file-path "/some/user/.emacs.d/.local/etc/workspace/.cache/something.cljc") #{(h/file-path "/some/place/file.clj")})))
+  (is (shared/external-filename? (h/file-path "/some/user/.emacs.d/.local/etc/workspace/.cache/something.cljc") #{(h/file-path "/some/place/file.clj")}))
+  (is (not (shared/external-filename? (h/file-path "/some/project/.lsp/config.edn") #{(h/file-path "/some/project/src")}))))
 
 (deftest uri->filename
   (testing "should decode special characters in file URI"

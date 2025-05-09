@@ -265,8 +265,11 @@
   (let [var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
         usages (into #{}
                      (comp
-                       (q/xf-all-var-usages-to-namespaces var-nses)
-                       (map q/var-usage-signature))
+                       (q/xf-all-var-usages-and-symbols-to-namespaces var-nses)
+                       (map (fn [{:keys [bucket] :as e}]
+                              (if (identical? :symbols bucket)
+                                (q/symbol-signature e)
+                                (q/var-usage-signature e)))))
                      nses-and-dependents)
         var-used? (fn [var-def]
                     (some usages (q/var-definition-signatures var-def)))]
@@ -289,7 +292,8 @@
           var-definitions-src (remove test-uri? var-definitions)
           var-definitions-test (filter test-uri? var-definitions)
           var-nses (set (map :ns var-definitions)) ;; optimization to limit usages to internal namespaces, or in the case of a single file, to its namespaces
-          nses-and-dependents (q/nses-and-dependents-analysis project-db var-nses)
+          nses-and-dependents (merge (q/nses-and-dependents-analysis project-db var-nses)
+                                     (q/edn-analysis project-db))
           nses-and-dependents-src (into {}
                                         (remove (fn [[uri _]]
                                                   (some #(re-find % uri) test-locations-regex))

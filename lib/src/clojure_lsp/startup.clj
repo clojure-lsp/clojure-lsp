@@ -209,6 +209,11 @@
     (async/go
       (db/upsert-local-cache! (build-db-cache db) db))))
 
+(defn ^:private project-paths-to-analyze [db]
+  (concat
+    (-> db :settings :source-paths)
+    [(.getCanonicalPath (config/local-project-config-file (:project-root-uri db)))]))
+
 (defn initialize-project
   [project-root-uri
    client-capabilities
@@ -278,7 +283,7 @@
             (when (contains? #{:project-and-full-dependencies
                                :project-and-shallow-analysis} (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
-              (analyze-external-classpath! root-path (-> @db* :settings :source-paths) classpath progress-token components))
+              (analyze-external-classpath! root-path (project-paths-to-analyze @db*) classpath progress-token components))
             (logger/info logger-tag "Caching db for next startup...")
             (upsert-db-cache! @db*))))
       (publish-task-progress producer (:resolving-config task-list) progress-token)
@@ -300,7 +305,7 @@
       (let [analyze-source-paths-fn (if (= :project-namespaces-only (:project-analysis-type @db*))
                                       analyze-source-paths-namespaces-only!
                                       analyze-source-paths!)]
-        (analyze-source-paths-fn (-> @db* :settings :source-paths)
+        (analyze-source-paths-fn (project-paths-to-analyze @db*)
                                  db*
                                  (fn [{:keys [total-files files-done]}]
                                    (let [task (-> (:analyzing-project task-list)

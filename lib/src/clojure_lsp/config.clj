@@ -7,6 +7,7 @@
    [clojure.string :as string]
    [medley.core :as medley])
   (:import
+   [java.io File]
    (java.util.jar JarFile JarFile$JarFileEntry)))
 
 (set! *warn-on-reflection* true)
@@ -49,6 +50,10 @@
         default (io/file (str project-root) ".lsp" ".cache")]
     ^java.io.File (or overwritten-path default)))
 
+(defn local-project-config-file ^File [project-root-uri]
+  (let [project-root-path (io/file (shared/uri->filename project-root-uri))]
+    (io/file project-root-path ".lsp" "config.edn")))
+
 (defn ^:private resolve-global-config [^java.io.File global-lsp-config-file]
   (when (shared/file-exists? global-lsp-config-file)
     (read-edn-file global-lsp-config-file)))
@@ -56,7 +61,7 @@
 (defn ^:private resolve-project-configs [project-root-uri ^java.io.File global-lsp-config-file]
   (loop [dir (io/file (shared/uri->filename project-root-uri))
          configs []]
-    (let [file (io/file dir ".lsp" "config.edn")
+    (let [file (local-project-config-file project-root-uri)
           parent (.getParentFile dir)]
       (if parent
         (recur parent (cond->> configs

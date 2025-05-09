@@ -569,18 +569,33 @@
         (q/find-references-from-cursor (h/db) (h/file-uri "file:///b.clj") def-r def-c false)))))
 
 (deftest find-references-in-edn
-  (h/load-code-and-locs (h/code "(ns b)"
-                                "{:a 1}") (h/file-uri "file:///b.clj"))
-  (let [[[kwd-r kwd-c]]
-        (h/load-code-and-locs (h/code "{:a 1"
-                                      " :b {|:a :foo}}") (h/file-uri "file:///a.edn"))]
-
-    (testing "from keyword outside source-path consider source-paths + uri analysis"
+  (testing "from keyword outside source-path consider source-paths + uri analysis"
+    (h/reset-components!)
+    (h/load-code-and-locs (h/code "(ns b)"
+                                  "{:a 1}") (h/file-uri "file:///b.clj"))
+    (let [[[kwd-r kwd-c]]
+          (h/load-code-and-locs (h/code "{:a 1"
+                                        " :b {|:a :foo}}") (h/file-uri "file:///a.edn"))]
       (h/assert-submaps
         [{:name "a" :name-row 2 :name-col 2 :name-end-row 2 :name-end-col 4 :bucket :keyword-usages :uri (h/file-uri "file:///b.clj")}
          {:name "a" :name-row 1 :name-col 2 :name-end-row 1 :name-end-col 4 :bucket :keyword-usages :uri (h/file-uri "file:///a.edn")}
          {:name "a" :name-row 2 :name-col 6 :name-end-row 2 :name-end-col 8 :bucket :keyword-usages :uri (h/file-uri "file:///a.edn")}]
-        (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.edn") kwd-r kwd-c false)))))
+        (q/find-references-from-cursor (h/db) (h/file-uri "file:///a.edn") kwd-r kwd-c false))))
+  (testing "when only var-definition reference is in edn"
+    (h/reset-components!)
+    (h/load-code-and-locs (h/code "{:a foo.bar/baz}") (h/file-uri "file:///a.edn"))
+    (let [[[fn-r fn-c]]
+          (h/load-code-and-locs (h/code "(ns foo.bar)"
+                                        "(defn |baz [] 1)") (h/file-uri "file:///foo/bar.clj"))]
+      (h/assert-submaps
+        [{:external? false
+          :name-row 1 :name-col 5 :name-end-row 1 :name-end-col 16
+          :symbol 'foo.bar/baz
+          :name 'baz
+          :lang :edn
+          :uri (h/file-uri "file:///a.edn")
+          :bucket :symbols}]
+        (q/find-references-from-cursor (h/db) (h/file-uri "file:///foo/bar.clj") fn-r fn-c false)))))
 
 (deftest find-definition-from-cursor
   (let [code (str "(ns a.b.c (:require [d.e.f :as |f-alias]))\n"

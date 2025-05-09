@@ -61,6 +61,11 @@
              {}
              (get-in documents [uri :namespaces])))
 
+(defn edn-analysis [{:keys [analysis]}]
+  (into {}
+        (filter (fn [[k _]] (string/ends-with? k ".edn")))
+        analysis))
+
 (defn db-with-analysis [db f & args]
   (assoc db :analysis (apply f db args)))
 
@@ -150,6 +155,7 @@
 
 (def kw-signature (juxt :ns :name))
 (def var-usage-signature (juxt :to :name))
+(def symbol-signature (juxt #(-> % :symbol namespace symbol) :name))
 (defn var-definition-signatures [var-def]
   (into #{}
         (map (fn [var-name]
@@ -536,11 +542,14 @@
           (comp
             (if include-declaration? xf-analysis->vars xf-analysis->var-usages-and-symbols)
             (filter #(contains? names (:name %)))
-            (filter #(safe-equal? (:ns var-definition) (or (:ns %) (:to %))))
+            (filter #(safe-equal? (:ns var-definition) (or (:ns %)
+                                                           (:to %)
+                                                           (some-> (:symbol %) namespace symbol))))
             (filter #(or include-declaration?
                          (not (var-usage-from-own-definition? %))))
             (medley/distinct-by (juxt :uri :name :row :col)))
-          (ns-and-dependents-analysis db (:ns var-definition)))))
+          (merge (ns-and-dependents-analysis db (:ns var-definition))
+                 (edn-analysis db)))))
 
 (defmethod find-references :keywords
   [db {:keys [ns name uri] :as keyword-element} include-declaration?]
@@ -847,10 +856,10 @@
             set
             (contains? fqsn)))))
 
-(defn xf-all-var-usages-to-namespaces [namespaces]
+(defn xf-all-var-usages-and-symbols-to-namespaces [namespaces]
   (comp
-    xf-analysis->var-usages
-    (filter #(contains? namespaces (:to %)))
+    xf-analysis->var-usages-and-symbols
+    (filter #(contains? namespaces (or (:to %) (some-> % :symbol namespace symbol))))
     (remove var-usage-from-own-definition?)))
 
 (defn find-local-var-usages-to-namespace [db uri namespace]

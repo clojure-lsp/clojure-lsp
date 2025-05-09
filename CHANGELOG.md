@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- General
+  - Consider `.lsp/config.edn` as part of project code, removing false positives of unused-public-var linter.
+  - Consider full qualified symbols in edn files when checking for var references.
+
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961
 

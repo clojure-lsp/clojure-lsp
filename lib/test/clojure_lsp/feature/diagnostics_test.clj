@@ -231,6 +231,9 @@
                                 "(reify Foo (baz [_ x] x))") (h/file-uri "file:///project/src/f.clj"))
   (h/load-code-and-locs "(ns g-a) (defn foo [a b] (+ a b))" (h/file-uri "file:///project/src/g_a.clj"))
   (h/load-code-and-locs "(ns g-b (:require [g-a :as g-a])) (g-a/foo 1 2)" (h/file-uri "file:///project/cool-test/g_a_test.clj"))
+  (h/load-code-and-locs "{:a h.b/foo}" (h/file-uri "file:///project/src/h_a.edn"))
+  (h/load-code-and-locs "{:b h.b/bar}" (h/file-uri "file:///project/.lsp/config.edn"))
+  (h/load-code-and-locs "(ns h.b) (defn foo [] 1) (defn bar [] 1)" (h/file-uri "file:///project/src/h_b.clj"))
   (testing "when linter level is :info"
     (reset! findings [])
     (f.diagnostic/custom-lint-uris!
@@ -445,7 +448,15 @@
         :col 16
         :end-row 1
         :end-col 19}]
-      @findings)))
+      @findings))
+  (testing "exclude when used in symbols"
+    (reset! findings [])
+    (f.diagnostic/custom-lint-uris!
+      [(h/file-uri "file:///project/src/h_b.clj")]
+      (h/db)
+      {:reg-finding! #(swap! findings conj %)
+       :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
+    (h/assert-submaps [] @findings)))
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some_ns.clj"))

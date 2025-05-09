@@ -8,6 +8,7 @@
    [clojure.string :as string]
    [sci.core :as sci])
   (:import
+   [java.io StringWriter]
    [java.util.jar JarFile]))
 
 (def ^:private logger-tag "[custom-linter]")
@@ -61,28 +62,34 @@
                                             source-code (file-content-from-classpath path (:classpath db))]
                                         {:file path
                                          :source source-code}))})
-        analyzer-fn (try
-                      (sci/binding [sci/out *out*
-                                    sci/err *err*]
-                        (let [code (let [ns (namespace fqns)]
-                                     (format "(require '%s %s)\n%s"
-                                             ns
-                                             (if *reload* :reload "")
-                                             fqns))]
-                          (sci/eval-string* sci-ctx code)))
-                      (catch Exception e
-                        (logger/error logger-tag (str "Error requiring custom linter " fqns) e)
-                        identity))
         empty-diagnostics (reduce #(assoc %1 %2 []) {} uris)
         diagnostics* (atom empty-diagnostics)
         reg-diagnostic!-fn (fn [diagnostic]
                              (if-let [missing-fields (missing-required-fields diagnostic)]
                                (logger/warn logger-tag (format "Ignoring diagnostic, missing required fields: %s for diagnostic %s" missing-fields diagnostic))
-                               (swap! diagnostics* update (:uri diagnostic) (fnil conj []) (custom-diagnostic->lsp diagnostic))))]
-    (analyzer-fn {:db db
-                  :params params
-                  :uris uris
-                  :reg-diagnostic! reg-diagnostic!-fn})
+                               (swap! diagnostics* update (:uri diagnostic) (fnil conj []) (custom-diagnostic->lsp diagnostic))))
+        out (StringWriter.)
+        err (StringWriter.)]
+    (try
+      (sci/binding [sci/out out
+                    sci/err err]
+        (let [code (let [ns (namespace fqns)]
+                     (format "(require '%s %s)\n%s"
+                             ns
+                             (if *reload* :reload "")
+                             fqns))
+              lint-fn (sci/eval-string* sci-ctx code)]
+          (lint-fn {:db db
+                    :params params
+                    :uris uris
+                    :reg-diagnostic! reg-diagnostic!-fn})))
+      (catch Exception e
+        (logger/error logger-tag (str "Error requiring custom linter " fqns) e)
+        identity))
+    (when-let [out (not-empty (string/trim (str out)))]
+      (logger/warn logger-tag "stdout from linter:" out))
+    (when-let [err (not-empty (string/trim (str err)))]
+      (logger/warn logger-tag "stderr from linter:" err))
     @diagnostics*))
 
 (defn ^:private analyze-uris!

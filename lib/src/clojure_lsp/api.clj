@@ -321,6 +321,7 @@
     `:dep-graph` Dependency graph of namespaces relationship derived from clj-kondo analysis.
     `:findings` clj-kondo findings used for diagnostics.
     `:settings` a map with all settings considered by clojure-lsp.
+    `:clj-kondo-settings` a map with all clj-kondo config used by clojure-lsp.
 
   **Example**
 

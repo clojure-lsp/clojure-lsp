@@ -459,6 +459,7 @@
     (assoc $
            :project-root (shared/uri->filename (:project-root-uri db))
            :source-paths (-> db :settings :source-paths)
+           :clj-kondo-settings (:kondo-config db)
            :diagnostics (diagnostics-by-uri db options))
     (select-keys $
                  (if (not (coll? filter-keys))

@@ -45,7 +45,7 @@
         (f.file-management/did-close uri (assoc (h/components)
                                                 :diagnostics-chan mock-diagnostics-chan)))
       (is (get-in (h/db) [:analysis uri]))
-      (is (get-in (h/db) [:findings uri]))
+      (is (get-in (h/db) [:diagnostics :clj-kondo uri]))
       (is (seq (get-in (h/db) [:dep-graph 'foo :uris])))
       (is (get-in (h/db) [:documents uri]))
       (h/assert-no-take mock-diagnostics-chan 500)))
@@ -56,7 +56,7 @@
         (f.file-management/did-close uri (assoc (h/components)
                                                 :diagnostics-chan mock-diagnostics-chan)))
       (is (nil? (get-in (h/db) [:analysis uri])))
-      (is (nil? (get-in (h/db) [:findings uri])))
+      (is (nil? (get-in (h/db) [:diagnostics :clj-kondo uri])))
       (is (not (seq (get-in (h/db) [:dep-graph 'bar :uris]))))
       (is (nil? (get-in (h/db) [:documents uri])))
       (is (= {:uri uri
@@ -69,7 +69,7 @@
         (f.file-management/did-close uri (assoc (h/components)
                                                 :diagnostics-chan mock-diagnostics-chan)))
       (is (get-in (h/db) [:analysis uri]))
-      (is (get-in (h/db) [:findings uri]))
+      (is (get-in (h/db) [:diagnostics :clj-kondo uri]))
       (is (seq (get-in (h/db) [:dep-graph 'some-jar :uris])))
       (is (get-in (h/db) [:documents uri]))
       (is (= {:uri uri
@@ -88,7 +88,7 @@
                                           :edits-chan mock-edits-chan
                                           :diagnostics-chan mock-diagnostics-chan))
       (is (get-in (h/db) [:analysis uri]))
-      (is (get-in (h/db) [:findings uri]))
+      (is (get-in (h/db) [:diagnostics :clj-kondo uri]))
       ;; The ns won't be in the dep graph until after the edit adding it is applied.
       (is (not (contains? (get (h/db) :dep-graph) 'aaa.bbb)))
       (is (get-in (h/db) [:documents uri]))

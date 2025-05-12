@@ -8,7 +8,7 @@
    [clojure.test :refer [deftest is testing]]
    [matcher-combinators.test :refer [match?]]))
 
-(def findings (atom []))
+(def diags (atom []))
 
 (h/reset-components-before-test)
 
@@ -17,35 +17,35 @@
   (h/load-code-and-locs "(ns b (:require [clojure.string :as s]))"
                         (h/file-uri "file:///b.clj"))
   (testing "when there are two files but only one alias"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [h/default-uri]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/different-aliases {:level :info}}}})
     (h/assert-submaps
       []
-      @findings))
+      @diags))
   (h/load-code-and-locs "(ns c (:require [clojure.string :as str]))"
                         (h/file-uri "file:///c.clj"))
   (h/load-code-and-locs "(ns d (:require [clojure.string :as string]))"
                         (h/file-uri "file:///d.clj"))
   (testing "when linter level is :off"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [h/default-uri]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/different-aliases {:level :off}}}})
     (h/assert-submaps
       []
-      @findings))
+      @diags))
   (testing "when linter level is :info"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [h/default-uri]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/different-aliases {:level :info}}}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///b.clj")
@@ -72,32 +72,32 @@
         :level :info
         :message "Different aliases #{s string str} found for clojure.string"
         :type :clojure-lsp/different-aliases}]
-      @findings))
+      @diags))
   (testing "linter level by default is :off"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [h/default-uri]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
     (h/assert-submaps
       []
-      @findings))
+      @diags))
   (h/load-code-and-locs "(ns e (:require [clojure.string :as sut]))"
                         (h/file-uri "file:///e.clj"))
   (testing "exclude-aliases"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [h/default-uri]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/different-aliases {:level :error
                                                           :exclude-aliases #{'sut}}}}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///b.clj")}
        {:uri (h/file-uri "file:///c.clj")}
        {:uri (h/file-uri "file:///d.clj")}]
-      @findings)))
+      @diags)))
 
 (deftest unused-public-var-declared-outside-test-namespaces
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
@@ -112,28 +112,28 @@
             When linter level is :info
             And the :ignore-test-references? flag is off
             Then it returns no findings because foo/bar is being used"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/foo.clj")
        (h/file-uri "file:///project/test/foo_test.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters
                 {:clojure-lsp/unused-public-var
                  {:level :info
                   :ignore-test-references? false}}}})
-    (is (match? [] @findings)))
+    (is (match? [] @diags)))
   (testing "Given a public var foo/bar in a src namespace
             And being referenced in a test namespace foo-test
             When linter level is :info
             And the :ignore-test-references? flag is on
             Then it returns a finding because the test namespace is ignored"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/foo.clj")
        (h/file-uri "file:///project/test/foo_test.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters
                 {:clojure-lsp/unused-public-var
                  {:level :info
@@ -147,7 +147,7 @@
                   :end-col 19
                   :message "Unused public var 'foo/bar'"
                   :row 1}]
-                @findings))))
+                @diags))))
 
 (deftest unused-public-var-declared-inside-test-namespace
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
@@ -158,11 +158,11 @@
             When linter level is :info
             And the :ignore-test-references? flag is off
             Then it returns a finding because foo-test/helper is not being used"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/test/foo_test.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters
                 {:clojure-lsp/unused-public-var
                  {:level :info
@@ -176,16 +176,16 @@
                   :end-col 27
                   :message "Unused public var 'foo-test/helper'"
                   :row 1}]
-                @findings)))
+                @diags)))
   (testing "Given a public var foo-test/helper in a test namespace
             When linter level is :info
             And the :ignore-test-references? flag is on
             Then it returns a finding because it is not being used although it is in a test namespace"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/test/foo_test.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var
                           {:level :info
                            :ignore-test-references? true}}}})
@@ -198,22 +198,22 @@
                   :end-col 27
                   :message "Unused public var 'foo-test/helper'"
                   :row 1}]
-                @findings)))
+                @diags)))
   (testing "Given a public var bar-test/baz in a test namespace
             When linter level is :info
             And the :ignore-test-references? flag is on
             Then it returns NO findings because it is being used although it is in a test namespace"
-    (reset! findings [])
+    (reset! diags [])
     (h/load-code-and-locs "(ns bar-test) (defn baz []) (baz)"
                           (h/file-uri "file:///project/test/bar_test.clj"))
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/test/bar_test.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var
                           {:level :info
                            :ignore-test-references? true}}}})
-    (is (match? [] @findings))))
+    (is (match? [] @diags))))
 
 (deftest lint-project-public-vars
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
@@ -235,11 +235,11 @@
   (h/load-code-and-locs "{:b h.b/bar}" (h/file-uri "file:///project/.lsp/config.edn"))
   (h/load-code-and-locs "(ns h.b) (defn foo [] 1) (defn bar [] 1)" (h/file-uri "file:///project/src/h_b.clj"))
   (testing "when linter level is :info"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/a.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///project/src/a.clj")
@@ -250,13 +250,13 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      @findings))
+      @diags))
   (testing "when linter level is :warning"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/a.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :warning}}}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///project/src/a.clj")
@@ -267,13 +267,13 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      @findings))
+      @diags))
   (testing "when linter level is :error"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/a.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :error}}}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///project/src/a.clj")
@@ -284,23 +284,23 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      @findings))
+      @diags))
   (testing "when linter level is :off"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/a.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :off}}}})
     (h/assert-submaps
       []
-      @findings))
+      @diags))
   (testing "linter level by default is :info"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/a.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///project/src/a.clj")
@@ -311,65 +311,65 @@
         :col 20
         :end-row 1
         :end-col 23}]
-      @findings))
+      @diags))
   (testing "excluding the whole ns"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/a.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}}})
     (h/assert-submaps
       []
-      @findings))
+      @diags))
   (testing "excluding the simple var from ns"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/a.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}}})
     (h/assert-submaps
       []
-      @findings))
+      @diags))
   (testing "excluding the specific var"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/a.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}}})
     (h/assert-submaps
       []
-      @findings))
+      @diags))
   (testing "excluding specific syms"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/b.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
     (h/assert-submaps
       []
-      @findings))
+      @diags))
   (testing "excluding when inside comment block"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/e.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
     (h/assert-submaps
       [{:type :clojure-lsp/unused-public-var
         :uri (h/file-uri "file:///project/src/e.clj")
         :message "Unused public var 'some-ns/foo'"}]
-      @findings))
+      @diags))
   (testing "unused keyword definitions"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/c.cljs")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///project/src/c.cljs")
@@ -388,29 +388,29 @@
         :col 17
         :end-row 3
         :end-col 28}]
-      @findings))
+      @diags))
   (testing "var marked ^:export is excluded"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/d.cljs")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
-    (h/assert-submaps [] @findings))
+    (h/assert-submaps [] @diags))
   (testing "var with dash and :gen-class on ns is excluded"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/b.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
-    (h/assert-submaps [] @findings))
+    (h/assert-submaps [] @diags))
   (testing "definterface methods are excluded when the interface is used."
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/f.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///project/src/f.clj")
@@ -421,23 +421,23 @@
         :col 15
         :end-row 2
         :end-col 18}]
-      @findings))
+      @diags))
   (testing "not ignoring tests references when flag is off"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/g_a.clj")
        (h/file-uri "file:///project/cool-test/g_a_test.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {}})
-    (h/assert-submaps [] @findings))
+    (h/assert-submaps [] @diags))
   (testing "ignoring tests references when flag is on"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/g_a.clj")
        (h/file-uri "file:///project/cool-test/g_a_test.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:ignore-test-references? true}}}})
     (h/assert-submaps
       [{:uri (h/file-uri "file:///project/src/g_a.clj")
@@ -448,15 +448,15 @@
         :col 16
         :end-row 1
         :end-col 19}]
-      @findings))
+      @diags))
   (testing "exclude when used in symbols"
-    (reset! findings [])
+    (reset! diags [])
     (f.diagnostic/custom-lint-uris!
       [(h/file-uri "file:///project/src/h_b.clj")]
       (h/db)
-      {:reg-finding! #(swap! findings conj %)
+      {:reg-finding! #(swap! diags conj %)
        :config {:linters {:clojure-lsp/unused-public-var {:level :info}}}})
-    (h/assert-submaps [] @findings)))
+    (h/assert-submaps [] @diags)))
 
 (deftest lint-clj-kondo-findings
   (h/load-code-and-locs "(ns some-ns) (defn ^:private foo [a b] (+ a b))" (h/file-uri "file:///some_ns.clj"))

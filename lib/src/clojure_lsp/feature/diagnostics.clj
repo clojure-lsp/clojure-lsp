@@ -141,7 +141,7 @@
                               (string/split #"\r?\n")))
         output-langs? (some-> db :kondo-config :output :langs)]
     (when-not (exclude-ns? uri linter db)
-      (->> (get-in db [:findings uri])
+      (->> (get-in db [:diagnostics :clj-kondo uri])
            (filter valid-finding?)
            (mapv #(kondo-finding->diagnostic range-type lines* output-langs? %))))))
 
@@ -172,7 +172,7 @@
                            :warning 2
                            :info 3)
                :source "clj-depend"}))
-          (get-in db [:clj-depend-violations (symbol namespace)]))))
+          (get-in db [:diagnostics :clj-depend (symbol namespace)]))))
 
 (defn find-diagnostics [^String uri db]
   (let [kondo-level (settings/get db [:linters :clj-kondo :level])

@@ -8,7 +8,9 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
-   [clojure.test :as t :refer [deftest is testing]]))
+   [clojure.test :as t :refer [deftest is testing]]
+   [matcher-combinators.matchers :as m]
+   [matcher-combinators.test :refer [match?]]))
 
 (defmacro ignoring-prints
   [& body]
@@ -333,16 +335,16 @@
               (api/dump {:project-root (io/file "../cli/integration-test/sample-test")}))]
         (is (= 0 result-code))
         (is result)
-        (is (= [:classpath
-                :analysis
-                :dep-graph
-                :findings
-                :settings
-                :clj-kondo-settings
-                :project-root
-                :source-paths
-                :diagnostics]
-               (keys (edn/read-string (apply message-fn [])))))))
+        (is (match? (m/in-any-order [:classpath
+                                     :analysis
+                                     :dep-graph
+                                     :findings
+                                     :settings
+                                     :clj-kondo-settings
+                                     :project-root
+                                     :source-paths
+                                     :diagnostics])
+                    (keys (edn/read-string (apply message-fn [])))))))
     (testing "dumping all fields as json"
       (let [{:keys [result result-code message-fn]}
             (ignoring-prints
@@ -350,15 +352,17 @@
                          :output {:format :json}}))]
         (is (= 0 result-code))
         (is result)
-        (is (= ["classpath"
-                "analysis"
-                "dep-graph"
-                "findings"
-                "settings"
-                "project-root"
-                "source-paths"
-                "diagnostics"]
-               (keys (json/parse-string (apply message-fn [])))))))
+        (is (match? (m/in-any-order
+                      ["classpath"
+                       "analysis"
+                       "dep-graph"
+                       "findings"
+                       "clj-kondo-settings"
+                       "settings"
+                       "project-root"
+                       "source-paths"
+                       "diagnostics"])
+                    (keys (json/parse-string (apply message-fn [])))))))
     (testing "dumping specific fields"
       (let [{:keys [result result-code message-fn]}
             (ignoring-prints

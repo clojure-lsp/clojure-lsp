@@ -169,11 +169,11 @@
                                                     :settings         {:source-paths source-paths}}))))))
 
 (deftest db-with-results-test
-  (testing "Should return db with :clj-depend-violations"
-    (is (= {:clj-depend-violations {'foo foo-namespace-violation}}
+  (testing "Should return db with :clj-depend violations"
+    (is (= {:diagnostics {:clj-depend {'foo foo-namespace-violation}}}
            (clj-depend/db-with-results {} {:violations {'foo foo-namespace-violation}}))))
 
-  (testing "Should return db with :clj-depend-violations when there are already violations"
-    (is (= {:clj-depend-violations {'foo foo-namespace-violation
-                                    'bar bar-namespace-violation}}
-           (clj-depend/db-with-results {:clj-depend-violations {'foo foo-namespace-violation}} {:violations {'bar bar-namespace-violation}})))))
+  (testing "Should return db with :diagnostics :clj-depend violations when there are already violations"
+    (is (= {:diagnostics {:clj-depend {'foo foo-namespace-violation
+                                       'bar bar-namespace-violation}}}
+           (clj-depend/db-with-results {:diagnostics {:clj-depend {'foo foo-namespace-violation}}} {:violations {'bar bar-namespace-violation}})))))

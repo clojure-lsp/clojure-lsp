@@ -74,7 +74,7 @@
   [db {:keys [findings config] :as results}]
   (-> db
       (db-with-analysis results)
-      (update :findings merge findings)
+      (update-in [:diagnostics :clj-kondo] merge findings)
       (shared/assoc-some :kondo-config config)))
 
 (defn ^:private element-with-fallback-name-position [element]
@@ -384,7 +384,7 @@
     (-> config
         (run-kondo! (str "paths " (string/join ", " paths)))
         (normalize normalization-config db)
-        (update :findings merge empty-findings))))
+        (update-in [:diagnostics :clj-kondo] merge empty-findings))))
 
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call

@@ -300,7 +300,7 @@
       (dep-graph/remove-doc uri)
       (shared/dissoc-in [:documents uri])
       (shared/dissoc-in [:analysis uri])
-      (shared/dissoc-in [:findings uri])))
+      (shared/dissoc-in [:diagnostics :clj-kondo uri])))
 
 (defn ^:private files-deleted [{:keys [db*], :as components} uris]
   (swap! db* #(reduce db-without-uri % uris))

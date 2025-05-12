@@ -333,15 +333,15 @@
               (api/dump {:project-root (io/file "../cli/integration-test/sample-test")}))]
         (is (= 0 result-code))
         (is result)
-        (is (= [:classpath
-                :analysis
+        (is (= [:findings
                 :dep-graph
-                :findings
-                :settings
                 :clj-kondo-settings
+                :classpath
+                :diagnostics
                 :project-root
+                :settings
                 :source-paths
-                :diagnostics]
+                :analysis]
                (keys (edn/read-string (apply message-fn [])))))))
     (testing "dumping all fields as json"
       (let [{:keys [result result-code message-fn]}
@@ -350,14 +350,15 @@
                          :output {:format :json}}))]
         (is (= 0 result-code))
         (is result)
-        (is (= ["classpath"
-                "analysis"
-                "dep-graph"
-                "findings"
+        (is (= ["dep-graph"
                 "settings"
+                "classpath"
                 "project-root"
+                "clj-kondo-settings"
+                "findings"
+                "diagnostics"
                 "source-paths"
-                "diagnostics"]
+                "analysis"]
                (keys (json/parse-string (apply message-fn [])))))))
     (testing "dumping specific fields"
       (let [{:keys [result result-code message-fn]}

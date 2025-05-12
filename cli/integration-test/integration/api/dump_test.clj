@@ -13,15 +13,15 @@
     (with-open [rdr (lsp/cli! "dump"
                               "--project-root" h/root-project-path)]
       (let [result (edn/read-string (slurp rdr))]
-        (is (= [:classpath
-                :analysis
+        (is (= [:findings
                 :dep-graph
-                :findings
-                :settings
                 :clj-kondo-settings
+                :classpath
+                :diagnostics
                 :project-root
+                :settings
                 :source-paths
-                :diagnostics]
+                :analysis]
                (keys result)))
         (is (h/assert-submap
               {:project-root h/root-project-path

@@ -14,6 +14,11 @@
   [db]
   (q/internal-analysis db))
 
+(defn db-with-internal-analysis
+  "Return a db with only internal analysis."
+  [db]
+  (q/db-with-internal-analysis db))
+
 (defn find-definition
   "Find the analysis element definition."
   [db element]
@@ -77,6 +82,7 @@
 (def api-fns
   {'external-analysis external-analysis
    'internal-analysis internal-analysis
+   'db-with-internal-analysis db-with-internal-analysis
    'find-definition find-definition
    'find-declaration find-declaration
    'find-implementations find-implementations

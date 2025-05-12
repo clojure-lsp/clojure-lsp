@@ -278,3 +278,21 @@
                     (shared/normalize-uri-from-client uri))
         "file:/c:/c.clj"
         "file:///c:/c.clj"))))
+
+(deftest dir-uris->file-uris-test
+  (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-uri "file:///user/project/src")
+                                                               (h/file-uri "file:///user/project/test")}}
+                                    :project-root-uri (h/file-uri "file:///user/project")})
+  (h/load-code (h/code "(ns foo.bar)") (h/file-uri "file:///user/project/src/foo/bar.clj"))
+  (h/load-code (h/code "(ns foo.baz)") (h/file-uri "file:///user/project/src/foo/baz.clj"))
+  (h/load-code (h/code "(ns bar.foo)") (h/file-uri "file:///user/project/test/bar/foo.clj"))
+  (h/load-code (h/code "(ns bar.baz)") (h/file-uri "file:///user/project/other/bar/baz.clj"))
+  (testing "when the dir-uri is a dir inside source-path"
+    (is (= [(h/file-uri "file:///user/project/src/foo/bar.clj")
+            (h/file-uri "file:///user/project/src/foo/baz.clj")]
+           (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src")]
+                                       (h/db)))))
+  (testing "when the dir-uri is absolute file URI"
+    (is (= [(h/file-uri "file:///user/project/src/foo/bar.clj")]
+           (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src/foo/bar.clj")]
+                                       (h/db))))))

@@ -59,6 +59,21 @@
   [uri]
   (shared/uri->filename uri))
 
+(defn dir-uris->file-uris
+  "Convert a coll of uris that may represent dirs to its
+   respective file uris if present on db.
+
+  **Example**
+
+   ```clojure
+   (dir-uris->file-uris [\"file:///project/src\"] db)
+   => [\"file:///project/src/foo.clj\"
+       \"file:///project/src/bar.clj\"]
+
+   ```"
+  [uris db]
+  (shared/dir-uris->file-uris uris db))
+
 (def api-fns
   {'external-analysis external-analysis
    'internal-analysis internal-analysis
@@ -70,4 +85,5 @@
    'find-var-definitions find-var-definitions
    'find-element-from-sym find-element-from-sym
    'filename->uri filename->uri
-   'uri->filename uri->filename})
+   'uri->filename uri->filename
+   'dir-uris->file-uris dir-uris->file-uris})

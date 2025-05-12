@@ -770,7 +770,7 @@
                                   (safe-equal? (:ns finding) (:to %)))
                             local-var-usages)))
             (map :ns))
-          (get-in db [:findings uri]))))
+          (get-in db [:diagnostics :clj-kondo uri]))))
 
 (defn find-unused-refers [db uri]
   (let [local-var-usages (get-in db [:analysis uri :var-usages])]
@@ -785,7 +785,7 @@
                               count)
                          1)))
             (map #(symbol (-> % :ns str) (-> % :refer str))))
-          (get-in db [:findings uri]))))
+          (get-in db [:diagnostics :clj-kondo uri]))))
 
 (defn find-unused-imports [db uri]
   (let [{:keys [var-usages java-class-usages]} (get-in db [:analysis uri])]
@@ -802,14 +802,14 @@
                                     (not (:import %)))
                               java-class-usages))))
             (map :class))
-          (get-in db [:findings uri]))))
+          (get-in db [:diagnostics :clj-kondo uri]))))
 
 (defn find-duplicate-requires [db uri]
   (into #{}
         (comp
           (filter (comp #(identical? :duplicate-require %) :type))
           (map :duplicate-ns))
-        (get-in db [:findings uri])))
+        (get-in db [:diagnostics :clj-kondo uri])))
 
 (defn find-element-from-sym [db from-ns from-name]
   (let [xf

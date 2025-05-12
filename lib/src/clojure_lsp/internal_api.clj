@@ -455,8 +455,9 @@
 
 (defn ^:private db->dump-data [db {{:keys [filter-keys]} :output :as options}]
   (as-> db $
-    (select-keys $ [:classpath :analysis :dep-graph :findings :settings])
+    (select-keys $ [:classpath :analysis :dep-graph :settings])
     (assoc $
+           :findings (get-in db [:diagnostics :clj-kondo])
            :project-root (shared/uri->filename (:project-root-uri db))
            :source-paths (-> db :settings :source-paths)
            :clj-kondo-settings (:kondo-config db)

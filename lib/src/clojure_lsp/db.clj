@@ -13,7 +13,9 @@
 (def ^:private db-logger-tag "[DB]")
 
 (def initial-db {:documents {}
-                 :dep-graph {}})
+                 :dep-graph {}
+                 :diagnostics {:clj-kondo nil
+                               :clj-depend nil}})
 (defonce db* (atom initial-db))
 
 (def version 12)

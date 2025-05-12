@@ -4,7 +4,9 @@
    [clojure.edn :as edn]
    [clojure.test :refer [deftest is testing]]
    [integration.helper :as h]
-   [integration.lsp :as lsp]))
+   [integration.lsp :as lsp]
+   [matcher-combinators.matchers :as m]
+   [matcher-combinators.test :refer [match?]]))
 
 (lsp/clean-after-test)
 
@@ -13,16 +15,17 @@
     (with-open [rdr (lsp/cli! "dump"
                               "--project-root" h/root-project-path)]
       (let [result (edn/read-string (slurp rdr))]
-        (is (= [:findings
-                :dep-graph
-                :clj-kondo-settings
-                :classpath
-                :diagnostics
-                :project-root
-                :settings
-                :source-paths
-                :analysis]
-               (keys result)))
+        (is (match? (m/in-any-order
+                      [:classpath
+                       :analysis
+                       :dep-graph
+                       :findings
+                       :settings
+                       :clj-kondo-settings
+                       :project-root
+                       :source-paths
+                       :diagnostics])
+                    (keys result)))
         (is (h/assert-submap
               {:project-root h/root-project-path
                :source-paths #{(h/project-path->canon-path "test")

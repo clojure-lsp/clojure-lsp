@@ -94,4 +94,4 @@
 (defn db-with-results
   "Update `db` with clj-depend result."
   [db {:keys [violations]}]
-  (update db :clj-depend-violations merge violations))
+  (update-in db [:diagnostics :clj-depend] merge violations))

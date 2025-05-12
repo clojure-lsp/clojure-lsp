@@ -319,7 +319,7 @@
     `:classpath` list of paths of found classpath.
     `:analysis` clj-kondo analysis normalized for clojure-lsp usage.
     `:dep-graph` Dependency graph of namespaces relationship derived from clj-kondo analysis.
-    `:findings` clj-kondo findings used for diagnostics.
+    `:diagnostics` diagnostics including all findings sources.
     `:settings` a map with all settings considered by clojure-lsp.
     `:clj-kondo-settings` a map with all clj-kondo config used by clojure-lsp.
 

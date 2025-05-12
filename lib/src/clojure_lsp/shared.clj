@@ -567,5 +567,5 @@
 (defn dir-uris->file-uris [dir-uris db]
   (into []
         (filter (fn [uri]
-                  (some #(fs/starts-with? uri %) dir-uris)))
+                  (some #(string/starts-with? uri %) dir-uris)))
         (keys (:analysis db))))

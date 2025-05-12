@@ -124,4 +124,4 @@
 (defn db-with-results
   "Update `db` with custom linter analyzers result."
   [db analyze-fn]
-  (update db :custom-linter-diagnostics merge (analyze-fn db)))
+  (update-in db [:diagnostics :custom] merge (analyze-fn db)))

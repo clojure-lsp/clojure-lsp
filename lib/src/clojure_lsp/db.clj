@@ -15,7 +15,8 @@
 (def initial-db {:documents {}
                  :dep-graph {}
                  :diagnostics {:clj-kondo nil
-                               :clj-depend nil}})
+                               :clj-depend nil
+                               :custom nil}})
 (defonce db* (atom initial-db))
 
 (def version 12)

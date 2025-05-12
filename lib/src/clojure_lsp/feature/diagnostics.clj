@@ -174,8 +174,8 @@
                :source "clj-depend"}))
           (get-in db [:diagnostics :clj-depend (symbol namespace)]))))
 
-(defn ^:private custom-linter-diagnostics->diagnostics [uri db]
-  (get-in db [:custom-linter-diagnostics uri]))
+(defn ^:private custom-diagnostics->diagnostics [uri db]
+  (get-in db [:diagnostics :custom uri]))
 
 (defn find-diagnostics [^String uri db]
   (let [kondo-level (settings/get db [:linters :clj-kondo :level])
@@ -190,7 +190,7 @@
         (concat (clj-depend-violations->diagnostics uri depend-level db))
 
         :always
-        (concat (custom-linter-diagnostics->diagnostics uri db))))))
+        (concat (custom-diagnostics->diagnostics uri db))))))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
   (async/put! diagnostics-chan diagnostic))

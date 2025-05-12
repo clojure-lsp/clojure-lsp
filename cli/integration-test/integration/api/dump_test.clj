@@ -18,6 +18,7 @@
                 :dep-graph
                 :findings
                 :settings
+                :clj-kondo-settings
                 :project-root
                 :source-paths
                 :diagnostics]

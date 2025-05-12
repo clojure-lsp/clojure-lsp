@@ -12,6 +12,7 @@
 
 - API/CLI
   - Replace `tools.cli` with `babashka.cli`. #2036
+  - Include `:clj-kondo-settings` to dump data.
 
 ## 2025.04.23-18.16.46
 

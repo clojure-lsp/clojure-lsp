@@ -167,7 +167,19 @@
                                 "(r/reg-event-fx :some/thing (fn []))"
                                 "(r/reg-event-fx :otherthing (fn []))") (h/file-uri "file:///project/src/c.cljs"))
   (h/load-code-and-locs (h/code "(ns some-ns) (defn ^:export foobar (fn []))") (h/file-uri "file:///project/src/d.cljs"))
-  (h/load-code-and-locs "(ns some-ns) (def foo 1) (comment (def bar 2))" (h/file-uri "file:///project/src/e.clj"))
+  (h/load-code-and-locs "(ns some-ns) (def foo 1) (comment (def bar 2))" (h/file-uri "file:///project/src/e_a.clj"))
+  (h/load-code-and-locs (h/code "(ns some-ns)"
+                                "#_:clojure-lsp/ignore"
+                                "(def bar 2)"
+                                "#_:clj-kondo/ignore"
+                                "(def baz 3)"
+                                "#_:other-comment/here"
+                                "(def foo 1)"
+                                "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}"
+                                "(def qux 4)"
+                                "#_{:clojure-lsp/ignore [:clojure-lsp/unused-public-var]}"
+                                "(def quu 5)")
+                        (h/file-uri "file:///project/src/e_b.clj"))
   (h/load-code-and-locs (h/code "(ns f-ns)"
                                 "(definterface Bar (bar [x]))"
                                 "(definterface Foo (baz [x]))"
@@ -250,10 +262,21 @@
   (testing "excluding when inside comment block"
     (h/assert-submaps
       [{:code "clojure-lsp/unused-public-var"
-        :uri (h/file-uri "file:///project/src/e.clj")
+        :uri (h/file-uri "file:///project/src/e_a.clj")
         :message "Unused public var 'some-ns/foo'"}]
       (lint!
-        [(h/file-uri "file:///project/src/e.clj")]
+        [(h/file-uri "file:///project/src/e_a.clj")]
+        {})))
+  (testing "exclude when ignored via generic clojure-lsp/ignore comment"
+    (h/assert-submaps
+      [{:range
+        {:start {:line 6 :character 5} :end {:line 6 :character 8}}
+        :severity 3
+        :code "clojure-lsp/unused-public-var"
+        :source "clojure-lsp"
+        :uri (h/file-uri "file:///project/src/e_b.clj")}]
+      (lint!
+        [(h/file-uri "file:///project/src/e_b.clj")]
         {})))
   (testing "unused keyword definitions"
     (h/assert-submaps

@@ -76,9 +76,7 @@
                          (shared/logging-task
                            :internal/project-paths-analyzed-by-clj-depend
                            (lsp.depend/analyze-paths! paths @db*)))
-        analyze-built-in-fn #(shared/logging-task
-                               :internal/project-paths-analyzed-by-built-in-diagnostics
-                               (f.diagnostics.built-in/analyze-paths! paths %))
+        analyze-built-in-fn #(f.diagnostics.built-in/analyze-paths! paths %)
         kondo-result @kondo-result*
         depend-result @depend-result*]
     (swap! db* (fn [state-db]

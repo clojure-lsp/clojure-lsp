@@ -55,19 +55,21 @@
       {}
       uris-with-ignores)))
 
-(defn ^:private element->diagnostic [element severity code message]
-  {:uri (:uri element)
-   :range {:start {:line (dec (:name-row element))
-                   :character (dec (:name-col element))}
-           :end {:line (dec (:name-end-row element))
-                 :character (dec (:name-end-col element))}}
-   :severity (case severity
-               :error 1
-               :warning 2
-               :info 3)
-   :message message
-   :code code
-   :source "clojure-lsp"})
+(defn ^:private element->diagnostic [element severity code message tags]
+  (shared/assoc-some
+    {:uri (:uri element)
+     :range {:start {:line (dec (:name-row element))
+                     :character (dec (:name-col element))}
+             :end {:line (dec (:name-end-row element))
+                   :character (dec (:name-end-col element))}}
+     :severity (case severity
+                 :error 1
+                 :warning 2
+                 :info 3)
+     :message message
+     :code code
+     :source "clojure-lsp"}
+    :tags tags))
 
 (defn ^:private different-aliases [narrowed-db project-db kondo-config]
   (let [kondo-config (update-in kondo-config [:linters :clojure-lsp/different-aliases :level] #(or % :off))]
@@ -97,7 +99,8 @@
             "clojure-lsp/different-aliases"
             (format "Different aliases %s found for %s"
                     (get inconsistencies (:to namespace-alias))
-                    (:to namespace-alias))))))))
+                    (:to namespace-alias))
+            nil))))))
 
 (defn ^:private kondo-config-for-ns [kondo-config ns-name filename]
   (let [ns-groups (cons ns-name (kondo.config/ns-groups kondo-config ns-name filename))
@@ -206,23 +209,26 @@
                         (if (:ns element)
                           (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
                           (format "Unused public keyword ':%s'" (:name element)))
-                        (format "Unused public var '%s/%s'" (:ns element) (:name element)))))))))))
+                        (format "Unused public var '%s/%s'" (:ns element) (:name element)))
+                      [1]))))))))
 
 (defn analyze-uris! [uris db]
-  (let [project-db (q/db-with-internal-analysis db)
-        db-of-uris (update project-db :analysis select-keys uris)
-        empty-diags (reduce #(assoc %1 %2 []) {} uris)
-        ignores (future (find-ignore-comments uris db))
-        all-diags (->> (concat
-                         (unused-public-vars db-of-uris project-db (:kondo-config db))
-                         (different-aliases db-of-uris project-db (:kondo-config db)))
-                       (remove #(ignore-diag? % @ignores)))]
-    (merge empty-diags
-           (reduce
-             (fn [acc diag]
-               (update acc (:uri diag) (fnil conj []) (dissoc diag :uri)))
-             {}
-             all-diags))))
+  (shared/logging-task
+    :internal/built-in-linters
+    (let [project-db (q/db-with-internal-analysis db)
+          db-of-uris (update project-db :analysis select-keys uris)
+          empty-diags (reduce #(assoc %1 %2 []) {} uris)
+          ignores (future (find-ignore-comments uris db))
+          all-diags (->> (concat
+                           (unused-public-vars db-of-uris project-db (:kondo-config db))
+                           (different-aliases db-of-uris project-db (:kondo-config db)))
+                         (remove #(ignore-diag? % @ignores)))]
+      (merge empty-diags
+             (reduce
+               (fn [acc diag]
+                 (update acc (:uri diag) (fnil conj []) (dissoc diag :uri)))
+               {}
+               all-diags)))))
 
 (defn analyze-uri! [uri db]
   (analyze-uris! [uri] db))

@@ -17,40 +17,32 @@
     (h/assert-submaps
       [{:range
         {:start {:line 3, :character 34}, :end {:line 3, :character 35}},
-        :tags [],
         :message
         "Different aliases #{s string cstring str} found for clojure.string",
         :code "clojure-lsp/different-aliases",
-        :langs [],
         :severity 1,
-        :source "clj-kondo"}
+        :source "clojure-lsp"}
        {:range
         {:start {:line 4, :character 34}, :end {:line 4, :character 37}},
-        :tags [],
         :message
         "Different aliases #{s string cstring str} found for clojure.string",
         :code "clojure-lsp/different-aliases",
-        :langs [],
         :severity 1,
-        :source "clj-kondo"}
+        :source "clojure-lsp"}
        {:range
         {:start {:line 5, :character 34}, :end {:line 5, :character 40}},
-        :tags [],
         :message
         "Different aliases #{s string cstring str} found for clojure.string",
         :code "clojure-lsp/different-aliases",
-        :langs [],
         :severity 1,
-        :source "clj-kondo"}
+        :source "clojure-lsp"}
        {:range
         {:start {:line 6, :character 34}, :end {:line 6, :character 41}},
-        :tags [],
         :message
         "Different aliases #{s string cstring str} found for clojure.string",
         :code "clojure-lsp/different-aliases",
-        :langs [],
         :severity 1,
-        :source "clj-kondo"}]
+        :source "clojure-lsp"}]
       (lsp/client-awaits-server-diagnostics "diagnostics/different_aliases.clj"))))
 
 (deftest unused-public-var

@@ -10,6 +10,51 @@
    [clojure.string :as string]
    [rewrite-clj.zip :as z]))
 
+(defn ^:private ignore-diag? [diagnostic ignores]
+  (let [diag-range {:name-row (-> diagnostic :range :start :line inc)
+                    :name-col (-> diagnostic :range :start :character inc)
+                    :name-end-row (-> diagnostic :range :end :line inc)
+                    :name-end-col (-> diagnostic :range :end :character inc)}
+        uri-ignores (get ignores (:uri diagnostic))]
+    (some
+      (fn [ignore]
+        (and
+          (or (:all-codes ignore)
+              (some #(identical? (keyword (:code diagnostic)) %) (:codes ignore)))
+          (shared/inside?
+            diag-range
+            {:name-row (:row ignore)
+             :name-col (:col ignore)
+             :name-end-row (:end-row ignore)
+             :name-end-col (:end-col ignore)})))
+      uri-ignores)))
+
+(def ^:private ignores-keywords #{:clj-kondo/ignore :clojure-lsp/ignore})
+
+(defn ^:private find-ignore-comments [uris db]
+  (let [text-by-uri (reduce #(assoc %1 %2 (get-in db [:documents %2 :text] "")) {} uris)
+        uris-with-ignores (filterv #(re-find #":clj-kondo/ignore|:clojure-lsp/ignore" (text-by-uri %)) uris)]
+    (reduce
+      (fn [acc uri]
+        (let [ignores (loop [zloc (z/next (parser/safe-zloc-of-string (text-by-uri uri)))
+                             ignores []]
+                        (if-let [node (z/find-next-tag zloc z/right :uneval)]
+                          (cond
+                            (contains? ignores-keywords (z/sexpr (z/next (z/next node))))
+                            (recur node (conj ignores (assoc (meta (z/node (z/right node)))
+                                                             :codes (z/sexpr (z/find-next-tag node z/next :vector)))))
+
+                            (contains? ignores-keywords (z/sexpr (z/next node)))
+                            (recur node (conj ignores (assoc (meta (z/node (z/right node)))
+                                                             :all-codes true)))
+
+                            :else
+                            (recur node ignores))
+                          ignores))]
+          (assoc acc uri ignores)))
+      {}
+      uris-with-ignores)))
+
 (defn ^:private element->diagnostic [element severity code message]
   {:uri (:uri element)
    :range {:start {:line (dec (:name-row element))
@@ -166,14 +211,18 @@
 (defn analyze-uris! [uris db]
   (let [project-db (q/db-with-internal-analysis db)
         db-of-uris (update project-db :analysis select-keys uris)
-        all-diags (concat
-                    (unused-public-vars db-of-uris project-db (:kondo-config db))
-                    (different-aliases db-of-uris project-db (:kondo-config db)))]
-    (reduce
-      (fn [acc diag]
-        (update acc (:uri diag) (fnil conj []) (dissoc diag :uri)))
-      {}
-      all-diags)))
+        empty-diags (reduce #(assoc %1 %2 []) {} uris)
+        ignores (future (find-ignore-comments uris db))
+        all-diags (->> (concat
+                         (unused-public-vars db-of-uris project-db (:kondo-config db))
+                         (different-aliases db-of-uris project-db (:kondo-config db)))
+                       (remove #(ignore-diag? % @ignores)))]
+    (merge empty-diags
+           (reduce
+             (fn [acc diag]
+               (update acc (:uri diag) (fnil conj []) (dissoc diag :uri)))
+             {}
+             all-diags))))
 
 (defn analyze-uri! [uri db]
   (analyze-uris! [uri] db))

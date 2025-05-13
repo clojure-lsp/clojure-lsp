@@ -6,7 +6,7 @@
 
 (h/reset-components-before-test)
 
-(defn ^:private analyze-many! [uris kondo-config]
+(defn ^:private lint! [uris kondo-config]
   (reduce
     (fn [acc [uri diags]]
       (concat acc (mapv #(assoc % :uri uri) diags)))
@@ -15,9 +15,6 @@
       uris
       (assoc (h/db) :kondo-config kondo-config))))
 
-(defn ^:private analyze-one! [kondo-config]
-  (analyze-many! [h/default-uri] kondo-config))
-
 (deftest lint-project-different-aliases
   (h/load-code-and-locs "(ns a (:require [clojure.string]))")
   (h/load-code-and-locs "(ns b (:require [clojure.string :as s]))"
@@ -25,7 +22,7 @@
   (testing "when there are two files but only one alias"
     (h/assert-submaps
       []
-      (analyze-one! {:linters {:clojure-lsp/different-aliases {:level :info}}})))
+      (lint! [h/default-uri] {:linters {:clojure-lsp/different-aliases {:level :info}}})))
   (h/load-code-and-locs "(ns c (:require [clojure.string :as str]))"
                         (h/file-uri "file:///c.clj"))
   (h/load-code-and-locs "(ns d (:require [clojure.string :as string]))"
@@ -33,7 +30,7 @@
   (testing "when linter level is :off"
     (h/assert-submaps
       []
-      (analyze-one! {:linters {:clojure-lsp/different-aliases {:level :off}}})))
+      (lint! [h/default-uri] {:linters {:clojure-lsp/different-aliases {:level :off}}})))
   (testing "when linter level is 3"
     (h/assert-submaps
       [{:uri (h/file-uri "file:///b.clj")
@@ -54,11 +51,11 @@
         :severity 3
         :message "Different aliases #{s string str} found for clojure.string"
         :code "clojure-lsp/different-aliases"}]
-      (analyze-one! {:linters {:clojure-lsp/different-aliases {:level :info}}})))
+      (lint! [h/default-uri] {:linters {:clojure-lsp/different-aliases {:level :info}}})))
   (testing "linter level by default is :off"
     (h/assert-submaps
       []
-      (analyze-one! {})))
+      (lint! [h/default-uri] {})))
   (h/load-code-and-locs "(ns e (:require [clojure.string :as sut]))"
                         (h/file-uri "file:///e.clj"))
   (testing "exclude-aliases"
@@ -66,7 +63,7 @@
       [{:uri (h/file-uri "file:///b.clj")}
        {:uri (h/file-uri "file:///c.clj")}
        {:uri (h/file-uri "file:///d.clj")}]
-      (analyze-one! {:linters {:clojure-lsp/different-aliases {:level :error :exclude-aliases #{'sut}}}}))))
+      (lint! [h/default-uri] {:linters {:clojure-lsp/different-aliases {:level :error :exclude-aliases #{'sut}}}}))))
 
 (deftest unused-public-var-declared-outside-test-namespaces
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
@@ -83,7 +80,7 @@
             Then it returns no findings because foo/bar is being used"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/foo.clj")
          (h/file-uri "file:///project/test/foo_test.clj")]
         {:linters
@@ -102,7 +99,7 @@
         :uri (h/file-uri "file:///project/src/foo.clj")
         :message "Unused public var 'foo/bar'"
         :source "clojure-lsp"}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/foo.clj")
          (h/file-uri "file:///project/test/foo_test.clj")]
         {:linters
@@ -125,7 +122,7 @@
         :severity 3
         :uri (h/file-uri "file:///project/test/foo_test.clj")
         :message "Unused public var 'foo-test/helper'"}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/test/foo_test.clj")]
         {:linters
          {:clojure-lsp/unused-public-var
@@ -141,7 +138,7 @@
         :severity 3
         :uri (h/file-uri "file:///project/test/foo_test.clj")
         :message "Unused public var 'foo-test/helper'"}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/test/foo_test.clj")]
         {:linters
          {:clojure-lsp/unused-public-var
@@ -153,7 +150,7 @@
             Then it returns NO findings because it is being used although it is in a test namespace"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/test/bar_test.clj")]
         {:linters {:clojure-lsp/unused-public-var
                    {:level :info
@@ -187,7 +184,7 @@
         :severity 3
         :uri (h/file-uri "file:///project/src/a.clj")
         :message "Unused public var 'some-ns/foo'"}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/a.clj")]
         {:linters {:clojure-lsp/unused-public-var {:level :info}}})))
   (testing "when linter level is :warning"
@@ -197,7 +194,7 @@
         :severity 2
         :uri (h/file-uri "file:///project/src/a.clj")
         :message "Unused public var 'some-ns/foo'"}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/a.clj")]
         {:linters {:clojure-lsp/unused-public-var {:level :warning}}})))
   (testing "when linter level is :error"
@@ -207,13 +204,13 @@
         :severity 1
         :uri (h/file-uri "file:///project/src/a.clj")
         :message "Unused public var 'some-ns/foo'"}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/a.clj")]
         {:linters {:clojure-lsp/unused-public-var {:level :error}}})))
   (testing "when linter level is :off"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/a.clj")]
         {:linters {:clojure-lsp/unused-public-var {:level :off}}})))
   (testing "linter level by default is 3"
@@ -223,31 +220,31 @@
         :severity 3
         :uri (h/file-uri "file:///project/src/a.clj")
         :message "Unused public var 'some-ns/foo'"}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/a.clj")]
         {})))
   (testing "excluding the whole ns"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/a.clj")]
         {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns}}}})))
   (testing "excluding the simple var from ns"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/a.clj")]
         {:linters {:clojure-lsp/unused-public-var {:exclude #{'foo}}}})))
   (testing "excluding the specific var"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/a.clj")]
         {:linters {:clojure-lsp/unused-public-var {:exclude #{'some-ns/foo}}}})))
   (testing "excluding specific syms"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/b.clj")]
         {})))
   (testing "excluding when inside comment block"
@@ -255,7 +252,7 @@
       [{:code "clojure-lsp/unused-public-var"
         :uri (h/file-uri "file:///project/src/e.clj")
         :message "Unused public var 'some-ns/foo'"}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/e.clj")]
         {})))
   (testing "unused keyword definitions"
@@ -270,19 +267,19 @@
         :code "clojure-lsp/unused-public-var"
         :message "Unused public keyword ':otherthing'"
         :range {:start {:line 2 :character 16} :end {:line 2 :character 27}}}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/c.cljs")]
         {})))
   (testing "var marked ^:export is excluded"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/d.cljs")]
         {})))
   (testing "var with dash and :gen-class on ns is excluded"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/b.clj")]
         {})))
   (testing "definterface methods are excluded when the interface is used."
@@ -292,13 +289,13 @@
         :code "clojure-lsp/unused-public-var"
         :message "Unused public var 'f-ns/Bar'"
         :range {:start {:line 1 :character 14} :end {:line 1 :character 17}}}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/f.clj")]
         {})))
   (testing "not ignoring tests references when flag is off"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/g_a.clj")
          (h/file-uri "file:///project/cool-test/g_a_test.clj")]
         {})))
@@ -309,13 +306,13 @@
         :code "clojure-lsp/unused-public-var"
         :message "Unused public var 'g-a/foo'"
         :range {:start {:line 0 :character 15} :end {:line 0 :character 18}}}]
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/g_a.clj")
          (h/file-uri "file:///project/cool-test/g_a_test.clj")]
         {:linters {:clojure-lsp/unused-public-var {:ignore-test-references? true}}})))
   (testing "exclude when used in symbols"
     (h/assert-submaps
       []
-      (analyze-many!
+      (lint!
         [(h/file-uri "file:///project/src/h_b.clj")]
         {:linters {:clojure-lsp/unused-public-var {:level :info}}}))))

@@ -21,7 +21,7 @@
        str/trim
        not-empty))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+#_{:clojure-lsp/ignore [:clojure-lsp/unused-public-var]}
 (defn release [& args]
   (let [latest-dev-tag (:tag_name (first (ghr.internal/list-releases "clojure-lsp" "clojure-lsp-dev-builds")))
         prod-release-tag (tag)

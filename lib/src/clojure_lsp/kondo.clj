@@ -4,7 +4,6 @@
    [clj-kondo.core :as kondo]
    [clojure-lsp.config :as config]
    [clojure-lsp.dep-graph :as dep-graph]
-   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
@@ -238,32 +237,6 @@
       (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
-(defn ^:private run-custom-lint? [config]
-  (or (-> config :linters :clojure-lsp/unused-public-var :level (not= :off))
-      (-> config :linters :clojure-lsp/different-aliases :level (not= :off))))
-
-(defn ^:private custom-lint-project!
-  [db {:keys [config] :as kondo-ctx} normalization-config]
-  (when (run-custom-lint? config)
-    (shared/logging-task
-      :internal/custom-lint-project
-      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config db))]
-        (f.diagnostic/custom-lint-project! db kondo-ctx)))))
-
-(defn ^:private custom-lint-files!
-  [uris db {:keys [config] :as kondo-ctx} normalization-config]
-  (when (run-custom-lint? config)
-    (shared/logging-task
-      :reference-files/lint
-      (let [db (db-with-analysis db (normalize kondo-ctx normalization-config db))]
-        (f.diagnostic/custom-lint-uris! uris db kondo-ctx)))))
-
-(defn ^:private custom-lint-file!
-  [filename uri db {:keys [config] :as kondo-ctx}]
-  (when (run-custom-lint? config)
-    (let [db (db-with-analysis db (normalize-for-file kondo-ctx db filename uri))]
-      (f.diagnostic/custom-lint-uris! [uri] db kondo-ctx))))
-
 (defn ^:private var-definition-metas [db]
   (let [metas (get-in (:kondo-config db) [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})]
     (cond-> [:arglists :style/indent]
@@ -281,11 +254,10 @@
        :file-analyzed-fn file-analyzed-fn}
       (with-additional-config settings)))
 
-(defn ^:private config-for-internal-paths [paths db custom-lint-fn file-analyzed-fn]
+(defn ^:private config-for-internal-paths [paths db file-analyzed-fn]
   (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))
         settings (settings/all db)]
     (-> (config-for-paths paths file-analyzed-fn db settings)
-        (assoc :custom-lint-fn custom-lint-fn)
         (assoc-in [:config :analysis] {:arglists full-analysis?
                                        :locals full-analysis?
                                        :keywords (and full-analysis? (get-in settings [:analysis :keywords] true))
@@ -333,7 +305,6 @@
 (defn ^:private config-for-single-file [uri db*]
   (let [db @db*
         filename (shared/uri->filename uri)
-        custom-lint-fn #(custom-lint-file! filename uri @db* %)
         lang (shared/uri->file-type uri)
         settings (settings/all db)]
     (-> {:cache true
@@ -341,7 +312,6 @@
          :copy-configs (get settings :copy-kondo-configs? true)
          :filename filename
          :config-dir (some-> db :project-root-uri project-config-dir)
-         :custom-lint-fn custom-lint-fn
          :config {:output {:canonical-paths true}
                   :analysis {:arglists true
                              :locals true
@@ -375,9 +345,7 @@
   (let [db @db*
         config (if external?
                  (config-for-external-paths paths db file-analyzed-fn)
-                 (config-for-internal-paths paths db
-                                            #(custom-lint-project! @db* % normalization-config)
-                                            file-analyzed-fn))
+                 (config-for-internal-paths paths db file-analyzed-fn))
         empty-findings (->> paths
                             (filter (partial shared/ignore-path? (settings/all db)))
                             (reduce (fn [findings path] (assoc findings (shared/filename->uri path db) [])) {}))]
@@ -416,9 +384,8 @@
   (let [db @db*
         filenames (map shared/uri->filename uris)
         normalization-config {:external? false
-                              :ensure-uris uris}
-        custom-lint-fn #(custom-lint-files! uris @db* % normalization-config)]
-    (-> (config-for-internal-paths filenames db custom-lint-fn nil)
+                              :ensure-uris uris}]
+    (-> (config-for-internal-paths filenames db nil)
         (run-kondo! (str "files " (string/join ", " uris)))
         (normalize normalization-config db))))
 

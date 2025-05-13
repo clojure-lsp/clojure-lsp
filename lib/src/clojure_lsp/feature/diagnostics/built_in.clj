@@ -48,7 +48,7 @@
                            (some #{alias} (get inconsistencies to))))]
           (element->diagnostic
             namespace-alias
-            (-> kondo-config :linters :clojure-lsp/different-aliases :level)
+            (or (-> kondo-config :linters :clojure-lsp/different-aliases :level) :info)
             "clojure-lsp/different-aliases"
             (format "Different aliases %s found for %s"
                     (get inconsistencies (:to namespace-alias))

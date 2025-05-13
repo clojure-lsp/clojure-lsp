@@ -174,6 +174,9 @@
                :source "clj-depend"}))
           (get-in db [:diagnostics :clj-depend (symbol namespace)]))))
 
+(defn ^:private built-in-diagnostics [uri db]
+  (get-in db [:diagnostics :built-in uri]))
+
 (defn find-diagnostics [^String uri db]
   (let [kondo-level (settings/get db [:linters :clj-kondo :level])
         depend-level (settings/get db [:linters :clj-depend :level] :info)]
@@ -184,7 +187,10 @@
         (concat (kondo-findings->diagnostics uri :clj-kondo db))
 
         (not= :off depend-level)
-        (concat (clj-depend-violations->diagnostics uri depend-level db))))))
+        (concat (clj-depend-violations->diagnostics uri depend-level db))
+
+        :always
+        (concat (built-in-diagnostics uri db))))))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
   (async/put! diagnostics-chan diagnostic))
@@ -318,15 +324,15 @@
 (defn ^:private findings-of-project
   [db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)]
-    (concat (unused-public-vars project-db project-db kondo-config)
-            (different-aliases project-db project-db kondo-config))))
+    (concat #_(unused-public-vars project-db project-db kondo-config)
+            #_(different-aliases project-db project-db kondo-config))))
 
 (defn ^:private findings-of-uris
   [uris db kondo-config]
   (let [project-db (q/db-with-internal-analysis db)
         db-of-uris (update project-db :analysis select-keys uris)]
-    (concat (unused-public-vars db-of-uris project-db kondo-config)
-            (different-aliases db-of-uris project-db kondo-config))))
+    (concat #_(unused-public-vars db-of-uris project-db kondo-config)
+            #_(different-aliases db-of-uris project-db kondo-config))))
 
 (defn ^:private finalize-findings! [findings reg-finding!]
   (let [uri->filename (memoize shared/uri->filename)]

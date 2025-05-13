@@ -563,3 +563,9 @@
     (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))
 
 (def test-locations-regex-default #{"_test\\.clj[a-z]?$"})
+
+(defn dir-uris->file-uris [dir-uris db]
+  (into []
+        (filter (fn [uri]
+                  (some #(string/starts-with? uri %) dir-uris)))
+        (keys (:analysis db))))

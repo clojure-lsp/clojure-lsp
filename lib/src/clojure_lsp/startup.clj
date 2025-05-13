@@ -4,6 +4,7 @@
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
+   [clojure-lsp.feature.diagnostics.built-in :as f.diagnostics.built-in]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.producer :as producer]
@@ -75,12 +76,16 @@
                          (shared/logging-task
                            :internal/project-paths-analyzed-by-clj-depend
                            (lsp.depend/analyze-paths! paths @db*)))
+        analyze-built-in-fn #(shared/logging-task
+                               :internal/project-paths-analyzed-by-built-in-diagnostics
+                               (f.diagnostics.built-in/analyze-paths! paths %))
         kondo-result @kondo-result*
         depend-result @depend-result*]
     (swap! db* (fn [state-db]
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
-                     (lsp.depend/db-with-results depend-result))))))
+                     (lsp.depend/db-with-results depend-result)
+                     (f.diagnostics.built-in/db-with-results analyze-built-in-fn))))))
 
 (defn ^:private analyze-source-paths-namespaces-only! [paths db* _file-analyzed-fn]
   (let [db @db*

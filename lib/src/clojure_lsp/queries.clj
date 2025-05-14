@@ -2,7 +2,6 @@
   (:require
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.logger :as logger]
-   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.set :as set]
    [clojure.string :as string]

@@ -7,6 +7,7 @@
   - Consider full qualified symbols in edn files when checking for var references.
   - Improving clojure-lsp linter capabilities, migrating `unused-public-var` and `different-aliases` linters to be built-in linters.
     - Migrate from clj-kondo `custom-lint-fn` but considering kondo settings to avoid breaking changes.
+  - New feature: Add support for custom project linters. #2043
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961

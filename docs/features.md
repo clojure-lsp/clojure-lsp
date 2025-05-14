@@ -368,22 +368,32 @@ Show the project tree ns and external dependencies.
 
 ### Diagnostics (linter)
 
-Most linters come from [clj-kondo](https://github.com/clj-kondo/clj-kondo) that clojure-lsp calls under the hood to lint the code and retrieve the analysis to
-make most of features work.
+There are 3 diagnostics providers currently:
+- [clj-kondo](https://github.com/clj-kondo/clj-kondo): most diagnostics come from here, configurations of these linters should be done on clj-kondo config side, for more information on how to configure clj-kondo check [here](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros)
+- [clojure-lsp](#built-in-linters): linters built-in + custom linters.
+- [clj-depend](#clj-depend): optional namespace layer diagnostics.
 
-Every linter configuration that the source is clj-kondo, should be done on clj-kondo side, so anything related to unresolved symbols or unknown macros are probably related to wrong clj-kondo for the project. For more information on how to configure clj-kondo check [here](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).
+#### Built-in linters
 
 Below you can find the clojure-lsp built-in linters:
 
-#### clojure-lsp/unused-public-var
+##### clojure-lsp/unused-public-var
 
 ![](images/features/unused-public-var.png)
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 
-#### clojure-lsp/different-aliases
+##### clojure-lsp/different-aliases
 
 ![](images/features/different-aliases.png)
+
+For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
+
+#### Custom linters
+
+![](images/features/custom-linters.png)
+
+Clojure-lsp support linters that users or libs decide to create, these linters can use clojure-lsp db analysis to build whatever linter one may want, similar to clj-kondo hooks feature.
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 

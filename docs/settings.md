@@ -99,7 +99,7 @@ __You can find all settings and its default values [here](https://github.com/clo
 | `:keep-parens-when-threading?`                 | Whether to keep parenthesis when threading single arity functions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `false`                                                                                       |
 | `:lint-project-files-after-startup?`           | Whether to async lint all project only files after startup to make features like [List project errors](https://emacs-lsp.github.io/lsp-mode/page/main-features/#project-errors-on-modeline) work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `true`                                                                                        |
 | `:diagnostics :range-type`                     | which range use for diagnostics, `:full` makes the range be the whole affected diagnostic while `:simple` makes the range be the first character of the diagnostic.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `:full`                                                                                       |
-| `:linters`                                     | clojure-lsp custom linters, check the diagnostics settings section below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |                                                                                               |
+| `:linters`                                     | linters configuration, check the diagnostics settings section below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |                                                                                               |
 | `:log-path`                                    | A absolute path to a file where clojure-lsp should log.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | A JVM tmp path, usually `/tmp/clojure-lsp.*.out`                                              |
 | `:notify-references-on-file-change`            | Whether to update diagnostics of the changed references when editing files, avoiding outdated diagnostics in other files.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `true`                                                                                        |
 | `:project-specs`                               | A vector of a map with `:project-path` and `:classpath-cmd`, defining how `clojure-lsp` should find your project classpath. The `:project-path` should be a file and the `:classpath-cmd` the command to run to get the classpath                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Check [`Classpath scan`](#classpath-scan) section below                                       |
@@ -156,12 +156,9 @@ Default: Check `:linters` in [all-available-settings.edn](https://github.com/clo
 
 #### clj-kondo
 
-`clojure-lsp` uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) under the hood to lint the code and retrieve the analysis to
-make most of features work, you don't have to install clj-kondo to
-make it work.
+`clojure-lsp` uses [clj-kondo](https://github.com/clj-kondo/clj-kondo) under the hood to lint the code and retrieve the analysis to make most of features work, you don't have to install clj-kondo to make it work.
 
-`clojure-lsp` will use a specific clj-kondo version that can be retrieved via `clojure-lsp --version`, but make sure you have it
-properly configured in your `.clj-kondo/config.edn` file.
+`clojure-lsp` will use a specific clj-kondo version that can be retrieved via `clojure-lsp --version`, but make sure you have a `.clj-kondo/config.edn` file properly configured.
 
 It has the possible key/values:
 
@@ -188,18 +185,22 @@ linter enabled via `ale` will only conflict with the built-in clj-kondo bundled 
 
 </details>
 
-Also, clojure-lsp by default pass `copy-configs` flag as `true` to clj-kondo to copy configurations exported from libs on classpath, to disable this behavior, set `copy-kondo-configs?` setting to false.
+Also, clojure-lsp by default pass `copy-configs` flag as `true` to clj-kondo to copy configurations exported from libs on classpath, to disable this behavior, set `:copy-kondo-configs?` setting to false.
 
-For more information about all clj-kondo available configurations,
-check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
+For more information about all clj-kondo available configurations, check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
 
-##### Custom clj-kondo linters
+#### Built-in linters
 
-Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (`<project>/.clj-kondo/config.edn`). Note that configuring these custom linters via clj-kondo's [ns metadata config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#metadata-config) is *not* supported. Below are the custom linters used:
+Clojure-lsp has project aware linters, below are the linters:
 
-###### clojure-lsp/unused-public-var
+<details>
+<summary>Note for legacy config</summary>
+Some of these linters config used to live on clj-kondo side, so to avoid breaking changes, clojure-lsp still supports configuration of them on clj-kondo side, but it's recommended to configure on clojure-lsp settings side.
+</details>
 
-A custom linter that reports public functions/vars not used over the project.
+##### clojure-lsp/unused-public-var
+
+A linter that reports public functions/vars not used across the project.
 
 It has the possible key/values:
 
@@ -213,7 +214,7 @@ It has the possible key/values:
 
 Example:
 
-`.clj-kondo/config.edn`
+`.lsp/config.edn`
 ```clojure
 {:linters {:clojure-lsp/unused-public-var {:level :warning
                                            :exclude #{my-ns/foo
@@ -227,7 +228,7 @@ Example:
                                            :ignore-test-references? true}}}
 ```
 
-###### clojure-lsp/different-aliases
+##### clojure-lsp/different-aliases
 
 Sometimes, it's desirable to use the same alias across namespaces to enhance readability and reduce cognitive load.
 
@@ -235,6 +236,12 @@ It has the possible keys/values:
 
 - `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:off`.
 - `:exclude-aliases` ignores the symbols provided in a set, example `#{sut}`
+
+`.lsp/config.edn`
+```clojure
+{:linters {:clojure-lsp/different-aliases {:level :info
+                                           :exclude-aliases #{foo}}}}
+```
 
 #### clj-depend
 

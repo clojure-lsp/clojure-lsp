@@ -199,7 +199,7 @@
                                     (setting-for-ns settings (:ns element) (-> element :uri shared/uri->filename))
                                     settings)
                          severity (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info)]
-                     (when-not (:identical? :off severity)
+                     (when-not (identical? :off severity)
                        (element->diagnostic
                          element
                          severity

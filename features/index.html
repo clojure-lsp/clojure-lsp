@@ -1498,10 +1498,10 @@
 <p>Show the project tree ns and external dependencies.</p>
 <p><img alt="" src="../images/features/project-tree.png" /></p>
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
-<p>All linters besides the ones below come from <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> that clojure-lsp calls under the hood to lint the code and retrieve the analysis to
+<p>Most linters come from <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> that clojure-lsp calls under the hood to lint the code and retrieve the analysis to
 make most of features work.</p>
-<p>Every linter configuration should be done on clj-kondo side, so anything related to unresolved symbols or unknown macros are probably related to wrong clj-kondo for the project. For more information on how to configure clj-kondo check <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">here</a>.</p>
-<p>Below you can find the custom linters implemented on clojure-lsp side that uses the <code>:custom-lint-fn</code> from clj-kondo:</p>
+<p>Every linter configuration that the source is clj-kondo, should be done on clj-kondo side, so anything related to unresolved symbols or unknown macros are probably related to wrong clj-kondo for the project. For more information on how to configure clj-kondo check <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">here</a>.</p>
+<p>Below you can find the clojure-lsp built-in linters:</p>
 <h4 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h4>
 <p><img alt="" src="../images/features/unused-public-var.png" /></p>
 <p>For more information on how to configure it, check the <a href="../settings/#diagnostics-linter">diagnostics settings section</a>.</p>
@@ -1952,7 +1952,7 @@ For more information check the <a href="../settings/#stub-generation">stubs sett
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 12, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 14, 2025</span>
     
   </small>
 </div>

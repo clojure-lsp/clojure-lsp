@@ -421,15 +421,14 @@
     clj-kondo
   </a>
   
-    <nav class="md-nav" aria-label="clj-kondo">
-      <ul class="md-nav__list">
+</li>
         
           <li class="md-nav__item">
-  <a href="#custom-clj-kondo-linters" class="md-nav__link">
-    Custom clj-kondo linters
+  <a href="#built-in-linters" class="md-nav__link">
+    Built-in linters
   </a>
   
-    <nav class="md-nav" aria-label="Custom clj-kondo linters">
+    <nav class="md-nav" aria-label="Built-in linters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -443,11 +442,6 @@
   <a href="#clojure-lspdifferent-aliases" class="md-nav__link">
     clojure-lsp/different-aliases
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -967,15 +961,14 @@
     clj-kondo
   </a>
   
-    <nav class="md-nav" aria-label="clj-kondo">
-      <ul class="md-nav__list">
+</li>
         
           <li class="md-nav__item">
-  <a href="#custom-clj-kondo-linters" class="md-nav__link">
-    Custom clj-kondo linters
+  <a href="#built-in-linters" class="md-nav__link">
+    Built-in linters
   </a>
   
-    <nav class="md-nav" aria-label="Custom clj-kondo linters">
+    <nav class="md-nav" aria-label="Built-in linters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -989,11 +982,6 @@
   <a href="#clojure-lspdifferent-aliases" class="md-nav__link">
     clojure-lsp/different-aliases
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1415,7 +1403,7 @@
 </tr>
 <tr>
 <td><code>:linters</code></td>
-<td>clojure-lsp custom linters, check the diagnostics settings section below</td>
+<td>linters configuration, check the diagnostics settings section below</td>
 <td></td>
 </tr>
 <tr>
@@ -1528,11 +1516,8 @@
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
 <p>Default: Check <code>:linters</code> in <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/docs/all-available-settings.edn">all-available-settings.edn</a>.</p>
 <h4 id="clj-kondo">clj-kondo<a class="headerlink" href="#clj-kondo" title="Permanent link">#</a></h4>
-<p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to
-make most of features work, you don't have to install clj-kondo to
-make it work.</p>
-<p><code>clojure-lsp</code> will use a specific clj-kondo version that can be retrieved via <code>clojure-lsp --version</code>, but make sure you have it
-properly configured in your <code>.clj-kondo/config.edn</code> file.</p>
+<p><code>clojure-lsp</code> uses <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> under the hood to lint the code and retrieve the analysis to make most of features work, you don't have to install clj-kondo to make it work.</p>
+<p><code>clojure-lsp</code> will use a specific clj-kondo version that can be retrieved via <code>clojure-lsp --version</code>, but make sure you have a <code>.clj-kondo/config.edn</code> file properly configured.</p>
 <p>It has the possible key/values:</p>
 <ul>
 <li><code>:clj-kondo</code></li>
@@ -1555,13 +1540,17 @@ linter enabled via `ale` will only conflict with the built-in clj-kondo bundled 
 
 </details>
 
-<p>Also, clojure-lsp by default pass <code>copy-configs</code> flag as <code>true</code> to clj-kondo to copy configurations exported from libs on classpath, to disable this behavior, set <code>copy-kondo-configs?</code> setting to false.</p>
-<p>For more information about all clj-kondo available configurations,
-check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
-<h5 id="custom-clj-kondo-linters">Custom clj-kondo linters<a class="headerlink" href="#custom-clj-kondo-linters" title="Permanent link">#</a></h5>
-<p>Clojure-lsp register custom linters in clj-kondo, for specifically those linters, configurations should be done on clj-kondo config files, e.g. (<code>&lt;project&gt;/.clj-kondo/config.edn</code>). Note that configuring these custom linters via clj-kondo's <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#metadata-config">ns metadata config</a> is <em>not</em> supported. Below are the custom linters used:</p>
-<h6 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h6>
-<p>A custom linter that reports public functions/vars not used over the project.</p>
+<p>Also, clojure-lsp by default pass <code>copy-configs</code> flag as <code>true</code> to clj-kondo to copy configurations exported from libs on classpath, to disable this behavior, set <code>:copy-kondo-configs?</code> setting to false.</p>
+<p>For more information about all clj-kondo available configurations, check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
+<h4 id="built-in-linters">Built-in linters<a class="headerlink" href="#built-in-linters" title="Permanent link">#</a></h4>
+<p>Clojure-lsp has project aware linters, below are the linters:</p>
+<details>
+<summary>Note for legacy config</summary>
+Some of these linters config used to live on clj-kondo side, so to avoid breaking changes, clojure-lsp still supports configuration of them on clj-kondo side, but it's recommended to configure on clojure-lsp settings side.
+</details>
+
+<h5 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h5>
+<p>A linter that reports public functions/vars not used across the project.</p>
 <p>It has the possible key/values:</p>
 <ul>
 <li><code>:level</code> with available values: <code>:info</code>, <code>:warning</code>, <code>:error</code> or <code>:off</code> with default value of <code>:info</code>.</li>
@@ -1573,7 +1562,7 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
 <li><code>:ignore-test-references?</code> whether to ignore test references of a var-definition when considering if the var is unused. Useful to check functions that have tests but are not being used in the source code. Relies on Clojure-LSP's <code>:test-locations-regex</code> setting to locate test files. Default: <code>false</code>.</li>
 </ul>
 <p>Example:</p>
-<p><code>.clj-kondo/config.edn</code>
+<p><code>.lsp/config.edn</code>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clojure-lsp/unused-public-var</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:warning</span>
                                            <span class="ss">:exclude</span> <span class="o">#</span><span class="p">{</span><span class="nv">my-ns/foo</span>
                                                       <span class="nv">my-ns/bar</span>
@@ -1585,13 +1574,17 @@ check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config
                                            <span class="ss">:exclude-when-contains-meta</span> <span class="o">#</span><span class="p">{</span><span class="ss">:my-cool-meta</span><span class="p">}</span>
                                            <span class="ss">:ignore-test-references?</span> <span class="nv">true</span><span class="p">}}}</span>
 </code></pre></div></p>
-<h6 id="clojure-lspdifferent-aliases">clojure-lsp/different-aliases<a class="headerlink" href="#clojure-lspdifferent-aliases" title="Permanent link">#</a></h6>
+<h5 id="clojure-lspdifferent-aliases">clojure-lsp/different-aliases<a class="headerlink" href="#clojure-lspdifferent-aliases" title="Permanent link">#</a></h5>
 <p>Sometimes, it's desirable to use the same alias across namespaces to enhance readability and reduce cognitive load.</p>
 <p>It has the possible keys/values:</p>
 <ul>
 <li><code>:level</code> with available values: <code>:info</code>, <code>:warning</code>, <code>:error</code> or <code>:off</code> with default value of <code>:off</code>.</li>
 <li><code>:exclude-aliases</code> ignores the symbols provided in a set, example <code>#{sut}</code></li>
 </ul>
+<p><code>.lsp/config.edn</code>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clojure-lsp/different-aliases</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:info</span>
+                                           <span class="ss">:exclude-aliases</span> <span class="o">#</span><span class="p">{</span><span class="nv">foo</span><span class="p">}}}}</span>
+</code></pre></div></p>
 <h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
 <p>clojure-lsp uses <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> when any clj-depend config is found either on clojure-lsp config or as a <code>.clj-depend/config.edn</code> file.</p>
 <p>The clj-depend config should be within the <code>:config</code> key.</p>
@@ -1751,7 +1744,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 12, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 14, 2025</span>
     
   </small>
 </div>

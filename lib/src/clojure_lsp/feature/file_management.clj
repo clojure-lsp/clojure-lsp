@@ -6,6 +6,7 @@
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.completion-lib :as f.completion-lib]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.feature.diagnostics.built-in :as f.diagnostics.built-in]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.producer :as producer]
@@ -44,7 +45,8 @@
     (swap! db* (fn [state-db]
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
-                     (lsp.depend/db-with-results depend-result))))
+                     (lsp.depend/db-with-results depend-result)
+                     (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uri! uri %)))))
     (f.diagnostic/publish-diagnostics! uri components))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
@@ -135,8 +137,11 @@
                (or kw-dependency-uris #{}))))
 
 (defn analyze-reference-uris! [uris db*]
-  (let [result (lsp.kondo/run-kondo-on-reference-uris! uris db*)]
-    (swap! db* lsp.kondo/db-with-results result)))
+  (let [kondo-result (lsp.kondo/run-kondo-on-reference-uris! uris db*)]
+    (swap! db* (fn [state-db]
+                 (-> state-db
+                     (lsp.kondo/db-with-results kondo-result)
+                     (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uris! uris %)))))))
 
 (defn ^:private notify-references [uri db-before db-after {:keys [db* producer] :as components}]
   (async/thread
@@ -262,6 +267,7 @@
                               (-> state-db
                                   (lsp.kondo/db-with-results kondo-result)
                                   (lsp.depend/db-with-results depend-result)
+                                  (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uri! uri %))
                                   (update-in [:documents uri :analyzed-version]
                                              bump-version version)))
           (let [db @db*]
@@ -282,12 +288,13 @@
                                      :version version})))
 
 (defn analyze-watched-files! [uris {:keys [db* producer] :as components}]
-  (let [filenames (->> uris
-                       ;; we check if file still exists/should be linted
-                       (filter #(get-in @db* [:documents %]))
-                       (map shared/uri->filename))
-        result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
-    (swap! db* lsp.kondo/db-with-results result)
+  (let [existing-uris (filter #(get-in @db* [:documents %]) uris) ;; we check if file still exists/should be linted
+        filenames (map shared/uri->filename existing-uris)
+        kondo-result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
+    (swap! db* (fn [state-db]
+                 (-> state-db
+                     (lsp.kondo/db-with-results kondo-result)
+                     (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uris! existing-uris %)))))
     (f.diagnostic/publish-all-diagnostics! uris true components)
     (producer/refresh-test-tree producer uris)
     (doseq [uri uris]

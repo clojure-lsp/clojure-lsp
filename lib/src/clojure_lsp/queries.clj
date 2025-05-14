@@ -139,7 +139,7 @@
   (or (find-last xf (internal-analysis db))
       (find-last xf (external-analysis db))))
 
-(defn var-definition-names [{:keys [name] :as element}]
+(defn ^:private var-definition-names [{:keys [name] :as element}]
   (let [defined-bys (defined-bys element)]
     (cond
       (some '#{clojure.core/defrecord
@@ -478,16 +478,16 @@
 (defmethod find-implementations :default [_ _] [])
 
 (defmulti find-references
-  (fn [_db element _include-declaration?]
+  (fn [_db element _include-definition?]
     (case (:bucket element)
       (:locals :local-usages) :local
       (:keyword-definitions :keyword-usages) :keywords
       (:bucket element))))
 
 (defmethod find-references :namespace-definitions
-  [db {:keys [name] :as namespace-definition} include-declaration?]
+  [db {:keys [name] :as namespace-definition} include-definition?]
   (concat
-    (when include-declaration?
+    (when include-definition?
       [namespace-definition])
     (vec
       (concat
@@ -510,14 +510,14 @@
               (:analysis db))))))
 
 (defmethod find-references :namespace-usages
-  [db namespace-usage include-declaration?]
+  [db namespace-usage include-definition?]
   (let [namespace-definition (assoc namespace-usage :bucket :namespace-definitions)]
-    (find-references db namespace-definition include-declaration?)))
+    (find-references db namespace-definition include-definition?)))
 
 (defmethod find-references :namespace-alias
-  [db {:keys [alias uri] :as namespace-alias} include-declaration?]
+  [db {:keys [alias uri] :as namespace-alias} include-definition?]
   (concat
-    (when include-declaration?
+    (when include-definition?
       [namespace-alias])
     (let [{:keys [var-usages keyword-usages keyword-definitions]} (get-in db [:analysis uri])]
       (into []
@@ -527,55 +527,55 @@
             (concat keyword-definitions keyword-usages var-usages)))))
 
 (defmethod find-references :var-usages
-  [db var-usage include-declaration?]
+  [db var-usage include-definition?]
   (if (= (:to var-usage) :clj-kondo/unknown-namespace)
     [var-usage]
     (let [var-definition {:ns (:to var-usage)
                           :name (:name var-usage)
                           :bucket :var-definitions}]
-      (find-references db var-definition include-declaration?))))
+      (find-references db var-definition include-definition?))))
 
 (defmethod find-references :var-definitions
-  [db var-definition include-declaration?]
+  [db var-definition include-definition?]
   (let [names (var-definition-names var-definition)]
     (into []
           (comp
-            (if include-declaration? xf-analysis->vars xf-analysis->var-usages-and-symbols)
+            (if include-definition? xf-analysis->vars xf-analysis->var-usages-and-symbols)
             (filter #(contains? names (:name %)))
             (filter #(safe-equal? (:ns var-definition) (or (:ns %)
                                                            (:to %)
                                                            (some-> (:symbol %) namespace symbol))))
-            (filter #(or include-declaration?
+            (filter #(or include-definition?
                          (not (var-usage-from-own-definition? %))))
             (medley/distinct-by (juxt :uri :name :row :col)))
           (merge (ns-and-dependents-analysis db (:ns var-definition))
                  (edn-analysis db)))))
 
 (defmethod find-references :keywords
-  [db {:keys [ns name uri] :as keyword-element} include-declaration?]
+  [db {:keys [ns name uri] :as keyword-element} include-definition?]
   (let [analysis (if (contains? (elem-langs keyword-element) :edn)
                    (internal-plus-local-analysis db uri)
                    (internal-analysis db))]
     (into []
           (comp
-            (if include-declaration? xf-analysis->keywords xf-analysis->keyword-usages)
+            (if include-definition? xf-analysis->keywords xf-analysis->keyword-usages)
             (xf-same-fqn ns name)
             (medley/distinct-by (juxt :uri :name :row :col)))
           analysis)))
 
 (defmethod find-references :local
-  [db {:keys [id name uri] :as element} include-declaration?]
+  [db {:keys [id name uri] :as element} include-definition?]
   (if (or id name)
     (let [{:keys [locals local-usages]} (get-in db [:analysis uri])]
       (filter #(= (:id %) id)
-              (concat (when include-declaration? locals)
+              (concat (when include-definition? locals)
                       local-usages)))
     [element]))
 
 (defmethod find-references :protocol-impls
-  [db {:keys [method-name protocol-ns] :as element} include-declaration?]
+  [db {:keys [method-name protocol-ns] :as element} include-definition?]
   (concat
-    (when include-declaration?
+    (when include-definition?
       [element])
     (into []
           (comp
@@ -585,7 +585,7 @@
           (ns-and-dependents-analysis db protocol-ns))))
 
 (defmethod find-references :symbols
-  [db quoted-symbol include-declaration?]
+  [db quoted-symbol include-definition?]
   (let [analysis (if (contains? (elem-langs quoted-symbol) :edn)
                    (internal-plus-local-analysis db (:uri quoted-symbol))
                    (internal-analysis db))
@@ -600,7 +600,7 @@
         to (or original-to
                (symbol (namespace (:symbol quoted-symbol))))]
     (concat
-      (when include-declaration?
+      (when include-definition?
         [quoted-symbol])
 
       ;; symbols references
@@ -615,7 +615,7 @@
       (find-references db (assoc quoted-symbol
                                  :bucket :var-usages
                                  :lang lang
-                                 :to to) include-declaration?))))
+                                 :to to) include-definition?))))
 
 (defmethod find-references :default
   [_db element _]
@@ -665,10 +665,10 @@
     (catch Throwable e
       (logger/error e "can't find implementation"))))
 
-(defn find-references-from-cursor [db uri row col include-declaration?]
+(defn find-references-from-cursor [db uri row col include-definition?]
   (try
     (when-let [element (find-element-under-cursor db uri row col)]
-      (find-references db element include-declaration?))
+      (find-references db element include-definition?))
     (catch Throwable e
       (logger/error e "can't find references"))))
 
@@ -866,8 +866,6 @@
   (into []
         (filter #(= namespace (:to %)))
         (get-in db [:analysis uri :var-usages])))
-
-(def xf-all-keyword-usages xf-analysis->keyword-usages)
 
 (defn find-keyword-usages-by-keyword [db uri kwd-ns kwd-name]
   (into []

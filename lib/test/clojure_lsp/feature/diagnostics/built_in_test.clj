@@ -6,14 +6,14 @@
 
 (h/reset-components-before-test)
 
-(defn ^:private lint! [uris kondo-config]
+(defn ^:private lint! [uris settings]
   (reduce
     (fn [acc [uri diags]]
       (concat acc (mapv #(assoc % :uri uri) diags)))
     []
     (f.diagnostics.built-in/analyze-uris!
       uris
-      (assoc (h/db) :kondo-config kondo-config))))
+      (assoc (h/db) :settings settings))))
 
 (deftest lint-project-different-aliases
   (h/load-code-and-locs "(ns a (:require [clojure.string]))")

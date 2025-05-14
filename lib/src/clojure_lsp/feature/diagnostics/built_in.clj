@@ -71,10 +71,10 @@
      :source "clojure-lsp"}
     :tags tags))
 
-(defn ^:private different-aliases [narrowed-db project-db kondo-config]
-  (let [kondo-config (update-in kondo-config [:linters :clojure-lsp/different-aliases :level] #(or % :off))]
-    (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/different-aliases :level))
-      (let [exclude-aliases-config (-> kondo-config :linters :clojure-lsp/different-aliases :exclude-aliases set)
+(defn ^:private different-aliases [narrowed-db project-db]
+  (let [level (settings/get project-db [:linters :clojure-lsp/different-aliases :level] :off)]
+    (when-not (identical? :off level)
+      (let [exclude-aliases-config (set (settings/get project-db [:linters :clojure-lsp/different-aliases :exclude-aliases]))
             exclude-aliases (conj exclude-aliases-config nil) ;; nil here means an unaliased require
             dep-graph (:dep-graph narrowed-db)
             inconsistencies (reduce (fn [m [ns dep-graph-item]]
@@ -95,32 +95,31 @@
                            (some #{alias} (get inconsistencies to))))]
           (element->diagnostic
             namespace-alias
-            (or (-> kondo-config :linters :clojure-lsp/different-aliases :level) :info)
+            level
             "clojure-lsp/different-aliases"
             (format "Different aliases %s found for %s"
                     (get inconsistencies (:to namespace-alias))
                     (:to namespace-alias))
             nil))))))
 
-(defn ^:private kondo-config-for-ns [kondo-config ns-name filename]
-  (let [ns-groups (cons ns-name (kondo.config/ns-groups kondo-config ns-name filename))
-        configs-in-ns (seq (keep #(get (:config-in-ns kondo-config) %) ns-groups))
-        kondo-config (if configs-in-ns
-                       (apply kondo.config/merge-config! kondo-config configs-in-ns)
-                       kondo-config)]
-    kondo-config))
+(defn ^:private setting-for-ns [settings ns-name filename]
+  (let [ns-groups (cons ns-name (kondo.config/ns-groups settings ns-name filename))
+        configs-in-ns (seq (keep #(get (:config-in-ns settings) %) ns-groups))]
+    (if configs-in-ns
+      (apply kondo.config/merge-config! settings configs-in-ns)
+      settings)))
 
-(defn ^:private exclude-public-diagnostic-definition? [db kondo-config definition]
-  (let [kondo-config (kondo-config-for-ns kondo-config (:ns definition) (-> definition :uri shared/uri->filename))
-        excluded-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
-        excluded-defined-by-syms-regex (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
-        excluded-metas (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})
+(defn ^:private exclude-public-diagnostic-definition? [db definition]
+  (let [settings (setting-for-ns (settings/all db) (:ns definition) (-> definition :uri shared/uri->filename))
+        excluded-syms-regex (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
+        excluded-defined-by-syms-regex (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
+        excluded-metas (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})
         fqsn (symbol (-> definition :ns str) (-> definition :name str))
         starts-with-dash? (string/starts-with? (:name definition) "-")
         inside-comment? (some #(and (= 'comment (:name %))
                                     (= 'clojure.core (:ns %))) (:callstack definition))]
     (or inside-comment?
-        (q/exclude-public-definition? kondo-config definition)
+        (q/exclude-public-definition? db definition)
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
         (some (fn [exclude]
                 (some #(re-matches (re-pattern (str exclude))
@@ -152,17 +151,16 @@
                     (some usages (q/var-definition-signatures var-def)))]
     (remove var-used? var-definitions)))
 
-(defn ^:private unused-public-vars [narrowed-db project-db kondo-config]
-  (when-not (identical? :off (-> kondo-config :linters :clojure-lsp/unused-public-var :level))
-    (let [ignore-test-references? (get-in kondo-config
+(defn ^:private unused-public-vars [narrowed-db project-db]
+  (when-not (identical? :off (settings/get project-db [:linters :clojure-lsp/unused-public-var :level]))
+    (let [settings (settings/all project-db)
+          ignore-test-references? (get-in settings
                                           [:linters :clojure-lsp/unused-public-var :ignore-test-references?]
                                           false)
           test-locations-regex (into #{}
                                      (map re-pattern
-                                          (settings/get project-db
-                                                        [:test-locations-regex]
-                                                        shared/test-locations-regex-default)))
-          exclude-def? (partial exclude-public-diagnostic-definition? project-db kondo-config)
+                                          (get settings :test-locations-regex shared/test-locations-regex-default)))
+          exclude-def? (partial exclude-public-diagnostic-definition? project-db)
           var-definitions (->> (q/find-all-var-definitions narrowed-db)
                                (remove exclude-def?))
           test-uri? (fn [{uri :uri}] (some #(re-find % uri) test-locations-regex))
@@ -197,10 +195,10 @@
                    (remove kw-used? kw-definitions))
            (map (fn [element]
                   (let [keyword-def? (identical? :keyword-definitions (:bucket element))
-                        kondo-config (if (:ns element)
-                                       (kondo-config-for-ns kondo-config (:ns element) (-> element :uri shared/uri->filename))
-                                       kondo-config)
-                        severity (or (-> kondo-config :linters :clojure-lsp/unused-public-var :level) :info)]
+                        settings (if (:ns element)
+                                   (setting-for-ns settings (:ns element) (-> element :uri shared/uri->filename))
+                                   settings)
+                        severity (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info)]
                     (element->diagnostic
                       element
                       severity
@@ -220,8 +218,8 @@
           empty-diags (reduce #(assoc %1 %2 []) {} uris)
           ignores (future (find-ignore-comments uris db))
           all-diags (->> (concat
-                           (unused-public-vars db-of-uris project-db (:kondo-config db))
-                           (different-aliases db-of-uris project-db (:kondo-config db)))
+                           (unused-public-vars db-of-uris project-db)
+                           (different-aliases db-of-uris project-db))
                          (remove #(ignore-diag? % @ignores)))]
       (merge empty-diags
              (reduce

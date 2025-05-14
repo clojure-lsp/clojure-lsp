@@ -65,11 +65,12 @@
       (update :document-formatting? (fnil identity true))
       (update :document-range-formatting? (fnil identity true))))
 
-(defn ^:private get-refreshed-settings [project-root-uri settings force-settings]
+(defn ^:private get-refreshed-settings [project-root-uri settings force-settings kondo-config]
   (let [new-project-settings (config/resolve-for-root project-root-uri)]
-    (config/deep-merge-considering-settings settings
-                                            new-project-settings
-                                            force-settings)))
+    (-> (config/deep-merge-considering-settings settings
+                                                new-project-settings
+                                                force-settings)
+        (config/with-legacy-linters-kondo-config kondo-config))))
 
 (def ttl-threshold-milis 1000)
 
@@ -79,11 +80,11 @@
 (defn all
   "Get memoized settings from db.
   Refreshes settings if memoize threshold met."
-  [{:keys [settings-auto-refresh? env project-root-uri settings force-settings]}]
+  [{:keys [settings-auto-refresh? kondo-config env project-root-uri settings force-settings]}]
   (if (or (not settings-auto-refresh?)
           (#{:unit-test :api-test} env))
-    (get-refreshed-settings project-root-uri settings force-settings)
-    (memoized-settings project-root-uri settings force-settings)))
+    (get-refreshed-settings project-root-uri settings force-settings kondo-config)
+    (memoized-settings project-root-uri settings force-settings kondo-config)))
 
 (defn get
   ([db kws]

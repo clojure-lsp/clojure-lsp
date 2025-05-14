@@ -13,7 +13,9 @@
  :linters {:clj-kondo {:level :on
                        :report-duplicates true
                        :ns-exclude-regex ""}
-           :clj-depend {:level :info}} ;; Only if any clj-depend config is found
+           :clj-depend {:level :info} ;; Only if any clj-depend config is found
+           :clojure-lsp/unused-public-var {:level :info}
+           :cloujure-lsp/different-aliases {:level :off}}
  :clean {:automatically-after-ns-refactor true
          :ns-inner-blocks-indentation :next-line
          :ns-import-classes-indentation :next-line

@@ -14,4 +14,7 @@
                                 "lib/test"
                                 "cli/test"]
                   :main-opts ["-m" "kaocha.runner"]}
-           :debug {:extra-paths ["cli/dev"]}}}
+           :debug {:extra-paths ["cli/dev"]
+                   :extra-deps {com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.1"}
+                                com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.4.0"}
+                                criterium/criterium {:mvn/version "0.4.6"}}}}}

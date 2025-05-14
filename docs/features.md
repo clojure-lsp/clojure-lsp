@@ -375,7 +375,7 @@ There are 3 diagnostics providers currently:
 
 #### Built-in linters
 
-Below you can find the custom linters implemented on clojure-lsp side that uses the `:custom-lint-fn` from clj-kondo:
+Below you can find the clojure-lsp built-in linters:
 
 ##### clojure-lsp/unused-public-var
 

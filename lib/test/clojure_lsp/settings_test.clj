@@ -40,6 +40,19 @@
   (is (= {:a {:b {:c 2}}}
          (settings/all (h/db)))))
 
+(deftest legacy-linsters-kondo-config-test
+  (swap! (h/db*) shared/deep-merge {:settings {:a {:b {:c 2}}}
+                                    :kondo-config {:bar :a
+                                                   :config-in-ns {:a 1}
+                                                   :ns-groups {:b 2}
+                                                   :linters {:foo :a
+                                                             :clojure-lsp/unused-public-var {:level :error}}}})
+  (is (= {:a {:b {:c 2}}
+          :config-in-ns {:a 1}
+          :ns-groups {:b 2}
+          :linters {:clojure-lsp/unused-public-var {:level :error}}}
+         (settings/all (h/db)))))
+
 (deftest get-test
   (swap! (h/db*) shared/deep-merge {:settings {:a {:b {:c 2}}}})
   (is (= 2 (settings/get (h/db) [:a :b :c])))

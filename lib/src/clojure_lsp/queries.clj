@@ -831,9 +831,9 @@
 (def default-public-vars-name-to-exclude
   '#{-main})
 
-(defn exclude-public-definition? [kondo-config definition]
-  (let [excluded-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude] #{})
-        excluded-defined-by-syms (get-in kondo-config [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
+(defn exclude-public-definition? [settings definition]
+  (let [excluded-syms (get-in settings [:linters :clojure-lsp/unused-public-var :exclude] #{})
+        excluded-defined-by-syms (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by] #{})
         excluded-full-qualified-vars (set (filter qualified-ident? excluded-syms))
         excluded-ns-or-var (set (filter simple-ident? excluded-syms))
         keyword-definition? (identical? :keyword-definitions (:bucket definition))

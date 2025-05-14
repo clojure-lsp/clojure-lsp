@@ -19,7 +19,7 @@
         (spit lsp-config-file old-content)))))
 
 (def new-lsp-config-content
-  (h/code "{:linters {:clj-kondo {:level :off}}}"
+  (h/code "{:linters {:clojure-lsp/unused-public-var {:level :off}}}"
           ""))
 
 (deftest unused-public-var

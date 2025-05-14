@@ -9,7 +9,7 @@
 
 (set! *warn-on-reflection* true)
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+#_{:clojure-lsp/ignore [:clojure-lsp/unused-public-var]}
 (defmacro zspy [loc]
   `(do
      (taoensso.timbre/warn '~loc (pr-str (z/sexpr ~loc)))

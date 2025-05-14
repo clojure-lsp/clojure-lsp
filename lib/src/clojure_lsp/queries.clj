@@ -542,7 +542,6 @@
           (comp
             (if include-definition? xf-analysis->vars xf-analysis->var-usages-and-symbols)
             (filter #(contains? names (:name %)))
-
             (filter #(safe-equal? (:ns var-definition) (or (:ns %)
                                                            (:to %)
                                                            (some-> (:symbol %) namespace symbol))))

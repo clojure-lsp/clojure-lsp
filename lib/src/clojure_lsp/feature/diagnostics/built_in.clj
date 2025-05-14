@@ -152,7 +152,7 @@
     (remove var-used? var-definitions)))
 
 (defn ^:private unused-public-vars [narrowed-db project-db]
-  (when-not (identical? :off (settings/get project-db [:linters :clojure-lsp/unused-public-var :level]))
+  (when-not (identical? :off (settings/get project-db [:linters :clojure-lsp/unused-public-var :level] :info))
     (let [settings (settings/all project-db)
           ignore-test-references? (get-in settings
                                           [:linters :clojure-lsp/unused-public-var :ignore-test-references?]
@@ -193,22 +193,23 @@
                      (contains? kw-usages (q/kw-signature kw-def)))]
       (->> (concat unused-vars
                    (remove kw-used? kw-definitions))
-           (map (fn [element]
-                  (let [keyword-def? (identical? :keyword-definitions (:bucket element))
-                        settings (if (:ns element)
-                                   (setting-for-ns settings (:ns element) (-> element :uri shared/uri->filename))
-                                   settings)
-                        severity (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info)]
-                    (element->diagnostic
-                      element
-                      severity
-                      "clojure-lsp/unused-public-var"
-                      (if keyword-def?
-                        (if (:ns element)
-                          (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
-                          (format "Unused public keyword ':%s'" (:name element)))
-                        (format "Unused public var '%s/%s'" (:ns element) (:name element)))
-                      [1]))))))))
+           (keep (fn [element]
+                   (let [keyword-def? (identical? :keyword-definitions (:bucket element))
+                         settings (if (:ns element)
+                                    (setting-for-ns settings (:ns element) (-> element :uri shared/uri->filename))
+                                    settings)
+                         severity (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info)]
+                     (when-not (:identical? :off severity)
+                       (element->diagnostic
+                         element
+                         severity
+                         "clojure-lsp/unused-public-var"
+                         (if keyword-def?
+                           (if (:ns element)
+                             (format "Unused public keyword ':%s/%s'" (:ns element) (:name element))
+                             (format "Unused public keyword ':%s'" (:name element)))
+                           (format "Unused public var '%s/%s'" (:ns element) (:name element)))
+                         [1])))))))))
 
 (defn analyze-uris! [uris db]
   (shared/logging-task

@@ -124,10 +124,12 @@
    to avoid breaking changes we consider kondo config settings."
   [settings kondo-config]
   (shared/deep-merge
-    {:linters (select-keys (:linters kondo-config) [:clojure-lsp/unused-public-var
-                                                    :clojure-lsp/different-aliases])
-     :config-in-ns (:config-in-ns kondo-config)
-     :ns-groups (:ns-groups kondo-config)}
+    (shared/assoc-some
+      {}
+      :linters (not-empty (select-keys (:linters kondo-config) [:clojure-lsp/unused-public-var
+                                                                :clojure-lsp/different-aliases]))
+      :config-in-ns (:config-in-ns kondo-config)
+      :ns-groups (:ns-groups kondo-config))
     settings))
 
 (defn ^:private resolve-from-classpath-config-paths-impl [classpath {:keys [classpath-config-paths]}]

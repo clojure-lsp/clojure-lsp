@@ -9,7 +9,6 @@
    [clj-async-profiler.core :as profiler]
    [clj-memory-meter.core :as mm]
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.shared :as shared]
    [criterium.core :as bench]))
 
@@ -109,14 +108,14 @@
        (profile-by-runtime opts# ~body))))
 
 (comment
-
+  (require '[clojure-lsp.feature.diagnostics.built-in :as f.diagnostics.built-in])
   (do
-    (println "\nProfiling completion in queries.clj")
+    (println "\nProfiling...")
     (auto-profile
       {:open? true
        ;; :estimate-strategy :quick-bench
        }
-      (f.completion/completion (uri-in-project "lib/src/clojure_lsp/queries.clj") 24 8 @db/db*)))
+      (f.diagnostics.built-in/analyze-uri! (uri-in-project "lib/src/clojure_lsp/queries.clj") @db/db*)))
 
   (do
     (println "\n Profiling db memory")

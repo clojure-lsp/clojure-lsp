@@ -28,7 +28,7 @@
         (concat (q/find-namespace-definitions db uri)
                 (->> (concat (q/find-var-definitions db uri true)
                              (q/find-keyword-definitions db uri))
-                     (remove (partial q/exclude-public-definition? db))))))
+                     (remove (partial q/exclude-public-definition? (settings/all db)))))))
 
 (defn ^:private test-reference? [test-locations-regex source-uri reference-uri]
   (and source-uri

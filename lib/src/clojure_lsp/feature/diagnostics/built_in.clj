@@ -71,8 +71,8 @@
      :source "clojure-lsp"}
     :tags tags))
 
-(defn ^:private different-aliases [narrowed-db project-db]
-  (let [level (settings/get project-db [:linters :clojure-lsp/different-aliases :level] :off)]
+(defn ^:private different-aliases [narrowed-db project-db settings]
+  (let [level (get-in settings [:linters :clojure-lsp/different-aliases :level] :off)]
     (when-not (identical? :off level)
       (let [exclude-aliases-config (set (settings/get project-db [:linters :clojure-lsp/different-aliases :exclude-aliases]))
             exclude-aliases (conj exclude-aliases-config nil) ;; nil here means an unaliased require
@@ -109,8 +109,8 @@
       (apply kondo.config/merge-config! settings configs-in-ns)
       settings)))
 
-(defn ^:private exclude-public-diagnostic-definition? [db definition]
-  (let [settings (setting-for-ns (settings/all db) (:ns definition) (-> definition :uri shared/uri->filename))
+(defn ^:private exclude-public-diagnostic-definition? [db settings definition]
+  (let [settings (setting-for-ns settings (:ns definition) (-> definition :uri shared/uri->filename))
         excluded-syms-regex (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
         excluded-defined-by-syms-regex (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
         excluded-metas (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})
@@ -119,7 +119,7 @@
         inside-comment? (some #(and (= 'comment (:name %))
                                     (= 'clojure.core (:ns %))) (:callstack definition))]
     (or inside-comment?
-        (q/exclude-public-definition? db definition)
+        (q/exclude-public-definition? settings definition)
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)
         (some (fn [exclude]
                 (some #(re-matches (re-pattern (str exclude))
@@ -151,16 +151,15 @@
                     (some usages (q/var-definition-signatures var-def)))]
     (remove var-used? var-definitions)))
 
-(defn ^:private unused-public-vars [narrowed-db project-db]
-  (when-not (identical? :off (settings/get project-db [:linters :clojure-lsp/unused-public-var :level] :info))
-    (let [settings (settings/all project-db)
-          ignore-test-references? (get-in settings
+(defn ^:private unused-public-vars [narrowed-db project-db settings]
+  (when-not (identical? :off (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info))
+    (let [ignore-test-references? (get-in settings
                                           [:linters :clojure-lsp/unused-public-var :ignore-test-references?]
                                           false)
           test-locations-regex (into #{}
                                      (map re-pattern
                                           (get settings :test-locations-regex shared/test-locations-regex-default)))
-          exclude-def? (partial exclude-public-diagnostic-definition? project-db)
+          exclude-def? (partial exclude-public-diagnostic-definition? project-db settings)
           var-definitions (->> (q/find-all-var-definitions narrowed-db)
                                (remove exclude-def?))
           test-uri? (fn [{uri :uri}] (some #(re-find % uri) test-locations-regex))
@@ -214,13 +213,16 @@
 (defn analyze-uris! [uris db]
   (shared/logging-task
     :internal/built-in-linters
-    (let [project-db (q/db-with-internal-analysis db)
+    (let [settings (settings/all db)
+          project-db (q/db-with-internal-analysis db)
           db-of-uris (update project-db :analysis select-keys uris)
           empty-diags (reduce #(assoc %1 %2 []) {} uris)
-          ignores (future (find-ignore-comments uris db))
+          ignores (future (shared/logging-task
+                            :internal/find-linter-ignore-comments
+                            (find-ignore-comments uris db)))
           all-diags (->> (concat
-                           (unused-public-vars db-of-uris project-db)
-                           (different-aliases db-of-uris project-db))
+                           (unused-public-vars db-of-uris project-db settings)
+                           (different-aliases db-of-uris project-db settings))
                          (remove #(ignore-diag? % @ignores)))]
       (merge empty-diags
              (reduce

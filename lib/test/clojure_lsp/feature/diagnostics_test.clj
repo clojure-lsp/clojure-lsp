@@ -1,8 +1,8 @@
 (ns clojure-lsp.feature.diagnostics-test
   (:require
    [clj-depend.api :as clj-depend]
-   [clojure-lsp.feature.custom-linters :as f.custom-linters]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.feature.diagnostics.custom :as f.diagnostics.custom]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper :as h]
    [clojure.core.async :as async]
@@ -285,7 +285,7 @@
     (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                           :settings {:source-paths [(h/file-path "/project/src") (h/file-path "/project/test")]
                                      :linters {:custom {'foo.bar/baz {:severity :error}}}}})
-    (with-redefs [f.custom-linters/file-content-from-classpath
+    (with-redefs [f.diagnostics.custom/file-content-from-classpath
                   (constantly (format (h/code "(ns foo.bar)"
                                               "(defn baz [{:keys [params db reg-diagnostic!]}]"
                                               "  (reg-diagnostic! {:uri \"%s\""

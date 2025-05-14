@@ -4,8 +4,8 @@
    [clojure-lsp.clj-depend :as lsp.depend]
    [clojure-lsp.config :as config]
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.custom-linters :as f.custom-linters]
    [clojure-lsp.feature.diagnostics.built-in :as f.diagnostics.built-in]
+   [clojure-lsp.feature.diagnostics.custom :as f.diagnostics.custom]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.producer :as producer]
@@ -79,7 +79,7 @@
                            (lsp.depend/analyze-paths! paths @db*)))
         custom-lint-fn #(shared/logging-task
                           :internal/project-paths-analyzed-by-custom-linters
-                          (f.custom-linters/analyze-paths! paths %))
+                          (f.diagnostics.custom/analyze-paths! paths %))
         analyze-built-in-fn #(f.diagnostics.built-in/analyze-paths! paths %)
         kondo-result @kondo-result*
         depend-result @depend-result*]
@@ -88,7 +88,7 @@
                      (lsp.kondo/db-with-results kondo-result)
                      (lsp.depend/db-with-results depend-result)
                      (f.diagnostics.built-in/db-with-results analyze-built-in-fn)
-                     (f.custom-linters/db-with-results custom-lint-fn))))))
+                     (f.diagnostics.custom/db-with-results custom-lint-fn))))))
 
 (defn ^:private analyze-source-paths-namespaces-only! [paths db* _file-analyzed-fn]
   (let [db @db*

@@ -1,4 +1,4 @@
-(ns clojure-lsp.feature.custom-linters
+(ns clojure-lsp.feature.diagnostics.custom
   (:require
    [clojure-lsp.custom-linters-api :as custom-linters-api]
    [clojure-lsp.logger :as logger]

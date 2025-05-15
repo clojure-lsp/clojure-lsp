@@ -414,8 +414,8 @@ jobs:
           path: clojure-lsp-native-macos-aarch64.zip.sha256
           name: clojure-lsp-native-macos-aarch64.zip.sha256
 
-  windows:
-    name: Build native Windows binary
+  windows-amd64:
+    name: Build native Windows amd64 binary
     needs: [build-lib-jar, build-cli-jar]
     runs-on: windows-latest
     steps:
@@ -497,11 +497,93 @@ jobs:
           cd cli
           bb integration-test ../clojure-lsp.exe
 
+  windows-aarch64:
+    name: Build native Windows aarch64 binary
+    needs: [build-lib-jar, build-cli-jar]
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: clojure-lsp-standalone.jar
+
+      - name: configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 8GB
+          maximum-size: 16GB
+
+      - name: Prepare java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Install clojure build tools
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.12.0.1495'
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
+
+      - name: Install MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install GraalVM
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          graalvm: 22.2.0
+          java: java11
+
+      - name: Install native-image component
+        run: |
+          gu.cmd install native-image
+
+      # see https://github.com/oracle/graal/issues/4340
+      - name: GraalVM workaround to support UPX compression
+        run: |
+          7z d "$env:JAVA_HOME\lib\svm\builder\svm.jar" com/oracle/svm/core/windows/WindowsImageHeapProviderFeature.class
+
+      - name: Build Windows native image
+        env:
+          CLOJURE_LSP_JAR: ..\clojure-lsp-standalone.jar
+          CLOJURE_LSP_XMX: "-J-Xmx7g"
+        run: |
+          bb native-cli
+
+      - name: Compress binary
+        uses: svenstaro/upx-action@v2
+        with:
+          file: clojure-lsp.exe
+
+      - name: Zip binary
+        run: |
+          jar -cMf clojure-lsp-native-windows-aarch64.zip clojure-lsp.exe
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-native-windows-aarch64.zip
+          name: clojure-lsp-native-windows-aarch64.zip
+
+      - name: Generate sha256
+        run: sha256sum clojure-lsp-native-windows-aarch64.zip | awk '{print $1}' > clojure-lsp-native-windows-aarch64.zip.sha256
+
+      - name: Upload sha256
+        uses: actions/upload-artifact@v4
+        with:
+          path: clojure-lsp-native-windows-aarch64.zip.sha256
+          name: clojure-lsp-native-windows-aarch64.zip.sha256
+
+      - name: Run integration tests
+        run: |
+          cd cli
+          bb integration-test ../clojure-lsp.exe
 
   release:
     name: Create Release
     environment: prod-release
-    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, linux-aarch64, macos-amd64, macos-aarch64, windows]
+    needs: [build-lib-jar, build-cli-jar, linux-amd64, linux-amd64-static, linux-aarch64, macos-amd64, macos-aarch64, windows-amd64, windows-aarch64]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -703,7 +785,7 @@ jobs:
           asset_name: clojure-lsp-native-macos-aarch64.zip.sha256
           tag: ${{ steps.latest-tag.outputs.tag}}
 
-      - name: Upload Windows native binary
+      - name: Upload Windows amd64 native binary
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
@@ -711,10 +793,26 @@ jobs:
           asset_name: clojure-lsp-native-windows-amd64.zip
           tag: ${{ steps.latest-tag.outputs.tag}}
 
-      - name: Upload Windows native sha256
+      - name: Upload Windows amd64 native sha256
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           file: clojure-lsp-native-windows-amd64.zip.sha256/clojure-lsp-native-windows-amd64.zip.sha256
           asset_name: clojure-lsp-native-windows-amd64.zip.sha256
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload Windows aarch64 native binary
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-windows-aarch64.zip/clojure-lsp-native-windows-aarch64.zip
+          asset_name: clojure-lsp-native-windows-aarch64.zip
+          tag: ${{ steps.latest-tag.outputs.tag}}
+
+      - name: Upload Windows aarch64 native sha256
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          file: clojure-lsp-native-windows-aarch64.zip.sha256/clojure-lsp-native-windows-aarch64.zip.sha256
+          asset_name: clojure-lsp-native-windows-aarch64.zip.sha256
           tag: ${{ steps.latest-tag.outputs.tag}}

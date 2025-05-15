@@ -288,7 +288,9 @@
                                      :version version})))
 
 (defn analyze-watched-files! [uris {:keys [db* producer] :as components}]
-  (let [existing-uris (filter #(get-in @db* [:documents %]) uris) ;; we check if file still exists/should be linted
+  (let [existing-uris (->> uris
+                           distinct
+                           (filter #(get-in @db* [:documents %]))) ;; we check if file still exists/should be linted
         filenames (map shared/uri->filename existing-uris)
         kondo-result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
     (swap! db* (fn [state-db]
@@ -309,9 +311,12 @@
       (shared/dissoc-in [:analysis uri])
       (shared/dissoc-in [:diagnostics :clj-kondo uri])))
 
-(defn ^:private files-deleted [{:keys [db*], :as components} uris]
+(defn ^:private files-deleted [old-db {:keys [db*] :as components} uris]
   (swap! db* #(reduce db-without-uri % uris))
-  (f.diagnostic/publish-empty-diagnostics! uris components))
+  (f.diagnostic/publish-empty-diagnostics! uris components)
+  (when (settings/get @db* [:notify-references-on-file-change] true)
+    (doseq [uri uris]
+      (notify-references uri @db* old-db components))))
 
 (defn ^:private dir-or-file-uri->analyzable-uris [uri db]
   ;; If the URI is for an entire directory that has been created/deleted, we
@@ -346,16 +351,17 @@
     (when (seq deleted)
       (shared/logging-task
         :internal/delete-watched-files
-        (files-deleted components deleted)))))
+        (files-deleted db components deleted)))))
 
 (defn did-close [uri {:keys [db*] :as components}]
-  (let [filename (shared/uri->filename uri)
-        source-paths (settings/get @db* [:source-paths])
+  (let [db @db*
+        filename (shared/uri->filename uri)
+        source-paths (settings/get db [:source-paths])
         external-filename? (shared/external-filename? filename source-paths)]
     (if external-filename?
       (f.diagnostic/publish-empty-diagnostics! [uri] components)
       (when (not (shared/file-exists? (io/file filename)))
-        (files-deleted components [uri])))))
+        (files-deleted db components [uri])))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
@@ -400,5 +406,5 @@
                    (f.rename/rename-element new-ns db old-ns-definition :rename-file)))))
        (reduce #(shared/deep-merge %1 %2) {:document-changes []})))
 
-(defn did-rename-files [files components]
-  (files-deleted components (mapv :old-uri files)))
+(defn did-rename-files [files {:keys [db*] :as components}]
+  (files-deleted @db* components (mapv :old-uri files)))

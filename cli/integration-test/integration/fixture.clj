@@ -61,6 +61,11 @@
     :position {:line line :character character}
     :newName new-name}])
 
+(defn references-request [path line character]
+  [:textDocument/references
+   {:textDocument {:uri (h/source-path->uri path)}
+    :position {:line line :character character}}])
+
 (defn formatting-range-request [path start-line start-character end-line end-character]
   [:textDocument/rangeFormatting
    {:textDocument {:uri (h/source-path->uri path)}
@@ -140,3 +145,12 @@
                             :range {:start {:line start-line :character start-character}
                                     :end {:line end-line :character end-character}}})
                          changes)}])
+
+(defn did-change-watched-files [changes]
+  [:workspace/didChangeWatchedFiles
+   {:changes (for [[path type] changes]
+               {:uri (h/source-path->uri path)
+                :type (case type
+                        :created 1
+                        :changed 2
+                        :deleted 3)})}])

@@ -204,11 +204,15 @@
   ([code uri components]
    (handlers/did-open components {:text-document {:uri uri :text code}})))
 
+(defn delete-file [uri]
+  (with-redefs [shared/file-exists? (constantly false)]
+    (handlers/did-close (components) {:text-document {:uri uri}})))
+
 (defn load-java-path [uri]
   (#'f.java-interop/analyze-and-cache-jdk-source!
-   [uri]
-   {}
-   (db*)))
+    [uri]
+    {}
+    (db*)))
 
 (defn load-code-and-locs
   ([code] (load-code-and-locs code default-uri))

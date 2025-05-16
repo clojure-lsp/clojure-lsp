@@ -4,7 +4,7 @@
    (sample_test.java_interop SampleClass)
    (difflib DiffUtils)))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+#_{:clojure-lsp/ignore [:clojure-lsp/unused-public-var]}
 (defn my-function []
   (SampleClass.)
   (PersistentVector.)

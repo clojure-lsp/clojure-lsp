@@ -5,7 +5,7 @@
 - General
   - Consider `.lsp/config.edn` as part of project code, removing false positives of unused-public-var linter.
   - Consider full qualified symbols in edn files when checking for var references.
-  - Improve clojure-lsp linter capabilities, migrating `unused-public-var` and `different-aliases` linters to be built-in linters.
+  - Improve clojure-lsp linter capabilities, migrating `unused-public-var` and `different-aliases` linters to be built-in linters. #2050
     - Migrate from clj-kondo `custom-lint-fn` but considering kondo settings to avoid breaking changes.
     - Considerably improve performance of `unused-public-var` and `different-aliases` linters.
 

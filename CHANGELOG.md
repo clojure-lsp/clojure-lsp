@@ -11,6 +11,7 @@
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961
+  - Fix outdated analysis for watched created/deleted files (git branch switchs for example). #2046
 
 - API/CLI
   - Replace `tools.cli` with `babashka.cli`. #2036

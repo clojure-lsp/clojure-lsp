@@ -39,3 +39,33 @@
     (h/assert-submaps
       [{:uri (h/source-path->uri a-file-path)}]
       (lsp/request! (fixture/references-request a-file-path 2 6)))))
+
+(deftest watched-file-created
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+
+  (testing "we force file didn't exist"
+    (lsp/notify! (fixture/did-change-watched-files [[b-file-path :deleted]])))
+
+  (lsp/notify! (fixture/did-open-source-path-notification a-file-path))
+  (h/assert-submaps
+    []
+    (lsp/client-awaits-server-diagnostics b-file-path))
+
+  (testing "Before creation, there is one reference"
+    (h/assert-submaps
+      [{:uri (h/source-path->uri a-file-path)}]
+      (lsp/request! (fixture/references-request a-file-path 2 6))))
+
+  (lsp/notify! (fixture/did-change-watched-files [[b-file-path :created]]))
+
+  (testing "After creation, diagnostics are updated for each related file"
+    (is (= 1 (count (lsp/client-awaits-server-diagnostics b-file-path))))
+    (is (= 0 (count (lsp/client-awaits-server-diagnostics a-file-path)))))
+
+  (testing "After creation, there is now 2 references updated"
+    (h/assert-submaps
+      [{:uri (h/source-path->uri b-file-path)}
+       {:uri (h/source-path->uri a-file-path)}]
+      (lsp/request! (fixture/references-request a-file-path 2 6)))))

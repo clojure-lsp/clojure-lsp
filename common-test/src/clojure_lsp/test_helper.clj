@@ -210,9 +210,9 @@
 
 (defn load-java-path [uri]
   (#'f.java-interop/analyze-and-cache-jdk-source!
-    [uri]
-    {}
-    (db*)))
+   [uri]
+   {}
+   (db*)))
 
 (defn load-code-and-locs
   ([code] (load-code-and-locs code default-uri))

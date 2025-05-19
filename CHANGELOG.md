@@ -8,6 +8,7 @@
   - Improve clojure-lsp linter capabilities, migrating `unused-public-var` and `different-aliases` linters to be built-in linters. #2050
     - Migrate from clj-kondo `custom-lint-fn` but considering kondo settings to avoid breaking changes.
     - Considerably improve performance of `unused-public-var` and `different-aliases` linters.
+  - Bump rewrite-clj to 1.2.50.
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961

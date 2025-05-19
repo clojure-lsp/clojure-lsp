@@ -32,7 +32,10 @@
 (def ^:private ignores-keywords #{:clj-kondo/ignore :clojure-lsp/ignore})
 
 (defn ^:private find-ignore-comments [uris db]
-  (let [text-by-uri (reduce #(assoc %1 %2 (get-in db [:documents %2 :text] "")) {} uris)
+  ;; TODO get document text more reliable via file_management/force-get-document
+  (let [text-by-uri (reduce #(assoc %1 %2 (or (get-in db [:documents %2 :text])
+                                              (shared/slurp-uri %2)
+                                              "")) {} uris)
         uris-with-ignores (filterv #(re-find #":clj-kondo/ignore|:clojure-lsp/ignore" (text-by-uri %)) uris)]
     (reduce
       (fn [acc uri]
@@ -40,11 +43,14 @@
                              ignores []]
                         (if-let [node (z/find-next-tag zloc z/right :uneval)]
                           (cond
-                            (contains? ignores-keywords (z/sexpr (z/next (z/next node))))
+                            (some-> node z/next z/next z/sexpr-able? not)
+                            (recur node ignores)
+
+                            (contains? ignores-keywords (some-> node z/next z/next z/sexpr))
                             (recur node (conj ignores (assoc (meta (z/node (z/right node)))
                                                              :codes (z/sexpr (z/find-next-tag node z/next :vector)))))
 
-                            (contains? ignores-keywords (z/sexpr (z/next node)))
+                            (contains? ignores-keywords (some-> node z/next z/sexpr))
                             (recur node (conj ignores (assoc (meta (z/node (z/right node)))
                                                              :all-codes true)))
 

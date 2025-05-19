@@ -929,11 +929,14 @@
                        :code :invalid-params}}))))
 
 (defn suppress-diagnostic [zloc diagnostic-code]
-  (let [form-zloc (or (z/up (edit/find-op zloc))
+  (let [diagnostic-ignore (if (= "clojure-lsp" (namespace (keyword diagnostic-code)))
+                            :clojure-lsp/ignore
+                            :clj-kondo/ignore)
+        form-zloc (or (z/up (edit/find-op zloc))
                       zloc)
         {form-row :row form-col :col :as form-pos} (-> form-zloc z/node meta)
         loc-w-comment (z/edit-> form-zloc
-                                (z/insert-left* (n/uneval-node (cond-> [(n/map-node [(n/keyword-node :clj-kondo/ignore)
+                                (z/insert-left* (n/uneval-node (cond-> [(n/map-node [(n/keyword-node diagnostic-ignore)
                                                                                      (n/spaces 1)
                                                                                      (n/vector-node [(keyword diagnostic-code)])])
                                                                         (n/newlines 1)]

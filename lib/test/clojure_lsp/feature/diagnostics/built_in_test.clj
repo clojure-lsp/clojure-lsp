@@ -173,6 +173,7 @@
                                 "(def bar 2)"
                                 "#_:clj-kondo/ignore"
                                 "(def baz 3)"
+                                "#_#_#_1 2 3 4"
                                 "#_:other-comment/here"
                                 "(def foo 1)"
                                 "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}"
@@ -270,7 +271,7 @@
   (testing "exclude when ignored via generic clojure-lsp/ignore comment"
     (h/assert-submaps
       [{:range
-        {:start {:line 6 :character 5} :end {:line 6 :character 8}}
+        {:start {:line 7 :character 5} :end {:line 7 :character 8}}
         :severity 3
         :code "clojure-lsp/unused-public-var"
         :source "clojure-lsp"

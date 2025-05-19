@@ -1001,7 +1001,7 @@
   (testing "when diagnostic is from clojure-lsp"
     (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
     (h/assert-submaps
-      [{:loc   (h/code "#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}"
+      [{:loc   (h/code "#_{:clojure-lsp/ignore [:clojure-lsp/unused-public-var]}"
                        "")
         :range {:row 3 :col 1 :end-row 3 :end-col 1}}]
       (suppress-diagnostic (h/code "(ns bla)"

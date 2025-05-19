@@ -5,12 +5,15 @@
 - General
   - Consider `.lsp/config.edn` as part of project code, removing false positives of unused-public-var linter.
   - Consider full qualified symbols in edn files when checking for var references.
-  - Improving clojure-lsp linter capabilities, migrating `unused-public-var` and `different-aliases` linters to be built-in linters.
+  - Improve clojure-lsp linter capabilities, migrating `unused-public-var` and `different-aliases` linters to be built-in linters. #2050
     - Migrate from clj-kondo `custom-lint-fn` but considering kondo settings to avoid breaking changes.
+    - Considerably improve performance of `unused-public-var` and `different-aliases` linters.
+  - Bump rewrite-clj to 1.2.50.
   - New feature: Add support for custom project linters. #2043
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961
+  - Fix outdated analysis for watched created/deleted files (git branch switchs for example). #2046
 
 - API/CLI
   - Replace `tools.cli` with `babashka.cli`. #2036

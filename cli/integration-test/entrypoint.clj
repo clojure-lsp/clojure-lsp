@@ -10,6 +10,7 @@
     integration.declaration-test
     integration.implementation-test
     integration.text-change-test
+    integration.watched-files-change-test
     integration.code-action-test
     integration.completion-test
     integration.diagnostics-test
@@ -47,7 +48,7 @@
   (when (medley/deref-reset! first-print-log-tail?* false)
     (binding [*out* *err*]
       (println "--- RECENT LOG OUTPUT ---")
-      (print (log-tail "clojure-lsp.integration-test.out" 300))
+      (print (log-tail "clojure-lsp.integration-test.out" 100))
       (println "--- END RECENT LOG OUTPUT ---"))))
 
 (declare ^:dynamic original-report)

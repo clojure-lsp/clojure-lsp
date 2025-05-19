@@ -146,37 +146,38 @@
                      (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uris! uris %)))))))
 
 (defn ^:private notify-references [uri db-before db-after {:keys [db* producer] :as components}]
-  (async/thread
-    (shared/logging-task
-      :internal/notify-references
-      (let [uris (shared/logging-task
-                   :reference-files/find
-                   (reference-uris uri db-before db-after))]
-        (when (seq uris)
-          (shared/logging-task
-            :reference-files/analyze
-            ;; TODO: We process the dependent and dependency files together, but
-            ;; it may be possible to be more efficient by processing them
-            ;; separately.
-            ;;
-            ;; The dependents may have been affected by changes to var
-            ;; definitions. Since some var definition data is copied to var
-            ;; usage data, this will change their analysis slightly. They may
-            ;; also gain or lose clj-kondo lint like unresolved-var or
-            ;; invalid-arity.
-            ;;
-            ;; The dependencies may have been affected by changes to var usages.
-            ;; Their analysis won't have changed, but they may gain or lose
-            ;; custom unused-public-var lint.
-            ;;
-            ;; So, we could send the dependents to kondo, bypassing custom-lint.
-            ;; And we could send the dependencies to custom-lint, bypassing
-            ;; kondo. See
-            ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
-            ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
-            (analyze-reference-uris! uris db*))
-          (f.diagnostic/publish-all-diagnostics! uris true components)
-          (producer/refresh-code-lens producer))))))
+  (when (settings/get db-after [:notify-references-on-file-change] true)
+    (async/thread
+      (shared/logging-task
+        :internal/notify-references
+        (let [uris (shared/logging-task
+                     :reference-files/find
+                     (reference-uris uri db-before db-after))]
+          (when (seq uris)
+            (shared/logging-task
+              :reference-files/analyze
+              ;; TODO: We process the dependent and dependency files together, but
+              ;; it may be possible to be more efficient by processing them
+              ;; separately.
+              ;;
+              ;; The dependents may have been affected by changes to var
+              ;; definitions. Since some var definition data is copied to var
+              ;; usage data, this will change their analysis slightly. They may
+              ;; also gain or lose clj-kondo lint like unresolved-var or
+              ;; invalid-arity.
+              ;;
+              ;; The dependencies may have been affected by changes to var usages.
+              ;; Their analysis won't have changed, but they may gain or lose
+              ;; custom unused-public-var lint.
+              ;;
+              ;; So, we could send the dependents to kondo, bypassing custom-lint.
+              ;; And we could send the dependencies to custom-lint, bypassing
+              ;; kondo. See
+              ;; https://github.com/clojure-lsp/clojure-lsp/issues/1027 and
+              ;; https://github.com/clojure-lsp/clojure-lsp/issues/1028.
+              (analyze-reference-uris! uris db*))
+            (f.diagnostic/publish-all-diagnostics! uris true components)
+            (producer/refresh-code-lens producer)))))))
 
 (defn ^:private offsets [lines line character end-line end-character]
   (loop [lines (seq lines)
@@ -275,8 +276,7 @@
                                              bump-version version)))
           (let [db @db*]
             (f.diagnostic/publish-diagnostics! uri components)
-            (when (settings/get db [:notify-references-on-file-change] true)
-              (notify-references uri old-db db components))
+            (notify-references uri old-db db components)
             (producer/refresh-test-tree producer [uri]))
           (recur @db*))))))
 
@@ -291,7 +291,10 @@
                                      :version version})))
 
 (defn analyze-watched-files! [uris {:keys [db* producer] :as components}]
-  (let [existing-uris (filter #(get-in @db* [:documents %]) uris) ;; we check if file still exists/should be linted
+  (let [old-db @db*
+        existing-uris (->> uris
+                           distinct
+                           (filter #(shared/file-exists? (io/file (shared/uri->filename %))))) ;; we check if file still exists/should be linted
         filenames (map shared/uri->filename existing-uris)
         kondo-result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
     (swap! db* (fn [state-db]
@@ -303,7 +306,8 @@
     (doseq [uri uris]
       (when (get-in @db* [:documents uri :v])
         (when-let [text (shared/slurp-uri uri)]
-          (swap! db* assoc-in [:documents uri :text] text))))))
+          (swap! db* assoc-in [:documents uri :text] text)))
+      (notify-references uri old-db @db* components))))
 
 (defn ^:private db-without-uri [state-db uri]
   (-> state-db
@@ -312,9 +316,11 @@
       (shared/dissoc-in [:analysis uri])
       (shared/dissoc-in [:diagnostics :clj-kondo uri])))
 
-(defn ^:private files-deleted [{:keys [db*], :as components} uris]
+(defn ^:private files-deleted [old-db {:keys [db*] :as components} uris]
   (swap! db* #(reduce db-without-uri % uris))
-  (f.diagnostic/publish-empty-diagnostics! uris components))
+  (f.diagnostic/publish-empty-diagnostics! uris components)
+  (doseq [uri uris]
+    (notify-references uri @db* old-db components)))
 
 (defn ^:private dir-or-file-uri->analyzable-uris [uri db]
   ;; If the URI is for an entire directory that has been created/deleted, we
@@ -349,16 +355,17 @@
     (when (seq deleted)
       (shared/logging-task
         :internal/delete-watched-files
-        (files-deleted components deleted)))))
+        (files-deleted db components deleted)))))
 
 (defn did-close [uri {:keys [db*] :as components}]
-  (let [filename (shared/uri->filename uri)
-        source-paths (settings/get @db* [:source-paths])
+  (let [db @db*
+        filename (shared/uri->filename uri)
+        source-paths (settings/get db [:source-paths])
         external-filename? (shared/external-filename? filename source-paths)]
     (if external-filename?
       (f.diagnostic/publish-empty-diagnostics! [uri] components)
       (when (not (shared/file-exists? (io/file filename)))
-        (files-deleted components [uri])))))
+        (files-deleted db components [uri])))))
 
 (defn force-get-document-text
   "Get document text from db, if document not found, tries to open the document"
@@ -403,5 +410,5 @@
                    (f.rename/rename-element new-ns db old-ns-definition :rename-file)))))
        (reduce #(shared/deep-merge %1 %2) {:document-changes []})))
 
-(defn did-rename-files [files components]
-  (files-deleted components (mapv :old-uri files)))
+(defn did-rename-files [files {:keys [db*] :as components}]
+  (files-deleted @db* components (mapv :old-uri files)))

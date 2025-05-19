@@ -217,7 +217,13 @@
                   "(def x)"
                   "a/a"
                   "a/a"
-                  "x"))))
+                  "x"))
+
+    (testing "When a file is removed"
+      (h/delete-file (h/file-uri "file:///src/b.clj"))
+
+      (is (= #{(h/file-uri "file:///src/a.clj")}
+             (f.file-management/reference-uris (h/file-uri "file:///src/b.clj") (h/db) db-before))))))
 
 (deftest kw-dependency-reference-uris
   (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}

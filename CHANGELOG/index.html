@@ -2424,12 +2424,13 @@
 <li>General</li>
 <li>Consider <code>.lsp/config.edn</code> as part of project code, removing false positives of unused-public-var linter.</li>
 <li>Consider full qualified symbols in edn files when checking for var references.</li>
-<li>
-<p>Improve clojure-lsp linter capabilities, migrating <code>unused-public-var</code> and <code>different-aliases</code> linters to be built-in linters. #2050</p>
-<ul>
+<li>Improve clojure-lsp linter capabilities, migrating <code>unused-public-var</code> and <code>different-aliases</code> linters to be built-in linters. #2050<ul>
 <li>Migrate from clj-kondo <code>custom-lint-fn</code> but considering kondo settings to avoid breaking changes.</li>
 <li>Considerably improve performance of <code>unused-public-var</code> and <code>different-aliases</code> linters.</li>
 </ul>
+</li>
+<li>
+<p>Bump rewrite-clj to 1.2.50.</p>
 </li>
 <li>
 <p>Editor</p>
@@ -4072,7 +4073,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 16, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 19, 2025</span>
     
   </small>
 </div>

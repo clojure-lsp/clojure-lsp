@@ -453,11 +453,6 @@
       "hash": "sha256-lR2zV/nEmlyId8CJYMSoroa9jJqohwYmZL0E96/+6pU="
     },
     {
-      "mvn-path": "com/fasterxml/jackson/core/jackson-core/2.6.6/jackson-core-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-FBG05nI1xvoyhdFIbk8zj/wRqPksm1CBOOwimQCnbBs="
-    },
-    {
       "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.12.4/jackson-databind-2.12.4.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-6Zp7S4kHS8aJqrzZ6x8sExi2jMXDSXna8+NO3FWMegE="
@@ -466,11 +461,6 @@
       "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.12.4/jackson-databind-2.12.4.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-mUN+jfYJpvJRoMHUrAYQO2qklT6MLJyG90TNcQXIJGg="
-    },
-    {
-      "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.6.6/jackson-databind-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-JVEXkl7QzmBeKiLGeSuW8IBjxoplCC3Hurkrp/C9ags="
     },
     {
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.10.2/jackson-dataformat-cbor-2.10.2.jar",
@@ -511,11 +501,6 @@
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.17.0/jackson-dataformat-cbor-2.17.0.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-Niz1VWDxh5GL5n6L0ej33T5VKZU/uPKNv1x/m8MInQE="
-    },
-    {
-      "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.6.6/jackson-dataformat-cbor-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-HSZtuGTqrQ99EbEsQA14+a2pyxSvVc54/3zc2pgVt78="
     },
     {
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-smile/2.10.2/jackson-dataformat-smile-2.10.2.jar",

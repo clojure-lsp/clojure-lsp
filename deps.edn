@@ -10,7 +10,7 @@
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                   :extra-paths ["lib/src"
                                 "cli/src"
-                                "common-test/src"
+                                "test-helper/src"
                                 "lib/test"
                                 "cli/test"]
                   :main-opts ["-m" "kaocha.runner"]}

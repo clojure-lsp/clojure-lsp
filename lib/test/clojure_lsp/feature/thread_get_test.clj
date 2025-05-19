@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.thread-get-test
   (:require
    [clojure-lsp.feature.thread-get :as f.thread-get]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is]]))
 
 (h/reset-components-before-test)

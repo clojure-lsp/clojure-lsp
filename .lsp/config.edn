@@ -1,3 +1,4 @@
-{:linters {:clj-kondo {:ns-exclude-regex "sample-test.*"}}
+{:linters {:clj-kondo {:ns-exclude-regex "sample-test.*"}
+           :clojure-lsp/unused-public-var {:exclude [make]}}
  :source-aliases #{:dev :test :debug}
  :use-metadata-for-privacy? true}

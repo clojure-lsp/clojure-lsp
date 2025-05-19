@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.replace-refer-all-test
   (:require
    [clojure-lsp.feature.replace-refer-all :as f.replace-refer-all]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is]]))
 
 (h/reset-components-before-test)

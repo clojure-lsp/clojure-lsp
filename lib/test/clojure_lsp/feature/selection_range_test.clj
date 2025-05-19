@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.selection-range-test
   (:require
    [clojure-lsp.feature.selection-range :as f.selection-range]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest]]))
 
 (deftest selection-ranges-test

@@ -141,12 +141,12 @@ The test author should be aware of the following important differences between *
 Below are a few __hints__ to assist with writing test that work accross the different platforms.
 
 1. Line Endings
-    1. When comparing strings, Use `clojure-lsp.test-helper/string=` with `\n` in your expected result.
+    1. When comparing strings, Use `clojure-lsp.test-helper.internal/string=` with `\n` in your expected result.
         1. e.g. use `(is (h/strings= "one\n" result)` instead of `(is (= "one\r\n" result))` or `(is (= "one\n" result))`.
     1. Use `h/str-includes?` with `\n` in the string to search for instead of `clojure.string/includes?`.
         1. e.g. `(is (h/str-includes? (slurp "path") "something\n"))` instead of `(is (str/includes? (slurp "path") "something\n"))` or `(is (str/includes? (slurp "path") "something\r\n"))`.
 2. Paths
     1. Always use `babashka.fs/canonicalize` when converting a relative path to an absolute path. Avoiding using any of java File/Path absolute or canonical equivalent fns. This ensures that the drive letter on windows is always in capitals (e.g. `D:\` instead of `d:\`). This is also the convention used throughout the codebase and it works as well with both existing and non-existing files.
-    1. Use `clojure-lsp.test-helper/file-path`, `clojure-lsp.test-helper/file->uri` with *nix paths. They are converted to the format expected by the OS.
+    1. Use `clojure-lsp.test-helper.internal/file-path`, `clojure-lsp.test-helper.internal/file->uri` with *nix paths. They are converted to the format expected by the OS.
         1. e.g. `(load-code (h/file-path "/aaa.clj")  "(ns aaa)")` instead of `(load-code "/aaa.clj" "(ns aaa)")` or `(load-code "c:\\aaa.clj" "(ns aaa)")`
 

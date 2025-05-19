@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.document-symbol-test
   (:require
    [clojure-lsp.feature.document-symbol :as f.document-symbol]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.spec.alpha :as s]
    [clojure.test :refer [deftest is testing]]
    [clojure.test.check.clojure-test :refer [defspec]]

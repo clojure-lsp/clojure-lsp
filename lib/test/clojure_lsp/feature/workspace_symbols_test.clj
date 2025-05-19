@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.workspace-symbols-test
   (:require
    [clojure-lsp.feature.workspace-symbols :as f.workspace-symbols]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)

@@ -4,7 +4,7 @@
    [cheshire.core :as json]
    [clojure-lsp.api :as api]
    [clojure-lsp.internal-api :as internal-api]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]

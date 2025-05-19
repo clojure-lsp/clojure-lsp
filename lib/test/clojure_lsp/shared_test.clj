@@ -1,7 +1,7 @@
 (ns clojure-lsp.shared-test
   (:require
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [are deftest is testing]]
    [medley.core :as medley]))
 

@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.paredit-test
   (:require
    [clojure-lsp.feature.paredit :as f.paredit]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [are deftest]]))
 
 (defn ^:private pareditfy

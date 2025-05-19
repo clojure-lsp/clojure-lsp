@@ -15,7 +15,7 @@
                        :ns-exclude-regex ""}
            :clj-depend {:level :info} ;; Only if any clj-depend config is found
            :clojure-lsp/unused-public-var {:level :info}
-           :cloujure-lsp/different-aliases {:level :off}
+           :clojure-lsp/different-aliases {:level :off}
            :custom {}}
  :clean {:automatically-after-ns-refactor true
          :ns-inner-blocks-indentation :next-line

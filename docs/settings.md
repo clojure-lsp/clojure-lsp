@@ -271,7 +271,7 @@ clojure-lsp supports defining custom linters in a project or lib (via [classpath
 
 `.lsp/config.edn` or any classpath config
 ```clojure
-{:linters {:custom {my-org.my-linter/lint {:severity :info}}}}
+{:linters {:custom {my-org.my-linter/lint {:level :info}}}}
 ```
 
 2. clojure-lsp will then search for a clojure file that defines that linter in the classpath:
@@ -284,7 +284,7 @@ clojure-lsp supports defining custom linters in a project or lib (via [classpath
 (defn lint [{:keys [db uris params reg-diagnostic!]}]
   ,,,
   (reg-diagnostic! {:uri (first uris)
-                    :severity (:severity params)
+                    :level (:level params)
                     :code "my-org/missing-unit-test"
                     :message "Logic function missing unit test"
                     :source "my-org/codestyle"

@@ -10,12 +10,12 @@
   (testing "Basic reg-diagnostic"
     (h/reset-components!)
     (swap! (h/db*) assoc-in
-           [:settings :linters] {:custom {'foo.bar/baz {:severity :warning}}})
+           [:settings :linters] {:custom {'foo.bar/baz {:level :warning}}})
     (with-redefs [f.diagnostics.custom/file-content-from-classpath
                   (constantly (format (h/code "(ns foo.bar)"
                                               "(defn baz [{:keys [params db reg-diagnostic!]}]"
                                               "  (reg-diagnostic! {:uri \"%s\""
-                                              "                    :severity :warning"
+                                              "                    :level :warning"
                                               "                    :message \"Some linter\""
                                               "                    :source \"some-source\""
                                               "                    :code \"some-code\""
@@ -33,13 +33,13 @@
   (testing "API usage"
     (h/reset-components!)
     (swap! (h/db*) assoc-in
-           [:settings :linters] {:custom {'foo.bar/qux {:severity :warning}}})
+           [:settings :linters] {:custom {'foo.bar/qux {:level :warning}}})
     (with-redefs [f.diagnostics.custom/file-content-from-classpath
                   (constantly (format (h/code "(ns foo.bar"
                                               " (:require [clojure-lsp.custom-linters-api :as api]))"
                                               "(defn qux [{:keys [params db reg-diagnostic!]}]"
                                               "  (reg-diagnostic! {:uri \"%s\""
-                                              "                    :severity (:severity params)"
+                                              "                    :level (:level params)"
                                               "                    :message (str \"var-definitions: \" (count (api/internal-analysis db)))"
                                               "                    :source \"some-source\""
                                               "                    :code \"some-code\""

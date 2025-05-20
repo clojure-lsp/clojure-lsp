@@ -61,16 +61,16 @@
       {}
       uris-with-ignores)))
 
-(defn ^:private element->diagnostic [element severity code message tags]
+(defn ^:private element->diagnostic [element level code message tags]
   (shared/assoc-some
     {:uri (:uri element)
      :range {:start {:line (dec (:name-row element))
                      :character (dec (:name-col element))}
              :end {:line (dec (:name-end-row element))
                    :character (dec (:name-end-col element))}}
-     :severity (case severity
+     :severity (case level
                  :error 1
-                 :warning 2
+                 :warn 2
                  :info 3)
      :message message
      :code code
@@ -203,11 +203,11 @@
                          settings (if (:ns element)
                                     (setting-for-ns settings (:ns element) (-> element :uri shared/uri->filename))
                                     settings)
-                         severity (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info)]
-                     (when-not (identical? :off severity)
+                         level (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info)]
+                     (when-not (identical? :off level)
                        (element->diagnostic
                          element
-                         severity
+                         level
                          "clojure-lsp/unused-public-var"
                          (if keyword-def?
                            (if (:ns element)

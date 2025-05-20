@@ -28,7 +28,7 @@
         (slurp (io/file head path))
         (recur path tail)))))
 
-(def ^:private required-fields #{:uri :range :severity :message :source :code})
+(def ^:private required-fields #{:uri :range :level :message :source :code})
 
 (defn ^:private missing-required-fields [diagnostic]
   (seq (remove (set (keys diagnostic)) required-fields)))
@@ -36,10 +36,10 @@
 (defn ^:private custom-diagnostic->lsp [diagnostic]
   (-> diagnostic
       (dissoc :uri)
-      (update :severity #(case %
-                           :error 1
-                           :warning 2
-                           :info 3))))
+      (assoc :severity (case (:level diagnostic)
+                         :error 1
+                         :warn 2
+                         :info 3))))
 
 (defn ^:private analyze [fqns params uris db]
   (sci/create-ns 'clojure-lsp.custom-linters-api nil)
@@ -99,7 +99,7 @@
                           (shared/logging-task
                             :internal/all-custom-linters
                             (reduce (fn [all-diags [fqns params]]
-                                      (if (contains? #{:error :warning :info} (:severity params))
+                                      (if (contains? #{:error :warn :info} (:level params))
                                         (shared/deep-merge all-diags
                                                            (shared/logging-task
                                                              (keyword "custom-lint" (-> fqns

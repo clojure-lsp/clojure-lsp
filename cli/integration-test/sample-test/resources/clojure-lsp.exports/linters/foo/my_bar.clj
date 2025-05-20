@@ -8,7 +8,7 @@
                            (.getCanonicalPath
                              (io/file (api/uri->filename (:project-root-uri db)) "src" "sample_test" "diagnostics" "custom_linters.clj"))
                            db)
-                    :severity (:severity params)
+                    :level (:level params)
                     :message (str "external analysis count: " (->> db
                                                                    api/internal-analysis
                                                                    vals

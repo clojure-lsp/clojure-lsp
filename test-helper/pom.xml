@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-test-helper</artifactId>
-  <version>2025.04.23-18.16.46</version>
+  <version>2025.04.23-18.16.46-alpha</version>
   <name>clojure-lsp-test-helper</name>
   <dependencies>
     <dependency>
@@ -23,6 +23,6 @@
     </repository>
   </repositories>
   <scm>
-    <tag>2025.04.23-18.16.46</tag>
+    <tag>2025.04.23-18.16.46-alpha</tag>
   </scm>
 </project>

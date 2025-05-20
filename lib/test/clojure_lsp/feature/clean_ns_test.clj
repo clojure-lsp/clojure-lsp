@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
 

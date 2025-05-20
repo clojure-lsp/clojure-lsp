@@ -4,7 +4,7 @@
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.kondo :as lsp.kondo]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))

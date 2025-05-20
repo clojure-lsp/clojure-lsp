@@ -1,7 +1,7 @@
 (ns clojure-lsp.source-paths-test
   (:require
    [clojure-lsp.source-paths :as source-paths]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]))
 

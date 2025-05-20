@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.test-tree-test
   (:require
    [clojure-lsp.feature.test-tree :as f.test-tree]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest testing]]))
 
 (h/reset-components-before-test)

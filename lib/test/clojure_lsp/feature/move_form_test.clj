@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.move-form-test
   (:require
    [clojure-lsp.feature.move-form :as move-form]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)

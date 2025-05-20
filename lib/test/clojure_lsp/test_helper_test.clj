@@ -1,6 +1,6 @@
 (ns clojure-lsp.test-helper-test
   (:require
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is]]))
 
 (deftest changes->code-test

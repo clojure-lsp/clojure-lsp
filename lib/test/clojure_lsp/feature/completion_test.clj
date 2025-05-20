@@ -3,7 +3,7 @@
    [babashka.fs :as fs]
    [clojure-lsp.feature.completion :as f.completion]
    [clojure-lsp.feature.completion-lib :as f.completion-lib]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]))
 

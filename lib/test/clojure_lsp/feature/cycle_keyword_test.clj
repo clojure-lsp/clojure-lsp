@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.cycle-keyword-test
   (:require
    [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)

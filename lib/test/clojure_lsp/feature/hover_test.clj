@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.feature.hover :as f.hover]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
 

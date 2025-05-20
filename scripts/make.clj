@@ -67,6 +67,8 @@
 
 (defn cli-pom [] (build "cli" "pom"))
 
+(defn test-helper-pom [] (build "test-helper" "pom"))
+
 (defn lib-jar []
   (build "lib" "jar")
   (mv-here "lib/target/clojure-lsp.jar"))
@@ -76,6 +78,9 @@
   []
   (build "cli" "server-jar")
   (mv-here "cli/target/clojure-lsp-server.jar"))
+
+(defn test-helper-jar []
+  (build "test-helper" "jar"))
 
 (defn server-install
   "Build `cli` server jar and install."
@@ -160,6 +165,8 @@
 (defn deploy-clojars [] (build "lib" "deploy-clojars"))
 
 (defn deploy-clojars-standalone [] (build "cli" "deploy-clojars"))
+
+(defn deploy-clojars-test-helper [] (build "test-helper" "deploy-clojars"))
 
 (defn local-webpage []
   (let [files ["CHANGELOG.md" "README.md"]]

@@ -1,4 +1,4 @@
-(ns clojure-lsp.test-helper
+(ns clojure-lsp.test-helper.internal
   (:require
    [clojure-lsp.db :as db]
    [clojure-lsp.feature.java-interop :as f.java-interop]

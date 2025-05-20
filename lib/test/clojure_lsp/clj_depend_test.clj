@@ -3,7 +3,7 @@
    [clj-depend.api :as clj-depend.api]
    [clojure-lsp.clj-depend :as clj-depend]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]))
 

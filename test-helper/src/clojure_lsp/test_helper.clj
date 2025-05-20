@@ -26,27 +26,17 @@
   [& strings]
   (apply h.internal/code strings))
 
-(defn file-uri
-  "Conform uri to a file uri considering Windows and unix paths."
-  [^String uri]
-  (h.internal/file-uri uri))
-
-(defn file-path
-  "Conform path to a file path considering Windows and unix paths."
-  [^String path]
-  (h.internal/file-path path))
-
 (defn load-code!
   "Simulates code load by clojure-lsp, analyzing it."
   [{:keys [code uri components]
     :or {uri h.internal/default-uri
-         components (h.internal/components)}}]
+         components h.internal/components}}]
   (h.internal/load-code code (h.internal/file-uri uri) components))
 
-(defn set-db!
-  "Changes db merging specified db."
-  [db]
-  (swap! (h.internal/db*) merge db))
+(defn set-settings!
+  "Changes db adding specified settings."
+  [settings]
+  (swap! (h.internal/db*) assoc :settings settings))
 
 (defn custom-lint!
   "Custom lint uris using previously loaded code and settings."

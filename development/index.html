@@ -908,7 +908,7 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 <p>Below are a few <strong>hints</strong> to assist with writing test that work accross the different platforms.</p>
 <ol>
 <li>Line Endings<ol>
-<li>When comparing strings, Use <code>clojure-lsp.test-helper/string=</code> with <code>\n</code> in your expected result.<ol>
+<li>When comparing strings, Use <code>clojure-lsp.test-helper.internal/string=</code> with <code>\n</code> in your expected result.<ol>
 <li>e.g. use <code>(is (h/strings= "one\n" result)</code> instead of <code>(is (= "one\r\n" result))</code> or <code>(is (= "one\n" result))</code>.</li>
 </ol>
 </li>
@@ -920,7 +920,7 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 </li>
 <li>Paths<ol>
 <li>Always use <code>babashka.fs/canonicalize</code> when converting a relative path to an absolute path. Avoiding using any of java File/Path absolute or canonical equivalent fns. This ensures that the drive letter on windows is always in capitals (e.g. <code>D:\</code> instead of <code>d:\</code>). This is also the convention used throughout the codebase and it works as well with both existing and non-existing files.</li>
-<li>Use <code>clojure-lsp.test-helper/file-path</code>, <code>clojure-lsp.test-helper/file-&gt;uri</code> with *nix paths. They are converted to the format expected by the OS.<ol>
+<li>Use <code>clojure-lsp.test-helper.internal/file-path</code>, <code>clojure-lsp.test-helper.internal/file-&gt;uri</code> with *nix paths. They are converted to the format expected by the OS.<ol>
 <li>e.g. <code>(load-code (h/file-path "/aaa.clj")  "(ns aaa)")</code> instead of <code>(load-code "/aaa.clj" "(ns aaa)")</code> or <code>(load-code "c:\\aaa.clj" "(ns aaa)")</code></li>
 </ol>
 </li>
@@ -935,7 +935,7 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 19, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 20, 2025</span>
     
   </small>
 </div>

@@ -19,7 +19,7 @@
         :message "external analysis count: 0"
         :source "some-source"
         :code "some-code"
-        :range {:start {:line 1 :character 2} :end {:line 3 :character 4}}}]
+        :range {:start {:line 0 :character 1} :end {:line 2 :character 3}}}]
       (lsp/client-awaits-server-diagnostics "diagnostics/custom_linters.clj"))))
 
 (deftest different-aliases

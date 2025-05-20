@@ -307,5 +307,5 @@
           :source "some-source"
           :code "some-code"
           :range
-          {:start {:line 1 :character 2} :end {:line 1 :character 4}}}]
+          {:start {:line 0 :character 1} :end {:line 2 :character 3}}}]
         (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/foo.clj") (h/db))))))

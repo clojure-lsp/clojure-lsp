@@ -27,8 +27,8 @@
                          :message "Some linter"
                          :source "some-source"
                          :code "some-code"
-                         :range {:start {:line 1 :character 2}
-                                 :end {:line 3 :character 4}}}]}
+                         :range {:start {:line 0 :character 1}
+                                 :end {:line 2 :character 3}}}]}
         (f.diagnostics.custom/analyze-uri! h/default-uri (h/db)))))
   (testing "API usage"
     (h/reset-components!)
@@ -55,6 +55,6 @@
                          :message "var-definitions: 2"
                          :source "some-source"
                          :code "some-code"
-                         :range {:start {:line 1 :character 2}
-                                 :end {:line 3 :character 4}}}]}
+                         :range {:start {:line 0 :character 1}
+                                 :end {:line 2 :character 3}}}]}
         (f.diagnostics.custom/analyze-uri! h/default-uri (h/db))))))

@@ -35,11 +35,11 @@
 
 (defn ^:private custom-diagnostic->lsp [{:keys [level range] :as diagnostic}]
   (-> diagnostic
-      (dissoc :uri)
-      (assoc :range {:start {:line (:row range)
-                             :character (:col range)}
-                     :end {:line (:end-row range)
-                           :character (:end-col range)}})
+      (dissoc :uri :level)
+      (assoc :range {:start {:line (dec (:row range))
+                             :character (dec (:col range))}
+                     :end {:line (dec (:end-row range))
+                           :character (dec (:end-col range))}})
       (assoc :severity (case level
                          :error 1
                          :warning 2

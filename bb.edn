@@ -16,6 +16,7 @@
 
          lib-pom make/lib-pom
          cli-pom make/cli-pom
+         test-helper-pom make/test-helper-pom
 
          lib-jar make/lib-jar
          server-jar make/server-jar
@@ -23,6 +24,7 @@
          standalone-install make/standalone-install
          cli-debug-jar make/cli-debug-jar
          cli-prod-jar make/cli-prod-jar
+         test-helper-jar make/test-helper-jar
 
          debug-cli make/debug-cli
          prod-cli make/prod-cli

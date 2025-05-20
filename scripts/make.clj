@@ -67,6 +67,8 @@
 
 (defn cli-pom [] (build "cli" "pom"))
 
+(defn test-helper-pom [] (build "test-helper" "pom"))
+
 (defn lib-jar []
   (build "lib" "jar")
   (mv-here "lib/target/clojure-lsp.jar"))
@@ -76,6 +78,9 @@
   []
   (build "cli" "server-jar")
   (mv-here "cli/target/clojure-lsp-server.jar"))
+
+(defn test-helper-jar []
+  (build "test-helper" "jar"))
 
 (defn server-install
   "Build `cli` server jar and install."

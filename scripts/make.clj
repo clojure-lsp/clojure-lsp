@@ -166,6 +166,8 @@
 
 (defn deploy-clojars-standalone [] (build "cli" "deploy-clojars"))
 
+(defn deploy-clojars-test-helper [] (build "test-helper" "deploy-clojars"))
+
 (defn local-webpage []
   (let [files ["CHANGELOG.md" "README.md"]]
     (doseq [f files]

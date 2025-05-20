@@ -53,5 +53,6 @@
 
          deploy-clojars make/deploy-clojars
          deploy-clojars-standalone make/deploy-clojars-standalone
+         deploy-clojars-test-helper make/deploy-clojars-test-helper
 
          local-webpage make/local-webpage}}

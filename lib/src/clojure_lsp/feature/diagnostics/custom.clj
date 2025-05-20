@@ -40,10 +40,7 @@
                              :character (dec (:col range))}
                      :end {:line (dec (:end-row range))
                            :character (dec (:end-col range))}})
-      (assoc :severity (case level
-                         :error 1
-                         :warning 2
-                         :info 3))))
+      (assoc :severity (shared/level->severity level))))
 
 (defn ^:private analyze [fqns params uris db]
   (sci/create-ns 'clojure-lsp.custom-linters-api nil)
@@ -96,14 +93,15 @@
       (logger/warn logger-tag "stderr from linter:" err))
     @diagnostics*))
 
-(defn ^:private analyze-uris!
+(defn analyze-uris!
   [uris db]
   (let [custom-linters (settings/get db [:linters :custom] {})
+        levels (set (keys shared/level->severity))
         uri+diagnostics (if (seq custom-linters)
                           (shared/logging-task
                             :internal/all-custom-linters
                             (reduce (fn [all-diags [fqns params]]
-                                      (if (contains? #{:error :warning :info} (:level params))
+                                      (if (contains? levels (:level params))
                                         (shared/deep-merge all-diags
                                                            (shared/logging-task
                                                              (keyword "custom-lint" (-> fqns

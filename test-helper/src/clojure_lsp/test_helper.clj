@@ -1,6 +1,7 @@
 (ns clojure-lsp.test-helper
   "Entrypoint for clojure-lsp test helper"
   (:require
+   [clojure-lsp.feature.diagnostics.custom :as f.diagnostics.custom]
    [clojure-lsp.test-helper.internal :as h.internal]))
 
 (set! *warn-on-reflection* true)
@@ -36,3 +37,8 @@
   "Changes db adding specified settings."
   [settings]
   (swap! (h.internal/db*) assoc :settings settings))
+
+(defn custom-lint!
+  "Custom lint uris using previously loaded code and settings."
+  [{:keys [uris]}]
+  (f.diagnostics.custom/analyze-uris! uris (h.internal/db*)))

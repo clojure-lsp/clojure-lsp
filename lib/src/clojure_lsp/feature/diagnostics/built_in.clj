@@ -68,10 +68,7 @@
                      :character (dec (:name-col element))}
              :end {:line (dec (:name-end-row element))
                    :character (dec (:name-end-col element))}}
-     :severity (case level
-                 :error 1
-                 :warning 2
-                 :info 3)
+     :severity (shared/level->severity level)
      :message message
      :code code
      :source "clojure-lsp"}

@@ -569,3 +569,8 @@
         (filter (fn [uri]
                   (some #(string/starts-with? uri %) dir-uris)))
         (keys (:analysis db))))
+
+(def level->severity
+  {:error 1
+   :warning 2
+   :info 3})

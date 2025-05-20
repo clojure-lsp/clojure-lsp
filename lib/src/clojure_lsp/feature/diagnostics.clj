@@ -56,10 +56,7 @@
                (str n "/" (name type))
                (name type))
        :langs langs
-       :severity (case level
-                   :error 1
-                   :warning 2
-                   :info 3)
+       :severity (shared/level->severity level)
        :source (if (identical? :clojure-lsp/unused-public-var type)
                  "clojure-lsp"
                  "clj-kondo")}
@@ -89,12 +86,6 @@
            (filter valid-finding?)
            (mapv #(kondo-finding->diagnostic range-type lines* output-langs? %))))))
 
-(defn severity->level [severity]
-  (case (int severity)
-    1 :error
-    2 :warning
-    3 :info))
-
 (defn severity->color [severity]
   (case (int severity)
     1 :red
@@ -111,10 +102,7 @@
                :tags []
                :message message
                :code "clj-depend"
-               :severity (case level
-                           :error 1
-                           :warning 2
-                           :info 3)
+               :severity (shared/level->severity level)
                :source "clj-depend"}))
           (get-in db [:diagnostics :clj-depend (symbol namespace)]))))
 

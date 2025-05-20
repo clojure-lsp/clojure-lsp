@@ -293,7 +293,7 @@
                                               "                    :message \"Some linter\""
                                               "                    :source \"some-source\""
                                               "                    :code \"some-code\""
-                                              "                    :range {:start {:line 1 :character 2} :end {:line 1 :character 4}}"
+                                              "                    :range {:row 1 :col 2 :end-row 3 :end-col 4}"
                                               "                    }))")
                                       (h/file-uri "file:///project/src/foo.clj")))]
       (h/load-code-and-locs "(ns foo) (defn bar [a b] (+ a b))"

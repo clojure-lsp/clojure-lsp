@@ -18,4 +18,4 @@
                                                                    count))
                     :source "some-source"
                     :code "some-code"
-                    :range {:start {:line 1 :character 2} :end {:line 3 :character 4}}}))
+                    :range {:row 1 :col 2 :end-row 3 :end-col 4}}))

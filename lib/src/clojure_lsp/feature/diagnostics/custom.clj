@@ -33,10 +33,14 @@
 (defn ^:private missing-required-fields [diagnostic]
   (seq (remove (set (keys diagnostic)) required-fields)))
 
-(defn ^:private custom-diagnostic->lsp [diagnostic]
+(defn ^:private custom-diagnostic->lsp [{:keys [level range] :as diagnostic}]
   (-> diagnostic
       (dissoc :uri)
-      (assoc :severity (case (:level diagnostic)
+      (assoc :range {:start {:line (:row range)
+                             :character (:col range)}
+                     :end {:line (:end-row range)
+                           :character (:end-col range)}})
+      (assoc :severity (case level
                          :error 1
                          :warning 2
                          :info 3))))

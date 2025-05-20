@@ -288,7 +288,7 @@ clojure-lsp supports defining custom linters in a project or lib (via [classpath
                     :code "my-org/missing-unit-test"
                     :message "Logic function missing unit test"
                     :source "my-org/codestyle"
-                    :range {:start {:line 1 :character 2} :end {:line 3 :character 4}}}))
+                    :range {:row 1 :col 2 :end-row 3 :end-col 4}}))
 ```
 
 3. When clojure-lsp analyze your project or file, it will consider that custom lint.

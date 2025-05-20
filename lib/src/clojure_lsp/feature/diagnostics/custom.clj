@@ -38,7 +38,7 @@
       (dissoc :uri)
       (assoc :severity (case (:level diagnostic)
                          :error 1
-                         :warn 2
+                         :warning 2
                          :info 3))))
 
 (defn ^:private analyze [fqns params uris db]
@@ -99,7 +99,7 @@
                           (shared/logging-task
                             :internal/all-custom-linters
                             (reduce (fn [all-diags [fqns params]]
-                                      (if (contains? #{:error :warn :info} (:level params))
+                                      (if (contains? #{:error :warning :info} (:level params))
                                         (shared/deep-merge all-diags
                                                            (shared/logging-task
                                                              (keyword "custom-lint" (-> fqns

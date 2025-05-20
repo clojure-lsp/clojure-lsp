@@ -70,7 +70,7 @@
                    :character (dec (:name-end-col element))}}
      :severity (case level
                  :error 1
-                 :warn 2
+                 :warning 2
                  :info 3)
      :message message
      :code code

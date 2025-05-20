@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [are deftest is testing]]))
 
 (h/reset-components-before-test)

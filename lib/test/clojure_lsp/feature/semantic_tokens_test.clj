@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.semantic-tokens-test
   (:require
    [clojure-lsp.feature.semantic-tokens :as semantic-tokens]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
 

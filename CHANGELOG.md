@@ -9,6 +9,7 @@
     - Migrate from clj-kondo `custom-lint-fn` but considering kondo settings to avoid breaking changes.
     - Considerably improve performance of `unused-public-var` and `different-aliases` linters.
   - Bump rewrite-clj to 1.2.50.
+  - Publish to clojars `com.github.clojure-lsp/clojure-lsp-test-helper` to be able to test created custom linters.
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961

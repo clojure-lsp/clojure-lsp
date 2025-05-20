@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.resolve-macro-test
   (:require
    [clojure-lsp.feature.resolve-macro :as f.resolve-macro]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)

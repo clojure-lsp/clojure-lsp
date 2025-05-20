@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.signature-help-test
   (:require
    [clojure-lsp.feature.signature-help :as f.signature-help]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)

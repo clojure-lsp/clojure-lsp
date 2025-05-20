@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.java-interop-test
   (:require
    [clojure-lsp.feature.java-interop :as f.java-interop]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))

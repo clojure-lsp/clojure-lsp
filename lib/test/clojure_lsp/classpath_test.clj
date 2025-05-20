@@ -3,7 +3,7 @@
    [babashka.fs :as fs]
    [clojure-lsp.classpath :as classpath]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.string :as str]
    [clojure.test :refer [deftest is testing]]))
 

@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.diagnostics.built-in-test
   (:require
    [clojure-lsp.feature.diagnostics.built-in :as f.diagnostics.built-in]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest testing]]))
 
 (h/reset-components-before-test)

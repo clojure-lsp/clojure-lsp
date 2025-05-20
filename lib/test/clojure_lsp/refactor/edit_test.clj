@@ -1,7 +1,7 @@
 (ns clojure-lsp.refactor.edit-test
   (:require
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]
    [rewrite-clj.zip :as z]))
 

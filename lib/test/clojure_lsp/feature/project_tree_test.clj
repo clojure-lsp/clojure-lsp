@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.feature.project-tree :as f.project-tree]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest]]))
 
 (h/reset-components-before-test)

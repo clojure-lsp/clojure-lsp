@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.sort-clauses-test
   (:require
    [clojure-lsp.feature.sort-clauses :as f.sort-clauses]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
 (defn ^:private can-sort-zloc? [zloc]

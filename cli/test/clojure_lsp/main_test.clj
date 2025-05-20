@@ -1,7 +1,7 @@
 (ns clojure-lsp.main-test
   (:require
    [clojure-lsp.main :as main]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [are deftest is testing use-fixtures]]
    [matcher-combinators.config]

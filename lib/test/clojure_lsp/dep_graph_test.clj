@@ -4,7 +4,7 @@
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.shared :as shared]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [are deftest is testing]]))
 
 (h/reset-components-before-test)

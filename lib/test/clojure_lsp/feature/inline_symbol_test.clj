@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.inline-symbol-test
   (:require
    [clojure-lsp.feature.inline-symbol :as f.inline-symbol]
-   [clojure-lsp.test-helper :as h]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)

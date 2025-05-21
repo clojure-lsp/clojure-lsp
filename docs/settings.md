@@ -291,7 +291,28 @@ clojure-lsp supports defining custom linters in a project or lib (via [classpath
                     :range {:row 1 :col 2 :end-row 3 :end-col 4}}))
 ```
 
-3. When clojure-lsp analyze your project or file, it will consider that custom lint.
+3. When clojure-lsp analyzes your project or file, it will consider that custom lint.
+
+4. (optional) You can create tests for that custom linter leveraging the test-helper lib `com.github.clojure-lsp/clojure-lsp-test-helper`:
+
+```clojure
+(ns my-org.my-linter-test
+  (:require [clojure-lsp.test-helper :as h]
+            [clojure.edn :as edn]))
+
+(deftest lint-test
+  (h/reset-components!)
+  (h/set-db! {:classpath ["resources"]
+              :settings {:linters {:custom {my-org.my-linter/lint {:level :info}}}}})
+  (h/load-code! {:code (h/code "(ns my-project.my-ns)"
+                               "(defn my-fn [])")})
+  (is (= {h/default-uri [{:code "my-org/missing-unit-test"
+                          :message "Logic function missing unit test"
+                          :range {:end {:character 11 :line 1} :start {:character 6 :line 1}}
+                          :severity 3
+                          :source "my-org/codestyle"}]}
+              (:custom (:diagnostics (h/db))))))
+```
 
 #### Disable a linter
 

@@ -7,7 +7,8 @@
 (def lib 'com.github.clojure-lsp/clojure-lsp-test-helper)
 (def current-version (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))
 (def class-dir "target/classes")
-(def basis {:project "deps.edn"})
+(def basis {:project "deps.edn"
+            :extra "../lib/deps.edn"})
 (def file (format "target/%s.jar" (name lib)))
 
 (defn clean [_]
@@ -19,7 +20,7 @@
                 :src-pom "./pom.xml"
                 :version current-version
                 :basis (b/create-basis basis)
-                :src-dirs ["src"]
+                :src-dirs ["src" "../lib/src"]
                 :scm {:tag current-version}})
   (b/copy-file {:src (str class-dir "/META-INF/maven/" lib "/pom.xml") :target "pom.xml"})
   (b/copy-file {:src (str class-dir "/META-INF/maven/" lib "/pom.properties") :target "pom.properties"}))
@@ -27,7 +28,7 @@
 (defn jar [opts]
   (clean opts)
   (pom opts)
-  (b/copy-dir {:src-dirs ["src"]
+  (b/copy-dir {:src-dirs ["src" "../lib/src" "../lib/resources"]
                :target-dir class-dir})
   (b/jar {:class-dir class-dir
           :jar-file file}))

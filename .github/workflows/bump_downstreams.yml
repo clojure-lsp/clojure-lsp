@@ -1,63 +1,64 @@
 name: Bump downstreams
 
 on:
-  workflow_run:
-    workflows: ["Release"]
-    types:
-      - completed
+  push:
+  # workflow_run:
+  #   workflows: ["Release"]
+  #   types:
+  #     - completed
 
 jobs:
-  release-clojars:
-    name: Release artifact to Clojars
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Prepare java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
+  # release-clojars:
+  #   name: Release artifact to Clojars
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Prepare java
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: 11
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.12.0.1495'
-          bb: '0.9.161'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.12.0.1495'
+  #         bb: '0.9.161'
 
-      - name: Deploy clojars
-        env:
-          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
-          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
-        run: |
-          bb deploy-clojars
+  #     - name: Deploy clojars
+  #       env:
+  #         CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+  #         CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+  #       run: |
+  #         bb deploy-clojars
 
-  release-clojars-standalone:
-    name: Release standalone artifact to Clojars
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Prepare java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
+  # release-clojars-standalone:
+  #   name: Release standalone artifact to Clojars
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Prepare java
+  #       uses: actions/setup-java@v1
+  #       with:
+  #         java-version: 11
 
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.12.0.1495'
-          bb: '0.9.161'
+  #     - name: Install Clojure
+  #       uses: DeLaGuardo/setup-clojure@master
+  #       with:
+  #         cli: '1.12.0.1495'
+  #         bb: '0.9.161'
 
-      - name: Deploy clojars
-        env:
-          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
-          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
-        run: |
-          bb deploy-clojars-standalone
+  #     - name: Deploy clojars
+  #       env:
+  #         CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+  #         CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+  #       run: |
+  #         bb deploy-clojars-standalone
 
   release-clojars-test-helper:
     name: Release artifact to Clojars
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -79,116 +80,116 @@ jobs:
         run: |
           bb deploy-clojars-test-helper
 
-  bump-homebrew-formula:
-    name: Bump Homebrew formula
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+  # bump-homebrew-formula:
+  #   name: Bump Homebrew formula
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Get latest tag
+  #       id: latest-tag
+  #       uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - name: Download artifacts
-        uses: dawidd6/action-download-artifact@v4
-        with:
-          workflow: release.yml
-          workflow_conclusion: success
+  #     - name: Download artifacts
+  #       uses: dawidd6/action-download-artifact@v4
+  #       with:
+  #         workflow: release.yml
+  #         workflow_conclusion: success
 
-      - name: Get new version sha256
-        id: sha256
-        env:
-          VERSION: ${{ steps.latest-tag.outputs.tag }}
-        run: |
-          mac_amd_sha256=$(shasum -a 256 clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip | awk '{print $1}')
-          mac_arm_sha256=$(shasum -a 256 clojure-lsp-native-macos-aarch64.zip/clojure-lsp-native-macos-aarch64.zip | awk '{print $1}')
-          linuxsha256=$(shasum -a 256 clojure-lsp-native-linux-amd64.zip/clojure-lsp-native-linux-amd64.zip | awk '{print $1}')
-          static_linuxsha256=$(shasum -a 256 clojure-lsp-native-static-linux-amd64.zip/clojure-lsp-native-static-linux-amd64.zip | awk '{print $1}')
-          echo "::set-output name=linuxsha256::$linuxsha256"
-          echo "::set-output name=static_linuxsha256::$static_linuxsha256"
-          echo "::set-output name=mac_amd_sha256::$mac_amd_sha256"
-          # not available since comes from CirrusCI
-          echo "::set-output name=mac_arm_sha256::$mac_arm_sha256"
+  #     - name: Get new version sha256
+  #       id: sha256
+  #       env:
+  #         VERSION: ${{ steps.latest-tag.outputs.tag }}
+  #       run: |
+  #         mac_amd_sha256=$(shasum -a 256 clojure-lsp-native-macos-amd64.zip/clojure-lsp-native-macos-amd64.zip | awk '{print $1}')
+  #         mac_arm_sha256=$(shasum -a 256 clojure-lsp-native-macos-aarch64.zip/clojure-lsp-native-macos-aarch64.zip | awk '{print $1}')
+  #         linuxsha256=$(shasum -a 256 clojure-lsp-native-linux-amd64.zip/clojure-lsp-native-linux-amd64.zip | awk '{print $1}')
+  #         static_linuxsha256=$(shasum -a 256 clojure-lsp-native-static-linux-amd64.zip/clojure-lsp-native-static-linux-amd64.zip | awk '{print $1}')
+  #         echo "::set-output name=linuxsha256::$linuxsha256"
+  #         echo "::set-output name=static_linuxsha256::$static_linuxsha256"
+  #         echo "::set-output name=mac_amd_sha256::$mac_amd_sha256"
+  #         # not available since comes from CirrusCI
+  #         echo "::set-output name=mac_arm_sha256::$mac_arm_sha256"
 
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+  #     - name: Install Babashka
+  #       run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
-      - name: Bump Homebrew formula
-        env:
-          VERSION: ${{ steps.latest-tag.outputs.tag }}
-          MAC_ARM_SHA256: ${{ steps.sha256.outputs.mac_arm_sha256 }}
-          MAC_AMD_SHA256: ${{ steps.sha256.outputs.mac_amd_sha256 }}
-          LINUX_SHA256: ${{ steps.sha256.outputs.linuxsha256 }}
-          STATIC_LINUX_SHA256: ${{ steps.sha256.outputs.static_linuxsha256 }}
-        run: |
-          git config --global user.name "Clojure LSP Bot"
-          git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
-          mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-          git clone git@github.com:clojure-lsp/homebrew-brew.git
-          cd homebrew-brew
-          bb -o render.clj --version "${{ env.VERSION }}" --mac-arm-sha "${{ env.MAC_ARM_SHA256 }}" --mac-amd-sha "${{ env.MAC_AMD_SHA256 }}" --linux-sha "${{ env.LINUX_SHA256 }}" --static-linux-sha "${{ env.STATIC_LINUX_SHA256 }}" > clojure-lsp-native.rb
-          cat clojure-lsp-native.rb
-          git add .
-          git commit -m "Bump to version: ${{ env.VERSION }}"
-          git push
+  #     - name: Bump Homebrew formula
+  #       env:
+  #         VERSION: ${{ steps.latest-tag.outputs.tag }}
+  #         MAC_ARM_SHA256: ${{ steps.sha256.outputs.mac_arm_sha256 }}
+  #         MAC_AMD_SHA256: ${{ steps.sha256.outputs.mac_amd_sha256 }}
+  #         LINUX_SHA256: ${{ steps.sha256.outputs.linuxsha256 }}
+  #         STATIC_LINUX_SHA256: ${{ steps.sha256.outputs.static_linuxsha256 }}
+  #       run: |
+  #         git config --global user.name "Clojure LSP Bot"
+  #         git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
+  #         mkdir ~/.ssh && touch ~/.ssh/id_rsa
+  #         echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+  #         git clone git@github.com:clojure-lsp/homebrew-brew.git
+  #         cd homebrew-brew
+  #         bb -o render.clj --version "${{ env.VERSION }}" --mac-arm-sha "${{ env.MAC_ARM_SHA256 }}" --mac-amd-sha "${{ env.MAC_AMD_SHA256 }}" --linux-sha "${{ env.LINUX_SHA256 }}" --static-linux-sha "${{ env.STATIC_LINUX_SHA256 }}" > clojure-lsp-native.rb
+  #         cat clojure-lsp-native.rb
+  #         git add .
+  #         git commit -m "Bump to version: ${{ env.VERSION }}"
+  #         git push
 
-  bump-setup-clojure-lsp:
-    name: Bump setup-clojure-lsp Github Action
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+  # bump-setup-clojure-lsp:
+  #   name: Bump setup-clojure-lsp Github Action
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Get latest tag
+  #       id: latest-tag
+  #       uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - name: Update version in files
-        env:
-          VERSION: ${{ steps.latest-tag.outputs.tag }}
-        run: |
-          git config --global user.name "Clojure LSP Bot"
-          git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
-          mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-          git clone git@github.com:clojure-lsp/setup-clojure-lsp.git
-          cd setup-clojure-lsp
-          sed -i "s/clojure-lsp-version: .*/clojure-lsp-version: ${{ env.VERSION }}/g" README.md .github/workflows/self_check.yml .github/workflows/main.yml
-          git add README.md .github/workflows/self_check.yml .github/workflows/main.yml
-          git commit -m "Bump to version: ${{ env.VERSION }}"
-          git push
+  #     - name: Update version in files
+  #       env:
+  #         VERSION: ${{ steps.latest-tag.outputs.tag }}
+  #       run: |
+  #         git config --global user.name "Clojure LSP Bot"
+  #         git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
+  #         mkdir ~/.ssh && touch ~/.ssh/id_rsa
+  #         echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+  #         git clone git@github.com:clojure-lsp/setup-clojure-lsp.git
+  #         cd setup-clojure-lsp
+  #         sed -i "s/clojure-lsp-version: .*/clojure-lsp-version: ${{ env.VERSION }}/g" README.md .github/workflows/self_check.yml .github/workflows/main.yml
+  #         git add README.md .github/workflows/self_check.yml .github/workflows/main.yml
+  #         git commit -m "Bump to version: ${{ env.VERSION }}"
+  #         git push
 
-  bump-lein-clojure-lsp:
-    name: Bump lein-clojure-lsp
-    needs: [release-clojars-standalone]
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Get latest tag
-        id: latest-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+  # bump-lein-clojure-lsp:
+  #   name: Bump lein-clojure-lsp
+  #   needs: [release-clojars-standalone]
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Get latest tag
+  #       id: latest-tag
+  #       uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - name: Install Babashka
-        run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
+  #     - name: Install Babashka
+  #       run: curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install | sudo bash
 
-      - name: Update version in files
-        env:
-          VERSION: ${{ steps.latest-tag.outputs.tag }}
-        run: |
-          git config --global user.name "Clojure LSP Bot"
-          git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
-          mkdir ~/.ssh && touch ~/.ssh/id_rsa
-          echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-          git clone git@github.com:clojure-lsp/lein-clojure-lsp.git
-          cd lein-clojure-lsp
-          bb tag-patch-for-version "${{ env.VERSION }}"
+  #     - name: Update version in files
+  #       env:
+  #         VERSION: ${{ steps.latest-tag.outputs.tag }}
+  #       run: |
+  #         git config --global user.name "Clojure LSP Bot"
+  #         git config --global user.email "ercdll1337+clojure-lsp@gmail.com"
+  #         mkdir ~/.ssh && touch ~/.ssh/id_rsa
+  #         echo "${{ secrets.CLOJURE_LSP_BOT_COMMIT_TOKEN }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+  #         git clone git@github.com:clojure-lsp/lein-clojure-lsp.git
+  #         cd lein-clojure-lsp
+  #         bb tag-patch-for-version "${{ env.VERSION }}"
 
   # not working
   # nixpkgs-update:

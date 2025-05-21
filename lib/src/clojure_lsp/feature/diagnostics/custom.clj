@@ -61,7 +61,6 @@
                                       (let [package (namespace-munge (name namespace))
                                             path (str "clojure-lsp.exports/linters/" (string/replace package "." "/") ".clj")
                                             source-code (file-content-from-classpath path (:classpath db))]
-                                        (println source-code)
                                         {:file path
                                          :source source-code}))})
         empty-diagnostics (reduce #(assoc %1 %2 []) {} uris)

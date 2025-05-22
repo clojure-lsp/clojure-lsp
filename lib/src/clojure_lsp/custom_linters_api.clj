@@ -57,7 +57,7 @@
   (q/find-element-from-sym db ns-sym name-sym))
 
 (defn find-node-from-sym
-  "Find the rewrite-clj node from a fully qualified symbol."
+  "Find the rewrite-clj zipper node from a fully qualified symbol."
   [db ns-sym name-sym]
   (when-let [e (q/find-element-from-sym db ns-sym name-sym)]
     (when-let [zloc (parser/safe-zloc-of-file db (:uri e))]

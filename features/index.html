@@ -649,6 +649,14 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#built-in-linters" class="md-nav__link">
+    Built-in linters
+  </a>
+  
+    <nav class="md-nav" aria-label="Built-in linters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#clojure-lspunused-public-var" class="md-nav__link">
     clojure-lsp/unused-public-var
   </a>
@@ -658,6 +666,18 @@
           <li class="md-nav__item">
   <a href="#clojure-lspdifferent-aliases" class="md-nav__link">
     clojure-lsp/different-aliases
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-linters" class="md-nav__link">
+    Custom linters
   </a>
   
 </li>
@@ -1100,6 +1120,14 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#built-in-linters" class="md-nav__link">
+    Built-in linters
+  </a>
+  
+    <nav class="md-nav" aria-label="Built-in linters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#clojure-lspunused-public-var" class="md-nav__link">
     clojure-lsp/unused-public-var
   </a>
@@ -1109,6 +1137,18 @@
           <li class="md-nav__item">
   <a href="#clojure-lspdifferent-aliases" class="md-nav__link">
     clojure-lsp/different-aliases
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-linters" class="md-nav__link">
+    Custom linters
   </a>
   
 </li>
@@ -1498,15 +1538,21 @@
 <p>Show the project tree ns and external dependencies.</p>
 <p><img alt="" src="../images/features/project-tree.png" /></p>
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
-<p>Most linters come from <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a> that clojure-lsp calls under the hood to lint the code and retrieve the analysis to
-make most of features work.</p>
-<p>Every linter configuration that the source is clj-kondo, should be done on clj-kondo side, so anything related to unresolved symbols or unknown macros are probably related to wrong clj-kondo for the project. For more information on how to configure clj-kondo check <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">here</a>.</p>
+<p>There are 3 diagnostics providers currently:
+- <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a>: most diagnostics come from here, configurations of these linters should be done on clj-kondo config side, for more information on how to configure clj-kondo check <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">here</a>
+- <a href="#built-in-linters">clojure-lsp</a>: linters built-in + custom linters.
+- <a href="#clj-depend">clj-depend</a>: optional namespace layer diagnostics.</p>
+<h4 id="built-in-linters">Built-in linters<a class="headerlink" href="#built-in-linters" title="Permanent link">#</a></h4>
 <p>Below you can find the clojure-lsp built-in linters:</p>
-<h4 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h4>
+<h5 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h5>
 <p><img alt="" src="../images/features/unused-public-var.png" /></p>
 <p>For more information on how to configure it, check the <a href="../settings/#diagnostics-linter">diagnostics settings section</a>.</p>
-<h4 id="clojure-lspdifferent-aliases">clojure-lsp/different-aliases<a class="headerlink" href="#clojure-lspdifferent-aliases" title="Permanent link">#</a></h4>
+<h5 id="clojure-lspdifferent-aliases">clojure-lsp/different-aliases<a class="headerlink" href="#clojure-lspdifferent-aliases" title="Permanent link">#</a></h5>
 <p><img alt="" src="../images/features/different-aliases.png" /></p>
+<p>For more information on how to configure it, check the <a href="../settings/#diagnostics-linter">diagnostics settings section</a>.</p>
+<h4 id="custom-linters">Custom linters<a class="headerlink" href="#custom-linters" title="Permanent link">#</a></h4>
+<p><img alt="" src="../images/features/custom-linters.png" /></p>
+<p>Clojure-lsp support linters that users or libs decide to create, these linters can use clojure-lsp db analysis to build whatever linter one may want, similar to clj-kondo hooks feature.</p>
 <p>For more information on how to configure it, check the <a href="../settings/#diagnostics-linter">diagnostics settings section</a>.</p>
 <h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
 <p>Clojure-lsp has a optional integration with <a href="https://github.com/clj-depend/clj-depend">clj-depend</a>, making it easier to configure namespaces relationship.</p>
@@ -1952,7 +1998,7 @@ For more information check the <a href="../settings/#stub-generation">stubs sett
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 20, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 22, 2025</span>
     
   </small>
 </div>

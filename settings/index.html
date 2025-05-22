@@ -424,11 +424,11 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#built-in-linters" class="md-nav__link">
-    Built-in linters
+  <a href="#clojure-lsp-built-in-linters" class="md-nav__link">
+    clojure-lsp built-in linters
   </a>
   
-    <nav class="md-nav" aria-label="Built-in linters">
+    <nav class="md-nav" aria-label="clojure-lsp built-in linters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -458,8 +458,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#disable-linter" class="md-nav__link">
-    Disable linter
+  <a href="#custom-linters" class="md-nav__link">
+    Custom linters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disable-a-linter" class="md-nav__link">
+    Disable a linter
   </a>
   
 </li>
@@ -964,11 +971,11 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#built-in-linters" class="md-nav__link">
-    Built-in linters
+  <a href="#clojure-lsp-built-in-linters" class="md-nav__link">
+    clojure-lsp built-in linters
   </a>
   
-    <nav class="md-nav" aria-label="Built-in linters">
+    <nav class="md-nav" aria-label="clojure-lsp built-in linters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -998,8 +1005,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#disable-linter" class="md-nav__link">
-    Disable linter
+  <a href="#custom-linters" class="md-nav__link">
+    Custom linters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disable-a-linter" class="md-nav__link">
+    Disable a linter
   </a>
   
 </li>
@@ -1542,7 +1556,7 @@ linter enabled via `ale` will only conflict with the built-in clj-kondo bundled 
 
 <p>Also, clojure-lsp by default pass <code>copy-configs</code> flag as <code>true</code> to clj-kondo to copy configurations exported from libs on classpath, to disable this behavior, set <code>:copy-kondo-configs?</code> setting to false.</p>
 <p>For more information about all clj-kondo available configurations, check the <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md">clj-kondo configuration section</a></p>
-<h4 id="built-in-linters">Built-in linters<a class="headerlink" href="#built-in-linters" title="Permanent link">#</a></h4>
+<h4 id="clojure-lsp-built-in-linters">clojure-lsp built-in linters<a class="headerlink" href="#clojure-lsp-built-in-linters" title="Permanent link">#</a></h4>
 <p>Clojure-lsp has project aware linters, below are the linters:</p>
 <details>
 <summary>Note for legacy config</summary>
@@ -1597,7 +1611,56 @@ Some of these linters config used to live on clj-kondo side, so to avoid breakin
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:config</span>    <span class="p">{</span>,,,<span class="p">}</span>
  <span class="ss">:snapshot?</span> <span class="nv">true</span><span class="p">}</span>
 </code></pre></div>
-<h4 id="disable-linter">Disable linter<a class="headerlink" href="#disable-linter" title="Permanent link">#</a></h4>
+<h4 id="custom-linters">Custom linters<a class="headerlink" href="#custom-linters" title="Permanent link">#</a></h4>
+<p>clojure-lsp supports defining custom linters in a project or lib (via <a href="#classpath-config-paths">classpath-config</a>) where one can create their own kind of diagnostics, more about the rationale <a href="https://github.com/clojure-lsp/clojure-lsp/issues/2043">here</a>.</p>
+<ol>
+<li>If clojure-lsp finds in its config a custom-linter like:</li>
+</ol>
+<p><code>.lsp/config.edn</code> or any classpath config
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:custom</span> <span class="p">{</span><span class="nv">my-org.my-linter/lint</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:info</span><span class="p">}}}}</span>
+</code></pre></div></p>
+<ol>
+<li>clojure-lsp will then search for a clojure file that defines that linter in the classpath:</li>
+</ol>
+<p><code>clojure-lsp.exports/linters/my_org/my_linter.clj</code>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">ns </span><span class="nv">my-org.my-linter</span>
+  <span class="p">(</span><span class="ss">:require</span> <span class="p">[</span><span class="nv">clojure-lsp.custom-linters-api</span> <span class="ss">:as</span> <span class="nv">api</span><span class="p">]))</span> <span class="c1">;; this ns has multiple helpers for handling the analysis.</span>
+
+<span class="p">(</span><span class="kd">defn </span><span class="nv">lint</span> <span class="p">[{</span><span class="ss">:keys</span> <span class="p">[</span><span class="nv">db</span> <span class="nv">uris</span> <span class="nv">params</span> <span class="nv">reg-diagnostic!</span><span class="p">]}]</span>
+  ,,,
+  <span class="p">(</span><span class="nf">reg-diagnostic!</span> <span class="p">{</span><span class="ss">:uri</span> <span class="p">(</span><span class="nb">first </span><span class="nv">uris</span><span class="p">)</span>
+                    <span class="ss">:level</span> <span class="p">(</span><span class="ss">:level</span> <span class="nv">params</span><span class="p">)</span>
+                    <span class="ss">:code</span> <span class="s">&quot;my-org/missing-unit-test&quot;</span>
+                    <span class="ss">:message</span> <span class="s">&quot;Logic function missing unit test&quot;</span>
+                    <span class="ss">:source</span> <span class="s">&quot;my-org/codestyle&quot;</span>
+                    <span class="ss">:range</span> <span class="p">{</span><span class="ss">:row</span> <span class="mi">1</span> <span class="ss">:col</span> <span class="mi">2</span> <span class="ss">:end-row</span> <span class="mi">3</span> <span class="ss">:end-col</span> <span class="mi">4</span><span class="p">}}))</span>
+</code></pre></div></p>
+<ol>
+<li>
+<p>When clojure-lsp analyzes your project or file, it will consider that custom lint.</p>
+</li>
+<li>
+<p>(optional) You can create tests for that custom linter leveraging the test-helper lib <code>com.github.clojure-lsp/clojure-lsp-test-helper</code>:</p>
+</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">ns </span><span class="nv">my-org.my-linter-test</span>
+  <span class="p">(</span><span class="ss">:require</span> <span class="p">[</span><span class="nv">clojure-lsp.test-helper</span> <span class="ss">:as</span> <span class="nv">h</span><span class="p">]</span>
+            <span class="p">[</span><span class="nv">clojure.edn</span> <span class="ss">:as</span> <span class="nv">edn</span><span class="p">]))</span>
+
+<span class="p">(</span><span class="nf">deftest</span> <span class="nv">lint-test</span>
+  <span class="p">(</span><span class="nf">h/reset-components!</span><span class="p">)</span>
+  <span class="p">(</span><span class="nf">h/set-db!</span> <span class="p">{</span><span class="ss">:classpath</span> <span class="p">[</span><span class="s">&quot;resources&quot;</span><span class="p">]</span>
+              <span class="ss">:settings</span> <span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:custom</span> <span class="p">{</span><span class="nv">my-org.my-linter/lint</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:info</span><span class="p">}}}}})</span>
+  <span class="p">(</span><span class="nf">h/load-code!</span> <span class="p">{</span><span class="ss">:code</span> <span class="p">(</span><span class="nf">h/code</span> <span class="s">&quot;(ns my-project.my-ns)&quot;</span>
+                               <span class="s">&quot;(defn my-fn [])&quot;</span><span class="p">)})</span>
+  <span class="p">(</span><span class="nf">is</span> <span class="p">(</span><span class="nb">= </span><span class="p">{</span><span class="nv">h/default-uri</span> <span class="p">[{</span><span class="ss">:code</span> <span class="s">&quot;my-org/missing-unit-test&quot;</span>
+                          <span class="ss">:message</span> <span class="s">&quot;Logic function missing unit test&quot;</span>
+                          <span class="ss">:range</span> <span class="p">{</span><span class="ss">:end</span> <span class="p">{</span><span class="ss">:character</span> <span class="mi">11</span> <span class="ss">:line</span> <span class="mi">1</span><span class="p">}</span> <span class="ss">:start</span> <span class="p">{</span><span class="ss">:character</span> <span class="mi">6</span> <span class="ss">:line</span> <span class="mi">1</span><span class="p">}}</span>
+                          <span class="ss">:severity</span> <span class="mi">3</span>
+                          <span class="ss">:source</span> <span class="s">&quot;my-org/codestyle&quot;</span><span class="p">}]}</span>
+              <span class="p">(</span><span class="ss">:custom</span> <span class="p">(</span><span class="ss">:diagnostics</span> <span class="p">(</span><span class="nf">h/db</span><span class="p">))))))</span>
+</code></pre></div>
+<h4 id="disable-a-linter">Disable a linter<a class="headerlink" href="#disable-a-linter" title="Permanent link">#</a></h4>
 <p>It's not recommended to disable a linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:</p>
 <p><code>.lsp/config.edn</code>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clj-kondo</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:off</span><span class="p">}</span>
@@ -1744,7 +1807,7 @@ The available settings inside <code>:stubs</code> are:</p>
 <div class="md-source-date">
   <small>
     
-      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 20, 2025</span>
+      Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 22, 2025</span>
     
   </small>
 </div>

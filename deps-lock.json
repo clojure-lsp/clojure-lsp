@@ -128,14 +128,24 @@
       "hash": "sha256-XBwijxopsG0KfQNJD15k+vcTo8YWcpi6Fxz/wzz57Rg="
     },
     {
-      "mvn-path": "borkdude/edamame/1.4.27/edamame-1.4.27.jar",
+      "mvn-path": "borkdude/edamame/1.4.28/edamame-1.4.28.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-GQu4vUDD+pKDFTnyDgH9AzZq52oi5/5zhmyJfcr9CcY="
+      "hash": "sha256-+HlBj6LXUXfJtSWKsJUfK9nsa0q83e7zMHIw0CJlgS4="
     },
     {
-      "mvn-path": "borkdude/edamame/1.4.27/edamame-1.4.27.pom",
+      "mvn-path": "borkdude/edamame/1.4.28/edamame-1.4.28.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-mgeghwB5lTpqmBrPq/4AwVK9mxHXK7mhG7KO+tUsxhk="
+      "hash": "sha256-BZ+DCljzs1VjFwXoqu/dWNDsIeX5Egf+1N5OoXT4hGo="
+    },
+    {
+      "mvn-path": "borkdude/graal.locking/0.0.2/graal.locking-0.0.2.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-eFlpdVXBVNcgMM6zRTTPuqcKxLWJhAQdN4ULU733FF4="
+    },
+    {
+      "mvn-path": "borkdude/graal.locking/0.0.2/graal.locking-0.0.2.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-+CvjevOXlKnCti6k276mRMhp++Mlm5dK1MdZVH6FsvU="
     },
     {
       "mvn-path": "borkdude/rewrite-edn/0.4.9/rewrite-edn-0.4.9.jar",
@@ -2333,14 +2343,14 @@
       "hash": "sha256-G2nywdVJ8si0e2uT3KcQPW/sQFBryQvVqXV1zWpEeh4="
     },
     {
-      "mvn-path": "org/babashka/sci/0.9.44/sci-0.9.44.jar",
+      "mvn-path": "org/babashka/sci/0.9.45/sci-0.9.45.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-CbdZ8S6CWWnJ8hUa7j46pa0afjPn+RH5DQZj317GMfU="
+      "hash": "sha256-Rn+3BKx+jFWJpsvK2dA0AWRnp6J+RF5FLf9pjgBjaSc="
     },
     {
-      "mvn-path": "org/babashka/sci/0.9.44/sci-0.9.44.pom",
+      "mvn-path": "org/babashka/sci/0.9.45/sci-0.9.45.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-qPPM23qzySAeS5K73ke32ZYoGrlFzvwkN0droceQHaU="
+      "hash": "sha256-9mjvTNUV7kjBduCjtTIEMMmcsGXc+2EkGYVqUGrCwgM="
     },
     {
       "mvn-path": "org/benf/cfr/0.152/cfr-0.152.jar",

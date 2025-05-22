@@ -163,6 +163,7 @@ Default: Check `:linters` in [all-available-settings.edn](https://github.com/clo
 It has the possible key/values:
 
 - `:clj-kondo`
+
   - `:level` with available values: `:off`, `:on` with default value of `:on`
   - `:report-duplicates` which will show all linters of the same symbol instead of showing only the first spot. Available values: `true`, `false` with default value of `true`
   - `ns-exclude-regex` which will exclude the diagnostics/findings for namespaces that match this regex.
@@ -243,38 +244,18 @@ It has the possible keys/values:
                                            :exclude-aliases #{foo}}}}
 ```
 
-#### clj-depend
-
-clojure-lsp uses [clj-depend](https://github.com/clj-depend/clj-depend) when any clj-depend config is found either on clojure-lsp config or as a `.clj-depend/config.edn` file.
-
-The clj-depend config should be within the `:config` key.
-
-```clojure
-{:config {:layers {:controller {:defined-by      ".*\\.controller\\..*"
-                                :accesses-layers #{:logic}}
-                   :logic      {:defined-by      ".*\\.logic\\..*"
-                                :accesses-layers #{:model}}}}}
-```
-
-When you need to inform some other parameter for clj-depend that is not a config, you can inform it this way:
-
-```clojure
-{:config    {,,,}
- :snapshot? true}
-```
-
 #### Custom linters
 
 clojure-lsp supports defining custom linters in a project or lib (via [classpath-config](#classpath-config-paths)) where one can create their own kind of diagnostics, more about the rationale [here](https://github.com/clojure-lsp/clojure-lsp/issues/2043).
 
-1. If clojure-lsp finds in its config a custom-linter like:
+- 1. If clojure-lsp finds in its config a custom-linter like:
 
 `.lsp/config.edn` or any classpath config
 ```clojure
 {:linters {:custom {my-org.my-linter/lint {:level :info}}}}
 ```
 
-2. clojure-lsp will then search for a clojure file that defines that linter in the classpath:
+- 2. clojure-lsp will then search for a clojure file that defines that linter in the classpath:
 
 `clojure-lsp.exports/linters/my_org/my_linter.clj`
 ```clojure
@@ -291,9 +272,9 @@ clojure-lsp supports defining custom linters in a project or lib (via [classpath
                     :range {:row 1 :col 2 :end-row 3 :end-col 4}}))
 ```
 
-3. When clojure-lsp analyzes your project or file, it will consider that custom lint.
+- 3. When clojure-lsp analyzes your project or file, it will consider that custom lint.
 
-4. (optional) You can create tests for that custom linter leveraging the test-helper lib `com.github.clojure-lsp/clojure-lsp-test-helper`:
+- 4. (optional) You can create tests for that custom linter leveraging the test-helper lib `com.github.clojure-lsp/clojure-lsp-test-helper`:
 
 ```clojure
 (ns my-org.my-linter-test
@@ -312,6 +293,26 @@ clojure-lsp supports defining custom linters in a project or lib (via [classpath
                           :severity 3
                           :source "my-org/codestyle"}]}
               (:custom (:diagnostics (h/db))))))
+```
+
+#### clj-depend
+
+clojure-lsp uses [clj-depend](https://github.com/clj-depend/clj-depend) when any clj-depend config is found either on clojure-lsp config or as a `.clj-depend/config.edn` file.
+
+The clj-depend config should be within the `:config` key.
+
+```clojure
+{:config {:layers {:controller {:defined-by      ".*\\.controller\\..*"
+                                :accesses-layers #{:logic}}
+                   :logic      {:defined-by      ".*\\.logic\\..*"
+                                :accesses-layers #{:model}}}}}
+```
+
+When you need to inform some other parameter for clj-depend that is not a config, you can inform it this way:
+
+```clojure
+{:config    {,,,}
+ :snapshot? true}
 ```
 
 #### Disable a linter

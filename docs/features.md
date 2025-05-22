@@ -369,6 +369,7 @@ Show the project tree ns and external dependencies.
 ### Diagnostics (linter)
 
 There are 3 diagnostics providers currently:
+
 - [clj-kondo](https://github.com/clj-kondo/clj-kondo): most diagnostics come from here, configurations of these linters should be done on clj-kondo config side, for more information on how to configure clj-kondo check [here](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros)
 - [clojure-lsp](#built-in-linters): linters built-in + custom linters.
 - [clj-depend](#clj-depend): optional namespace layer diagnostics.
@@ -393,7 +394,7 @@ For more information on how to configure it, check the [diagnostics settings sec
 
 ![](images/features/custom-linters.png)
 
-Clojure-lsp support linters that users or libs decide to create, these linters can use clojure-lsp db analysis to build whatever linter one may want, similar to clj-kondo hooks feature.
+Clojure-lsp support linters that users or libs decide to create, these linters can use clojure-lsp db analysis to build whatever linter one may want, similar to clj-kondo hooks feature but with project awareness support and more robust test support.
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 

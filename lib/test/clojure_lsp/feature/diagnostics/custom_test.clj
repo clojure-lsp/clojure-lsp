@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.feature.diagnostics.custom :as f.diagnostics.custom]
    [clojure-lsp.test-helper.internal :as h]
-   [clojure.test :refer [deftest testing]]))
+   [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)
 
@@ -58,3 +58,28 @@
                          :range {:start {:line 0 :character 1}
                                  :end {:line 2 :character 3}}}]}
         (f.diagnostics.custom/analyze-uri! h/default-uri (h/db))))))
+
+(deftest missing-required-fields-test
+  (testing "no missing field"
+    (h/assert-submaps
+      []
+      (#'f.diagnostics.custom/missing-required-fields
+       {:level :info
+        :uri h/default-uri
+        :message "var-definitions: 2"
+        :source "some-source"
+        :code "some-code"
+        :range {:row 1 :col 2 :end-row 3 :end-col 4}})))
+  (testing "missing fields"
+    (is (= [:source :level :code :uri :message]
+           (#'f.diagnostics.custom/missing-required-fields
+            {:range {:row 1 :col 2 :end-row 3 :end-col 4}}))))
+  (testing "missing range fields"
+    (is (= [:end-row :col]
+           (#'f.diagnostics.custom/missing-required-fields
+            {:level :info
+             :uri h/default-uri
+             :message "var-definitions: 2"
+             :source "some-source"
+             :code "some-code"
+             :range {:row 1 :end-col 4}})))))

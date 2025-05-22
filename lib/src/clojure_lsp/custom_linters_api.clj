@@ -1,7 +1,9 @@
 (ns clojure-lsp.custom-linters-api
   "Public API used by custom linters, avoid breaking changes."
   (:require
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.shared :as shared]))
 
 (defn external-analysis
@@ -54,6 +56,13 @@
   [db ns-sym name-sym]
   (q/find-element-from-sym db ns-sym name-sym))
 
+(defn find-node-from-sym
+  "Find the rewrite-clj node from a fully qualified symbol."
+  [db ns-sym name-sym]
+  (when-let [e (q/find-element-from-sym db ns-sym name-sym)]
+    (when-let [zloc (parser/safe-zloc-of-file db (:uri e))]
+      (edit/find-at-element zloc e))))
+
 (defn filename->uri
   "Convert a absolute filename path to a uri."
   [filename db]
@@ -90,6 +99,7 @@
    'find-element find-element
    'find-var-definitions find-var-definitions
    'find-element-from-sym find-element-from-sym
+   'find-node-from-sym find-node-from-sym
    'filename->uri filename->uri
    'uri->filename uri->filename
    'dir-uris->file-uris dir-uris->file-uris})

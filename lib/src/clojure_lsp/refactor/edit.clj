@@ -270,19 +270,19 @@
     (recur up-loc)
     loc))
 
-(defn find-at-usage-name [zloc usage]
+(defn find-at-element-name [zloc usage]
   (some-> zloc
           to-top-or-subzip-top
           z/leftmost
           (find-at-pos (:name-row usage)
                        (:name-col usage))))
 
-(defn find-at-usage [zloc usage]
+(defn find-at-element [zloc element]
   (some-> zloc
           to-top-or-subzip-top
           z/leftmost
-          (find-at-pos (:row usage)
-                       (:col usage))))
+          (find-at-pos (:row element)
+                       (:col element))))
 
 (defn loc-encapsulates-usage?
   [loc usage]

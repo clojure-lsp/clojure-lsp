@@ -62,7 +62,7 @@ You can help us keep going and improving it by **[supporting the project](https:
 
 ### Gold sponsors
 
-No Gold sponsors at the moment
+No Gold sponsors at the moment.
 
 ### Sponsors
 

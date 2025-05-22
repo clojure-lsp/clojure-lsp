@@ -7,6 +7,21 @@
 
 (lsp/clean-after-test)
 
+(deftest custom-linters
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/notify! (fixture/did-open-source-path-notification "diagnostics/custom_linters.clj"))
+
+  (testing "When a custom linter is defined"
+    (h/assert-submaps
+      [{:severity 2
+        :message "external analysis count: 0"
+        :source "some-source"
+        :code "some-code"
+        :range {:start {:line 0 :character 1} :end {:line 2 :character 3}}}]
+      (lsp/client-awaits-server-diagnostics "diagnostics/custom_linters.clj"))))
+
 (deftest different-aliases
   (lsp/start-process!)
   (lsp/request! (fixture/initialize-request))

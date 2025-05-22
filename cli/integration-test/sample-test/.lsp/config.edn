@@ -1,3 +1,4 @@
-{:linters {:clj-kondo {:ns-exclude-regex ""}}
+{:linters {:clj-kondo {:ns-exclude-regex ""}
+           :custom {foo.my-bar/baz {:level :warning}}}
  :log-path "clojure-lsp.integration-test.out"
  :api {:exit-on-errors? false}}

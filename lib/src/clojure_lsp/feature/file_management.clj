@@ -7,6 +7,7 @@
    [clojure-lsp.feature.completion-lib :as f.completion-lib]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.diagnostics.built-in :as f.diagnostics.built-in]
+   [clojure-lsp.feature.diagnostics.custom :as f.diagnostics.custom]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.producer :as producer]
@@ -46,7 +47,8 @@
                  (-> state-db
                      (lsp.kondo/db-with-results kondo-result)
                      (lsp.depend/db-with-results depend-result)
-                     (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uri! uri %)))))
+                     (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uri! uri %))
+                     (f.diagnostics.custom/db-with-results #(f.diagnostics.custom/analyze-uri! uri %)))))
     (f.diagnostic/publish-diagnostics! uri components))
   (when allow-create-ns
     (when-let [create-ns-edits (create-ns-changes uri text @db*)]
@@ -269,6 +271,7 @@
                                   (lsp.kondo/db-with-results kondo-result)
                                   (lsp.depend/db-with-results depend-result)
                                   (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uri! uri %))
+                                  (f.diagnostics.custom/db-with-results #(f.diagnostics.custom/analyze-uri! uri %))
                                   (update-in [:documents uri :analyzed-version]
                                              bump-version version)))
           (let [db @db*]

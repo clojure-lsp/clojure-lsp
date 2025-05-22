@@ -2,6 +2,7 @@
   (:require
    [clj-depend.api :as clj-depend]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
+   [clojure-lsp.feature.diagnostics.custom :as f.diagnostics.custom]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
    [clojure.core.async :as async]
@@ -278,3 +279,33 @@
       (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
         (is (= (h/file-uri "file:///foo/bar.clj") uri))
         (is (= [] diagnostics))))))
+
+(deftest custom-linters
+  (testing "when a custom-linter is found and configured"
+    (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
+                          :settings {:source-paths [(h/file-path "/project/src") (h/file-path "/project/test")]
+                                     :linters {:custom {'foo.bar/baz {:level :error}}}}})
+    (with-redefs [f.diagnostics.custom/file-content-from-classpath
+                  (constantly (format (h/code "(ns foo.bar)"
+                                              "(defn baz [{:keys [params db reg-diagnostic!]}]"
+                                              "  (reg-diagnostic! {:uri \"%s\""
+                                              "                    :level (:level params)"
+                                              "                    :message \"Some linter\""
+                                              "                    :source \"some-source\""
+                                              "                    :code \"some-code\""
+                                              "                    :range {:row 1 :col 2 :end-row 3 :end-col 4}"
+                                              "                    }))")
+                                      (h/file-uri "file:///project/src/foo.clj")))]
+      (h/load-code-and-locs "(ns foo) (defn bar [a b] (+ a b))"
+                            (h/file-uri "file:///project/src/foo.clj"))
+      (h/load-code-and-locs "(ns foo-test (:require [foo])) (foo/bar 1 2)"
+                            (h/file-uri "file:///project/test/foo_test.clj"))
+      (h/assert-submaps
+        [{:code "clojure-lsp/unused-public-var"}
+         {:severity 1
+          :message "Some linter"
+          :source "some-source"
+          :code "some-code"
+          :range
+          {:start {:line 0 :character 1} :end {:line 2 :character 3}}}]
+        (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/foo.clj") (h/db))))))

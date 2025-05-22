@@ -189,7 +189,7 @@ Also, clojure-lsp by default pass `copy-configs` flag as `true` to clj-kondo to 
 
 For more information about all clj-kondo available configurations, check the [clj-kondo configuration section](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md)
 
-#### Built-in linters
+#### clojure-lsp built-in linters
 
 Clojure-lsp has project aware linters, below are the linters:
 
@@ -263,7 +263,58 @@ When you need to inform some other parameter for clj-depend that is not a config
  :snapshot? true}
 ```
 
-#### Disable linter
+#### Custom linters
+
+clojure-lsp supports defining custom linters in a project or lib (via [classpath-config](#classpath-config-paths)) where one can create their own kind of diagnostics, more about the rationale [here](https://github.com/clojure-lsp/clojure-lsp/issues/2043).
+
+1. If clojure-lsp finds in its config a custom-linter like:
+
+`.lsp/config.edn` or any classpath config
+```clojure
+{:linters {:custom {my-org.my-linter/lint {:level :info}}}}
+```
+
+2. clojure-lsp will then search for a clojure file that defines that linter in the classpath:
+
+`clojure-lsp.exports/linters/my_org/my_linter.clj`
+```clojure
+(ns my-org.my-linter
+  (:require [clojure-lsp.custom-linters-api :as api])) ;; this ns has multiple helpers for handling the analysis.
+
+(defn lint [{:keys [db uris params reg-diagnostic!]}]
+  ,,,
+  (reg-diagnostic! {:uri (first uris)
+                    :level (:level params)
+                    :code "my-org/missing-unit-test"
+                    :message "Logic function missing unit test"
+                    :source "my-org/codestyle"
+                    :range {:row 1 :col 2 :end-row 3 :end-col 4}}))
+```
+
+3. When clojure-lsp analyzes your project or file, it will consider that custom lint.
+
+4. (optional) You can create tests for that custom linter leveraging the test-helper lib `com.github.clojure-lsp/clojure-lsp-test-helper`:
+
+```clojure
+(ns my-org.my-linter-test
+  (:require [clojure-lsp.test-helper :as h]
+            [clojure.edn :as edn]))
+
+(deftest lint-test
+  (h/reset-components!)
+  (h/set-db! {:classpath ["resources"]
+              :settings {:linters {:custom {my-org.my-linter/lint {:level :info}}}}})
+  (h/load-code! {:code (h/code "(ns my-project.my-ns)"
+                               "(defn my-fn [])")})
+  (is (= {h/default-uri [{:code "my-org/missing-unit-test"
+                          :message "Logic function missing unit test"
+                          :range {:end {:character 11 :line 1} :start {:character 6 :line 1}}
+                          :severity 3
+                          :source "my-org/codestyle"}]}
+              (:custom (:diagnostics (h/db))))))
+```
+
+#### Disable a linter
 
 It's not recommended to disable a linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:
 

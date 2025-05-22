@@ -69,7 +69,7 @@
                                               "(defn qux [{:keys [params db reg-diagnostic!]}]"
                                               "  (reg-diagnostic! {:uri \"%s\""
                                               "                    :level (:level params)"
-                                              "                    :message (str \"node string: \" (z/string (api/find-node-from-sym db 'some-ns 'my-var)))"
+                                              "                    :message (str \"node string: \" (z/string (first (api/find-nodes-from-defined-bys db #{'clojure.core/def}))))"
                                               "                    :source \"some-source\""
                                               "                    :code \"some-code\""
                                               "                    :range {:row 1 :col 2 :end-row 3 :end-col 4}"

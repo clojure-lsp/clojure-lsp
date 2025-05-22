@@ -36,10 +36,10 @@
 (defn ^:private custom-diagnostic->lsp [{:keys [level range] :as diagnostic}]
   (-> diagnostic
       (dissoc :uri :level)
-      (assoc :range {:start {:line (dec (:row range))
-                             :character (dec (:col range))}
-                     :end {:line (dec (:end-row range))
-                           :character (dec (:end-col range))}})
+      (assoc :range {:start {:line (dec (or (:row range) 1))
+                             :character (dec (or (:col range) 1))}
+                     :end {:line (dec (or (:end-row range) 1))
+                           :character (dec (or (:end-col range) 1))}})
       (assoc :severity (shared/level->severity level))))
 
 (defn ^:private analyze [fqns params uris db]

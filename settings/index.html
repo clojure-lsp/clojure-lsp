@@ -451,15 +451,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#clj-depend" class="md-nav__link">
-    clj-depend
+  <a href="#custom-linters" class="md-nav__link">
+    Custom linters
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#custom-linters" class="md-nav__link">
-    Custom linters
+  <a href="#clj-depend" class="md-nav__link">
+    clj-depend
   </a>
   
 </li>
@@ -998,15 +998,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#clj-depend" class="md-nav__link">
-    clj-depend
+  <a href="#custom-linters" class="md-nav__link">
+    Custom linters
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#custom-linters" class="md-nav__link">
-    Custom linters
+  <a href="#clj-depend" class="md-nav__link">
+    clj-depend
   </a>
   
 </li>
@@ -1534,8 +1534,12 @@
 <p><code>clojure-lsp</code> will use a specific clj-kondo version that can be retrieved via <code>clojure-lsp --version</code>, but make sure you have a <code>.clj-kondo/config.edn</code> file properly configured.</p>
 <p>It has the possible key/values:</p>
 <ul>
-<li><code>:clj-kondo</code></li>
-<li><code>:level</code> with available values: <code>:off</code>, <code>:on</code> with default value of <code>:on</code></li>
+<li>
+<p><code>:clj-kondo</code></p>
+</li>
+<li>
+<p><code>:level</code> with available values: <code>:off</code>, <code>:on</code> with default value of <code>:on</code></p>
+</li>
 <li><code>:report-duplicates</code> which will show all linters of the same symbol instead of showing only the first spot. Available values: <code>true</code>, <code>false</code> with default value of <code>true</code></li>
 <li><code>ns-exclude-regex</code> which will exclude the diagnostics/findings for namespaces that match this regex.</li>
 </ul>
@@ -1599,29 +1603,25 @@ Some of these linters config used to live on clj-kondo side, so to avoid breakin
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:clojure-lsp/different-aliases</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:info</span>
                                            <span class="ss">:exclude-aliases</span> <span class="o">#</span><span class="p">{</span><span class="nv">foo</span><span class="p">}}}}</span>
 </code></pre></div></p>
-<h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
-<p>clojure-lsp uses <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> when any clj-depend config is found either on clojure-lsp config or as a <code>.clj-depend/config.edn</code> file.</p>
-<p>The clj-depend config should be within the <code>:config</code> key.</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:config</span> <span class="p">{</span><span class="ss">:layers</span> <span class="p">{</span><span class="ss">:controller</span> <span class="p">{</span><span class="ss">:defined-by</span>      <span class="s">&quot;.*\\.controller\\..*&quot;</span>
-                                <span class="ss">:accesses-layers</span> <span class="o">#</span><span class="p">{</span><span class="ss">:logic</span><span class="p">}}</span>
-                   <span class="ss">:logic</span>      <span class="p">{</span><span class="ss">:defined-by</span>      <span class="s">&quot;.*\\.logic\\..*&quot;</span>
-                                <span class="ss">:accesses-layers</span> <span class="o">#</span><span class="p">{</span><span class="ss">:model</span><span class="p">}}}}}</span>
-</code></pre></div>
-<p>When you need to inform some other parameter for clj-depend that is not a config, you can inform it this way:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:config</span>    <span class="p">{</span>,,,<span class="p">}</span>
- <span class="ss">:snapshot?</span> <span class="nv">true</span><span class="p">}</span>
-</code></pre></div>
 <h4 id="custom-linters">Custom linters<a class="headerlink" href="#custom-linters" title="Permanent link">#</a></h4>
 <p>clojure-lsp supports defining custom linters in a project or lib (via <a href="#classpath-config-paths">classpath-config</a>) where one can create their own kind of diagnostics, more about the rationale <a href="https://github.com/clojure-lsp/clojure-lsp/issues/2043">here</a>.</p>
+<ul>
+<li>
 <ol>
 <li>If clojure-lsp finds in its config a custom-linter like:</li>
 </ol>
+</li>
+</ul>
 <p><code>.lsp/config.edn</code> or any classpath config
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:custom</span> <span class="p">{</span><span class="nv">my-org.my-linter/lint</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:info</span><span class="p">}}}}</span>
 </code></pre></div></p>
+<ul>
+<li>
 <ol>
 <li>clojure-lsp will then search for a clojure file that defines that linter in the classpath:</li>
 </ol>
+</li>
+</ul>
 <p><code>clojure-lsp.exports/linters/my_org/my_linter.clj</code>
 <div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">ns </span><span class="nv">my-org.my-linter</span>
   <span class="p">(</span><span class="ss">:require</span> <span class="p">[</span><span class="nv">clojure-lsp.custom-linters-api</span> <span class="ss">:as</span> <span class="nv">api</span><span class="p">]))</span> <span class="c1">;; this ns has multiple helpers for handling the analysis.</span>
@@ -1635,14 +1635,18 @@ Some of these linters config used to live on clj-kondo side, so to avoid breakin
                     <span class="ss">:source</span> <span class="s">&quot;my-org/codestyle&quot;</span>
                     <span class="ss">:range</span> <span class="p">{</span><span class="ss">:row</span> <span class="mi">1</span> <span class="ss">:col</span> <span class="mi">2</span> <span class="ss">:end-row</span> <span class="mi">3</span> <span class="ss">:end-col</span> <span class="mi">4</span><span class="p">}}))</span>
 </code></pre></div></p>
+<ul>
+<li>
 <ol>
-<li>
-<p>When clojure-lsp analyzes your project or file, it will consider that custom lint.</p>
-</li>
-<li>
-<p>(optional) You can create tests for that custom linter leveraging the test-helper lib <code>com.github.clojure-lsp/clojure-lsp-test-helper</code>:</p>
-</li>
+<li>When clojure-lsp analyzes your project or file, it will consider that custom lint.</li>
 </ol>
+</li>
+<li>
+<ol>
+<li>(optional) You can create tests for that custom linter leveraging the test-helper lib <code>com.github.clojure-lsp/clojure-lsp-test-helper</code>:</li>
+</ol>
+</li>
+</ul>
 <div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">ns </span><span class="nv">my-org.my-linter-test</span>
   <span class="p">(</span><span class="ss">:require</span> <span class="p">[</span><span class="nv">clojure-lsp.test-helper</span> <span class="ss">:as</span> <span class="nv">h</span><span class="p">]</span>
             <span class="p">[</span><span class="nv">clojure.edn</span> <span class="ss">:as</span> <span class="nv">edn</span><span class="p">]))</span>
@@ -1659,6 +1663,18 @@ Some of these linters config used to live on clj-kondo side, so to avoid breakin
                           <span class="ss">:severity</span> <span class="mi">3</span>
                           <span class="ss">:source</span> <span class="s">&quot;my-org/codestyle&quot;</span><span class="p">}]}</span>
               <span class="p">(</span><span class="ss">:custom</span> <span class="p">(</span><span class="ss">:diagnostics</span> <span class="p">(</span><span class="nf">h/db</span><span class="p">))))))</span>
+</code></pre></div>
+<h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
+<p>clojure-lsp uses <a href="https://github.com/clj-depend/clj-depend">clj-depend</a> when any clj-depend config is found either on clojure-lsp config or as a <code>.clj-depend/config.edn</code> file.</p>
+<p>The clj-depend config should be within the <code>:config</code> key.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:config</span> <span class="p">{</span><span class="ss">:layers</span> <span class="p">{</span><span class="ss">:controller</span> <span class="p">{</span><span class="ss">:defined-by</span>      <span class="s">&quot;.*\\.controller\\..*&quot;</span>
+                                <span class="ss">:accesses-layers</span> <span class="o">#</span><span class="p">{</span><span class="ss">:logic</span><span class="p">}}</span>
+                   <span class="ss">:logic</span>      <span class="p">{</span><span class="ss">:defined-by</span>      <span class="s">&quot;.*\\.logic\\..*&quot;</span>
+                                <span class="ss">:accesses-layers</span> <span class="o">#</span><span class="p">{</span><span class="ss">:model</span><span class="p">}}}}}</span>
+</code></pre></div>
+<p>When you need to inform some other parameter for clj-depend that is not a config, you can inform it this way:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:config</span>    <span class="p">{</span>,,,<span class="p">}</span>
+ <span class="ss">:snapshot?</span> <span class="nv">true</span><span class="p">}</span>
 </code></pre></div>
 <h4 id="disable-a-linter">Disable a linter<a class="headerlink" href="#disable-a-linter" title="Permanent link">#</a></h4>
 <p>It's not recommended to disable a linter as it provides helpful smart checks/suggestions for your code, even so it's possible via the following config:</p>

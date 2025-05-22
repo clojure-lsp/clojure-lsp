@@ -1538,10 +1538,12 @@
 <p>Show the project tree ns and external dependencies.</p>
 <p><img alt="" src="../images/features/project-tree.png" /></p>
 <h3 id="diagnostics-linter">Diagnostics (linter)<a class="headerlink" href="#diagnostics-linter" title="Permanent link">#</a></h3>
-<p>There are 3 diagnostics providers currently:
-- <a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a>: most diagnostics come from here, configurations of these linters should be done on clj-kondo config side, for more information on how to configure clj-kondo check <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">here</a>
-- <a href="#built-in-linters">clojure-lsp</a>: linters built-in + custom linters.
-- <a href="#clj-depend">clj-depend</a>: optional namespace layer diagnostics.</p>
+<p>There are 3 diagnostics providers currently:</p>
+<ul>
+<li><a href="https://github.com/clj-kondo/clj-kondo">clj-kondo</a>: most diagnostics come from here, configurations of these linters should be done on clj-kondo config side, for more information on how to configure clj-kondo check <a href="https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros">here</a></li>
+<li><a href="#built-in-linters">clojure-lsp</a>: linters built-in + custom linters.</li>
+<li><a href="#clj-depend">clj-depend</a>: optional namespace layer diagnostics.</li>
+</ul>
 <h4 id="built-in-linters">Built-in linters<a class="headerlink" href="#built-in-linters" title="Permanent link">#</a></h4>
 <p>Below you can find the clojure-lsp built-in linters:</p>
 <h5 id="clojure-lspunused-public-var">clojure-lsp/unused-public-var<a class="headerlink" href="#clojure-lspunused-public-var" title="Permanent link">#</a></h5>
@@ -1552,7 +1554,7 @@
 <p>For more information on how to configure it, check the <a href="../settings/#diagnostics-linter">diagnostics settings section</a>.</p>
 <h4 id="custom-linters">Custom linters<a class="headerlink" href="#custom-linters" title="Permanent link">#</a></h4>
 <p><img alt="" src="../images/features/custom-linters.png" /></p>
-<p>Clojure-lsp support linters that users or libs decide to create, these linters can use clojure-lsp db analysis to build whatever linter one may want, similar to clj-kondo hooks feature.</p>
+<p>Clojure-lsp support linters that users or libs decide to create, these linters can use clojure-lsp db analysis to build whatever linter one may want, similar to clj-kondo hooks feature but with project awareness support and more robust test support.</p>
 <p>For more information on how to configure it, check the <a href="../settings/#diagnostics-linter">diagnostics settings section</a>.</p>
 <h4 id="clj-depend">clj-depend<a class="headerlink" href="#clj-depend" title="Permanent link">#</a></h4>
 <p>Clojure-lsp has a optional integration with <a href="https://github.com/clj-depend/clj-depend">clj-depend</a>, making it easier to configure namespaces relationship.</p>

@@ -1606,21 +1606,13 @@ Some of these linters config used to live on clj-kondo side, so to avoid breakin
 <h4 id="custom-linters">Custom linters<a class="headerlink" href="#custom-linters" title="Permanent link">#</a></h4>
 <p>clojure-lsp supports defining custom linters in a project or lib (via <a href="#classpath-config-paths">classpath-config</a>) where one can create their own kind of diagnostics, more about the rationale <a href="https://github.com/clojure-lsp/clojure-lsp/issues/2043">here</a>.</p>
 <ul>
-<li>
-<ol>
-<li>If clojure-lsp finds in its config a custom-linter like:</li>
-</ol>
-</li>
+<li>1: If clojure-lsp finds in its config a custom-linter like:</li>
 </ul>
 <p><code>.lsp/config.edn</code> or any classpath config
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span> <span class="p">{</span><span class="ss">:custom</span> <span class="p">{</span><span class="nv">my-org.my-linter/lint</span> <span class="p">{</span><span class="ss">:level</span> <span class="ss">:info</span><span class="p">}}}}</span>
 </code></pre></div></p>
 <ul>
-<li>
-<ol>
-<li>clojure-lsp will then search for a clojure file that defines that linter in the classpath:</li>
-</ol>
-</li>
+<li>2: clojure-lsp will then search for a clojure file that defines that linter in the classpath:</li>
 </ul>
 <p><code>clojure-lsp.exports/linters/my_org/my_linter.clj</code>
 <div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">ns </span><span class="nv">my-org.my-linter</span>
@@ -1637,14 +1629,10 @@ Some of these linters config used to live on clj-kondo side, so to avoid breakin
 </code></pre></div></p>
 <ul>
 <li>
-<ol>
-<li>When clojure-lsp analyzes your project or file, it will consider that custom lint.</li>
-</ol>
+<p>3: When clojure-lsp analyzes your project or file, it will consider that custom lint.</p>
 </li>
 <li>
-<ol>
-<li>(optional) You can create tests for that custom linter leveraging the test-helper lib <code>com.github.clojure-lsp/clojure-lsp-test-helper</code>:</li>
-</ol>
+<p>4: (optional) You can create tests for that custom linter leveraging the test-helper lib <code>com.github.clojure-lsp/clojure-lsp-test-helper</code>:</p>
 </li>
 </ul>
 <div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">ns </span><span class="nv">my-org.my-linter-test</span>

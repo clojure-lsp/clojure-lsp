@@ -336,7 +336,7 @@
       (let [result (binding [*err* err-writer]
                      (kondo/run! config))]
         (when-not (string/blank? (str err-writer))
-          (logger/warn logger-tag (str "log: " (string/trim-newline (str err-writer)))))
+          (logger/warn logger-tag (string/trim-newline (str err-writer))))
         result)
       (catch Exception e
         (logger/error e (str logger-tag " error analysing " err-hint))))))

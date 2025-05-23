@@ -11,6 +11,7 @@
   - Bump rewrite-clj to 1.2.50.
   - New feature: Add support for custom project linters. #2043
   - Publish to clojars `com.github.clojure-lsp/clojure-lsp-test-helper` to be able to test created custom linters.
+  - Bump clj-kondo to `2025.04.08-20250523.111911-10`.
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961

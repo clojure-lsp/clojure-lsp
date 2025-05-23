@@ -40,7 +40,7 @@
                                               "(defn qux [{:keys [params db reg-diagnostic!]}]"
                                               "  (reg-diagnostic! {:uri \"%s\""
                                               "                    :level (:level params)"
-                                              "                    :message (str \"var-definitions: \" (count (api/internal-analysis db)))"
+                                              "                    :message (str \"var-definitions: \" (api/fast= 'foo (count (api/internal-analysis db))))"
                                               "                    :source \"some-source\""
                                               "                    :code \"some-code\""
                                               "                    :range {:row 1 :col 2 :end-row 3 :end-col 4}"
@@ -52,7 +52,7 @@
                            "(def my-var-2 1)") (h/file-uri "file:///b.clj"))
       (h/assert-submap
         {h/default-uri [{:severity 2
-                         :message "var-definitions: 2"
+                         :message "var-definitions: false"
                          :source "some-source"
                          :code "some-code"
                          :range {:start {:line 0 :character 1}

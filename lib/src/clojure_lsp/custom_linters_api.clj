@@ -131,6 +131,11 @@
   [a b]
   (shared/inside? a b))
 
+(defn fast=
+  "Fast `=` comparassion, useful for string, sym and keyword comparassions."
+  [a b]
+  (shared/fast= a b))
+
 (def api-fns
   {'external-analysis external-analysis
    'internal-analysis internal-analysis
@@ -150,4 +155,5 @@
    'filename->uri filename->uri
    'uri->filename uri->filename
    'dir-uris->file-uris dir-uris->file-uris
-   'inside? inside?})
+   'inside? inside?
+   'fast= fast=})

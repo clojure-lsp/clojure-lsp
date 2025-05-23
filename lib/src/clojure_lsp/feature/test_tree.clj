@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.test-tree
   (:require
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]))
+   [clojure-lsp.shared :as shared :refer [fast=]]))
 
 (set! *warn-on-reflection* true)
 
@@ -41,7 +41,7 @@
                                       (q/defined-bys %)))
                        (:var-definitions local-buckets))
         testings (into []
-                       (filter #(and (= 'testing (:name %))
+                       (filter #(and (fast= 'testing (:name %))
                                      (contains? '#{clojure.test cljs.test} (:to %))))
                        (:var-usages local-buckets))
         tests-tree (mapv #(deftest->tree % testings) deftests)]

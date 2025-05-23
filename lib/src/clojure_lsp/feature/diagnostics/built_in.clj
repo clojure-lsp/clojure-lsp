@@ -5,7 +5,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.set :as set]
    [clojure.string :as string]
    [rewrite-clj.zip :as z]))
@@ -119,8 +119,8 @@
         excluded-metas (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})
         fqsn (symbol (-> definition :ns str) (-> definition :name str))
         starts-with-dash? (string/starts-with? (:name definition) "-")
-        inside-comment? (some #(and (= 'comment (:name %))
-                                    (= 'clojure.core (:ns %))) (:callstack definition))]
+        inside-comment? (some #(and (fast= 'comment (:name %))
+                                    (fast= 'clojure.core (:ns %))) (:callstack definition))]
     (or inside-comment?
         (q/exclude-public-definition? settings definition)
         (some #(re-matches (re-pattern (str %)) (str fqsn)) excluded-syms-regex)

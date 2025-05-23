@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.thread-get
   (:require
    [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.shared :refer [fast=]]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
 
@@ -79,14 +80,14 @@
                     ;; Check whether arity-3 (get/get-in with default-value) is
                     ;; being converted to symbol/keyword IFn arity-2
                     (n/keyword-node? (z/node key-loc))
-                    (and (= :quote (z/tag key-loc))
-                         (= :token (z/tag (z/down key-loc)))))
+                    (and (fast= :quote (z/tag key-loc))
+                         (fast= :token (z/tag (z/down key-loc)))))
             (assoc data
                    :map-loc map-loc
                    :default-loc default-loc)))))))
 
 (defn ^:private get-in-less* [{:keys [replace-with map-loc key-loc path-loc default-loc]}]
-  (let [interior (if (= :key replace-with)
+  (let [interior (if (fast= :key replace-with)
                    [key-loc map-loc]
                    [replace-with (z-of-list-locs [key-loc map-loc]) path-loc])
         interior (cond-> interior default-loc (conj default-loc))]

@@ -4,7 +4,7 @@
    [clojure-lsp.logger :as logger]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.core.async :as async]
    [clojure.string :as string])
   (:gen-class))
@@ -148,7 +148,7 @@
 (defn publish-all-diagnostics! [uris publish-empty? {:keys [db*] :as components}]
   (let [db @db*
         all-diagnostics (->> uris
-                             (remove #(= :unknown (shared/uri->file-type %)))
+                             (remove #(fast= :unknown (shared/uri->file-type %)))
                              (map #(diagnostics-of-uri % db)))
         diagnostics (if publish-empty?
                       all-diagnostics

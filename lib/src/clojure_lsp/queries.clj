@@ -2,7 +2,7 @@
   (:require
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.logger :as logger]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :refer [fast=] :as shared]
    [clojure.set :as set]
    [clojure.string :as string]
    [medley.core :as medley]))
@@ -110,13 +110,6 @@
 (def xf-analysis->symbols (xf-analysis->bucket-elems :symbols))
 (def xf-analysis->vars (xf-analysis->buckets-elems :var-definitions :var-usages :symbols))
 
-(defn ^:private safe-equal?
-  "Fast equals for string and symbols."
-  [a b]
-  (if (instance? clojure.lang.Symbol a)
-    (.equals ^clojure.lang.Symbol a b)
-    (.equals ^String a b)))
-
 ;; Borrowed from https://github.com/cgrand/xforms
 ;; Copyright © 2015-2016 Christophe Grand
 ;; Distributed under the Eclipse Public License version 1.0
@@ -172,7 +165,7 @@
      (identical? :clj-kondo/unknown-namespace ns)
      , (filter #(identical? :clj-kondo/unknown-namespace (get-ns %)))
      ns
-     , (filter #(safe-equal? ns (get-ns %)))
+     , (filter #(fast= ns (get-ns %)))
      :else
      , (remove get-ns))))
 
@@ -180,7 +173,7 @@
   ([name]
    (xf-same-name name :name))
   ([name get-name]
-   (filter #(safe-equal? name (get-name %)))))
+   (filter #(fast= name (get-name %)))))
 
 (defn xf-same-fqn
   ([ns name]
@@ -302,7 +295,7 @@
     (find-definition db (assoc quoted-symbol :bucket :var-usages))
     (let [sym (:symbol quoted-symbol)
           lang (:lang quoted-symbol)
-          lang (if (= :edn lang)
+          lang (if (fast= :edn lang)
                  ;; when referring to qualified-symbols in edn, pretend it's
                  ;; referenced from JVM Clojure
                  :clj
@@ -332,12 +325,12 @@
   (let [actual-definition (delay (find-last-order-by-project-analysis
                                    (comp xf-analysis->var-definitions
                                          (xf-same-fqn ns name)
-                                         (filter #(not= 'clojure.core/declare (:defined-by %)))
+                                         (filter #(not (fast= 'clojure.core/declare (:defined-by %))))
                                          (xf-same-lang var-definition))
                                    (db-with-ns-analysis db ns)))]
     (cond
       ;; Handle potemkin/import-vars
-      (some #(safe-equal? 'potemkin/import-vars %) (defined-bys var-definition))
+      (some #(fast= 'potemkin/import-vars %) (defined-bys var-definition))
       (find-definition db (assoc var-definition
                                  :bucket :var-usages
                                  :to imported-ns))
@@ -367,14 +360,14 @@
                (into []
                      (comp
                        xf-analysis->java-member-definitions
-                       (filter #(and (safe-equal? full-class-name (:class %))
-                                     (safe-equal? method-name (:name %))))))
+                       (filter #(and (fast= full-class-name (:class %))
+                                     (fast= method-name (:name %))))))
                first))
         (->> (:analysis db)
              (into []
                    (comp
                      xf-analysis->java-class-definitions
-                     (filter #(safe-equal? full-class-name (:class %)))))
+                     (filter #(fast= full-class-name (:class %)))))
              (sort-by (complement #(string/ends-with? (:uri %) ".java")))
              first)
         ;; maybe class was defined by defrecord
@@ -439,7 +432,7 @@
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to))
 
                 ;; defmulti definition
-                (some #(safe-equal? 'clojure.core/defmulti %) (defined-bys var-definition))
+                (some #(fast= 'clojure.core/defmulti %) (defined-bys var-definition))
                 (comp xf-analysis->var-usages
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to)
                       (filter :defmethod))
@@ -545,9 +538,9 @@
           (comp
             (if include-definition? xf-analysis->vars xf-analysis->var-usages-and-symbols)
             (filter #(contains? names (:name %)))
-            (filter #(safe-equal? (:ns var-definition) (or (:ns %)
-                                                           (:to %)
-                                                           (some-> (:symbol %) namespace symbol))))
+            (filter #(fast= (:ns var-definition) (or (:ns %)
+                                                     (:to %)
+                                                     (some-> (:symbol %) namespace symbol))))
             (filter #(or include-definition?
                          (not (var-usage-from-own-definition? %))))
             (medley/distinct-by (juxt :uri :name :row :col)))
@@ -593,7 +586,7 @@
                    (internal-plus-local-analysis db (:uri quoted-symbol))
                    (internal-analysis db))
         lang (:lang quoted-symbol)
-        lang (if (= :edn lang)
+        lang (if (fast= :edn lang)
                ;; when referring to qualified-symbols in edn, pretend it's
                ;; referenced from JVM Clojure
                :clj
@@ -769,7 +762,7 @@
             (filter (comp #(identical? :unused-namespace %) :type))
             (remove (fn [finding]
                       (some #(and (not (:refer %))
-                                  (safe-equal? (:ns finding) (:to %)))
+                                  (fast= (:ns finding) (:to %)))
                             local-var-usages)))
             (map :ns))
           (get-in db [:diagnostics :clj-kondo uri]))))
@@ -781,8 +774,8 @@
             (filter (comp #(identical? :unused-referred-var %) :type))
             (remove (fn [finding]
                       (> (->> local-var-usages
-                              (filter #(and (safe-equal? (:refer finding) (:name %))
-                                            (safe-equal? (:ns finding) (:to %))))
+                              (filter #(and (fast= (:refer finding) (:name %))
+                                            (fast= (:ns finding) (:to %))))
                               (medley/distinct-by (juxt :name :to :row :col :end-row :end-col))
                               count)
                          1)))
@@ -796,11 +789,11 @@
             (filter (comp #(identical? :unused-import %) :type))
             (remove (fn [finding]
                       (or
-                        (some #(safe-equal? (str (:class finding))
-                                            (str (:to %) "." (:name %)))
+                        (some #(fast= (str (:class finding))
+                                      (str (:to %) "." (:name %)))
                               var-usages)
-                        (some #(and (safe-equal? (str (:class finding))
-                                                 (:class %))
+                        (some #(and (fast= (str (:class finding))
+                                           (:class %))
                                     (not (:import %)))
                               java-class-usages))))
             (map :class))
@@ -886,7 +879,7 @@
         (comp
           xf-analysis->java-class-usages
           (filter #(and (:import %)
-                        (safe-equal? class-name (:class %)))))
+                        (fast= class-name (:class %)))))
         (:analysis db)))
 
 (defn find-all-project-namespace-definitions [db namespace]

@@ -3,7 +3,7 @@
    [cheshire.core :as json]
    [clojure-lsp.http :as http]
    [clojure-lsp.logger :as logger]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as string]
@@ -31,15 +31,15 @@
       (:clojure-deps :babashka)
       (cond
         ;; inside :mvn/version string
-        (identical? :mvn/version (when (some-> cursor-loc z/prev z/tag (= :token))
-                                   (some-> cursor-loc z/prev z/sexpr)))
+        (fast= :mvn/version (when (some-> cursor-loc z/prev z/tag (= :token))
+                              (some-> cursor-loc z/prev z/sexpr)))
         #:dep{:type :version
               :coordinate :mvn/version
               :lib (z/sexpr (z/prev (z/up cursor-loc)))}
 
         ;; inside :git/tag string
-        (identical? :git/tag (when (some-> cursor-loc z/prev z/tag (= :token))
-                               (some-> cursor-loc z/prev z/sexpr)))
+        (fast= :git/tag (when (some-> cursor-loc z/prev z/tag (= :token))
+                          (some-> cursor-loc z/prev z/sexpr)))
         #:dep{:type :version
               :coordinate :git/tag
               :lib (z/sexpr (z/prev (z/up cursor-loc)))}

@@ -126,6 +126,11 @@
   [uris db]
   (shared/dir-uris->file-uris uris db))
 
+(defn inside?
+  "Checks if element `a` is inside element `b` scope."
+  [a b]
+  (shared/inside? a b))
+
 (def api-fns
   {'external-analysis external-analysis
    'internal-analysis internal-analysis
@@ -144,4 +149,5 @@
    'find-nodes-from-defined-bys find-nodes-from-defined-bys
    'filename->uri filename->uri
    'uri->filename uri->filename
-   'dir-uris->file-uris dir-uris->file-uris})
+   'dir-uris->file-uris dir-uris->file-uris
+   'inside? inside?})

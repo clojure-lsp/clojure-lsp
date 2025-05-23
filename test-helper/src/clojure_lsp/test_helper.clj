@@ -1,6 +1,7 @@
 (ns clojure-lsp.test-helper
   "Entrypoint for clojure-lsp test helper"
   (:require
+   [clojure-lsp.logger :as logger]
    [clojure-lsp.test-helper.internal :as h.internal]))
 
 (set! *warn-on-reflection* true)
@@ -23,7 +24,8 @@
   "Resets in-memory clojure-lsp components to a empty state,
    removing any previously loaded code."
   []
-  (h.internal/reset-components!))
+  (h.internal/reset-components!)
+  (logger/set-logger! (:logger (h.internal/components))))
 
 (defn code
   "Return a string of concatenated strings separated by \n."

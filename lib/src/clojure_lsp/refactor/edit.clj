@@ -1,5 +1,6 @@
 (ns clojure-lsp.refactor.edit
   (:require
+   [clojure-lsp.shared :refer [fast=]]
    [clojure.set :as set]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
@@ -57,7 +58,7 @@
   excludes the entire family."
   [start-zloc inherits?]
   (loop [zloc (cond-> start-zloc
-                (= :forms (z/tag start-zloc)) z/down*)]
+                (fast= :forms (z/tag start-zloc)) z/down*)]
     (if (z/end? zloc)
       zloc
       (if (inherits? zloc)
@@ -78,13 +79,13 @@
 
 (defn find-op
   [zloc]
-  (loop [op-loc (or (and (= :list (z/tag zloc))
+  (loop [op-loc (or (and (fast= :list (z/tag zloc))
                          (z/down zloc))
                     (z/leftmost zloc))]
     (let [up-loc (z/up op-loc)]
       (cond
         (nil? up-loc) nil
-        (= :list (z/tag up-loc)) op-loc
+        (fast= :list (z/tag up-loc)) op-loc
         :else (recur (z/leftmost up-loc))))))
 
 (defn find-ops-up
@@ -94,7 +95,7 @@
       (nil? op-loc)
       nil
 
-      (and (= :token (z/tag op-loc))
+      (and (fast= :token (z/tag op-loc))
            (contains? (set op-strs)
                       (let [sexpr (-> op-loc z/string symbol)]
                         (if (qualified-ident? sexpr)
@@ -110,14 +111,14 @@
     (not loc)
     nil
 
-    (= :map (-> loc z/next z/tag))
+    (fast= :map (-> loc z/next z/tag))
     (-> loc z/next z/right)
 
-    (and (= :meta (-> loc z/next z/tag))
-         (= :map (-> loc z/next z/next z/tag)))
+    (and (fast= :meta (-> loc z/next z/tag))
+         (fast= :map (-> loc z/next z/next z/tag)))
     (-> loc z/next z/down z/rightmost)
 
-    (= :meta (-> loc z/next z/tag))
+    (fast= :meta (-> loc z/next z/tag))
     (-> loc z/next z/next z/next)
 
     :else
@@ -171,7 +172,7 @@
 
 (defn parent-let? [zloc]
   (let [parent-op (-> zloc z/leftmost)]
-    (when (= 'let (-> parent-op z/sexpr))
+    (when (fast= 'let (-> parent-op z/sexpr))
       (z/up parent-op))))
 
 (defn join-let
@@ -204,10 +205,10 @@
 
 (defn inside-refer? [zloc]
   (and (inside-require? zloc)
-       (or (and (= :vector (z/tag zloc))
-                (= :refer (-> zloc z/left z/sexpr)))
-           (and (= :token (z/tag zloc))
-                (= :refer (-> zloc z/up z/left z/sexpr))))))
+       (or (and (fast= :vector (z/tag zloc))
+                (fast= :refer (-> zloc z/left z/sexpr)))
+           (and (fast= :token (z/tag zloc))
+                (fast= :refer (-> zloc z/up z/left z/sexpr))))))
 
 (defn inside-rcf?
   [zloc]
@@ -215,7 +216,7 @@
 
 (defn find-refer-ns [zloc]
   (when (inside-refer? zloc)
-    (if (= :vector (z/tag zloc))
+    (if (fast= :vector (z/tag zloc))
       (z/leftmost zloc)
       (z/leftmost (z/up zloc))))) ; ns form
 

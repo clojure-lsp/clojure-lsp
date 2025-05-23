@@ -4,6 +4,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
+   [clojure-lsp.shared :refer [fast=]]
    [clojure.set :as set]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
@@ -20,7 +21,7 @@
 
 (defn ^:private sort-by-if-enabled [fn type db coll]
   (if-let [sort-type (settings/get db [:clean :sort type] true)]
-    (if (= :lexicographically sort-type)
+    (if (fast= :lexicographically sort-type)
       (sort-by str coll)
       (sort-by fn coll))
     coll))
@@ -33,11 +34,11 @@
 
 (defn ^:private remove-empty-reader-conditional
   [new-node]
-  (let [reader-macro? (= :reader-macro (some-> new-node z/up z/up z/tag))
+  (let [reader-macro? (fast= :reader-macro (some-> new-node z/up z/up z/tag))
         empty-reader-conditional? (when reader-macro?
                                     (or (<= (-> new-node z/up z/sexpr count) 1)
-                                        (and (or (= :vector (z/tag new-node))
-                                                 (= :list (z/tag new-node)))
+                                        (and (or (fast= :vector (z/tag new-node))
+                                                 (fast= :list (z/tag new-node)))
                                              (-> new-node z/sexpr empty?))))]
     (if empty-reader-conditional?
       (-> new-node
@@ -96,7 +97,7 @@
                                 (:db clean-ctx))
                               (map
                                 (fn [node]
-                                  (if-let [[n comment] (and (= :vector (n/tag node))
+                                  (if-let [[n comment] (and (fast= :vector (n/tag node))
                                                             (n/children node))]
                                     (if (and comment (n/comment? comment))
                                       [n comment]
@@ -110,11 +111,11 @@
                          (n/comment? node)
                          [single-space node]
 
-                         (and (= :same-line (:ns-inner-blocks-indentation clean-ctx))
+                         (and (fast= :same-line (:ns-inner-blocks-indentation clean-ctx))
                               (= idx 0))
                          [single-space node]
 
-                         (and (= :keep (:ns-inner-blocks-indentation clean-ctx))
+                         (and (fast= :keep (:ns-inner-blocks-indentation clean-ctx))
                               keep-first-line-spacing
                               (= idx 0))
                          [(n/whitespace-node (apply str (repeat keep-first-line-spacing " ")))
@@ -240,7 +241,7 @@
       (contains? unused-aliases namespace-expr)
       (z/remove node)
 
-      (= :vector (-> node z/down (z/find-next-value ':refer) z/right z/tag))
+      (fast= :vector (-> node z/down (z/find-next-value ':refer) z/right z/tag))
       (remove-unused-refers node unused-refers initial-sep-spaces clean-ctx)
 
       (contains? duplicate-requires namespace-expr)
@@ -329,7 +330,7 @@
 (defn ^:private sorting-package-import-classes
   [parent-node clean-ctx import-loc base-package classes settings node]
   (let [parent-node-col (ns-inner-blocks-indentation-parent-col import-loc clean-ctx)
-        coll-node-fn (if (= :list (z/tag parent-node))
+        coll-node-fn (if (fast= :list (z/tag parent-node))
                        n/list-node
                        n/vector-node)
         sorted-classes (sort-by-if-enabled identity :import-classes (:db clean-ctx) classes)
@@ -344,7 +345,7 @@
                      (concat [(n/token-node (symbol base-package))])
                      flatten)
 
-                (= :next-line (:ns-import-classes-indentation clean-ctx))
+                (fast= :next-line (:ns-import-classes-indentation clean-ctx))
                 (->> sorted-classes
                      (mapv (fn [n]
                              [(n/newlines 1)
@@ -409,11 +410,11 @@
   [ns-loc settings]
   (if (get-in settings [:clean :sort :ns] true)
     (let [require-loc (-> ns-loc
-                          (z/find-next-depth-first #(and (= :list (z/tag %))
-                                                         (= :require (z/sexpr (z/next %))))))
+                          (z/find-next-depth-first #(and (fast= :list (z/tag %))
+                                                         (fast= :require (z/sexpr (z/next %))))))
           import-loc (-> ns-loc
-                         (z/find-next-depth-first #(and (= :list (z/tag %))
-                                                        (= :import (z/sexpr (z/next %))))))]
+                         (z/find-next-depth-first #(and (fast= :list (z/tag %))
+                                                        (fast= :import (z/sexpr (z/next %))))))]
       (if (and require-loc
                import-loc
                (< (-> import-loc z/node meta :row)

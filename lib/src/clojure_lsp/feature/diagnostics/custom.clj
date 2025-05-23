@@ -117,9 +117,9 @@
         (logger/error logger-tag (str "Error requiring custom linter " fqns) e)
         identity))
     (when-let [out (not-empty (string/trim (str out)))]
-      (logger/warn logger-tag "stdout from linter:" out))
+      (logger/warn logger-tag (format "[%s] stdout: %s" fqns out)))
     (when-let [err (not-empty (string/trim (str err)))]
-      (logger/warn logger-tag "stderr from linter:" err))
+      (logger/warn logger-tag (format "[%s] stderr: %s" fqns err)))
     @diagnostics*))
 
 (defn analyze-uris!

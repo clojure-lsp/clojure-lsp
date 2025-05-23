@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.shared :refer [fast=]]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
@@ -21,7 +22,7 @@
   (when zloc
     (let [{:keys [row col]} (meta (z/node zloc))]
       (when-let [def-elem (q/find-definition-from-cursor db uri row col)]
-        (when (= :locals (:bucket def-elem))
+        (when (fast= :locals (:bucket def-elem))
           (let [top-zloc (edit/to-top zloc)
                 def-zloc (edit/find-at-pos top-zloc (:row def-elem) (:col def-elem))
                 up-loc (z/up def-zloc)

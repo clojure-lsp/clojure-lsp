@@ -7,7 +7,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.core.memoize :as memoize]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -37,7 +37,7 @@
             (cond
               (vector? x)      (inc (depth (first x)))
               (or (number? x)
-                  (= :defn x)) 0
+                  (fast= :defn x)) 0
               :else            -1000))]
     (let [d (depth argspec)]
       (when-not (neg? d)

@@ -6,7 +6,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.string :as string]
    [rewrite-clj.zip :as z]))
 
@@ -87,12 +87,12 @@
     (seq? doc)
     (let [referenced-var-meta
           (and (seq? doc)
-               (= :doc (first doc))
+               (fast= :doc (first doc))
                (let [doc' (fnext doc)]
                  (and (seq? doc')
-                      (= 'meta (first doc'))
+                      (fast= 'meta (first doc'))
                       (let [doc'' (fnext doc')]
-                        (and (= 'var (first doc''))
+                        (and (fast= 'var (first doc''))
                              (meta (second doc'')))))))
           referenced-var-docs
           (when referenced-var-meta
@@ -109,7 +109,7 @@
    join-char]
   (or (let [node (some->> (:arglists meta) z/of-node)
             sexpr (try (z/sexpr node) (catch Exception _ nil))]
-        (if (= 'quote (first sexpr))
+        (if (fast= 'quote (first sexpr))
           (string/join join-char (second sexpr))
           (z/string node)))
       (some->> arglist-strs

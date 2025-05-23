@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.project-tree
   (:require
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.java.io :as io]))
 
 (defn ^:private root-node [db]
@@ -96,17 +96,17 @@
     (not current-node)
     (root-node db)
 
-    (= :source-path (:type current-node))
+    (fast= :source-path (:type current-node))
     (source-path-node current-node db)
 
-    (and (= :library (:type current-node))
+    (and (fast= :library (:type current-node))
          (= "external-dependencies" (:id current-node)))
     (external-dependencies-node current-node db)
 
-    (= :jar (:type current-node))
+    (fast= :jar (:type current-node))
     (jar-node current-node db)
 
-    (= :ns (:type current-node))
+    (fast= :ns (:type current-node))
     (ns-node current-node db)))
 
 (comment

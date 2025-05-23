@@ -11,7 +11,7 @@
   It associates comments 'above' a clause and on the same line 'after' a clause
   with the clause."
   (:require
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]))
@@ -131,13 +131,13 @@
       ;; everything processed
       result
 
-      (= :in-padding state)
+      (fast= :in-padding state)
       (let [[padding zloc] (z-split-with zloc (tag-p #{:whitespace :newline :comma}))]
         (recur zloc
                :on-elem
                (conj result (map z/node padding))))
 
-      (= :on-elem state)
+      (fast= :on-elem state)
       (let [[prefix elem-loc] (z-split-with zloc whitespace-or-comment?)]
         (if-not elem-loc
           ;; We've processed all the elements and this is trailing whitespace.

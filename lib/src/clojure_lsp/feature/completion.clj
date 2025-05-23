@@ -12,7 +12,7 @@
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.refactor.transform :as r.transform]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.zip :as z]))
@@ -51,7 +51,7 @@
 
 (defn ^:private keyword-element->str [{:keys [alias ns] :as element} cursor-alias priority]
   (let [alias (or alias
-                  (when (= :alias-keyword priority)
+                  (when (fast= :alias-keyword priority)
                     cursor-alias))]
     (cond-> ":"
       alias
@@ -185,7 +185,7 @@
 
 (defn ^:private completion-item-with-unresolved-alias-edit
   [completion-item cursor-loc alias-to-add ns-to-add db uri resolve-support]
-  (let [rcf-pos (when (= :always (settings/get db [:add-missing :add-to-rcf]))
+  (let [rcf-pos (when (fast= :always (settings/get db [:add-missing :add-to-rcf]))
                   (some-> cursor-loc edit/inside-rcf? z/node meta))]
     (if (contains? (:properties resolve-support) "additionalTextEdits")
     ;; client supports postponing the expensive edit calculation
@@ -634,7 +634,7 @@
             non-local-db (update db :analysis dissoc uri)
             local-buckets (get-in db [:analysis uri])
             cursor-element (q/find-element-under-cursor db uri row col)
-            cursor-value (if (= :vector (z/tag cursor-loc))
+            cursor-value (if (fast= :vector (z/tag cursor-loc))
                            ""
                            (if (z/sexpr-able? cursor-loc)
                              (z/sexpr cursor-loc)

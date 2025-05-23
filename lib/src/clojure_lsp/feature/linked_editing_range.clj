@@ -1,7 +1,7 @@
 (ns clojure-lsp.feature.linked-editing-range
   (:require
    [clojure-lsp.queries :as q]
-   [clojure-lsp.shared :as shared]))
+   [clojure-lsp.shared :as shared :refer [fast=]]))
 
 (set! *warn-on-reflection* true)
 
@@ -11,7 +11,7 @@
 
 (defn ranges [uri row col db]
   (when-let [element (q/find-element-under-cursor db uri row col)]
-    (when (= :namespace-alias (:bucket element))
+    (when (fast= :namespace-alias (:bucket element))
       (when-let [elements (q/find-references db element true)]
         (let [alias-length (count (str (:alias element)))]
           {:ranges (->> elements

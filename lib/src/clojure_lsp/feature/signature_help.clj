@@ -4,7 +4,7 @@
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
-   [clojure-lsp.shared :as shared :refer [assoc-some]]
+   [clojure-lsp.shared :as shared :refer [assoc-some fast=]]
    [edamame.core :as edamame]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z])
@@ -57,8 +57,8 @@
 
 (defn ^:private arglist-str->parameters [arglist-str]
   (let [parameters (edamame/parse-string arglist-str {:auto-resolve #(symbol (str ":" %))})
-        rest-args? (some #(= '& %) parameters)
-        available-params (filter (complement #(= '& %)) parameters)
+        rest-args? (some #(fast= '& %) parameters)
+        available-params (filter (complement #(fast= '& %)) parameters)
         params-count (dec (count available-params))]
     (->> available-params
          (map-indexed (fn [index arg]

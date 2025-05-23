@@ -1,7 +1,7 @@
 (ns clojure-lsp.dep-graph
   (:refer-clojure :exclude [ns-aliases])
   (:require
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.set :as set]))
 
 ;;;; Syntax
@@ -267,7 +267,7 @@
         (reduce-kv (fn [result uri {:keys [var-definitions namespace-definitions namespace-usages]}]
                      (let [defs (cond-> namespace-definitions
                                   ;; implicitly in user ns
-                                  (some #(= 'user (:ns %)) var-definitions)
+                                  (some #(fast= 'user (:ns %)) var-definitions)
                                   (conj (assoc user-ns-def :uri uri)))]
                        (-> result
                            (update :defs into defs)

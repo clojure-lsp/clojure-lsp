@@ -170,25 +170,54 @@
        (or (not (identical? :var-definitions bucket))
            name)))
 
-(defn ^:private normalize-analysis [external? settings analysis]
+(defn ^:private findings->analysis [findings]
+  (shared/logging-task
+    :internal/kondo-findings->analysis
+    (reduce
+      (fn [acc [uri findings]]
+        (assoc acc uri
+               (reduce
+                 (fn [acc2 finding]
+                   (if (identical? :unresolved-namespace (:type finding))
+                     (update acc2 :var-usages (fnil conj [])
+                             {:bucket :var-usages
+                              :unresolved? true
+                              :external? false
+                              :name (:name finding)
+                              :to (:ns finding)
+                              :full-qualified-simbol? true
+                              :name-row (:row finding)
+                              :name-col (:col finding)
+                              :name-end-row (:end-row finding)
+                              :name-end-col (:end-col finding)
+                              :uri uri})
+                     acc2))
+                 {}
+                 findings)))
+      {}
+      findings)))
+
+(defn ^:private normalize-analysis [external? settings findings analysis]
   (let [keyword-definitions-enabled? (get-in settings [:analysis :keywords :definitions] true)
         keyword-usages-enabled? (get-in settings [:analysis :keywords :usages] true)]
-    (reduce-kv
-      (fn [result kondo-bucket kondo-elements]
-        (transduce
-          (comp
-            (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?) keyword-definitions-enabled? keyword-usages-enabled?))
-            (filter valid-element?))
-          (completing
-            (fn [result {:keys [uri bucket] :as element}]
-              ;; intentionally use element bucket, since it may have been
-              ;; normalized to something besides kondo-bucket
-              (update-in result [uri bucket] (fnil conj []) element)))
-          result
-          kondo-elements))
-      ;; TODO: Can result be a transient?
-      {}
-      analysis)))
+    (shared/deep-merge
+      (reduce-kv
+        (fn [result kondo-bucket kondo-elements]
+          (transduce
+            (comp
+              (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?) keyword-definitions-enabled? keyword-usages-enabled?))
+              (filter valid-element?))
+            (completing
+              (fn [result {:keys [uri bucket] :as element}]
+                ;; intentionally use element bucket, since it may have been
+                ;; normalized to something besides kondo-bucket
+                (update-in result [uri bucket] (fnil conj []) element)))
+            result
+            kondo-elements))
+        ;; TODO: Can result be a transient?
+        {}
+        analysis)
+      (findings->analysis findings))))
 
 (defn ^:private normalize
   "Put kondo result in a standard format, with `analysis` normalized and
@@ -204,15 +233,15 @@
                                      (dissoc :filename)))
         with-uris (fn [uris default coll]
                     (merge (zipmap uris (repeat default)) coll))
+        findings (->> findings
+                      (map trade-filename-for-uri)
+                      (group-by :uri))
         analysis (->> analysis
                       filter-analysis
                       (medley/map-vals #(map trade-filename-for-uri %))
-                      (normalize-analysis external? (settings/all db))
+                      (normalize-analysis external? (settings/all db) findings)
                       (with-uris ensure-uris {}))
-        findings (->> findings
-                      (map trade-filename-for-uri)
-                      (group-by :uri)
-                      (with-uris (keys analysis) []))]
+        findings (with-uris (keys analysis) [] findings)]
     (assoc kondo-results
            :external? external?
            :analysis analysis

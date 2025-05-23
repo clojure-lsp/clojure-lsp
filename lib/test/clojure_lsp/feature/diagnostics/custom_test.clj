@@ -30,7 +30,7 @@
                          :range {:start {:line 0 :character 1}
                                  :end {:line 2 :character 3}}}]}
         (f.diagnostics.custom/analyze-uri! h/default-uri (h/db)))))
-  (testing "API usage"
+  (testing "API usage - internal analysis"
     (h/reset-components!)
     (swap! (h/db*) assoc-in
            [:settings :linters] {:custom {'foo.bar/qux {:level :warning}}})
@@ -40,7 +40,7 @@
                                               "(defn qux [{:keys [params db reg-diagnostic!]}]"
                                               "  (reg-diagnostic! {:uri \"%s\""
                                               "                    :level (:level params)"
-                                              "                    :message (str \"var-definitions: \" (count (api/internal-analysis db)))"
+                                              "                    :message (str \"var-definitions: \" (api/fast= 'foo (count (api/internal-analysis db))))"
                                               "                    :source \"some-source\""
                                               "                    :code \"some-code\""
                                               "                    :range {:row 1 :col 2 :end-row 3 :end-col 4}"
@@ -52,7 +52,36 @@
                            "(def my-var-2 1)") (h/file-uri "file:///b.clj"))
       (h/assert-submap
         {h/default-uri [{:severity 2
-                         :message "var-definitions: 2"
+                         :message "var-definitions: false"
+                         :source "some-source"
+                         :code "some-code"
+                         :range {:start {:line 0 :character 1}
+                                 :end {:line 2 :character 3}}}]}
+        (f.diagnostics.custom/analyze-uri! h/default-uri (h/db)))))
+  (testing "API usage - find-node-from-sym"
+    (h/reset-components!)
+    (swap! (h/db*) assoc-in
+           [:settings :linters] {:custom {'foo.bar/qux {:level :warning}}})
+    (with-redefs [f.diagnostics.custom/file-content-from-classpath
+                  (constantly (format (h/code "(ns foo.bar"
+                                              " (:require [clojure-lsp.custom-linters-api :as api]"
+                                              "           [rewrite-clj.zip :as z]))"
+                                              "(defn qux [{:keys [params db reg-diagnostic!]}]"
+                                              "  (reg-diagnostic! {:uri \"%s\""
+                                              "                    :level (:level params)"
+                                              "                    :message (str \"node string: \" (z/string (first (api/find-nodes-from-defined-bys db #{'clojure.core/def}))))"
+                                              "                    :source \"some-source\""
+                                              "                    :code \"some-code\""
+                                              "                    :range {:row 1 :col 2 :end-row 3 :end-col 4}"
+                                              "                    }))")
+                                      h/default-uri))]
+      (h/load-code (h/code "(ns some-ns)"
+                           "(def my-var 1)"))
+      (h/load-code (h/code "(ns other-ns)"
+                           "(def my-var-2 1)") (h/file-uri "file:///b.clj"))
+      (h/assert-submap
+        {h/default-uri [{:severity 2
+                         :message "node string: (def my-var 1)"
                          :source "some-source"
                          :code "some-code"
                          :range {:start {:line 0 :character 1}

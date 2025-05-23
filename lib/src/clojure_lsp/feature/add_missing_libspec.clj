@@ -593,7 +593,7 @@
                                     (map (fn [element]
                                            {:ns (str (:ns element))
                                             :refer cursor-name-str})))
-                                  (q/find-all-var-definitions db)))))]
+                                  (q/find-all-var-definitions db false)))))]
       suggestions)))
 
 (defn ^:private find-forms [zloc p?]

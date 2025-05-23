@@ -55,7 +55,7 @@
       (if (and (> (count kwd-usages) 1)
                (ask-to-replace-all-ns-changes kwd-usages producer))
         (mapv (fn [kwd-usage]
-                (let [loc (edit/find-at-usage zloc kwd-usage)
+                (let [loc (edit/find-at-element zloc kwd-usage)
                       new-loc (zloc-edit-fn loc)]
                   {:range (meta (z/node new-loc))
                    :loc new-loc}))

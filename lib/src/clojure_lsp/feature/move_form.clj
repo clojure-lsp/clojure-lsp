@@ -14,9 +14,9 @@
   (loop [[usage & other-usages] usages
          loc zloc]
     (if usage
-      (let [usage-loc (edit/find-at-usage-name loc usage)]
+      (let [usage-loc (edit/find-at-element-name loc usage)]
         (recur other-usages (z/subedit-> loc
-                                         (edit/find-at-usage-name usage)
+                                         (edit/find-at-element-name usage)
                                          (z/replace (symbol (name (z/sexpr usage-loc)))))))
       loc)))
 
@@ -56,7 +56,7 @@
           (fn [loc]
             (z/subedit->
               loc
-              (edit/find-at-usage source-require)
+              (edit/find-at-element source-require)
               z/up
               z/remove)))
 
@@ -66,7 +66,7 @@
           (fn [loc]
             (z/subedit->
               loc
-              (edit/find-at-usage-name source-refer)
+              (edit/find-at-element-name source-refer)
               z/remove
               (cond-> (empty? other-source-refers) (-> z/remove z/remove)))))
 
@@ -76,13 +76,13 @@
         (->> [{:loc (cond-> namespace-loc
                       remove-source-require?
                       (z/subedit->
-                        (edit/find-at-usage source-require)
+                        (edit/find-at-element source-require)
                         z/up
                         z/remove)
 
                       (and (not remove-source-require?) source-refer)
                       (z/subedit->
-                        (edit/find-at-usage-name source-refer)
+                        (edit/find-at-element-name source-refer)
                         z/remove
                         (cond-> (empty? other-source-refers) (-> z/remove z/remove))))
                :range (meta (z/node namespace-loc))}]
@@ -134,7 +134,7 @@
                                                 z/left)
                                    :range (assoc insertion-pos :row (:end-row insertion-pos) :col (:end-col insertion-pos))}]
                                  (into (for [dest-ref (vec dest-refs)
-                                             :let [dest-ref-loc (edit/find-at-usage-name insertion-loc dest-ref)]]
+                                             :let [dest-ref-loc (edit/find-at-element-name insertion-loc dest-ref)]]
                                          {:loc (z/replace dest-ref-loc (symbol (name (z/sexpr dest-ref-loc))))
                                           :range (meta dest-ref-loc)})))
                 usage-changes-by-uri (->> (dissoc per-file-usages dest-uri)
@@ -180,7 +180,7 @@
                                                                      :else
                                                                      (:lib libspec))
                                                     usage-changes (keep (fn [usage]
-                                                                          (let [usage-loc (edit/find-at-usage-name file-loc usage)]
+                                                                          (let [usage-loc (edit/find-at-element-name file-loc usage)]
                                                                             (when (or
                                                                                     (= source-uri usage-uri)
                                                                                     (namespace (z/sexpr usage-loc)))

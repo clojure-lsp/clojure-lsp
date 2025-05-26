@@ -405,14 +405,14 @@
       "hash": "sha256-n6pYYudCO9kUHuBAUHGxemuzocncPdgstHX1qka57IM="
     },
     {
-      "mvn-path": "com/fabiodomingues/clj-depend/0.11.0/clj-depend-0.11.0.jar",
+      "mvn-path": "com/fabiodomingues/clj-depend/0.11.1/clj-depend-0.11.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-BuPnMBfNmqA91vseFZ8sgvpV6yAOIIFIbRH77mIhdEM="
+      "hash": "sha256-XjwkJ/SfsMr3btQ1P/wbrRqmns9xxWFf9XbZA3FmAfM="
     },
     {
-      "mvn-path": "com/fabiodomingues/clj-depend/0.11.0/clj-depend-0.11.0.pom",
+      "mvn-path": "com/fabiodomingues/clj-depend/0.11.1/clj-depend-0.11.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-qsqXzi83uLjnDS+Zd4W2Hd+sd/uEjDX+pIkMG04HWFc="
+      "hash": "sha256-StK34s72VfU2CPPx7v2xFH2aPfctw+4Y8Vwx3gSqZ9I="
     },
     {
       "mvn-path": "com/fasterxml/jackson/core/jackson-annotations/2.12.4/jackson-annotations-2.12.4.jar",

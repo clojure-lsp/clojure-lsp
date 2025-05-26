@@ -1918,9 +1918,9 @@
 </tbody>
 </table>
 <h3 id="classpath-scan">Classpath scan<a class="headerlink" href="#classpath-scan" title="Permanent link">#</a></h3>
-<p>clojure-lsp needs to analyze the whole project and its dependencies to understand your code for most features, during the startup clojure-lsp will try to find the classpath of your project to pass to clj-kondo later.</p>
-<p>You can configure how clojure-lsp should find the classpath with the <code>project-specs</code> setting, but keep in mind that usually the <a href="https://github.com/clojure-lsp/clojure-lsp/blob/master/lib/src/clojure_lsp/classpath.clj#L184">default</a> is enough, it will also consider the <code>:source-aliases</code> setting if any to find the classpath using those aliases.</p>
-<p>Supported project types at the moment are:</p>
+<p>clojure-lsp needs to analyze the whole project and its dependencies to understand your code for most features, during the startup clojure-lsp will try to find the classpath of your project spawning a process like <code>lein</code> or <code>clojure</code>.</p>
+<p>clojure-lsp uses <a href="https://github.com/clojure-lsp/clojure-lsp/blob/0366069b9bf92c031a1903bb9460702da193f971/lib/src/clojure_lsp/classpath.clj#L186">these default project-specs</a>, if the default is not enough, you can try to change the <code>:source-aliases</code> setting, if that is not enough yet, you can configure <code>:project-specs</code> which is a more low-level setting.</p>
+<p>This is a summary of the current logic and supported project types:</p>
 <ul>
 <li><code>leiningen</code>: If a <code>project.clj</code> is found at the project root, clojure-lsp will run <code>lein classpath</code> with <code>:source-aliases</code> specified if any.</li>
 <li><code>deps</code>: If a <code>deps.edn</code> is found at the project root, clojure-lsp will run <code>clojure -Spath</code> with <code>:source-aliases</code> specified if any.</li>
@@ -1936,7 +1936,7 @@
 <span class="w">                  </span><span class="ss">:env</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;PATH&quot;</span><span class="w"> </span><span class="s">&quot;/some/custom/path&quot;</span><span class="p">}</span><span class="w"> </span><span class="c1">;; optional if you want to override the PATH used in the classpath-cmd</span>
 <span class="w">                  </span><span class="ss">:classpath-cmd</span><span class="w"> </span><span class="p">[</span><span class="s">&quot;clojure&quot;</span><span class="w"> </span><span class="s">&quot;-A:my-custom-alias&quot;</span><span class="w"> </span><span class="s">&quot;-Spath&quot;</span><span class="p">]}]}</span>
 </code></pre></div></p>
-<p>Note that clojure-lsp will make this scan to save the cache when:</p>
+<p>Note that clojure-lsp will analyzes and cache for next startups, it will only analyze again if:</p>
 <ul>
 <li>The project has no cache (<code>.lsp/.cache</code>)</li>
 <li>The project deps file (<code>project.clj</code> for example) changed.</li>
@@ -2238,7 +2238,7 @@ The available settings inside <code>:stubs</code> are:</p>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 26, 2025 18:23:43">May 26, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 26, 2025 18:32:58">May 26, 2025</span>
   </span>
 
     

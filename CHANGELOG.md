@@ -3,6 +3,7 @@
 ## Unreleased
 
 - General
+
   - Consider `.lsp/config.edn` as part of project code, removing false positives of unused-public-var linter.
   - Consider full qualified symbols in edn files when checking for var references.
   - Improve clojure-lsp linter capabilities, migrating `unused-public-var` and `different-aliases` linters to be built-in linters. #2050
@@ -13,8 +14,10 @@
   - Publish to clojars `com.github.clojure-lsp/clojure-lsp-test-helper` to be able to test created custom linters.
   - Bump clj-kondo to `2025.04.08-20250523.111911-10`.
   - Small performance improvements across clojure-lsp, especially on places with comparassions inside big loops.
+  - Bump clj-depend to `0.11.1`.
 
 - Editor
+
   - Add support for LSP feature `textDocument/selectionRange`. #1961
   - Fix outdated analysis for watched created/deleted files (git branch switchs for example). #2046
 
@@ -25,6 +28,7 @@
 ## 2025.04.23-18.16.46
 
 - General
+
   - Fix `unused-public-var` false positives when `:ignore-test-references? true`.
   - Bump clj-kondo to `2025.04.07`.
 
@@ -36,6 +40,7 @@
 ## 2025.03.27-20.21.36
 
 - General
+
   - Bump rewrite-clj to `0bb572a03c0025c01f9c36bfca2815254683fbde`. #1984
   - Bump clj-kondo to `2025.02.21-20250314.135629-7`.
   - Add support for ignoring tests references for the `clojure-lsp/unused-public-var` linter. #1878
@@ -50,6 +55,7 @@
 ## 2025.03.07-17.42.36
 
 - General
+
   - Bump clj-kondo to `2025.02.20`.
   - Add support for OpenTelemetry(otlp) log, enabled if configured. #1963
 
@@ -69,6 +75,7 @@
 ## 2025.01.22-23.28.23
 
 - General
+
   - Bump clj-kondo to `2025.01.16`
   - Bump lsp4clj to `1.11.0`.
   - Add semantic version sorting in completion lib versions. #1913
@@ -76,6 +83,7 @@
   - Drop support for jdk 8. #1942
 
 - Editor
+
   - Change simple keyword completion to return all known keywords. #1920
   - Return textEdit to CompletionItems to fix completion in Zed #1933
   - Restrict linked edits to namespace aliases only, and fix a few related issues #1947
@@ -110,6 +118,7 @@
 ## 2024.08.03-15.28.27
 
 - General
+
   - Bump clj-kondo to `2024.08.01` fixing high memory usage issue.
   - Bump Clojure to `1.11.3`
   - Fix use of `:filename-pattern` from kondo breaking references.
@@ -123,6 +132,7 @@
 ## 2024.04.22-11.50.26
 
 - General
+
   - Bump clj-depend to `0.11.0`.
   - Fix renaming ns when one source path is a prefix of another (e.g. `src/clj` and `src/cljs`) #1805
 
@@ -146,6 +156,7 @@
 ## 2024.03.13-13.11.00
 
 - General
+
   - Bump clj-kondo to `2024.03.13` fixing high memory usage issue.
 
 - Editor
@@ -154,6 +165,7 @@
 ## 2024.03.01-11.37.51
 
 - General
+
   - Bump clj-kondo to `2024.02.13-20240228.191822-15`.
   - Add `:clojure-lsp/different-aliases` linter. #1770
   - Fix unused-public-var false positives for definterface methods. #1762
@@ -170,6 +182,7 @@
 ## 2024.02.01-11.01.59
 
 - General
+
   - Fix binary not wokring on some aarch64 linux. #1748
   - Add new `Project tree` feature via the `clojure/workspace/projectTree/nodes` custom method. #1752
   - Fix `--log-path` setting to work with `listen`/empty arg, starting clojure-lsp server and logging properly.
@@ -184,12 +197,14 @@
 ## 2023.12.29-12.09.27
 
 - General
+
   - Fix deep-merge of client settings with project settings.
   - Fix `max-line-length` on clean-ns feature not respecting some lines when contains a lot of refers. #1729
   - Bump cljfmt to 0.12.0.
   - Bump clj-kondo to `2023.12.15`.
 
 - Editor
+
   - Fix edn tree visualization for keys with same name in the same level. #1558
   - Make clear when `hover` feature is in a calling and not in a specific symbol. #1281
   - Exclude keys that are already included in the function call from completion suggestions. #1720
@@ -200,6 +215,7 @@
 ## 2023.10.30-16.25.41
 
 - General
+
   - Bump clj-kondo to `2023.10.21-20231022.204832-4`.
   - Fix move-to-let/expand-let bug for multi-arity functions #1283
   - Fix `:dependency-scheme` setting for .java files from jars #1653
@@ -226,6 +242,7 @@
 ## 2023.08.06-00.28.06
 
 - General
+
   - Fix truncation of namespaced keywords #1640
   - Add rewrite-clj node to cursor-info.
   - Fixing semantic-tokens, collons not managed by lsp anymore. #1550
@@ -240,6 +257,7 @@
   - Added functionality to `workspace/didChangeConfiguration` so it changes configuration on runtime.
 
 - Editor
+
   - Avoid returning all known keywords on empty keywords completion for performance reasons.
 
 - API/CLI
@@ -248,6 +266,7 @@
 ## 2023.07.01-22.35.41
 
 - General
+
   - Update flake.nix to build with babashka. #1373
   - Bump clj-kondo to `2023.06.02-20230630.144012-16`.
   - Improve support for ClojureDart `.cljd` files. #1589
@@ -259,6 +278,7 @@
   - Bump cljfmt to `0.10.6`. #1605
 
 - Editor
+
   - New code actions: `Replace ':refer :all' with ':refer [my-refer]'` and `Replace ':refer :all' with alias`. #1575
   - Enhance java support for hover and completion of static class members.
   - Improve `:paths-ignore-regex` to ignore features avoiding impact in huge files that are intented to be excluded.
@@ -273,9 +293,11 @@
 ## 2023.05.04-19.38.01
 
 - General
+
   - Bump clj-kondo to `2023.04.15-20230503.152749-8`
 
 - Editor
+
   - Fix edn tree to consider symbols. #1556
   - Fix edn tree to consider vector root nodes. #1557
   - Fix edn tree to handle invalid edn code and not throw exceptions while typing code.
@@ -286,6 +308,7 @@
 ## 2023.04.19-12.43.29
 
 - General
+
   - Fix reflection issue in JDK19 with `Thread/sleep` #1520
   - Bump clj-kondo to `2023.04.15-20230418.173453-3`, fixing analysis inconsistencies with `schema.core`
   - Ignore vars defined wrongly via config. #1510
@@ -308,6 +331,7 @@
 ## 2023.02.26-23.46.05
 
 - General
+
   - Add new setting `:paths-ignore-regex` to allow ignore analyzing/linting specific paths, useful if you have folders or files that are not relevant to be linted and are huge which may affect performance.
   - Bump clj-kondo. Fixes missing lint class constructors, making clojure-lsp show add import code action always.
   - Fix wrong ns rename for cljc files. #1508
@@ -326,6 +350,7 @@
 ## 2023.01.26-11.08.16
 
 - General
+
   - Bump clj-kondo to `2023.01.20`
   - Avoid false-positives of unused-public-var for functions used in :gen-class that starts with `-` as convention. #1443
   - New jar available on releases: `clojure-lsp-server.jar`, an Uberjar not aot-ed containing both clojure-lsp core + server code, improving startup time for JVM clients, for example for `lein-clojure-lsp`. Any lib using `clojure-lsp-standalone.jar` should consider switch to this new jar.
@@ -335,6 +360,7 @@
   - Support `:style/indent` metadata for indentation with cljfmt #1420
 
 - Editor
+
   - Fix add missing import code action when there are multiple options. #1422
   - Only show completion items if no changed code is being processed, avoiding wrong completion items. #1425
   - Improve semantic tokens for defprotocol, definterface coloring as `interface` tokens.
@@ -353,6 +379,7 @@
 ## 2022.12.09-15.51.10
 
 - General
+
   - Fix rename issue with VS-Code/Calva on MS-Windows. #1388
   - Only publish progress on initialize if client provided a `workDoneProgress`. #1363
   - Bump clj-kondo to `2022.12.08`.
@@ -360,6 +387,7 @@
   - Fall back on CLJS var when finding definition from Clojure and nothing was found. #1403
 
 - Editor
+
   - Show better icons for multimethods, var-arg fns, protocols, records, interfaces and types on `workspace/symbol` and `textDocument/documentSymbol`.
   - Inlining the last binding of a let removes the let. #210
   - Allow import java classes via code-actions `Add import 'x.y.Z'`.
@@ -376,6 +404,7 @@
 ## 2022.11.03-00.14.57
 
 - General
+
   - Bump clj-kondo to `2022.11.02` avoiding breaking changes on custom hooks.
   - Bump graalvm to 22.3.0. #1345
 
@@ -394,7 +423,8 @@
 ## 2022.10.05-16.39.51
 
 - General
-  - Improve clj-depend merge config to overwrite `source-paths` only if it is nil or empty.  #1264
+
+  - Improve clj-depend merge config to overwrite `source-paths` only if it is nil or empty. #1264
   - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211
   - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
@@ -405,7 +435,8 @@
   - Bump graalvm version for MS-Windows to 22.2.0, in sync with the other archs. #1211
 
 - Editor
-  - Fix to avoid error when checking code actions from an #_x uneval node. #1227
+
+  - Fix to avoid error when checking code actions from an #\_x uneval node. #1227
   - Add support to decompile jar as a java project when finding the definition of a java class, allowing to have LSP features on that java project. #1187
   - Add refactorings similar to `Sort map`: `Sort vector`, `Sort list`, `Sort set`, and `Sort clauses` for functions like `assoc`. #1155
   - Support java class decompilation for zipfile scheme (vim users).
@@ -426,6 +457,7 @@
 ## 2022.09.01-15.27.31
 
 - General
+
   - Remove dependency on lsp4j. https://github.com/clojure-lsp/lsp4clj/issues/8
   - Fix extra space on :import when sorting classes. #1152
   - Bump Graalvm from 22.0.0.2 to 22.2.0 improving binary performance/size. #1154
@@ -460,6 +492,7 @@
 ## 2022.07.24-18.25.43
 
 - General
+
   - Bump `cljfmt` from 0.8.0 -> 0.8.2
 
 - Editor
@@ -490,6 +523,7 @@
 ## 2022.06.22-14.09.50
 
 - General
+
   - clojure-lsp has a flake.nix now, being able to be built using clj-nix. #999
   - Remove `use-source-paths-from-classpath` setting, its value was already true and disabling it could cause false-positives.
   - Add `compute-external-file-changes` setting as true by default, when enabled it will consider file changes outside editor like git branch changes and update analysis, avoiding the need to restart server when a file is changed outside editor, this will only work if client file-watchers is enabled. #1002
@@ -526,12 +560,14 @@
 ## 2022.05.23-13.18.11
 
 - General
+
   - Allow specify how many classes clojure-lsp should check before moving sorted package imported classes to next line. #966
   - Allow `:linters` to be configured by LSP clients passing string keys/values. #977
   - Support clj-kondo `:config-in-ns` and `:ns-groups` for `clojure-lsp/unused-public-var` linter. #981
   - Improve clean-ns correct positioning of multiple refers.
 
 - Editor
+
   - Fix powershell.exe command execution error on Windows
   - Fix drag in `are` when `clojure.test` is aliased. #967
   - Reduce time to calculate semantic tokens, reducing CPU usage in large files. #970
@@ -547,6 +583,7 @@
 ## 2022.05.03-12.35.40
 
 - General
+
   - Bump clj-kondo to `2022.04.26-20220429.192438-2`.
   - Decrease uncached startup time by 60-70%, by instructing clj-kondo to skip var definition bodies when analyzing deps. [#1674](https://github.com/clj-kondo/clj-kondo/pull/1674)
   - Improve speed of alias/ns completions.
@@ -556,6 +593,7 @@
   - Improve progress report both on editor and CLI using new clj-kondo callback feature.
 
 - Editor
+
   - Support `workspace/willRenameFiles`, renaming namespaces and all its references when a file is renamed.
   - Don't save cache when classpath lookup failed.
   - Wait for editor to apply edits before requesting cursor re-positioning. Fixes cursor positioning after drag in Calva.
@@ -569,6 +607,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2022.04.18-00.59.32
 
 - General
+
   - Improve settings documentation.
   - Fix completion performance regression from previous release.
   - Consider `.bb` and `.cljd` files as clj files. #906
@@ -584,6 +623,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - java: Add `:java :home-path` setting for easier way to specify java location for JDK source analysis. #907
 
 - Editor
+
   - Introduce ALPHA move-form command. #566
   - Rename "Move coll entry up/down" to "Drag forward/backward", matching Calva/Paredit terminology
   - drag: clauses move intuitively in `clojure.test/are`
@@ -591,10 +631,10 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Improve completion performance for most cases, reducing time to compute clj/cljs core symbols.
   - completion: suggest functions defined in Clojure 1.10 and 1.11
   - completion: Fix to no require extra ns when alias is already required. #920
-  - promote-fn: *new feature* Promote a fn to a top-level defn. #783 @mainej
+  - promote-fn: _new feature_ Promote a fn to a top-level defn. #783 @mainej
     - promote-fn can also promote a literal #() to a fn
   - demote-fn: Demote a fn to a literal #()
-  - *breaking* remove cycle-fn-literal, since the same refactorings can be performed with the more clearly named promote-fn and demote-fn
+  - _breaking_ remove cycle-fn-literal, since the same refactorings can be performed with the more clearly named promote-fn and demote-fn
   - drag: Fix to drag element-wise in destructured keys, not pair-wise. #927
   - test-tree: reduce CPU usage, especially during startup
 
@@ -625,6 +665,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2022.03.25-12.02.59
 
 - General
+
   - Fix cljfmt settings merge during refresh/classpath configs merge to avoid multiple config vectors on same symbol.
   - Fix install script for aarch64. #794
   - Fix handling cljfmt config files that end in `.clj` https://github.com/weavejester/cljfmt/issues/190
@@ -638,6 +679,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Clean ns automatically after adding missing require/imports, enabled by default under new `:clean :automatically-after-ns-refactor` flag. #558
 
 - Editor
+
   - extract-function: Fix wrong args when extracting from multi-arity fn. #683
   - extract-function: Fix wrong args when extracting after a local usage. #812 @mainej
   - move-coll-entry: clauses move intuitively in `assoc`, `case`, `cond`, and similar functions. #780 @mainej
@@ -648,7 +690,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Avoid infinite loops when several files are changed simultaneously. #796 @mainej
   - Fix "incoming call hierarchy" not considering usages inside defmethods. #808
   - range-formatting: more efficiently locate extent of range and reduce number of calls to cljfmt, improving performance especially when formatting large ranges. #795 @mainej
-  - cycle-fn-literal: *new feature* convert between function-literal syntaxes `(fn [] ...)` <-> `#(...)`. #774
+  - cycle-fn-literal: _new feature_ convert between function-literal syntaxes `(fn [] ...)` <-> `#(...)`. #774
   - Add find-implementation feature to `defmulti` and `defmethod`. #751
   - Make find-implementation of `defprotocol` names find its implementations and find-implementation on `deftype`/`defrecord` methods find other implementations.
   - Add new code action `Introduce let` for existing command. #825
@@ -666,6 +708,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2022.02.23-12.12.12
 
 - General
+
   - Use `:source-aliases` setting during default deps.edn and lein project-spec aliases, avoiding the need to configure a whole project-spec just because of a additional alias.
   - Exclude from unused-public-var linter vars with metadata `^:export`. #753
   - Fix clean-ns multiple refers sort when there is a alias before the refers.
@@ -680,6 +723,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Bump `org.clojure/clojure` to `1.11.0-rc1`.
 
 - Editor
+
   - Fix exception during code actions calculation when in a invalid code of a map with not even key-pairs.
   - Don't return diagnostics for external files like files on jar dependencies, avoiding noise on lint when opening dependencies.
   - Support finding implementations of defprotocol and references of defrecord/deftype, implementing LSP method `textDocument/implementation`. #656
@@ -706,6 +750,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2022.02.01-16.53.14
 
 - General
+
   - Migrate project from depstar -> tools.build. #711
   - Improve classpath hash to consider invaliding cache when local root deps was changed.
   - Replace datalevin cache db with transit. #703
@@ -730,6 +775,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2022.01.20-14.12.43
 
 - General
+
   - Bump clj-kondo to `2022.01.15`.
   - Add `:classpath` to `serverInfo` command for downstream usages.
   - Fix issues in `extract-function` that arise when operating over `.cljc` files.
@@ -740,6 +786,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Send testTree notification for all project test files after clojure-lsp start. #697
 
 - Editor
+
   - Improve 'create function' refactor code action handling multiple cases. #682
   - Fix 'resolve macro as ...' code action not working.
   - Fix `showDocumentRequest` issues when triggered via some refactor code action.
@@ -755,9 +802,11 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2022.01.03-15.41.19
 
 - General
+
   - Fix some analysis conflicts regarding `custom-async-lint?` feature introduced on latest release causing outdated analysis and some deadlocks.
 
 - Editor
+
   - Fix inline symbol code action regression from previous releases. #678
   - Fix expand let refactor duplicating variables in some cases. #676
   - Add completion support to potemkin usages of a namespace.
@@ -769,6 +818,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.12.20-00.36.56
 
 - General
+
   - Bump clj-kondo to `2021.12.19`, supporting auto-load configs, improving potemkin support, adding more linters and more.
   - Merge `:cljfmt` settings with `:cljfmt-config-path` if file path exists.
   - Avoid high CPU and lockup when clj-kondo throws exceptions. #671
@@ -778,10 +828,11 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Add babashka pod. #555
 
 - Editor
+
   - Change call hierarchy to return selection range of usage, not function definition.
   - Return `edits` in `codeAction/resolve` responses rather than `commands`. #655
   - Improve `:linters :clj-kondo :async-custom-lint?` to avoid infinite loops and default to `true`.
-  - Add new custom LSP feature __Test Tree__, which shows all test hierarchy of a file. #653
+  - Add new custom LSP feature **Test Tree**, which shows all test hierarchy of a file. #653
   - Improve function name finding to consider other function definition types for some features. #666
   - Make `textDocument/hover` return the correct range from LSP spec, the element range instead of the element scope range.
 
@@ -791,6 +842,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.12.01-12.28.16
 
 - General
+
   - Add support for LSP method `textDocument/prepareRename` which it's the proper way to check if the rename will work correctly. #642
   - Expose new custom method `clojure/cursorInfo/raw` for custom hack on current cursor information code. #645
   - Support stub generation using `clj-easy/stub`, adding analysis and linting support for closed sources codes like Datomic. Check `:stubs` settings for more details. #637
@@ -812,6 +864,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.11.16-16.52.14
 
 - General
+
   - Improve rename feature to not heavily rely on valid source-paths for most cases.
   - Fix setTrace exception logs for graalvm native images.
   - Huge improvements on namespaces renames and namespaces references find. #573
@@ -833,6 +886,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.11.02-15.24.47
 
 - General
+
   - Bump Graalvm from 21.2.0 to 21.3.0 improving binary performance/size
   - Fix wrong parse of code when code contains namespaced maps like `#:foo{:bar 1}`. This issue was affecting a lot of features for example code actions.
   - Bump datalevin from 0.5.26 to 0.5.27.
@@ -840,6 +894,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Fix bug where `:source-paths` settings could be hot-reloaded with wrong-value.
 
 - Editor
+
   - Deprecates setting `:show-docs-arity-on-same-line?` in favor of `:hover` `:arity-on-same-line?`.
   - Add support to new LSP `LinkedEditingRange` feature. #341
   - Improve suggested `Add require ...` code actions, this should make clojure-lsp smarter when user wants to add a missing require. #614
@@ -867,6 +922,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.10.20-13.04.11
 
 - General
+
   - Improve intialization feedback report messages.
   - Consider `dev` and `test` alias for deps.edn projects as project-specs during classpath lookup. #586
   - Avoid scanning source-paths twice, as it was being considered as part of external classpath as well.
@@ -883,7 +939,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Fix expand-let bug that occurs when a list form precedes let. #590
   - Add new command to create test for function at point. #582
   - Add new code action to create test for current function/var
-  - Add `private` to documentSymbol to make clear that a var or function is  `private`.
+  - Add `private` to documentSymbol to make clear that a var or function is `private`.
   - Add new code action `Suppress xxx diagnostic`, adding clj-kondo comment code to ignore the diagnostic. #591
   - Add more semantic tokens: aliases for macros, variable and function definitions.
   - Add [clojuredocs](https://clojuredocs.org/) information during symbol hover. #571
@@ -898,6 +954,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.09.30-12.28.16
 
 - General
+
   - Use lower-case for refer/import/require sorting. #560 #561
   - Avoid removing comments when sorting/cleaning namespace. #559
   - Break lines when sorting refers along with then new `:clean :sort :refer :max-line-length` setting with a default of `80`. #562
@@ -909,6 +966,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Support finding config in classpath via new setting`:classpath-config-paths ["my-org/my-lib"]`. #580
 
 - Editor
+
   - Fix `resolve macro as` code action after regression introduced recently.
   - Fix `unused-public-var` not being suppressed during project startup. #554
   - Improve `hover` feature to return elements when inside a function call. #569
@@ -933,6 +991,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.09.13-19.32.00
 
 - General
+
   - Create .clj-kondo folder if not exists in project root. #528
   - Fix exception when `:clojure-lsp/unused-public-var` linter is `:off`. #546
   - Bump clj-kondo to `2021.08.07-20210903.210340-28` to fix a false-positive with potemkin. https://github.com/clj-kondo/clj-kondo/issues/1370.
@@ -943,6 +1002,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Deprecates `:sqlite-db-path` in place of `:cache-path`.
 
 - Editor
+
   - Fix `didChangeWatchedFiles` to correctly create the file on server, properly change file content and re-scan with clj-kondo, or remove file analysis. This should improve LSP analysis reliability when changing files outside the editor. #536
   - Improve completion only showing valid local vars for current cursor.
   - Improve completion sorting adding priority to each item, showing most used symbols like variables and functions first before other completion items.
@@ -959,6 +1019,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.09.03-00.42.46
 
 - General
+
   - Improve logging during startup for better troubleshooting.
   - Refactor allowing calls to `clojure-lsp.main/run!` for manually passing args, useful for `lein-clojure-lsp` for example.
   - Internal: Move graalvm configuration to sqlite-jdbc.
@@ -966,9 +1027,11 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Bump Graalvm from 21.1.0 to 21.2.0
 
 - API/CLI
+
   - Use clj-kondo custom lint for API as well, required for correct diagnostics API feature.
 
 - Editor
+
   - Fix regression, custom `source-paths` from initializationOptions were not being parsed correctly. #537
 
 - Documentation
@@ -977,6 +1040,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.08.24-14.41.56
 
 - General
+
   - Fix classpath scan when classpath has other things like new lines or warning message besides the classpath. Fixes #523
   - Improve `clean-ns` to remove empty reader conditionals(`#?(:clj)` or `#?@(:clj [])` on ns form) after cleaning requires/imports.
   - Fix `clean-ns` false-positives removals to cljc files when the alias/refer/import is being used inside a reader conditional.
@@ -993,10 +1057,12 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.08.16-14.47.54
 
 - General
+
   - Fix wrong parse of source-paths for bb.edn when :paths contains symbols not only strings. #507
   - Bump clj-kondo to fix a issue with clojure-lsp running in a lein process.
 
 - Editor
+
   - Fix find-definition in jars for cljc files where the var is available on both cljs and clj files. #509
   - Add clojure.core.async common vars to common-refers to be required via code action.
   - Remove diagnostics when files are deleted, properly cleaning server. #513
@@ -1023,6 +1089,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.08.03-13.33.03
 
 - General
+
   - Parse correctly unescaped URIs sent from clients like vim avoiding errors on some features.
   - Bump clj-kondo fixing analysis position issue with `declare`, making rename and other features work.
   - Don't use PowerShell profiles on Windows when analyzing classpath. Fixes https://github.com/BetterThanTomorrow/calva/issues/1050
@@ -1035,11 +1102,13 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.07.28-14.24.06
 
 - General
+
   - Minor fix on the analysis queries comparison.
   - Improve GraalVM configuration to use direct/less configurations.
   - Bump clj-kondo 2021.06.18 -> 2021.07.28 which adds support for macroexpanding.
 
 - Editor
+
   - Fix outgoing/incoming call hierarchy when vars are outside project/external jars.
   - Fix completion of aliases without var names typed yet, for example: `string/`
 
@@ -1051,12 +1120,14 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.07.19-14.46.52
 
 - General
+
   - `clean-ns` now sorts ns children forms according to the ClojureStyleGuide, at the moment moving require form before import form, enabled by default under flag `:clean :sort :ns` setting.
   - Improve startup error handler and logging during project analysis. Related to #484
   - Performance improvements using transducers on analysis queries.
   - Fixed auto-resolve source-paths for lein projects that get source-paths dynamically, clojure-lsp will use the default source-paths for these cases
 
 - Editor
+
   - Improve hover output, both markdown and plain text forms.
   - Allow calling thread-first/last and thread-first-all/last-all from within the list.
   - Improve resolve-macro-as messages and default excluded symbols.
@@ -1068,6 +1139,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.07.12-12.30.59
 
 - Editor
+
   - Make semantic-tokens return no token for unknown symbols which has `:clj-kondo/unknown-namespace` on its analysis.
   - Fix file uri location when hovering a symbol.
   - Add reference code lens to keyword definitions, e.g. `re-frame.core/reg-sub`.
@@ -1089,6 +1161,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.07.05-15.12.14
 
 - General
+
   - Add `:clean :sort` settings option to disable sorting during `clean-ns`.
   - Add `:keep` value to `:ns-indent-blocks-indentation` setting to don't change indentation during `clean-ns`.
   - Deprecate `install-latest-clojure-lsp.sh` in place of `install` new script.
@@ -1247,7 +1320,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.03.06-17.05.35
 
 - Fix incremental didChange, debouncing distincting by uri, fixing some inconsistent file changes
-when multiple files are changed at same time (rename, iedit, etc).
+  when multiple files are changed at same time (rename, iedit, etc).
 - Make unused-public-var ignore -main public functions.
 - Add `:exclude-when-defined-by` option to `unused-public-var` linter, check settings documentation for more information.
 
@@ -1356,7 +1429,7 @@ when multiple files are changed at same time (rename, iedit, etc).
 
 ## 2021.02.04-02.08.58
 
- - Fix --version on graalvm native compiled binaries
+- Fix --version on graalvm native compiled binaries
 
 ## 2021.02.04-01.09.21
 
@@ -1423,8 +1496,8 @@ Huge refactor https://github.com/clojure-lsp/clojure-lsp/pull/261 which uses clj
 
 ## 2021.01.14-23.15.54
 
-- Check for the whole line to add-miising-* code actions instead of expect the cursor at the ns to be required/imported - Fixes #258
-- Return all possible add-missing-* code actions to the same line.
+- Check for the whole line to add-miising-\* code actions instead of expect the cursor at the ns to be required/imported - Fixes #258
+- Return all possible add-missing-\* code actions to the same line.
 
 ## 2021.01.14-17.19.10
 

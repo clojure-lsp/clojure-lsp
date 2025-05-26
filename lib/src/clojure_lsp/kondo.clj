@@ -153,7 +153,7 @@
     [(cond-> element
        (and (not (:alias element))
             (full-qualified-namespace? element))
-       (assoc :full-qualified-simbol? true))]
+       (assoc :full-qualified-symbol? true))]
 
     [element]))
 
@@ -185,7 +185,7 @@
                               :external? false
                               :name (:name finding)
                               :to (:ns finding)
-                              :full-qualified-simbol? true
+                              :full-qualified-symbol? true
                               :name-row (:row finding)
                               :name-col (:col finding)
                               :name-end-row (:end-row finding)

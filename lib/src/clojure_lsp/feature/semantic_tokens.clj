@@ -108,7 +108,7 @@
       nil)))
 
 (defn ^:private var-usage-element->absolute-tokens
-  [{:keys [name alias macro name-col to full-qualified-simbol?] :as element}]
+  [{:keys [name alias macro name-col to full-qualified-symbol?] :as element}]
   (let [name-str ^String (str name)]
     (cond
       (and macro
@@ -126,7 +126,7 @@
          (element->absolute-token name-pos :macro)])
 
       (or alias
-          full-qualified-simbol?)
+          full-qualified-symbol?)
       (let [slash (+ name-col (count (str (or alias to))))
             slash-pos (assoc element :name-col slash :name-end-col (inc slash))
             alias-pos (assoc element :name-end-col slash)

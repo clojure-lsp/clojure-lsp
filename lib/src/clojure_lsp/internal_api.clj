@@ -12,11 +12,10 @@
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure-lsp.startup :as startup]
    [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
-   [clojure.set :as set]
    [clojure.string :as string])
   (:import
    [java.io File]))
@@ -155,7 +154,7 @@
 
 (defn ^:private apply-workspace-edit-summary!
   [change components]
-  (if (= :rename (:kind change))
+  (if (fast= :rename (:kind change))
     (apply-workspace-rename-edit-summary! change components)
     (apply-workspace-change-edit-summary! change components)))
 
@@ -234,8 +233,8 @@
 (defn ^:private find-new-uri-checking-rename
   [uri edits]
   (or (some->> edits
-               (filter #(and (= :rename (:kind %))
-                             (= uri (:old-uri %))))
+               (filter #(and (fast= :rename (:kind %))
+                             (fast= uri (:old-uri %))))
                first
                :new-uri)
       uri))
@@ -244,7 +243,7 @@
   (->> edits
        (sort-by #(not= :rename (:kind %)))
        (map (fn [{:keys [kind uri old-text new-text old-uri new-uri]}]
-              (if (= :rename kind)
+              (if (fast= :rename kind)
                 (diff/rename-diff old-uri new-uri (project-root->uri project-root db))
                 (diff/unified-diff uri (find-new-uri-checking-rename uri edits) old-text new-text (project-root->uri project-root db)))))
        (map #(if raw? % (diff/colorize-diff %)))
@@ -323,8 +322,7 @@
       {:result-code 0 :message-fn (constantly "Nothing to clear!")})))
 
 (defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]} db]
-  (let [project-path (shared/uri->filename (project-root->uri project-root db))
-        severity->level (set/map-invert shared/level->severity)]
+  (let [project-path (shared/uri->filename (project-root->uri project-root db))]
     (mapcat (fn [[uri diags]]
               (let [filename (shared/uri->filename uri)
                     file-output (if (:canonical-paths output)
@@ -335,7 +333,7 @@
                                        file-output
                                        (-> range :start :line inc)
                                        (-> range :start :character inc)
-                                       (name (severity->level (int severity)))
+                                       (name (shared/severity->level (int severity)))
                                        code
                                        message)
                          (not raw?) (shared/colorize (f.diagnostic/severity->color severity))))

@@ -6,7 +6,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.set :as set]
    [clojure.string :as string]
    [medley.core :as medley]
@@ -294,7 +294,7 @@
         :loc   loc}])))
 
 (defn multi-arity-fn-definition? [zloc]
-  (= :vector (-> zloc z/leftmost z/tag)))
+  (fast= :vector (-> zloc z/leftmost z/tag)))
 
 (defn expand-let
   "Expand the scope of the next let up the tree."
@@ -426,7 +426,7 @@
   (when-let [zloc (or (z/skip-whitespace z/right zloc)
                       (z/skip-whitespace z/up zloc))]
     (let [;; the expression that will be extracted
-          expr-loc (if (= :token (z/tag zloc))
+          expr-loc (if (fast= :token (z/tag zloc))
                      (z/up (edit/find-op zloc))
                      zloc)
           ;; the top-level form it will be extracted from
@@ -486,11 +486,11 @@
                  (z/replace zloc replacement)))))
 
 (defn ^:private outer-fn-form? [zloc]
-  (and (= :list (z/tag zloc))
+  (and (fast= :list (z/tag zloc))
        (some-> zloc z/down z/sexpr (= 'fn))))
 
 (defn ^:private outer-literal-form? [zloc]
-  (= :fn (z/tag zloc)))
+  (fast= :fn (z/tag zloc)))
 
 (defn ^:private convert-fn-to-literal-params [zloc]
   ;; skip non-fns
@@ -521,12 +521,12 @@
                             (iterate z/next)
                             (take-while (complement z/end?))
                             (keep (fn [zloc]
-                                    (when (= :token (z/tag zloc))
+                                    (when (fast= :token (z/tag zloc))
                                       (when-let [[_ trailing] (re-find #"^%([1-9][0-9]*|&)?$" (z/string zloc))]
                                         (cond
-                                          (= "&" trailing) {:key     :varargs
-                                                            :unnamed #{(z/sexpr zloc)}
-                                                            :named   'args}
+                                          (fast= "&" trailing) {:key     :varargs
+                                                                :unnamed #{(z/sexpr zloc)}
+                                                                :named   'args}
                                           (nil? trailing)  {:key     0
                                                             :unnamed #{(z/sexpr zloc)}
                                                             :named   'element}
@@ -716,9 +716,9 @@
   [zloc db]
   (when-let [oploc (find-function-form zloc)]
     (let [op (z/sexpr oploc)
-          switch-defn-? (and (= 'defn op)
+          switch-defn-? (and (fast= 'defn op)
                              (not (settings/get db [:use-metadata-for-privacy?])))
-          switch-defn? (= 'defn- op)
+          switch-defn? (fast= 'defn- op)
           name-loc (z/right oploc)
           private? (or switch-defn?
                        (-> name-loc z/sexpr meta :private))
@@ -929,7 +929,7 @@
                        :code :invalid-params}}))))
 
 (defn suppress-diagnostic [zloc diagnostic-code]
-  (let [diagnostic-ignore (if (= "clojure-lsp" (namespace (keyword diagnostic-code)))
+  (let [diagnostic-ignore (if (fast= "clojure-lsp" (namespace (keyword diagnostic-code)))
                             :clojure-lsp/ignore
                             :clj-kondo/ignore)
         form-zloc (or (z/up (edit/find-op zloc))

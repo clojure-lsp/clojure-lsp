@@ -6,6 +6,8 @@
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
    [clojure.string :as string]
+   [rewrite-clj.node :as n]
+   [rewrite-clj.zip :as z]
    [sci.core :as sci])
   (:import
    [java.io StringWriter]
@@ -47,7 +49,32 @@
 (defn ^:private analyze [fqns params uris db]
   (sci/create-ns 'clojure-lsp.custom-linters-api nil)
   (let [sci-ctx (sci/init {:namespaces {'clojure-lsp.custom-linters-api custom-linters-api/api-fns
-                                        'clojure.java.io {'file io/file}}
+                                        'clojure.java.io {'file io/file}
+                                        'rewrite-clj.zip {'string z/string
+                                                          'tag z/tag
+                                                          'sexpr z/sexpr
+                                                          'child-sexprs z/child-sexprs
+                                                          'next z/next
+                                                          'prev z/prev
+                                                          'right z/right
+                                                          'left z/left
+                                                          'down z/down
+                                                          'up z/up
+                                                          'leftmost z/leftmost
+                                                          'leftmost? z/leftmost?
+                                                          'rightmost z/rightmost
+                                                          'rightmost? z/rightmost?
+                                                          'find z/find
+                                                          'find-next z/find-next
+                                                          'node z/node}
+                                        'rewrite-clj.node {'map-node n/map-node
+                                                           'vector-node n/vector-node
+                                                           'list-node n/list-node
+                                                           'string-node n/string-node
+                                                           'keyword-node n/keyword-node
+                                                           'token-node n/token-node
+                                                           'children n/children
+                                                           'tag n/tag}}
                            :classes {'java.io.Exception Exception
                                      'java.lang.System System
                                      'java.io.File java.io.File
@@ -69,8 +96,10 @@
         diagnostics* (atom empty-diagnostics)
         reg-diagnostic!-fn (fn [diagnostic]
                              (if-let [missing-fields (missing-required-fields diagnostic)]
-                               (logger/warn logger-tag (format "Ignoring diagnostic, missing required fields: %s for diagnostic %s" missing-fields diagnostic))
-                               (swap! diagnostics* update (:uri diagnostic) (fnil conj []) (custom-diagnostic->lsp diagnostic))))
+                               (logger/warn logger-tag (format "[%s] Ignoring diagnostic, missing required fields: %s for diagnostic %s" fqns missing-fields diagnostic))
+                               (do
+                                 (swap! diagnostics* update (:uri diagnostic) (fnil conj []) (custom-diagnostic->lsp diagnostic))
+                                 (logger/info logger-tag (format "[%s] Registered diagnostic %s" fqns (:uri diagnostic))))))
         out (StringWriter.)
         err (StringWriter.)]
     (try

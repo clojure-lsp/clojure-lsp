@@ -8,7 +8,7 @@
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
    [clojure-lsp.settings :as settings]
-   [clojure-lsp.shared :as shared]
+   [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.string :as string]
    [medley.core :as medley]
    [rewrite-clj.node :as n]
@@ -139,7 +139,7 @@
   (let [existing-unwrapped-require (when refer-sym (z/find-value ns-zip z/next lib-sym))
         existing-wrapped-require (when existing-unwrapped-require
                                    (let [wrapped-require (z/up existing-unwrapped-require)]
-                                     (when (= :vector (z/tag wrapped-require))
+                                     (when (fast= :vector (z/tag wrapped-require))
                                        wrapped-require)))
         existing-refer (when existing-wrapped-require
                          (z/find-value (zsub/subzip existing-wrapped-require) z/next ':refer))
@@ -213,21 +213,21 @@
             ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
             col (if form-type-loc
                   (-> form-type-loc z/rightmost z/node meta :col)
-                  (if (= :same-line ns-inner-blocks-indentation)
+                  (if (fast= :same-line ns-inner-blocks-indentation)
                     2
                     5))
             {:keys [result-loc existing-import-package-by-full-package]}
             (modified-existing-libform ns-zip form-type-loc lib-sym refer-sym alias-sym class-sym)
             form-to-add (cond
-                          (and (= :import libspec-type)
+                          (and (fast= :import libspec-type)
                                existing-import-package-by-full-package)
                           (with-meta (symbol (str lib-sym "." class-sym)) nil)
 
-                          (= :import libspec-type)
+                          (fast= :import libspec-type)
                           [(with-meta lib-sym nil)
                            (with-meta class-sym nil)]
 
-                          (= :require libspec-type)
+                          (fast= :require libspec-type)
                           (cond-> (vector
                                     (if (string? lib-sym)
                                       lib-sym
@@ -244,7 +244,7 @@
                                         (z/up)
                                         (cond->
                                          (or (not add-form-type?)
-                                             (= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
+                                             (fast= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
                                         (z/append-child* (n/spaces (dec col)))
                                         (z/append-child form-to-add)))]
         [{:range (meta (z/node result-loc))
@@ -258,7 +258,7 @@
     (when (and
             rcf-zloc
             (or
-              (= :always c-setting)
+              (fast= :always c-setting)
               (and
                 (not= :never c-setting)
                 producer
@@ -307,10 +307,10 @@
                                                   z/down
                                                   z/string))))
           form-to-add (cond
-                        (= :import libspec-type)
+                        (fast= :import libspec-type)
                         [(with-meta lib-sym nil)
                          (with-meta class-sym nil)]
-                        (= :require libspec-type)
+                        (fast= :require libspec-type)
                         (cond-> (with-meta lib-sym nil)
                           (or alias-sym refer-sym) (vector)
                           alias-sym (conj :as (with-meta alias-sym nil))
@@ -343,7 +343,7 @@
 
 (defn ^:private add-to-namespace
   [zloc type ns-sym sym db]
-  (when (or (= :require-simple type) sym)
+  (when (or (fast= :require-simple type) sym)
     (let [libspec (case type
                     :require-refer {:type :require :lib ns-sym :refer sym}
                     :require-alias {:type :require :lib ns-sym :alias sym}
@@ -421,7 +421,7 @@
   [ns-str aliases->namespaces]
   (->> (string/split ns-str #"\.")
        reverse
-       (drop-while #(= "core" %))
+       (drop-while #(fast= "core" %))
        (reductions
          (fn [accum ns-str]
            (str ns-str "." accum)))
@@ -593,7 +593,7 @@
                                     (map (fn [element]
                                            {:ns (str (:ns element))
                                             :refer cursor-name-str})))
-                                  (q/find-all-var-definitions db)))))]
+                                  (q/find-all-var-definitions db false)))))]
       suggestions)))
 
 (defn ^:private find-forms [zloc p?]

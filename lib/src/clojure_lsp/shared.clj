@@ -38,6 +38,23 @@
 (defn colorize [s color]
   (str \u001b (ansi-colors color) s \u001b (ansi-colors :reset)))
 
+(defn fast=
+  "Faster `=` comparassion for string, symbols and keywords."
+  [a b]
+  (cond
+    (instance? clojure.lang.Symbol b)
+    (.equals ^clojure.lang.Symbol b a)
+
+    (instance? String b)
+    (.equals ^String b a)
+
+    (instance? clojure.lang.Keyword a)
+    (identical? a b)
+
+    ;; Fallback
+    :else
+    (= a b)))
+
 (defn deep-merge
   "Recursively merges maps together.
   Improved version of medley deep-merge concating colls instead of overwriting."
@@ -216,14 +233,14 @@
 
       ;; else
       (let [uri-obj (URI. uri)
-            [_ jar-uri-path nested-file] (cond (= "zipfile" (.getScheme uri-obj))
+            [_ jar-uri-path nested-file] (cond (fast= "zipfile" (.getScheme uri-obj))
                                                (re-find #"^(.*\.jar)::(.*)" (.getPath uri-obj)))]
         (if jar-uri-path
           (str (uri->canonical-path (URI. jar-uri-path)) ":" nested-file)
           (uri-obj->filepath uri-obj))))))
 
 (defn ensure-jarfile [uri db]
-  (let [jar-scheme? (= "jar" (get db [:settings :dependency-scheme]))]
+  (let [jar-scheme? (fast= "jar" (get db [:settings :dependency-scheme]))]
     (if (or jar-scheme?
             (string/starts-with? uri "jar:"))
       uri
@@ -280,7 +297,7 @@
   Jar files are given the `jar:file` or `zipfile` scheme depending on the
   `:dependency-scheme` setting."
   [^String filename db]
-  (let [jar-scheme? (= "jar" (get-in db [:settings :dependency-scheme]))
+  (let [jar-scheme? (fast= "jar" (get-in db [:settings :dependency-scheme]))
         [_ jar-filepath nested-file] (re-find jar-file-with-filename-regex filename)]
     (conform-uri
       (if-let [jar-uri-path (some-> jar-filepath (-> filepath->uri-obj .getPath))]
@@ -574,3 +591,6 @@
   {:error 1
    :warning 2
    :info 3})
+
+(def severity->level
+  (set/map-invert level->severity))

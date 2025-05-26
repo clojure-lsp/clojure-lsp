@@ -11,7 +11,7 @@
   - Bump rewrite-clj to 1.2.50.
   - New feature: Add support for custom project linters. #2043 #2058
   - Publish to clojars `com.github.clojure-lsp/clojure-lsp-test-helper` to be able to test created custom linters.
-  - Bump clj-kondo to `2025.04.08-20250523.111911-10`.
+  - Bump clj-kondo to `2025.04.08-20250526.195207-12`.
   - Small performance improvements across clojure-lsp, especially on places with comparassions inside big loops.
   - Bump clj-depend to `0.11.1`.
 

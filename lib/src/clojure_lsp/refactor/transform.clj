@@ -525,8 +525,8 @@
                                       (when-let [[_ trailing] (re-find #"^%([1-9][0-9]*|&)?$" (z/string zloc))]
                                         (cond
                                           (fast= "&" trailing) {:key     :varargs
-                                                            :unnamed #{(z/sexpr zloc)}
-                                                            :named   'args}
+                                                                :unnamed #{(z/sexpr zloc)}
+                                                                :named   'args}
                                           (nil? trailing)  {:key     0
                                                             :unnamed #{(z/sexpr zloc)}
                                                             :named   'element}

@@ -75,6 +75,9 @@
 (defn db-with-ns-analysis [db namespace]
   (db-with-analysis db ns-analysis namespace))
 
+(defn db-with-uris-analysis [db uris]
+  (db-with-analysis db uris-analysis uris))
+
 ;;;; Filter elements in analysis
 
 (def ^:private xf-analysis->by-bucket (map val))
@@ -683,11 +686,11 @@
         (xf-var-defs include-private?)
         (get-in db [:analysis uri :var-definitions])))
 
-(defn find-all-var-definitions [db]
+(defn find-all-var-definitions [db include-private?]
   (into []
         (comp
           xf-analysis->var-definitions
-          (xf-var-defs false))
+          (xf-var-defs include-private?))
         (:analysis db)))
 
 (defn find-all-path-namespace-definitions [db path-uri]

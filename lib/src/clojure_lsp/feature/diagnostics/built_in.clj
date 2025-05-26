@@ -163,7 +163,7 @@
                                      (map re-pattern
                                           (get settings :test-locations-regex shared/test-locations-regex-default)))
           exclude-def? (partial exclude-public-diagnostic-definition? project-db settings)
-          var-definitions (->> (q/find-all-var-definitions narrowed-db)
+          var-definitions (->> (q/find-all-var-definitions narrowed-db false)
                                (remove exclude-def?))
           test-uri? (fn [{uri :uri}] (some #(re-find % uri) test-locations-regex))
           var-definitions-src (remove test-uri? var-definitions)

@@ -1,7 +1,9 @@
 (ns clojure-lsp.test-helper
   "Entrypoint for clojure-lsp test helper"
   (:require
+   [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.logger :as logger]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h.internal]))
 
 (set! *warn-on-reflection* true)
@@ -53,3 +55,9 @@
   "Changes in-memory db merging specified db."
   [db]
   (swap! (h.internal/db*) merge db))
+
+(defn diagnostics
+  "Return all diagnostics in a concise vector."
+  [uri db]
+  (->> (f.diagnostic/find-diagnostics uri db)
+       (map #(assoc % :level (shared/severity->level (:severity %))))))

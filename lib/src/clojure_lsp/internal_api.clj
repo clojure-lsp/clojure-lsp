@@ -16,7 +16,6 @@
    [clojure-lsp.startup :as startup]
    [clojure.core.async :as async :refer [<! go-loop]]
    [clojure.java.io :as io]
-   [clojure.set :as set]
    [clojure.string :as string])
   (:import
    [java.io File]))
@@ -323,8 +322,7 @@
       {:result-code 0 :message-fn (constantly "Nothing to clear!")})))
 
 (defn ^:private diagnostics->diagnostic-messages [diagnostics {:keys [project-root output raw?]} db]
-  (let [project-path (shared/uri->filename (project-root->uri project-root db))
-        severity->level (set/map-invert shared/level->severity)]
+  (let [project-path (shared/uri->filename (project-root->uri project-root db))]
     (mapcat (fn [[uri diags]]
               (let [filename (shared/uri->filename uri)
                     file-output (if (:canonical-paths output)
@@ -335,7 +333,7 @@
                                        file-output
                                        (-> range :start :line inc)
                                        (-> range :start :character inc)
-                                       (name (severity->level (int severity)))
+                                       (name (shared/severity->level (int severity)))
                                        code
                                        message)
                          (not raw?) (shared/colorize (f.diagnostic/severity->color severity))))

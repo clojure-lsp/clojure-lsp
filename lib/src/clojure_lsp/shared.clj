@@ -591,3 +591,6 @@
   {:error 1
    :warning 2
    :info 3})
+
+(def severity->level
+  (set/map-invert level->severity))

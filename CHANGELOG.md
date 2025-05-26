@@ -14,6 +14,7 @@
   - Bump clj-kondo to `2025.04.08-20250526.195207-12`.
   - Small performance improvements across clojure-lsp, especially on places with comparassions inside big loops.
   - Bump clj-depend to `0.11.1`.
+  - Provide analysis of unresolved namespaces, making features like definition, hover, references work.
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961

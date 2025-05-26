@@ -119,11 +119,11 @@ __You can find all settings and its default values [here](https://github.com/clo
 
 ### Classpath scan
 
-clojure-lsp needs to analyze the whole project and its dependencies to understand your code for most features, during the startup clojure-lsp will try to find the classpath of your project to pass to clj-kondo later.
+clojure-lsp needs to analyze the whole project and its dependencies to understand your code for most features, during the startup clojure-lsp will try to find the classpath of your project spawning a process like `lein` or `clojure`.
 
-You can configure how clojure-lsp should find the classpath with the `project-specs` setting, but keep in mind that usually the [default](https://github.com/clojure-lsp/clojure-lsp/blob/master/lib/src/clojure_lsp/classpath.clj#L184) is enough, it will also consider the `:source-aliases` setting if any to find the classpath using those aliases.
+clojure-lsp uses [these default project-specs](https://github.com/clojure-lsp/clojure-lsp/blob/0366069b9bf92c031a1903bb9460702da193f971/lib/src/clojure_lsp/classpath.clj#L186), if the default is not enough, you can try to change the `:source-aliases` setting, if that is not enough yet, you can configure `:project-specs` which is a more low-level setting.
 
-Supported project types at the moment are:
+This is a summary of the current logic and supported project types:
 
 - `leiningen`: If a `project.clj` is found at the project root, clojure-lsp will run `lein classpath` with `:source-aliases` specified if any.
 - `deps`: If a `deps.edn` is found at the project root, clojure-lsp will run `clojure -Spath` with `:source-aliases` specified if any.
@@ -144,7 +144,7 @@ Alternatively, you can configure the `project-specs` specific for your project, 
                   :classpath-cmd ["clojure" "-A:my-custom-alias" "-Spath"]}]}
 ```
 
-Note that clojure-lsp will make this scan to save the cache when:
+Note that clojure-lsp will analyzes and cache for next startups, it will only analyze again if:
 
 - The project has no cache (`.lsp/.cache`)
 - The project deps file (`project.clj` for example) changed.

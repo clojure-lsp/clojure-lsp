@@ -13,6 +13,7 @@
   - Publish to clojars `com.github.clojure-lsp/clojure-lsp-test-helper` to be able to test created custom linters.
   - Bump clj-kondo to `2025.04.08-20250523.111911-10`.
   - Small performance improvements across clojure-lsp, especially on places with comparassions inside big loops.
+  - Bump clj-depend to `0.11.1`.
 
 - Editor
   - Add support for LSP feature `textDocument/selectionRange`. #1961

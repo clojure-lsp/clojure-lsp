@@ -96,8 +96,10 @@
         diagnostics* (atom empty-diagnostics)
         reg-diagnostic!-fn (fn [diagnostic]
                              (if-let [missing-fields (missing-required-fields diagnostic)]
-                               (logger/warn logger-tag (format "Ignoring diagnostic, missing required fields: %s for diagnostic %s" missing-fields diagnostic))
-                               (swap! diagnostics* update (:uri diagnostic) (fnil conj []) (custom-diagnostic->lsp diagnostic))))
+                               (logger/warn logger-tag (format "[%s] Ignoring diagnostic, missing required fields: %s for diagnostic %s" fqns missing-fields diagnostic))
+                               (do
+                                 (swap! diagnostics* update (:uri diagnostic) (fnil conj []) (custom-diagnostic->lsp diagnostic))
+                                 (logger/info logger-tag (format "[%s] Registered diagnostic %s" fqns (:uri diagnostic))))))
         out (StringWriter.)
         err (StringWriter.)]
     (try

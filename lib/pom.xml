@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp</artifactId>
-  <version>2025.04.23-18.16.46</version>
+  <version>2025.05.27-11.34.31</version>
   <name>clojure-lsp</name>
   <licenses>
     <license>
@@ -32,13 +32,18 @@
     <dependency>
       <groupId>com.github.clojure-lsp</groupId>
       <artifactId>lsp4clj</artifactId>
-      <version>1.11.0</version>
+      <version>1.13.1</version>
       <exclusions>
         <exclusion>
           <groupId>funcool</groupId>
           <artifactId>promesa</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>rewrite-clj</groupId>
+      <artifactId>rewrite-clj</artifactId>
+      <version>1.2.50</version>
     </dependency>
     <dependency>
       <groupId>io.forward</groupId>
@@ -48,7 +53,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2025.04.07</version>
+      <version>2025.04.08-20250526.195207-12</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
@@ -79,6 +84,11 @@
       <groupId>anonimitoraf</groupId>
       <artifactId>clj-flx</artifactId>
       <version>1.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.babashka</groupId>
+      <artifactId>sci</artifactId>
+      <version>0.9.45</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>
@@ -130,6 +140,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2025.04.23-18.16.46</tag>
+    <tag>2025.05.27-11.34.31</tag>
   </scm>
 </project>

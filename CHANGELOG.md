@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.05.27-11.34.31
+
 - General
   - Consider `.lsp/config.edn` as part of project code, removing false positives of unused-public-var linter.
   - Consider full qualified symbols in edn files when checking for var references.

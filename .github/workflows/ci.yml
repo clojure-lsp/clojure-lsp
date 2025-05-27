@@ -85,9 +85,9 @@ jobs:
         jdk: [11, 15, 17]
         include:
           - os: windows-latest
-            jdk: 11
+            jdk: 17
           - os: macos-latest
-            jdk: 11
+            jdk: 17
     steps:
       - uses: actions/checkout@v4
         with:

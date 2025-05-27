@@ -3,7 +3,9 @@
    [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
    [integration.helper :as h]
-   [integration.lsp :as lsp]))
+   [integration.lsp :as lsp]
+   [matcher-combinators.matchers :as m]
+   [matcher-combinators.test :refer [match?]]))
 
 (def a-file-path "watched_files_change/a.clj")
 (def b-file-path "watched_files_change/b.clj")
@@ -20,10 +22,10 @@
     (is (= 1 (count (lsp/client-awaits-server-diagnostics b-file-path)))))
 
   (testing "Before removal, the referenced file has usages"
-    (h/assert-submaps
-      [{:uri (h/source-path->uri b-file-path)}
-       {:uri (h/source-path->uri a-file-path)}]
-      (lsp/request! (fixture/references-request a-file-path 2 6))))
+    (is (match? (m/in-any-order
+                  [{:uri (h/source-path->uri b-file-path)}
+                   {:uri (h/source-path->uri a-file-path)}])
+                (lsp/request! (fixture/references-request a-file-path 2 6)))))
 
   (lsp/notify! (fixture/did-change-watched-files [[b-file-path :deleted]]))
 
@@ -36,9 +38,9 @@
     (is (= 0 (count (lsp/client-awaits-server-diagnostics a-file-path)))))
 
   (testing "After removal, the references are updated"
-    (h/assert-submaps
-      [{:uri (h/source-path->uri a-file-path)}]
-      (lsp/request! (fixture/references-request a-file-path 2 6)))))
+    (is (match? (m/in-any-order
+                  [{:uri (h/source-path->uri a-file-path)}])
+                (lsp/request! (fixture/references-request a-file-path 2 6))))))
 
 (deftest watched-file-created
   (lsp/start-process!)
@@ -54,9 +56,9 @@
     (lsp/client-awaits-server-diagnostics b-file-path))
 
   (testing "Before creation, there is one reference"
-    (h/assert-submaps
-      [{:uri (h/source-path->uri a-file-path)}]
-      (lsp/request! (fixture/references-request a-file-path 2 6))))
+    (is (match? (m/in-any-order
+                  [{:uri (h/source-path->uri a-file-path)}])
+                (lsp/request! (fixture/references-request a-file-path 2 6)))))
 
   (lsp/notify! (fixture/did-change-watched-files [[b-file-path :created]]))
 
@@ -65,7 +67,7 @@
     (is (= 0 (count (lsp/client-awaits-server-diagnostics a-file-path)))))
 
   (testing "After creation, there is now 2 references updated"
-    (h/assert-submaps
-      [{:uri (h/source-path->uri b-file-path)}
-       {:uri (h/source-path->uri a-file-path)}]
-      (lsp/request! (fixture/references-request a-file-path 2 6)))))
+    (is (match? (m/in-any-order
+                  [{:uri (h/source-path->uri b-file-path)}
+                   {:uri (h/source-path->uri a-file-path)}])
+                (lsp/request! (fixture/references-request a-file-path 2 6))))))

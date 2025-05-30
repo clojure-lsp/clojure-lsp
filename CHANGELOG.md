@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- General
+  - Fix .lsp/config.edn file not found diagnostic when it doesn't exist on project.
+
 ## 2025.05.27-13.56.57
 
 - General

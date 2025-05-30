@@ -215,7 +215,9 @@
 (defn ^:private project-paths-to-analyze [db]
   (concat
     (-> db :settings :source-paths)
-    [(.getCanonicalPath (config/local-project-config-file (:project-root-uri db)))]))
+    (let [local-config (config/local-project-config-file (:project-root-uri db))]
+      (when (shared/file-exists? local-config)
+        [(.getCanonicalPath local-config)]))))
 
 (defn initialize-project
   [project-root-uri

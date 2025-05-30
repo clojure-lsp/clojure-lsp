@@ -282,14 +282,14 @@
 
 (deftest dir-uris->file-uris-test
   (testing "when the dir-uri is a dir inside source-path"
-    (with-redefs [fs/glob (constantly [(h/file-uri "file:///user/project/src/foo/bar.clj")
-                                       (h/file-uri "file:///user/project/src/foo/baz.clj")])
+    (with-redefs [fs/glob (constantly [(h/file-path "/user/project/src/foo/bar.clj")
+                                       (h/file-uri "/user/project/src/foo/baz.clj")])
                   fs/canonicalize identity]
       (is (= [(h/file-uri "file:///user/project/src/foo/bar.clj")
               (h/file-uri "file:///user/project/src/foo/baz.clj")]
-             (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src")])))))
+             (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src")] (h/db))))))
   (testing "when the dir-uri is absolute file URI"
-    (with-redefs [fs/glob (constantly [(h/file-uri "file:///user/project/src/foo/bar.clj")])
+    (with-redefs [fs/glob (constantly [(h/file-path "/user/project/src/foo/bar.clj")])
                   fs/canonicalize identity]
       (is (= [(h/file-uri "file:///user/project/src/foo/bar.clj")]
-             (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src/foo/bar.clj")]))))))
+             (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src/foo/bar.clj")] (h/db)))))))

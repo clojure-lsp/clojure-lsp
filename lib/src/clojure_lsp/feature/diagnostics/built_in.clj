@@ -239,7 +239,7 @@
 
 (defn analyze-paths! [paths db]
   (let [uris (mapv #(shared/filename->uri % db) paths)]
-    (analyze-uris! (shared/dir-uris->file-uris uris) db)))
+    (analyze-uris! (shared/dir-uris->file-uris uris db) db)))
 
 (defn db-with-results [db analyze-fn]
   (update-in db [:diagnostics :built-in] merge (analyze-fn db)))

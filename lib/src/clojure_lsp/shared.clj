@@ -2,6 +2,7 @@
   (:require
    [babashka.fs :as fs]
    [clojure-lsp.logger :as logger]
+   [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.set :as set]
@@ -581,11 +582,12 @@
 
 (def test-locations-regex-default #{"_test\\.clj[a-z]?$"})
 
-(defn dir-uris->file-uris [dir-uris]
+(defn dir-uris->file-uris [dir-uris db]
   (into []
         (comp
+          (map shared/uri->filename)
           (mapcat #(fs/glob % "**.{edn,clj,cljs,cljc,bb,cljd,clj_kondo}"))
-          (map (comp str fs/canonicalize)))
+          (map (comp #(shared/filename->uri % db) str fs/canonicalize)))
         dir-uris))
 
 (def level->severity

@@ -123,8 +123,8 @@
        \"file:///project/src/bar.clj\"]
 
    ```"
-  [uris _db]
-  (shared/dir-uris->file-uris uris))
+  [uris db]
+  (shared/dir-uris->file-uris uris db))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."

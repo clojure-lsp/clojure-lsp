@@ -135,7 +135,7 @@
         (is (= 3 (:result-code result)))
         (is (= (str (h/file-path "src/sample_test/api/diagnostics/a.clj") ":3:1: error: [unresolved-symbol] Unresolved symbol: some-unknown-var") (apply (:message-fn result) [])))
         (is (= 1 (count (:diagnostics result))))))
-    (testing "unused-public-var custom lint fn returning only info"
+    (testing "unused-public-var built-in lint fn returning only info"
       (clean-api-db!)
       (let [result (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
                                      :namespace '[sample-test.api.diagnostics.d]

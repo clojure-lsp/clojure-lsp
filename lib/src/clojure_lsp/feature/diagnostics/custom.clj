@@ -152,7 +152,8 @@
 
 (defn analyze-paths!
   [paths db]
-  (analyze-uris! (mapv #(shared/filename->uri % db) paths) db))
+  (let [uris (mapv #(shared/filename->uri % db) paths)]
+    (analyze-uris! (shared/dir-uris->file-uris uris) db)))
 
 (defn db-with-results
   "Update `db` with custom linter analyzers result."

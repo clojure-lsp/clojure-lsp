@@ -581,11 +581,12 @@
 
 (def test-locations-regex-default #{"_test\\.clj[a-z]?$"})
 
-(defn dir-uris->file-uris [dir-uris db]
+(defn dir-uris->file-uris [dir-uris]
   (into []
-        (filter (fn [uri]
-                  (some #(string/starts-with? uri %) dir-uris)))
-        (keys (:analysis db))))
+        (comp
+          (mapcat #(fs/glob % "**.{edn,clj,cljs,cljc,bb,cljd,clj_kondo}"))
+          (map (comp str fs/canonicalize)))
+        dir-uris))
 
 (def level->severity
   {:error 1

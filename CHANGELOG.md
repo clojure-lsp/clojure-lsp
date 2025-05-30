@@ -4,6 +4,7 @@
 
 - General
   - Fix .lsp/config.edn file not found diagnostic when it doesn't exist on project.
+  - Fix custom linters source-paths analysis to consider all files in a source-path.
 
 ## 2025.05.27-13.56.57
 

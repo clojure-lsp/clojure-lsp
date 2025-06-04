@@ -537,6 +537,25 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#codebase-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Codebase architecture
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coding
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Coding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#the-clojure-way" class="md-nav__link">
     <span class="md-ellipsis">
       The Clojure Way
@@ -586,8 +605,8 @@
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#debugging-profiling" class="md-nav__link">
     <span class="md-ellipsis">
       Debugging &amp; Profiling
@@ -595,8 +614,8 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#testing" class="md-nav__link">
     <span class="md-ellipsis">
       Testing
@@ -612,6 +631,11 @@
       Writing tests
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -983,6 +1007,25 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#codebase-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Codebase architecture
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coding
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Coding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#the-clojure-way" class="md-nav__link">
     <span class="md-ellipsis">
       The Clojure Way
@@ -1032,8 +1075,8 @@
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#debugging-profiling" class="md-nav__link">
     <span class="md-ellipsis">
       Debugging &amp; Profiling
@@ -1041,8 +1084,8 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#testing" class="md-nav__link">
     <span class="md-ellipsis">
       Testing
@@ -1058,6 +1101,11 @@
       Writing tests
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1086,6 +1134,125 @@
 
 
 <h1 id="clojure-lsp-development">clojure-lsp Development<a class="headerlink" href="#clojure-lsp-development" title="Permanent link">#</a></h1>
+<h2 id="codebase-architecture">Codebase architecture<a class="headerlink" href="#codebase-architecture" title="Permanent link">#</a></h2>
+<p>The codebase is dense but well structured, the diagram below will help understand the layers making easier to understand where you need to make your changes.</p>
+<div class="highlight"><pre><span></span><code>flowchart TB
+subgraph Clients[&quot;Clients&quot;]
+       VSCode[&quot;VS Code&lt;br&gt;(Calva)&quot;]
+       Emacs[&quot;Emacs&lt;br&gt;(lsp-mode / eglot)&quot;]
+       Vim[&quot;Vim/Neovim&quot;]
+       IntelliJ[&quot;IntelliJ&lt;br&gt;(clojure-lsp-intellij)&quot;]
+       REPL[&quot;Repl&quot;]
+       OtherEditors[&quot;Other editors&quot;]
+ end
+subgraph subGraph1[&quot;Cli (cli/)&quot;]
+       CLIMain[&quot;Process&lt;br&gt;(main.clj)&quot;]
+       LSPServer[&quot;LSP Server&lt;br&gt;(server.clj)&quot;]
+ end
+subgraph subGraph2[&quot;Core Services&quot;]
+       Handlers[&quot;Features handlers&lt;br&gt;(handlers.clj)&quot;]
+       Startup[&quot;Startup &amp;amp; Init&lt;br&gt;(startup.clj)&quot;]
+       Config[&quot;Configuration&lt;br&gt;(config.clj)&quot;]
+       DB[&quot;Database&lt;br&gt;(db.clj)&quot;]
+ end
+subgraph subGraph3[&quot;Analysis Engine&quot;]
+       KondoIntegration[&quot;clj-kondo Integration&lt;br&gt;(kondo.clj)&quot;]
+       Parser[&quot;Parser&lt;br&gt;(parser.clj)&quot;]
+       Queries[&quot;Analysis Queries&lt;br&gt;(queries.clj)&quot;]
+       DepGraph[&quot;Dependency Graph&lt;br&gt;(dep_graph.clj)&quot;]
+ end
+subgraph subGraph4[&quot;Feature Implementations&quot;]
+       Completion[&quot;Completion&lt;br&gt;(completion.clj)&quot;]
+       Diagnostics[&quot;Diagnostics&lt;br&gt;(diagnostics.clj)&quot;]
+       CodeActions[&quot;Code Actions&lt;br&gt;(code_actions.clj)&quot;]
+       Rename[&quot;Rename&lt;br&gt;(rename.clj)&quot;]
+       Hover[&quot;Hover&lt;br&gt;(hover.clj)&quot;]
+       References[&quot;Find References&quot;]
+       Format[&quot;Formatting&lt;br&gt;(format.clj)&quot;]
+       Refactoring[&quot;Refactoring Features&quot;]
+ end
+subgraph subGraph5[&quot;Support Systems&quot;]
+       FileManagement[&quot;File Management&lt;br&gt;(file_management.clj)&quot;]
+       Classpath[&quot;Classpath Resolution&lt;br&gt;(classpath.clj)&quot;]
+       SourcePaths[&quot;Source Paths&lt;br&gt;(source_paths.clj)&quot;]
+       Logger[&quot;Logging&lt;br&gt;(logger.clj)&quot;]
+ end
+subgraph subGraph6[&quot;Core Library (lib/)&quot;]
+       API[&quot;Public API&lt;br&gt;(api.clj)&quot;]
+       InternalAPI[&quot;Internal API&lt;br&gt;(internal_api.clj)&quot;]
+       subGraph2
+       subGraph3
+       subGraph4
+       subGraph5
+ end
+subgraph subGraph7[&quot;External Tools&quot;]
+       CljKondo[&quot;clj-kondo&lt;br&gt;(Static Analysis)&quot;]
+       Cljfmt[&quot;cljfmt&lt;br&gt;(Code Formatting)&quot;]
+       CljDepend[&quot;clj-depend&lt;br&gt;(Dependency Analysis)&quot;]
+       ClojureDocs[&quot;ClojureDocs&lt;br&gt;(Documentation)&quot;]
+ end
+subgraph subGraph8[&quot;File System&quot;]
+       ProjectFiles[&quot;Project Source Files&lt;br&gt;(.clj, .cljs, .cljc)&quot;]
+       ConfigFiles[&quot;Config Files&lt;br&gt;(deps.edn, project.clj)&quot;]
+       Dependencies[&quot;Dependencies&lt;br&gt;(JARs, Git repos)&quot;]
+       CacheFiles[&quot;Cache Files&lt;br&gt;(.clj-kondo, .lsp)&quot;]
+ end
+ VSCode --&gt; CLIMain
+ Emacs --&gt; CLIMain
+ Vim --&gt; CLIMain
+ OtherEditors --&gt; CLIMain
+ CLIMain --&gt; API &amp; LSPServer
+ LSPServer --&gt; Handlers
+ REPL --&gt; API
+ API --&gt; InternalAPI
+ Handlers --&gt; InternalAPI &amp; Completion &amp; Diagnostics &amp; CodeActions &amp; Rename &amp; Hover &amp; References &amp; Format &amp; Refactoring
+ InternalAPI --&gt; Startup &amp; Config &amp; DB
+ Startup --&gt; KondoIntegration &amp; Classpath &amp; SourcePaths
+ KondoIntegration --&gt; CljKondo &amp; Parser &amp; CacheFiles
+ Format --&gt; Cljfmt
+ DepGraph --&gt; CljDepend
+ Hover --&gt; ClojureDocs
+ Parser --&gt; Queries
+ Queries --&gt; DB
+ Completion --&gt; Queries
+ Diagnostics --&gt; Queries
+ CodeActions --&gt; Queries
+ Rename --&gt; Queries
+ References --&gt; Queries
+ FileManagement --&gt; ProjectFiles &amp; ConfigFiles
+ Classpath --&gt; Dependencies
+
+ CLIMain:::entryPoint
+ LSPServer:::entryPoint
+ Handlers:::coreService
+ Startup:::coreService
+ Config:::coreService
+ DB:::coreService
+ KondoIntegration:::coreService
+ Parser:::coreService
+ Completion:::feature
+ Diagnostics:::feature
+ CodeActions:::feature
+ Rename:::feature
+ Hover:::feature
+ References:::feature
+ Format:::feature
+ Refactoring:::feature
+ CljKondo:::external
+ Cljfmt:::external
+ CljDepend:::external
+ ClojureDocs:::external
+ ProjectFiles:::storage
+ ConfigFiles:::storage
+ Dependencies:::storage
+ CacheFiles:::storage
+ classDef entryPoint fill:#e1f5fe
+ classDef coreService fill:#f3e5f5
+ classDef feature fill:#e8f5e8
+ classDef external fill:#fff3e0
+ classDef storage fill:#fce4ec
+</code></pre></div>
+<h2 id="coding">Coding<a class="headerlink" href="#coding" title="Permanent link">#</a></h2>
 <p>There are several ways of finding and fixing a bug or implementing a new feature:</p>
 <ul>
 <li><a href="#the-clojure-way">The Clojure Way</a></li>
@@ -1094,7 +1261,7 @@
 </ul>
 <p>Whichever development path you choose: For final testing, it is good to rebuild the binary with <code>bb debug-cli</code>.</p>
 <p>There are two custom LSP methods <code>clojure/serverInfo/log</code> and <code>clojure/cursorInfo/log</code>. They can assist in debugging.</p>
-<h2 id="the-clojure-way">The Clojure Way<a class="headerlink" href="#the-clojure-way" title="Permanent link">#</a></h2>
+<h3 id="the-clojure-way">The Clojure Way<a class="headerlink" href="#the-clojure-way" title="Permanent link">#</a></h3>
 <p>With a <strong>clojure-lsp + <a href="https://nrepl.org">nREPL</a></strong> powered Clojure editor you can modify your editor session's clojure-lsp server using the Clojure REPL.</p>
 <p>Here's demo video: https://www.youtube.com/watch?v=4UvT0yqBDw8</p>
 <p>These are the steps:</p>
@@ -1119,7 +1286,7 @@
 </ol>
 <p>You have just modified the LSP server powering your editor while it was running! This is the Clojure way. No recompiling and restarting and reloading. That is some other, non-Clojure, way.</p>
 <p>The details in how to perform these steps can vary a bit between the various Clojure editors/plugins.</p>
-<h3 id="visual-studio-code-with-calva">Visual Studio Code with Calva<a class="headerlink" href="#visual-studio-code-with-calva" title="Permanent link">#</a></h3>
+<h4 id="visual-studio-code-with-calva">Visual Studio Code with Calva<a class="headerlink" href="#visual-studio-code-with-calva" title="Permanent link">#</a></h4>
 <ul>
 <li>
 <p>This project comes with <a href="https://calva.io">Calva</a> configuration to use the <code>clojure-lsp[.bat]</code> executable built in step 1 above. You can skip step 2, unless are running on MS-Widnows, in which case you should update the setting in <code>.vscode/settings.json</code> to add the <code>.bat</code> extension, i.e. <code>"calva.clojureLspPath": "./clojure-lsp.bat"</code>.</p>
@@ -1129,7 +1296,7 @@
 </li>
 <li>The <strong>Hack away!</strong> step needs to start with you issuing the command <strong>Calva: Load Current File and Dependencies</strong>.</li>
 </ul>
-<h3 id="emacs-with-cider">Emacs with CIDER<a class="headerlink" href="#emacs-with-cider" title="Permanent link">#</a></h3>
+<h4 id="emacs-with-cider">Emacs with CIDER<a class="headerlink" href="#emacs-with-cider" title="Permanent link">#</a></h4>
 <ul>
 <li>To configure Emacs to use the nREPL-enabled executable, run <code>(setq lsp-clojure-custom-server-command '("~/path/to/clojure-lsp/clojure-lsp"))</code>, adjusting the path as necessary. If you add this to your Emacs config, you can skip this step in the future.</li>
 <li>To restart the clojure-lsp server, execute the Emacs command <code>lsp-workspace-restart</code>.</li>
@@ -1147,7 +1314,7 @@
 <span class="w">        </span><span class="p">(</span><span class="nv">cider-connect-clj</span><span class="w"> </span><span class="o">`</span><span class="p">(</span><span class="nb">:host</span><span class="w"> </span><span class="s">&quot;localhost&quot;</span>
 <span class="w">                             </span><span class="nb">:port</span><span class="w"> </span><span class="o">,</span><span class="nv">port</span><span class="p">))))))</span>
 </code></pre></div>
-<h3 id="vim-with-cocnvim-and-fireplace">Vim with coc.nvim and Fireplace<a class="headerlink" href="#vim-with-cocnvim-and-fireplace" title="Permanent link">#</a></h3>
+<h4 id="vim-with-cocnvim-and-fireplace">Vim with coc.nvim and Fireplace<a class="headerlink" href="#vim-with-cocnvim-and-fireplace" title="Permanent link">#</a></h4>
 <ul>
 <li>Change <code>coc-settings.json</code> (<code>:CocConfig</code>) <code>clojure-lsp: {command: "~/path/to/clojure-lsp/clojure-lsp"}</code>, adjusting the past as necessary.</li>
 <li>To restart the clojure-lsp server use <code>:CocRestart</code></li>
@@ -1161,7 +1328,7 @@ nnoremap &lt;silent&gt; crsl :call setreg(&#39;*&#39;, CocRequest(&#39;clojure-l
 &quot; Connects to nrepl
 nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-lsp&#39;, &#39;clojure/serverInfo/raw&#39;)[&#39;port&#39;]&lt;CR&gt;
 </code></pre></div>
-<h3 id="neovim-with-conjure">Neovim with Conjure<a class="headerlink" href="#neovim-with-conjure" title="Permanent link">#</a></h3>
+<h4 id="neovim-with-conjure">Neovim with Conjure<a class="headerlink" href="#neovim-with-conjure" title="Permanent link">#</a></h4>
 <ul>
 <li>Change the lsp <a href="https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#clojure_lsp">config</a> <code>cmd</code> to "~/path/to/clojure-lsp/clojure-lsp", adjusting the path as necessary.</li>
 <li>To <a href="https://neovim.io/doc/user/lsp.html#lsp-faq">restart</a> the LSP:</li>
@@ -1170,11 +1337,11 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 <li>To find the server info or the log file, use <code>:lua clients = vim.lsp.get_active_clients() for k, client_data in ipairs(clients) do id = client_data.id end client = vim.lsp.get_client_by_id(id) result = client.request_sync("clojure/serverInfo/raw", {}, 5000, 15) print('port = ' .. result.result.port) print('log-path = ' .. result.result['log-path'])</code></li>
 <li>To connect the nREPL client, run <code>:ConjureConnect &lt;port&gt;</code></li>
 </ul>
-<h2 id="debugging-profiling">Debugging &amp; Profiling<a class="headerlink" href="#debugging-profiling" title="Permanent link">#</a></h2>
+<h3 id="debugging-profiling">Debugging &amp; Profiling<a class="headerlink" href="#debugging-profiling" title="Permanent link">#</a></h3>
 <p>The nREPL includes tools for debugging and profiling clojure-lsp. See <code>cli/dev/clojure_lsp/debug.clj</code>.</p>
 <p>If you're interested in using the profiling tools in that file, you'll need to be familiar with <a href="https://github.com/hugoduncan/criterium">criterium</a> and <a href="http://clojure-goes-fast.com/blog/profiling-tool-async-profiler/">clj-async-profiler</a>.</p>
 <p>Note that the performance of clojure-lsp is highly dependent on the size of its db. If you load a repl with <code>-A:build</code>, you'll have access to the debugging tools, but the db will be nearly empty. Follow the [steps][#the-clojure-way] above to connect to an nREPL which has a populated db.</p>
-<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h2>
+<h3 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h3>
 <p>Run <code>bb tasks</code> for a list of available dev tasks.</p>
 <p>The codebase consists of the <code>lib/</code> library and the <code>cli/</code> program which depends on it.</p>
 <ol>
@@ -1197,7 +1364,7 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
 <ol>
 <li><code>bb lint</code></li>
 </ol>
-<h3 id="writing-tests">Writing tests<a class="headerlink" href="#writing-tests" title="Permanent link">#</a></h3>
+<h4 id="writing-tests">Writing tests<a class="headerlink" href="#writing-tests" title="Permanent link">#</a></h4>
 <p>A test should be able to run on all JDK versions in scope starting with 1.8 and across <code>GNU/Linux</code>, <code>macos</code> and <code>MS-Windows</code> operating systems.</p>
 <p>The test author should be aware of the following important differences between *nix and windows:</p>
 <ol>
@@ -1254,7 +1421,7 @@ nnoremap &lt;silent&gt; crsp :execute &#39;Connect&#39; CocRequest(&#39;clojure-
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 4, 2025 13:27:32">June 4, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 4, 2025 16:17:40">June 4, 2025</span>
   </span>
 
     

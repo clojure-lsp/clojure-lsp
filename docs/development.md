@@ -1,5 +1,129 @@
 # clojure-lsp Development
 
+## Codebase architecture 
+
+The codebase is dense but well structured, the diagram below will help understand the layers making easier to understand where you need to make your changes.
+
+```mermaid
+flowchart TB
+subgraph Clients["Clients"]
+       VSCode["VS Code<br>(Calva)"]
+       Emacs["Emacs<br>(lsp-mode / eglot)"]
+       Vim["Vim/Neovim"]
+       IntelliJ["IntelliJ<br>(clojure-lsp-intellij)"]
+       REPL["Repl"]
+       OtherEditors["Other editors"]
+ end
+subgraph subGraph1["Cli (cli/)"]
+       CLIMain["Process<br>(main.clj)"]
+       LSPServer["LSP Server<br>(server.clj)"]
+ end
+subgraph subGraph2["Core Services"]
+       Handlers["Features handlers<br>(handlers.clj)"]
+       Startup["Startup &amp; Init<br>(startup.clj)"]
+       Config["Configuration<br>(config.clj)"]
+       DB["Database<br>(db.clj)"]
+ end
+subgraph subGraph3["Analysis Engine"]
+       KondoIntegration["clj-kondo Integration<br>(kondo.clj)"]
+       Parser["Parser<br>(parser.clj)"]
+       Queries["Analysis Queries<br>(queries.clj)"]
+       DepGraph["Dependency Graph<br>(dep_graph.clj)"]
+ end
+subgraph subGraph4["Feature Implementations"]
+       Completion["Completion<br>(completion.clj)"]
+       Diagnostics["Diagnostics<br>(diagnostics.clj)"]
+       CodeActions["Code Actions<br>(code_actions.clj)"]
+       Rename["Rename<br>(rename.clj)"]
+       Hover["Hover<br>(hover.clj)"]
+       References["Find References"]
+       Format["Formatting<br>(format.clj)"]
+       Refactoring["Refactoring Features"]
+ end
+subgraph subGraph5["Support Systems"]
+       FileManagement["File Management<br>(file_management.clj)"]
+       Classpath["Classpath Resolution<br>(classpath.clj)"]
+       SourcePaths["Source Paths<br>(source_paths.clj)"]
+       Logger["Logging<br>(logger.clj)"]
+ end
+subgraph subGraph6["Core Library (lib/)"]
+       API["Public API<br>(api.clj)"]
+       InternalAPI["Internal API<br>(internal_api.clj)"]
+       subGraph2
+       subGraph3
+       subGraph4
+       subGraph5
+ end
+subgraph subGraph7["External Tools"]
+       CljKondo["clj-kondo<br>(Static Analysis)"]
+       Cljfmt["cljfmt<br>(Code Formatting)"]
+       CljDepend["clj-depend<br>(Dependency Analysis)"]
+       ClojureDocs["ClojureDocs<br>(Documentation)"]
+ end
+subgraph subGraph8["File System"]
+       ProjectFiles["Project Source Files<br>(.clj, .cljs, .cljc)"]
+       ConfigFiles["Config Files<br>(deps.edn, project.clj)"]
+       Dependencies["Dependencies<br>(JARs, Git repos)"]
+       CacheFiles["Cache Files<br>(.clj-kondo, .lsp)"]
+ end
+ VSCode --> CLIMain
+ Emacs --> CLIMain
+ Vim --> CLIMain
+ OtherEditors --> CLIMain
+ CLIMain --> API & LSPServer
+ LSPServer --> Handlers
+ REPL --> API
+ API --> InternalAPI
+ Handlers --> InternalAPI & Completion & Diagnostics & CodeActions & Rename & Hover & References & Format & Refactoring
+ InternalAPI --> Startup & Config & DB
+ Startup --> KondoIntegration & Classpath & SourcePaths
+ KondoIntegration --> CljKondo & Parser & CacheFiles
+ Format --> Cljfmt
+ DepGraph --> CljDepend
+ Hover --> ClojureDocs
+ Parser --> Queries
+ Queries --> DB
+ Completion --> Queries
+ Diagnostics --> Queries
+ CodeActions --> Queries
+ Rename --> Queries
+ References --> Queries
+ FileManagement --> ProjectFiles & ConfigFiles
+ Classpath --> Dependencies
+
+ CLIMain:::entryPoint
+ LSPServer:::entryPoint
+ Handlers:::coreService
+ Startup:::coreService
+ Config:::coreService
+ DB:::coreService
+ KondoIntegration:::coreService
+ Parser:::coreService
+ Completion:::feature
+ Diagnostics:::feature
+ CodeActions:::feature
+ Rename:::feature
+ Hover:::feature
+ References:::feature
+ Format:::feature
+ Refactoring:::feature
+ CljKondo:::external
+ Cljfmt:::external
+ CljDepend:::external
+ ClojureDocs:::external
+ ProjectFiles:::storage
+ ConfigFiles:::storage
+ Dependencies:::storage
+ CacheFiles:::storage
+ classDef entryPoint fill:#e1f5fe
+ classDef coreService fill:#f3e5f5
+ classDef feature fill:#e8f5e8
+ classDef external fill:#fff3e0
+ classDef storage fill:#fce4ec
+```
+
+## Coding
+
 There are several ways of finding and fixing a bug or implementing a new feature:
 
 - [The Clojure Way](#the-clojure-way)
@@ -10,7 +134,7 @@ Whichever development path you choose: For final testing, it is good to rebuild 
 
 There are two custom LSP methods `clojure/serverInfo/log` and `clojure/cursorInfo/log`. They can assist in debugging.
 
-## The Clojure Way
+### The Clojure Way
 
 With a **clojure-lsp + [nREPL](https://nrepl.org)** powered Clojure editor you can modify your editor session's clojure-lsp server using the Clojure REPL.
 
@@ -38,14 +162,14 @@ You have just modified the LSP server powering your editor while it was running!
 
 The details in how to perform these steps can vary a bit between the various Clojure editors/plugins.
 
-### Visual Studio Code with Calva
+#### Visual Studio Code with Calva
 
 * This project comes with [Calva](https://calva.io) configuration to use the `clojure-lsp[.bat]` executable built in step 1 above. You can skip step 2, unless are running on MS-Widnows, in which case you should update the setting in `.vscode/settings.json` to add the `.bat` extension, i.e. `"calva.clojureLspPath": "./clojure-lsp.bat"`.
 
 * To restart the clojure-lsp server, use the VS Code command **Developer: Reload Window**
 * The **Hack away!** step needs to start with you issuing the command **Calva: Load Current File and Dependencies**.
 
-### Emacs with CIDER
+#### Emacs with CIDER
 
 * To configure Emacs to use the nREPL-enabled executable, run `(setq lsp-clojure-custom-server-command '("~/path/to/clojure-lsp/clojure-lsp"))`, adjusting the path as necessary. If you add this to your Emacs config, you can skip this step in the future.
 * To restart the clojure-lsp server, execute the Emacs command `lsp-workspace-restart`.
@@ -66,7 +190,7 @@ If you re-connect regulary, you may want to add this Emacs shortcut:
                              :port ,port))))))
 ```
 
-### Vim with coc.nvim and Fireplace
+#### Vim with coc.nvim and Fireplace
 
 * Change `coc-settings.json` (`:CocConfig`) `clojure-lsp: {command: "~/path/to/clojure-lsp/clojure-lsp"}`, adjusting the past as necessary.
 * To restart the clojure-lsp server use `:CocRestart`
@@ -83,7 +207,7 @@ nnoremap <silent> crsl :call setreg('*', CocRequest('clojure-lsp', 'clojure/serv
 nnoremap <silent> crsp :execute 'Connect' CocRequest('clojure-lsp', 'clojure/serverInfo/raw')['port']<CR>
 ```
 
-### Neovim with Conjure
+#### Neovim with Conjure
 
 * Change the lsp [config](https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#clojure_lsp) `cmd` to "~/path/to/clojure-lsp/clojure-lsp", adjusting the path as necessary.
 * To [restart](https://neovim.io/doc/user/lsp.html#lsp-faq) the LSP:
@@ -92,7 +216,7 @@ nnoremap <silent> crsp :execute 'Connect' CocRequest('clojure-lsp', 'clojure/ser
 * To find the server info or the log file, use `:lua clients = vim.lsp.get_active_clients() for k, client_data in ipairs(clients) do id = client_data.id end client = vim.lsp.get_client_by_id(id) result = client.request_sync("clojure/serverInfo/raw", {}, 5000, 15) print('port = ' .. result.result.port) print('log-path = ' .. result.result['log-path'])`
 * To connect the nREPL client, run `:ConjureConnect <port>`
 
-## Debugging & Profiling
+### Debugging & Profiling
 
 The nREPL includes tools for debugging and profiling clojure-lsp. See `cli/dev/clojure_lsp/debug.clj`.
 
@@ -100,7 +224,7 @@ If you're interested in using the profiling tools in that file, you'll need to b
 
 Note that the performance of clojure-lsp is highly dependent on the size of its db. If you load a repl with `-A:build`, you'll have access to the debugging tools, but the db will be nearly empty. Follow the [steps][#the-clojure-way] above to connect to an nREPL which has a populated db.
 
-## Testing
+### Testing
 
 Run `bb tasks` for a list of available dev tasks.
 
@@ -125,7 +249,7 @@ The same development version can be used to lint all of the source code.
 
 1. `bb lint`
 
-### Writing tests
+#### Writing tests
 
 A test should be able to run on all JDK versions in scope starting with 1.8 and across `GNU/Linux`, `macos` and `MS-Windows` operating systems.
 

@@ -4,7 +4,16 @@
 
 The codebase is dense but well structured, the diagram below will help understand the layers making easier to understand where you need to make your changes.
 
+![visualization](images/codebase-arch.svg)
+
+<details>
+<summary><b>visualization above's code</b></summary>
+
 ```mermaid
+---
+config:
+theme: dark
+---
 flowchart TB
 subgraph Clients["Clients"]
        VSCode["VS Code<br>(Calva)"]
@@ -90,7 +99,6 @@ subgraph subGraph8["File System"]
  References --> Queries
  FileManagement --> ProjectFiles & ConfigFiles
  Classpath --> Dependencies
-
  CLIMain:::entryPoint
  LSPServer:::entryPoint
  Handlers:::coreService
@@ -121,6 +129,7 @@ subgraph subGraph8["File System"]
  classDef external fill:#fff3e0
  classDef storage fill:#fce4ec
 ```
+</details>
 
 ## Coding
 

@@ -46,7 +46,8 @@
                             (some-> node z/next z/next z/sexpr-able? not)
                             (recur node ignores)
 
-                            (contains? ignores-keywords (some-> node z/next z/next z/sexpr))
+                            (and (contains? ignores-keywords (some-> node z/next z/next z/sexpr))
+                                 (z/sexpr-able? (z/right node)))
                             (recur node (conj ignores (assoc (meta (z/node (z/right node)))
                                                              :codes (z/sexpr (z/find-next-tag node z/next :vector)))))
 

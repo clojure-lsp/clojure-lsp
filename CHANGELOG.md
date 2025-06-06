@@ -7,6 +7,7 @@
   - Fix custom linters source-paths analysis to consider all files in a source-path.
   - Fix crash on files with empty ignore comments.
   - Bump clj-kondo to `2025.06.05`.
+  - Fix analysis consistency for internal files.
 
 ## 2025.05.27-13.56.57
 

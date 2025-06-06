@@ -284,7 +284,8 @@
       (with-additional-config settings)))
 
 (defn ^:private config-for-internal-paths [paths db file-analyzed-fn]
-  (let [full-analysis? (not (contains? #{:project-only :project-and-shallow-analysis} (:project-analysis-type db)))
+  ;; source-paths analysis should always include all code data (full-analysis)
+  (let [full-analysis? (not= :project-only (:project-analysis-type db))
         settings (settings/all db)]
     (-> (config-for-paths paths file-analyzed-fn db settings)
         (assoc-in [:config :analysis] {:arglists full-analysis?

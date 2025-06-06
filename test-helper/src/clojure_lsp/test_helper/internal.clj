@@ -75,7 +75,9 @@
   (-debug [_this _fmeta arg1 arg2 arg3] (println arg1 arg2 arg3)))
 
 (defn ^:private make-components []
-  {:db* (atom (assoc db/initial-db :env :unit-test))
+  {:db* (atom (assoc db/initial-db
+                     :env :unit-test
+                     :project-analysis-type :project-and-shallow-analysis))
    :logger (->TestLogger)
    :producer (->TestProducer)
    :current-changes-chan (async/chan 1)

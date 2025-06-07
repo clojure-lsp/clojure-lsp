@@ -8,7 +8,7 @@ on:
 
 jobs:
   release-clojars:
-    name: Release artifact to Clojars
+    name: Release lib artifact to Clojars
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-22.04
     steps:
@@ -56,7 +56,7 @@ jobs:
           bb deploy-clojars-standalone
 
   release-clojars-test-helper:
-    name: Release artifact to Clojars
+    name: Release test-helper artifact to Clojars
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-22.04
     steps:

@@ -581,12 +581,17 @@
     (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))
 
 (def test-locations-regex-default #{"_test\\.clj[a-z]?$"})
+(def clj-extensions-regex ".+.(edn|clj|cljs|cljc|bb|cljd|clj_kondo)$")
+(def clj-file-regex "**.{edn,clj,cljs,cljc,bb,cljd,clj_kondo}")
 
 (defn dir-uris->file-uris [dir-uris db]
   (into []
         (comp
           (map shared/uri->filename)
-          (mapcat #(fs/glob % "**.{edn,clj,cljs,cljc,bb,cljd,clj_kondo}"))
+          (mapcat (fn [filename]
+                    (if (re-matches (re-pattern clj-extensions-regex) filename)
+                      [filename]
+                      (fs/glob filename clj-file-regex))))
           (map (comp #(shared/filename->uri % db) str fs/canonicalize)))
         dir-uris))
 

@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.logger :as logger]
    [clojure-lsp.refactor.edit :as edit]
+   [clojure-lsp.shared :as shared]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.parser :as p]
@@ -106,7 +107,8 @@
       (logger/warn "It was not possible to parse text. Probably not valid clojure code."))))
 
 (defn zloc-of-file [db uri]
-  (zloc-of-string (get-in db [:documents uri :text])))
+  (zloc-of-string (or (get-in db [:documents uri :text])
+                      (shared/slurp-uri uri))))
 
 (defn safe-zloc-of-file [db uri]
   (try

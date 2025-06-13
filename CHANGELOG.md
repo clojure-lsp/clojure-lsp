@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.06.13-20.45.44
+
 - General
   - Fix custom-linters not working for cases using `clojure-lsp.custom-linters-api/find-nodes`.
   - Improve `clojure-lsp.custom-linters-api/dir-uris->file-uris` to consider file-uris as well on input.

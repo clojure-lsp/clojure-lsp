@@ -352,13 +352,13 @@
           :range {:start {:line 0 :character 4} :end {:line 0 :character 5}}
           :severity 2
           :source "clojure-lsp"
-          :message "Namespace 'a' is part of a cyclic dependency: a -> b -> a"
+          :message "Circular dependency: 'a' ⟷ 'b'. Consider extracting shared code to a separate namespace."
           :code "clojure-lsp/cyclic-dependencies"}
          {:uri (h/file-uri "file:///b.clj")
           :range {:start {:line 0 :character 4} :end {:line 0 :character 5}}
           :severity 2
           :source "clojure-lsp"
-          :message "Namespace 'b' is part of a cyclic dependency: a -> b -> a"
+          :message "Circular dependency: 'b' ⟷ 'a'. Consider extracting shared code to a separate namespace."
           :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})))
@@ -381,15 +381,15 @@
       (h/assert-submaps
         [{:uri (h/file-uri "file:///foo.clj")
           :severity 1
-          :message "Namespace 'foo' is part of a cyclic dependency: foo -> bar -> baz -> foo"
+          :message "Complex dependency cycle detected: foo → bar → baz → foo. Consider refactoring to break the circular dependency - extract shared functionality or reorganize the dependency structure."
           :code "clojure-lsp/cyclic-dependencies"}
          {:uri (h/file-uri "file:///bar.clj")
           :severity 1
-          :message "Namespace 'bar' is part of a cyclic dependency: foo -> bar -> baz -> foo"
+          :message "Complex dependency cycle detected: foo → bar → baz → foo. Consider refactoring to break the circular dependency - extract shared functionality or reorganize the dependency structure."
           :code "clojure-lsp/cyclic-dependencies"}
          {:uri (h/file-uri "file:///baz.clj")
           :severity 1
-          :message "Namespace 'baz' is part of a cyclic dependency: foo -> bar -> baz -> foo"
+          :message "Complex dependency cycle detected: foo → bar → baz → foo. Consider refactoring to break the circular dependency - extract shared functionality or reorganize the dependency structure."
           :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///foo.clj") (h/file-uri "file:///bar.clj") (h/file-uri "file:///baz.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :error}}}))))
@@ -412,7 +412,7 @@
       (h/assert-submaps
         [{:uri (h/file-uri "file:///self.clj")
           :severity 2
-          :message "Namespace 'self' is part of a cyclic dependency: self -> self"
+          :message "Self-dependency detected: namespace 'self' requires itself. Remove the self-reference."
           :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///self.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}}))))
@@ -424,7 +424,7 @@
     (testing "excluding a namespace from cycle detection"
       (h/assert-submaps
         [{:uri (h/file-uri "file:///y.clj")
-          :message "Namespace 'y' is part of a cyclic dependency: x -> y -> x"
+          :message "Circular dependency: 'y' ⟷ 'x'. Consider extracting shared code to a separate namespace."
           :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///x.clj") (h/file-uri "file:///y.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :warning
@@ -444,10 +444,10 @@
                           {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}})]
         ;; Should have 4 diagnostics total (2 for each cycle)
         (h/assert-submaps
-          [{:message "Namespace 'alpha' is part of a cyclic dependency: alpha -> beta -> alpha"}
-           {:message "Namespace 'beta' is part of a cyclic dependency: alpha -> beta -> alpha"}
-           {:message "Namespace 'gamma' is part of a cyclic dependency: gamma -> delta -> gamma"}
-           {:message "Namespace 'delta' is part of a cyclic dependency: gamma -> delta -> gamma"}]
+          [{:message "Circular dependency: 'alpha' ⟷ 'beta'. Consider extracting shared code to a separate namespace."}
+           {:message "Circular dependency: 'beta' ⟷ 'alpha'. Consider extracting shared code to a separate namespace."}
+           {:message "Circular dependency: 'gamma' ⟷ 'delta'. Consider extracting shared code to a separate namespace."}
+           {:message "Circular dependency: 'delta' ⟷ 'gamma'. Consider extracting shared code to a separate namespace."}]
           results))))
   
   (testing "cycle with external dependencies ignored"
@@ -456,8 +456,8 @@
     (h/load-code-and-locs "(ns helper (:require [clojure.set :as set] [app :as app]))" (h/file-uri "file:///helper.clj"))
     (testing "external dependencies like clojure.string don't participate in cycles"
       (h/assert-submaps
-        [{:message "Namespace 'app' is part of a cyclic dependency: app -> helper -> app"}
-         {:message "Namespace 'helper' is part of a cyclic dependency: app -> helper -> app"}]
+        [{:message "Circular dependency: 'app' ⟷ 'helper'. Consider extracting shared code to a separate namespace."}
+         {:message "Circular dependency: 'helper' ⟷ 'app'. Consider extracting shared code to a separate namespace."}]
         (lint! [(h/file-uri "file:///app.clj") (h/file-uri "file:///helper.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}}))))
   
@@ -472,25 +472,24 @@
     (h/load-code-and-locs "(ns core (:require [main :as m]))" (h/file-uri "file:///core.clj"))
     (testing "detects the actual cycle path"
       (h/assert-submaps
-        [{:message "Namespace 'main' is part of a cyclic dependency: main -> core -> main"}
-         {:message "Namespace 'core' is part of a cyclic dependency: main -> core -> main"}]
+        [{:message "Circular dependency: 'main' ⟷ 'core'. Consider extracting shared code to a separate namespace."}
+         {:message "Circular dependency: 'core' ⟷ 'main'. Consider extracting shared code to a separate namespace."}]
         (lint! [(h/file-uri "file:///main.clj") (h/file-uri "file:///util.clj") (h/file-uri "file:///core.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}}))))
   
   (testing "cycle with ignore comment"
     (h/reset-components!)
-    (h/load-code-and-locs (h/code "(ns p (:require [q :as q]))"
-                                  "#_{:clojure-lsp/ignore [:clojure-lsp/cyclic-dependencies]}"
+    (h/load-code-and-locs (h/code "#_{:clojure-lsp/ignore [:clojure-lsp/cyclic-dependencies :clojure-lsp/unused-public-var]}"
+                                  "(ns p (:require [q :as q]))"
                                   "(def ignored-var 1)")
                           (h/file-uri "file:///p.clj"))
     (h/load-code-and-locs "(ns q (:require [p :as p]))" (h/file-uri "file:///q.clj"))
     (testing "ignore comment should work for cyclic dependencies"
-      ;; Note: The ignore works at the diagnostic level, not namespace level,
-      ;; so we'd still see the diagnostic for q, but not for p if p's namespace 
-      ;; definition is covered by the ignore
+      ;; The ignore comment should suppress both unused-public-var and cyclic-dependencies for p
+      ;; We should only see the cyclic dependency diagnostic for q
       (let [results (lint! [(h/file-uri "file:///p.clj") (h/file-uri "file:///q.clj")]
-                          {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})]
-        ;; Should have at least the diagnostic for q
+                          {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}
+                                    :clojure-lsp/unused-public-var {:level :error}}})]
         (h/assert-submaps
-          [{:message "Namespace 'q' is part of a cyclic dependency: p -> q -> p"}]
+          [{:message "Circular dependency: 'q' ⟷ 'p'. Consider extracting shared code to a separate namespace."}]
           results)))))

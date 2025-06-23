@@ -274,7 +274,7 @@
 (defn ^:private config-for-paths [paths file-analyzed-fn db settings]
   (-> {:cache true
        :parallel true
-       :config-dir (some-> db :project-root-uri project-config-dir)
+       :config-dir (settings/get db [:kondo-config-dir] (some-> db :project-root-uri project-config-dir))
        :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lint [(->> paths
                    (remove (partial shared/ignore-path? (settings/all db)))

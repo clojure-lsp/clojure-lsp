@@ -1,10 +1,12 @@
 (ns clojure-lsp.feature.diagnostics.custom
   (:require
+   [cheshire.core :as json]
    [clojure-lsp.custom-linters-api :as custom-linters-api]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure.java.io :as io]
+   [clojure.java.shell :as sh]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z]
@@ -48,8 +50,10 @@
 
 (defn ^:private analyze [fqns params uris db]
   (sci/create-ns 'clojure-lsp.custom-linters-api nil)
-  (let [sci-ctx (sci/init {:namespaces {'clojure-lsp.custom-linters-api custom-linters-api/api-fns
+  (let [sci-ctx (sci/init {:namespaces {'cheshire.core {'parse-string json/parse-string}
+                                        'clojure-lsp.custom-linters-api custom-linters-api/api-fns
                                         'clojure.java.io {'file io/file}
+                                        'clojure.java.shell {'sh sh/sh}
                                         'rewrite-clj.zip {'string z/string
                                                           'tag z/tag
                                                           'sexpr z/sexpr

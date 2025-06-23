@@ -340,3 +340,157 @@
       (lint!
         [(h/file-uri "file:///project/src/h_b.clj")]
         {:linters {:clojure-lsp/unused-public-var {:level :info}}}))))
+
+(deftest lint-project-cyclic-dependencies
+  (testing "simple two-namespace cycle"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns a (:require [b :as b]))" (h/file-uri "file:///a.clj"))
+    (h/load-code-and-locs "(ns b (:require [a :as a]))" (h/file-uri "file:///b.clj"))
+    (testing "when linter level is :warning"
+      (h/assert-submaps
+        [{:uri (h/file-uri "file:///a.clj")
+          :range {:start {:line 0 :character 4} :end {:line 0 :character 5}}
+          :severity 2
+          :source "clojure-lsp"
+          :message "Namespace 'a' is part of a cyclic dependency: a -> b -> a"
+          :code "clojure-lsp/cyclic-dependencies"}
+         {:uri (h/file-uri "file:///b.clj")
+          :range {:start {:line 0 :character 4} :end {:line 0 :character 5}}
+          :severity 2
+          :source "clojure-lsp"
+          :message "Namespace 'b' is part of a cyclic dependency: a -> b -> a"
+          :code "clojure-lsp/cyclic-dependencies"}]
+        (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
+               {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})))
+    (testing "when linter level is :off"
+      (h/assert-submaps
+        []
+        (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
+               {:linters {:clojure-lsp/cyclic-dependencies {:level :off}}})))
+    (testing "linter level by default is :off"
+      (h/assert-submaps
+        []
+        (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")] {}))))
+  
+  (testing "three-namespace cycle"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns foo (:require [bar :as b]))" (h/file-uri "file:///foo.clj"))
+    (h/load-code-and-locs "(ns bar (:require [baz :as bz]))" (h/file-uri "file:///bar.clj"))
+    (h/load-code-and-locs "(ns baz (:require [foo :as f]))" (h/file-uri "file:///baz.clj"))
+    (testing "when linter level is :error"
+      (h/assert-submaps
+        [{:uri (h/file-uri "file:///foo.clj")
+          :severity 1
+          :message "Namespace 'foo' is part of a cyclic dependency: foo -> bar -> baz -> foo"
+          :code "clojure-lsp/cyclic-dependencies"}
+         {:uri (h/file-uri "file:///bar.clj")
+          :severity 1
+          :message "Namespace 'bar' is part of a cyclic dependency: foo -> bar -> baz -> foo"
+          :code "clojure-lsp/cyclic-dependencies"}
+         {:uri (h/file-uri "file:///baz.clj")
+          :severity 1
+          :message "Namespace 'baz' is part of a cyclic dependency: foo -> bar -> baz -> foo"
+          :code "clojure-lsp/cyclic-dependencies"}]
+        (lint! [(h/file-uri "file:///foo.clj") (h/file-uri "file:///bar.clj") (h/file-uri "file:///baz.clj")]
+               {:linters {:clojure-lsp/cyclic-dependencies {:level :error}}}))))
+  
+  (testing "no cycle when linear dependency chain"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns a (:require [b :as b]))" (h/file-uri "file:///a.clj"))
+    (h/load-code-and-locs "(ns b (:require [c :as c]))" (h/file-uri "file:///b.clj"))
+    (h/load-code-and-locs "(ns c)" (h/file-uri "file:///c.clj"))
+    (testing "linear chain produces no diagnostics"
+      (h/assert-submaps
+        []
+        (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj") (h/file-uri "file:///c.clj")]
+               {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}}))))
+  
+  (testing "self-dependency cycle"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns self (:require [self :as s]))" (h/file-uri "file:///self.clj"))
+    (testing "self-referencing namespace is detected as cycle"
+      (h/assert-submaps
+        [{:uri (h/file-uri "file:///self.clj")
+          :severity 2
+          :message "Namespace 'self' is part of a cyclic dependency: self -> self"
+          :code "clojure-lsp/cyclic-dependencies"}]
+        (lint! [(h/file-uri "file:///self.clj")]
+               {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}}))))
+  
+  (testing "exclude specific namespaces"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns x (:require [y :as y]))" (h/file-uri "file:///x.clj"))
+    (h/load-code-and-locs "(ns y (:require [x :as x]))" (h/file-uri "file:///y.clj"))
+    (testing "excluding a namespace from cycle detection"
+      (h/assert-submaps
+        [{:uri (h/file-uri "file:///y.clj")
+          :message "Namespace 'y' is part of a cyclic dependency: x -> y -> x"
+          :code "clojure-lsp/cyclic-dependencies"}]
+        (lint! [(h/file-uri "file:///x.clj") (h/file-uri "file:///y.clj")]
+               {:linters {:clojure-lsp/cyclic-dependencies {:level :warning
+                                                           :exclude-namespaces #{'x}}}}))))
+  
+  (testing "multiple independent cycles"
+    (h/reset-components!)
+    ;; First cycle: alpha <-> beta
+    (h/load-code-and-locs "(ns alpha (:require [beta :as b]))" (h/file-uri "file:///alpha.clj"))
+    (h/load-code-and-locs "(ns beta (:require [alpha :as a]))" (h/file-uri "file:///beta.clj"))
+    ;; Second cycle: gamma <-> delta
+    (h/load-code-and-locs "(ns gamma (:require [delta :as d]))" (h/file-uri "file:///gamma.clj"))
+    (h/load-code-and-locs "(ns delta (:require [gamma :as g]))" (h/file-uri "file:///delta.clj"))
+    (testing "detects both independent cycles"
+      (let [results (lint! [(h/file-uri "file:///alpha.clj") (h/file-uri "file:///beta.clj")
+                           (h/file-uri "file:///gamma.clj") (h/file-uri "file:///delta.clj")]
+                          {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}})]
+        ;; Should have 4 diagnostics total (2 for each cycle)
+        (h/assert-submaps
+          [{:message "Namespace 'alpha' is part of a cyclic dependency: alpha -> beta -> alpha"}
+           {:message "Namespace 'beta' is part of a cyclic dependency: alpha -> beta -> alpha"}
+           {:message "Namespace 'gamma' is part of a cyclic dependency: gamma -> delta -> gamma"}
+           {:message "Namespace 'delta' is part of a cyclic dependency: gamma -> delta -> gamma"}]
+          results))))
+  
+  (testing "cycle with external dependencies ignored"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns app (:require [clojure.string :as str] [helper :as h]))" (h/file-uri "file:///app.clj"))
+    (h/load-code-and-locs "(ns helper (:require [clojure.set :as set] [app :as app]))" (h/file-uri "file:///helper.clj"))
+    (testing "external dependencies like clojure.string don't participate in cycles"
+      (h/assert-submaps
+        [{:message "Namespace 'app' is part of a cyclic dependency: app -> helper -> app"}
+         {:message "Namespace 'helper' is part of a cyclic dependency: app -> helper -> app"}]
+        (lint! [(h/file-uri "file:///app.clj") (h/file-uri "file:///helper.clj")]
+               {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}}))))
+  
+  (testing "complex cycle with branches"
+    (h/reset-components!)
+    ;; Create a more complex dependency structure:
+    ;; main -> [util, core] 
+    ;; util -> core
+    ;; core -> main (creates cycle: main -> core -> main, but not main -> util -> core -> main)
+    (h/load-code-and-locs "(ns main (:require [util :as u] [core :as c]))" (h/file-uri "file:///main.clj"))
+    (h/load-code-and-locs "(ns util (:require [core :as c]))" (h/file-uri "file:///util.clj"))
+    (h/load-code-and-locs "(ns core (:require [main :as m]))" (h/file-uri "file:///core.clj"))
+    (testing "detects the actual cycle path"
+      (h/assert-submaps
+        [{:message "Namespace 'main' is part of a cyclic dependency: main -> core -> main"}
+         {:message "Namespace 'core' is part of a cyclic dependency: main -> core -> main"}]
+        (lint! [(h/file-uri "file:///main.clj") (h/file-uri "file:///util.clj") (h/file-uri "file:///core.clj")]
+               {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}}))))
+  
+  (testing "cycle with ignore comment"
+    (h/reset-components!)
+    (h/load-code-and-locs (h/code "(ns p (:require [q :as q]))"
+                                  "#_{:clojure-lsp/ignore [:clojure-lsp/cyclic-dependencies]}"
+                                  "(def ignored-var 1)")
+                          (h/file-uri "file:///p.clj"))
+    (h/load-code-and-locs "(ns q (:require [p :as p]))" (h/file-uri "file:///q.clj"))
+    (testing "ignore comment should work for cyclic dependencies"
+      ;; Note: The ignore works at the diagnostic level, not namespace level,
+      ;; so we'd still see the diagnostic for q, but not for p if p's namespace 
+      ;; definition is covered by the ignore
+      (let [results (lint! [(h/file-uri "file:///p.clj") (h/file-uri "file:///q.clj")]
+                          {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})]
+        ;; Should have at least the diagnostic for q
+        (h/assert-submaps
+          [{:message "Namespace 'q' is part of a cyclic dependency: p -> q -> p"}]
+          results)))))

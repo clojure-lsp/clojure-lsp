@@ -258,28 +258,7 @@
         (when (= :white (get @colors namespace))
           (dfs-visit namespace)))
       
-      @cycles)))
-
-(defn ^:private format-cycle-message [namespace cycle]
-  "Format a readable diagnostic message for cyclic dependencies."
-  (let [cycle-length (count cycle)
-        cycle-path (string/join " → " (conj cycle (first cycle)))
-        other-namespaces (remove #(= % namespace) cycle)]
-    (cond
-      ;; Self-dependency
-      (= cycle-length 1)
-      (format "Self-dependency detected: namespace '%s' requires itself. Remove the self-reference." namespace)
-      
-      ;; Simple two-namespace cycle
-      (= cycle-length 2)
-      (format "Circular dependency: '%s' ⟷ '%s'. Consider extracting shared code to a separate namespace." 
-              namespace 
-              (first other-namespaces))
-      
-      ;; Complex multi-namespace cycle
-      :else
-      (format "Complex dependency cycle detected: %s. Consider refactoring to break the circular dependency - extract shared functionality or reorganize the dependency structure."
-              cycle-path))))
+              @cycles)))
 
 (defn ^:private cyclic-dependencies [narrowed-db _project-db settings]
   "Detects cyclic dependencies and generates diagnostics for each namespace in a cycle."
@@ -287,16 +266,10 @@
     (when-not (identical? :off level)
       (let [cycles (find-dependency-cycles (:dep-graph narrowed-db))
             exclude-namespaces (set (get-in settings [:linters :clojure-lsp/cyclic-dependencies :exclude-namespaces] #{}))
-            ;; Convert cycles to canonical form and create a single diagnostic per namespace per cycle
+            ;; Create diagnostics for each namespace in each cycle
             cycle-diagnostics (for [cycle cycles
-                                   :let [;; Normalize cycle to start from the lexicographically smallest namespace
-                                         sorted-cycle (vec (drop-last cycle)) ;; Remove the duplicate last element
-                                         min-ns (apply min-key str sorted-cycle)
-                                         min-index (.indexOf sorted-cycle min-ns)
-                                         normalized-cycle (vec (concat (drop min-index sorted-cycle)
-                                                                      (take min-index sorted-cycle)))
-                                         cycle-path (string/join " -> " (conj normalized-cycle (first normalized-cycle)))]
-                                   namespace normalized-cycle
+                                   :let [cycle-path (string/join " -> " cycle)]
+                                   namespace (butlast cycle) ;; All namespaces except the duplicate last one
                                    :when (not (contains? exclude-namespaces namespace))
                                    :let [dep-graph-item (get-in narrowed-db [:dep-graph namespace])]
                                    uri (:uris dep-graph-item)
@@ -308,7 +281,7 @@
                                  namespace-def
                                  level
                                  "clojure-lsp/cyclic-dependencies"
-                                 (format-cycle-message namespace normalized-cycle)
+                                 (format "Cyclic dependency detected: %s" cycle-path)
                                  nil))]
         ;; Remove duplicates based on namespace and cycle path
         (distinct cycle-diagnostics)))))

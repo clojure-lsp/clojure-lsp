@@ -260,8 +260,9 @@
       
               @cycles)))
 
-(defn ^:private cyclic-dependencies [narrowed-db _project-db settings]
+(defn ^:private cyclic-dependencies 
   "Detects cyclic dependencies and generates diagnostics for each namespace in a cycle."
+  [narrowed-db _project-db settings]
   (let [level (get-in settings [:linters :clojure-lsp/cyclic-dependencies :level] :off)]
     (when-not (identical? :off level)
       (let [cycles (find-dependency-cycles (:dep-graph narrowed-db))

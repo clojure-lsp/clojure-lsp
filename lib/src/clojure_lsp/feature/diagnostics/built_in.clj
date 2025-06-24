@@ -273,7 +273,7 @@
                                     :when (not (contains? exclude-namespaces namespace))
                                     :let [dep-graph-item (get-in narrowed-db [:dep-graph namespace])]
                                     uri (:uris dep-graph-item)
-                                    :let [namespace-def (some->> (get-in narrowed-db [:analysis uri :namespace-definitions])
+                                    :let [namespace-def (some->> (q/find-namespace-definitions narrowed-db uri)
                                                                  (filter #(= namespace (:name %)))
                                                                  first)]
                                     :when namespace-def]

@@ -371,7 +371,7 @@
       (h/assert-submaps
         []
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")] {}))))
-  
+
   (testing "three-namespace cycle"
     (h/reset-components!)
     (h/load-code-and-locs "(ns foo (:require [bar :as b]))" (h/file-uri "file:///foo.clj"))
@@ -393,7 +393,7 @@
           :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///foo.clj") (h/file-uri "file:///bar.clj") (h/file-uri "file:///baz.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :error}}}))))
-  
+
   (testing "no cycle when linear dependency chain"
     (h/reset-components!)
     (h/load-code-and-locs "(ns a (:require [b :as b]))" (h/file-uri "file:///a.clj"))
@@ -404,7 +404,7 @@
         []
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj") (h/file-uri "file:///c.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}}))))
-  
+
   (testing "self-dependency cycle"
     (h/reset-components!)
     (h/load-code-and-locs "(ns self (:require [self :as s]))" (h/file-uri "file:///self.clj"))
@@ -416,7 +416,7 @@
           :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///self.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}}))))
-  
+
   (testing "exclude specific namespaces"
     (h/reset-components!)
     (h/load-code-and-locs "(ns x (:require [y :as y]))" (h/file-uri "file:///x.clj"))
@@ -428,8 +428,8 @@
           :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///x.clj") (h/file-uri "file:///y.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :warning
-                                                           :exclude-namespaces #{'x}}}}))))
-  
+                                                            :exclude-namespaces #{'x}}}}))))
+
   (testing "multiple independent cycles"
     (h/reset-components!)
     ;; First cycle: alpha <-> beta
@@ -440,8 +440,8 @@
     (h/load-code-and-locs "(ns delta (:require [gamma :as g]))" (h/file-uri "file:///delta.clj"))
     (testing "detects both independent cycles"
       (let [results (lint! [(h/file-uri "file:///alpha.clj") (h/file-uri "file:///beta.clj")
-                           (h/file-uri "file:///gamma.clj") (h/file-uri "file:///delta.clj")]
-                          {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}})]
+                            (h/file-uri "file:///gamma.clj") (h/file-uri "file:///delta.clj")]
+                           {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}})]
         ;; Should have 4 diagnostics total (2 for each cycle)
         (h/assert-submaps
           [{:message "Cyclic dependency detected: beta -> alpha -> beta"}
@@ -449,7 +449,7 @@
            {:message "Cyclic dependency detected: delta -> gamma -> delta"}
            {:message "Cyclic dependency detected: delta -> gamma -> delta"}]
           results))))
-  
+
   (testing "cycle with external dependencies ignored"
     (h/reset-components!)
     (h/load-code-and-locs "(ns app (:require [clojure.string :as str] [helper :as h]))" (h/file-uri "file:///app.clj"))
@@ -460,7 +460,7 @@
          {:message "Cyclic dependency detected: helper -> app -> helper"}]
         (lint! [(h/file-uri "file:///app.clj") (h/file-uri "file:///helper.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}}))))
-  
+
   (testing "complex cycle with branches"
     (h/reset-components!)
     ;; Create a more complex dependency structure:
@@ -477,7 +477,7 @@
          {:message "Cyclic dependency detected: main -> util -> core -> main"}]
         (lint! [(h/file-uri "file:///main.clj") (h/file-uri "file:///util.clj") (h/file-uri "file:///core.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}}))))
-  
+
   ;; TODO: Fix ignore comment functionality for cyclic dependencies  
   #_(testing "cycle with ignore comment"
       (h/reset-components!)
@@ -490,8 +490,8 @@
         ;; The ignore comment should suppress both unused-public-var and cyclic-dependencies for p
         ;; We should only see the cyclic dependency diagnostic for q
         (let [results (lint! [(h/file-uri "file:///p.clj") (h/file-uri "file:///q.clj")]
-                            {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}
-                                      :clojure-lsp/unused-public-var {:level :error}}})]
+                             {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}
+                                        :clojure-lsp/unused-public-var {:level :error}}})]
           (h/assert-submaps
             [{:message "Cyclic dependency detected: p -> q -> p"}]
             results)))))

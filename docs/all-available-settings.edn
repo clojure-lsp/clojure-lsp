@@ -16,7 +16,7 @@
            :clj-depend {:level :info} ;; Only if any clj-depend config is found
            :clojure-lsp/unused-public-var {:level :info}
            :clojure-lsp/different-aliases {:level :off}
-           :clojure-lsp/cyclic-dependencies {:level :off
+           :clojure-lsp/cyclic-dependencies {:level :error
                                               :exclude-namespaces #{}}
            :custom {}}
  :clean {:automatically-after-ns-refactor true

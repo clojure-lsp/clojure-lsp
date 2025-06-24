@@ -283,7 +283,7 @@
 (deftest dir-uris->file-uris-test
   (testing "when the dir-uri is a dir inside source-path"
     (with-redefs [fs/glob (constantly [(h/file-path "/user/project/src/foo/bar.clj")
-                                       (h/file-uri "/user/project/src/foo/baz.clj")])
+                                       (h/file-path "/user/project/src/foo/baz.clj")])
                   fs/canonicalize identity]
       (is (= [(h/file-uri "file:///user/project/src/foo/bar.clj")
               (h/file-uri "file:///user/project/src/foo/baz.clj")]

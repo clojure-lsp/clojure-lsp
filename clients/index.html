@@ -515,20 +515,14 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Vim">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#nvim" class="md-nav__link">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#neovim" class="md-nav__link">
     <span class="md-ellipsis">
-      Nvim
+      Neovim
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1025,20 +1019,14 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Vim">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#nvim" class="md-nav__link">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#neovim" class="md-nav__link">
     <span class="md-ellipsis">
-      Nvim
+      Neovim
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1206,9 +1194,15 @@ xmap &lt;silent&gt; &lt;Leader&gt;c             &lt;Plug&gt;(coc-codeaction-sele
 nmap &lt;silent&gt; &lt;Leader&gt;c             &lt;Plug&gt;(coc-codeaction-line)
 nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
 </code></pre></div>
-<h3 id="nvim">Nvim<a class="headerlink" href="#nvim" title="Permanent link">#</a></h3>
-<p>An very detailed document about how configure Nvim as Clojure IDE using fennel, clojure-lsp and conjure.<br />
-<a href="https://github.com/rafaeldelboni/nvim-fennel-lsp-conjure-as-clojure-ide">nvim-fennel-lsp-conjure-as-clojure-ide</a></p>
+<h2 id="neovim">Neovim<a class="headerlink" href="#neovim" title="Permanent link">#</a></h2>
+<p><a href="https://neovim.io">Neovim</a> includes an <a href="https://neovim.io/doc/user/lsp.html">LSP client</a> and the <a href="https://github.com/neovim/nvim-lspconfig">nvim-lspconfig</a> plugin provides default configuration for numerous LSP servers.</p>
+<p><a href="https://github.com/mason-org/mason.nvim">Mason.nvim</a> tool manger for Neovim can be used to install and manage updates for Clojure LSP server (and many other LSP &amp; DAP servers, linters and format tooling).</p>
+<p><a href="https://github.com/mason-org/mason-lspconfig.nvim">Mason-lspconfig.nvim</a> bridges mason with nvim-lspconfig to simplify configuration of Mason installed LSP tools.</p>
+<p>Actively maintained configurations which support Clojure development:</p>
+<ul>
+<li><a href="https://github.com/practicalli/nvim-astro5">Practicalli Astro5</a> is a Lua configuration on top of <a href="https://astronvim.com/">AstroNvim</a>, supported by the <a href="https://practical.li/neovim">Practicalli Neovim book</a>.</li>
+<li><a href="https://github.com/rafaeldelboni/cajus-nfnl">cajus-nfnl</a> configuration includes documentation on how configure a Clojure IDE using fennel (nfnl), clojure-lsp and conjure.</li>
+</ul>
 <hr />
 <h2 id="intellij">Intellij<a class="headerlink" href="#intellij" title="Permanent link">#</a></h2>
 <h3 id="clojure-lsp-intellij-recommended">clojure-lsp-intellij (recommended)<a class="headerlink" href="#clojure-lsp-intellij-recommended" title="Permanent link">#</a></h3>
@@ -1250,7 +1244,7 @@ nmap &lt;silent&gt; gd                    &lt;Plug&gt;(coc-definition)
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 25, 2025 12:22:02">June 25, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 25, 2025 12:23:31">June 25, 2025</span>
   </span>
 
     

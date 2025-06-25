@@ -117,10 +117,18 @@ nmap <silent> <Leader>c             <Plug>(coc-codeaction-line)
 nmap <silent> gd                    <Plug>(coc-definition)
 ```
 
-### Nvim
+## Neovim
 
-An very detailed document about how configure Nvim as Clojure IDE using fennel, clojure-lsp and conjure.  
-[nvim-fennel-lsp-conjure-as-clojure-ide](https://github.com/rafaeldelboni/nvim-fennel-lsp-conjure-as-clojure-ide)
+[Neovim](https://neovim.io) includes an [LSP client](https://neovim.io/doc/user/lsp.html) and the [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) plugin provides default configuration for numerous LSP servers.
+
+[Mason.nvim](https://github.com/mason-org/mason.nvim) tool manger for Neovim can be used to install and manage updates for Clojure LSP server (and many other LSP & DAP servers, linters and format tooling).
+
+[Mason-lspconfig.nvim](https://github.com/mason-org/mason-lspconfig.nvim) bridges mason with nvim-lspconfig to simplify configuration of Mason installed LSP tools.
+
+Actively maintained configurations which support Clojure development:
+
+- [Practicalli Astro5](https://github.com/practicalli/nvim-astro5) is a Lua configuration on top of [AstroNvim](https://astronvim.com/), supported by the [Practicalli Neovim book](https://practical.li/neovim).
+- [cajus-nfnl](https://github.com/rafaeldelboni/cajus-nfnl) configuration includes documentation on how configure a Clojure IDE using fennel (nfnl), clojure-lsp and conjure.
 
 ---
 

@@ -4,6 +4,9 @@
 - Docs
   - update neovim editor configuration for clojure lsp
 
+- General
+  - New feature: Add `clojure-lsp/cyclic-dependencies` linter to detect cyclic dependencies between namespaces in the project.
+
 ## 2025.06.13-20.45.44
 
 - General

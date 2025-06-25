@@ -214,6 +214,77 @@
                            (format "Unused public var '%s/%s'" (:ns element) (:name element)))
                          [1])))))))))
 
+(defn ^:private find-dependency-cycles
+  "Detects cycles in the namespace dependency graph using DFS with colors.
+   Returns a sequence of cycle paths, where each path is a vector of namespaces forming a cycle."
+  [dep-graph]
+  (let [;; Get all internal namespaces (ignore external dependencies)
+        internal-namespaces (set (keep (fn [[ns data]]
+                                         (when (:internal? data) ns))
+                                       dep-graph))
+        ;; Track node colors: :white (unvisited), :gray (in progress), :black (finished)
+        colors (atom (zipmap internal-namespaces (repeat :white)))
+        current-path (atom [])
+        cycles (atom #{})]
+
+    (letfn [(get-dependencies [namespace]
+              ;; Get direct dependencies of a namespace, filtered to internal ones only
+              (->> (get-in dep-graph [namespace :dependencies])
+                   keys
+                   (filter internal-namespaces)))
+
+            (dfs-visit [namespace]
+              ;; Depth-first search to detect cycles
+              (swap! colors assoc namespace :gray)
+              (swap! current-path conj namespace)
+
+              (doseq [dependency (get-dependencies namespace)]
+                (case (get @colors dependency)
+                  :white (dfs-visit dependency)  ; Unvisited - recurse
+                  :gray  ; Back edge found - cycle detected!
+                  (let [path @current-path
+                        cycle-start (.indexOf path dependency)
+                        cycle-path (subvec path cycle-start)
+                        ;; Create complete cycle by adding the back edge
+                        complete-cycle (conj cycle-path dependency)]
+                    (swap! cycles conj complete-cycle))
+                  :black nil)) ; Already processed - no cycle
+
+              (swap! current-path pop)
+              (swap! colors assoc namespace :black))]
+
+      ;; Visit all unvisited namespaces
+      (doseq [namespace internal-namespaces]
+        (when (= :white (get @colors namespace))
+          (dfs-visit namespace)))
+      @cycles)))
+
+(defn ^:private cyclic-dependencies
+  "Detects cyclic dependencies and generates diagnostics for each namespace in a cycle."
+  [narrowed-db _project-db settings]
+  (let [level (get-in settings [:linters :clojure-lsp/cyclic-dependencies :level] :off)]
+    (when-not (identical? :off level)
+      (let [cycles (find-dependency-cycles (:dep-graph narrowed-db))
+            exclude-namespaces (set (get-in settings [:linters :clojure-lsp/cyclic-dependencies :exclude-namespaces] #{}))
+            ;; Create diagnostics for each namespace in each cycle
+            cycle-diagnostics (for [cycle cycles
+                                    :let [cycle-path (string/join " -> " cycle)]
+                                    namespace (butlast cycle) ;; All namespaces except the duplicate last one
+                                    :when (not (contains? exclude-namespaces namespace))
+                                    :let [dep-graph-item (get-in narrowed-db [:dep-graph namespace])]
+                                    uri (:uris dep-graph-item)
+                                    :let [namespace-def (some->> (q/find-namespace-definitions narrowed-db uri)
+                                                                 (filter #(= namespace (:name %)))
+                                                                 first)]
+                                    :when namespace-def]
+                                (element->diagnostic
+                                  namespace-def
+                                  level
+                                  "clojure-lsp/cyclic-dependencies"
+                                  (format "Cyclic dependency detected: %s" cycle-path)
+                                  nil))]
+        (distinct cycle-diagnostics)))))
+
 (defn analyze-uris! [uris db]
   (shared/logging-task
     :internal/built-in-linters
@@ -226,7 +297,8 @@
                             (find-ignore-comments uris db)))
           all-diags (->> (concat
                            (unused-public-vars db-of-uris project-db settings)
-                           (different-aliases db-of-uris project-db settings))
+                           (different-aliases db-of-uris project-db settings)
+                           (cyclic-dependencies db-of-uris project-db settings))
                          (remove #(ignore-diag? % @ignores)))]
       (merge empty-diags
              (reduce

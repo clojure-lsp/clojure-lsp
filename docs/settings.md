@@ -244,6 +244,23 @@ It has the possible keys/values:
                                            :exclude-aliases #{foo}}}}
 ```
 
+##### clojure-lsp/cyclic-dependencies
+
+A linter that detects cyclic dependencies between namespaces in your project. Cyclic dependencies can cause issues during compilation and make code harder to understand and maintain.
+
+It has the possible keys/values:
+
+- `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:error`.
+- `:exclude-namespaces` a set of namespace names or regex patterns to exclude from cyclic dependency detection, example `#{my-ns "test.*"}`
+
+`.lsp/config.edn`
+```clojure
+{:linters {:clojure-lsp/cyclic-dependencies {:level :warning
+                                             :exclude-namespaces #{"dev" "user" "test.*"}}}}
+```
+
+This linter will report all detected cycles with detailed information about the dependency path. For example, if namespace `a` requires `b`, `b` requires `c`, and `c` requires `a`, it will report the cycle as "a -> b -> c -> a".
+
 #### Custom linters
 
 clojure-lsp supports defining custom linters in a project or lib (via [classpath-config](#classpath-config-paths)) where one can create their own kind of diagnostics, more about the rationale [here](https://github.com/clojure-lsp/clojure-lsp/issues/2043).

@@ -221,13 +221,17 @@
           project-db (q/db-with-internal-analysis db)
           db-of-uris (update project-db :analysis select-keys uris)
           empty-diags (reduce #(assoc %1 %2 []) {} uris)
-          ignores (future (shared/logging-task
-                            :internal/find-linter-ignore-comments
-                            (find-ignore-comments uris db)))
-          all-diags (->> (concat
-                           (unused-public-vars db-of-uris project-db settings)
-                           (different-aliases db-of-uris project-db settings))
-                         (remove #(ignore-diag? % @ignores)))]
+          ignores* (future (shared/logging-task
+                             :internal/built-in-linters.find-linter-ignore-comments
+                             (find-ignore-comments uris db)))
+          unused* (future (shared/logging-task
+                            :internal/built-in-linters.unused-public-vars
+                            (unused-public-vars db-of-uris project-db settings)))
+          different* (future (shared/logging-task
+                               :internal/built-in-linters.different-aliases
+                               (different-aliases db-of-uris project-db settings)))
+          all-diags (remove #(ignore-diag? % @ignores*)
+                            (concat @unused* @different*))]
       (merge empty-diags
              (reduce
                (fn [acc diag]

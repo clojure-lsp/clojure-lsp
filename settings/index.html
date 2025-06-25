@@ -569,6 +569,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#clojure-lspcyclic-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      clojure-lsp/cyclic-dependencies
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1357,6 +1366,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#clojure-lspcyclic-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      clojure-lsp/cyclic-dependencies
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2018,6 +2036,18 @@ Some of these linters config used to live on clj-kondo side, so to avoid breakin
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span><span class="w"> </span><span class="p">{</span><span class="ss">:clojure-lsp/different-aliases</span><span class="w"> </span><span class="p">{</span><span class="ss">:level</span><span class="w"> </span><span class="ss">:info</span>
 <span class="w">                                           </span><span class="ss">:exclude-aliases</span><span class="w"> </span><span class="o">#</span><span class="p">{</span><span class="nv">foo</span><span class="p">}}}}</span>
 </code></pre></div></p>
+<h5 id="clojure-lspcyclic-dependencies">clojure-lsp/cyclic-dependencies<a class="headerlink" href="#clojure-lspcyclic-dependencies" title="Permanent link">#</a></h5>
+<p>A linter that detects cyclic dependencies between namespaces in your project. Cyclic dependencies can cause issues during compilation and make code harder to understand and maintain.</p>
+<p>It has the possible keys/values:</p>
+<ul>
+<li><code>:level</code> with available values: <code>:info</code>, <code>:warning</code>, <code>:error</code> or <code>:off</code> with default value of <code>:error</code>.</li>
+<li><code>:exclude-namespaces</code> a set of namespace names or regex patterns to exclude from cyclic dependency detection, example <code>#{my-ns "test.*"}</code></li>
+</ul>
+<p><code>.lsp/config.edn</code>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="ss">:linters</span><span class="w"> </span><span class="p">{</span><span class="ss">:clojure-lsp/cyclic-dependencies</span><span class="w"> </span><span class="p">{</span><span class="ss">:level</span><span class="w"> </span><span class="ss">:warning</span>
+<span class="w">                                             </span><span class="ss">:exclude-namespaces</span><span class="w"> </span><span class="o">#</span><span class="p">{</span><span class="s">&quot;dev&quot;</span><span class="w"> </span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="s">&quot;test.*&quot;</span><span class="p">}}}}</span>
+</code></pre></div></p>
+<p>This linter will report all detected cycles with detailed information about the dependency path. For example, if namespace <code>a</code> requires <code>b</code>, <code>b</code> requires <code>c</code>, and <code>c</code> requires <code>a</code>, it will report the cycle as "a -&gt; b -&gt; c -&gt; a".</p>
 <h4 id="custom-linters">Custom linters<a class="headerlink" href="#custom-linters" title="Permanent link">#</a></h4>
 <p>clojure-lsp supports defining custom linters in a project or lib (via <a href="#classpath-config-paths">classpath-config</a>) where one can create their own kind of diagnostics, more about the rationale <a href="https://github.com/clojure-lsp/clojure-lsp/issues/2043">here</a>.</p>
 <ul>
@@ -2238,7 +2268,7 @@ The available settings inside <code>:stubs</code> are:</p>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 24, 2025 16:49:28">June 24, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 25, 2025 12:22:02">June 25, 2025</span>
   </span>
 
     

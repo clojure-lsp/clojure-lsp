@@ -250,7 +250,7 @@ A linter that detects cyclic dependencies between namespaces in your project. Cy
 
 It has the possible keys/values:
 
-- `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:info`.
+- `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:error`.
 - `:exclude-namespaces` a set of namespace names or regex patterns to exclude from cyclic dependency detection, example `#{my-ns "test.*"}`
 
 `.lsp/config.edn`

@@ -271,10 +271,13 @@
     (cond-> [:arglists :style/indent]
       (seq metas) (concat metas))))
 
+(defn ^:private kondo-config-dir [db]
+  (settings/get db [:kondo-config-dir] (some-> db :project-root-uri project-config-dir)))
+
 (defn ^:private config-for-paths [paths file-analyzed-fn db settings]
   (-> {:cache true
        :parallel true
-       :config-dir (some-> db :project-root-uri project-config-dir)
+       :config-dir (kondo-config-dir db)
        :copy-configs (settings/get db [:copy-kondo-configs?] true)
        :lint [(->> paths
                    (remove (partial shared/ignore-path? (settings/all db)))
@@ -320,14 +323,14 @@
   {:cache true
    :parallel true
    :skip-lint true
-   :config-dir (some-> db :project-root-uri project-config-dir)
+   :config-dir (kondo-config-dir db)
    :copy-configs (settings/get db [:copy-kondo-configs?] true)
    :lint [(string/join (System/getProperty "path.separator") paths)]
    :config {:output {:canonical-paths true}}})
 
 (defn ^:private config-for-jdk-source [paths db]
   {:lint paths
-   :config-dir (some-> db :project-root-uri project-config-dir)
+   :config-dir (kondo-config-dir db)
    :config {:output {:canonical-paths true}
             :analysis {:java-class-definitions true
                        :java-member-definitions true}}})
@@ -341,7 +344,7 @@
          :lint ["-"]
          :copy-configs (get settings :copy-kondo-configs? true)
          :filename filename
-         :config-dir (some-> db :project-root-uri project-config-dir)
+         :config-dir (kondo-config-dir db)
          :config {:output {:canonical-paths true}
                   :analysis {:arglists true
                              :locals true

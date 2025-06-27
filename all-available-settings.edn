@@ -59,6 +59,7 @@
  :show-docs-arity-on-same-line? false ; deprecated, will be removed soon, use :hover :arity-on-same-line?
  :lens-segregate-test-references true ; deprecated, will be removed soon, use :code-lens :segregate-test-references instead.
  :copy-kondo-configs? true
+ :kondo-config-dir nil ; defaults to <project-root-uri>/.clj-kondo
  :analysis {:keywords {:definitions true
                        :usages true}
             :java {:class-definitions true

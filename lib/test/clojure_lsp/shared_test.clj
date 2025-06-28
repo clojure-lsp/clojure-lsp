@@ -5,7 +5,8 @@
    [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [are deftest is testing]]
    [medley.core :as medley])
-  (:import java.net.URI))
+  (:import
+   java.net.URI))
 
 (h/reset-components-before-test)
 

@@ -4,7 +4,9 @@
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [are deftest is testing]]
-   [medley.core :as medley]))
+   [medley.core :as medley])
+  (:import
+   java.net.URI))
 
 (h/reset-components-before-test)
 
@@ -30,6 +32,9 @@
   (testing "should decode special characters in file URI"
     (is (= (h/file-path "/path+/encoded characters!")
            (shared/uri->filename (h/file-uri "file:///path%2B/encoded%20characters%21")))))
+  (testing "should handle unicode characters in a file URI"
+    (is (= (h/file-path "/home/foo/hôpital.clj")
+           (shared/uri->filename (h/file-uri "file:///home/foo/hôpital.clj")))))
   (testing "when it is a jar via zipfile"
     (is (= (h/file-path "/something.jar:something/file.cljc")
            (shared/uri->filename (h/file-uri "zipfile:///something.jar::something/file.cljc")))))
@@ -155,6 +160,16 @@
   (testing "URI should remain the same as IllegalArgumentException is thrown."
     (is (= "file:///home/foo/bar.jar%%"
            (unescape-uri "file:///home/foo/bar.jar%%")))))
+
+(def escape-uri #'shared/escape-uri)
+
+(deftest escape-uri-test
+  (testing "URI should be escaped"
+    (is (= (URI. "file:///home/foo/h%C3%B4pital.clj")
+           (escape-uri (URI. "file:///home/foo/hôpital.clj")))))
+  (testing "URI should remain the same"
+    (is (= (URI. "file:///home/foo/h%C3%B4pital.clj")
+           (escape-uri (URI. "file:///home/foo/h%C3%B4pital.clj"))))))
 
 (deftest inside?
   (testing "when b has end scope"

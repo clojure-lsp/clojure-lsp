@@ -8,6 +8,7 @@
   - New feature: Add `clojure-lsp/cyclic-dependencies` linter to detect cyclic dependencies between namespaces in the project.
   - New optional `:kondo-config-dir` setting to configure clj-kondo execution.
   - Parallelize and log the time spent on built-in linters execution.
+  - Fix caching issue when :source-aliases changes. #2081
 
 ## 2025.06.13-20.45.44
 

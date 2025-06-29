@@ -11,8 +11,7 @@
    [clojure.set :as set]
    [clojure.string :as string])
   (:import
-   (java.io ByteArrayOutputStream)
-   (java.security MessageDigest)))
+   (java.io ByteArrayOutputStream)))
 
 (set! *warn-on-reflection* true)
 
@@ -23,10 +22,8 @@
         (with-open [xin (io/input-stream file)
                     xout (ByteArrayOutputStream.)]
           (io/copy xin xout)
-          (.toByteArray xout))
-        algorithm (MessageDigest/getInstance "MD5")
-        raw (.digest algorithm bytes')]
-    (format "%032x" (BigInteger. 1 raw))))
+          (.toByteArray xout))]
+    (shared/md5 bytes')))
 
 (defn ^:private valid-project-spec? [root-path {:keys [project-path]}]
   (let [project-file (shared/to-file root-path project-path)]

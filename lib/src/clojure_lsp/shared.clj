@@ -206,6 +206,12 @@
     (catch IllegalArgumentException _
       uri)))
 
+(defn ^:private escape-uri
+  [^URI uri]
+  (-> uri
+      (.toASCIIString)
+      (URI.)))
+
 (defn ^:private uri->canonical-path
   "Returns the URI's canonical path as a string using
   `java.io.file/getCanonicalPath`, of which see."
@@ -239,7 +245,7 @@
                                                (re-find #"^(.*\.jar)::(.*)" (.getPath uri-obj)))]
         (if jar-uri-path
           (str (uri->canonical-path (URI. jar-uri-path)) ":" nested-file)
-          (uri-obj->filepath uri-obj))))))
+          (uri-obj->filepath (escape-uri uri-obj)))))))
 
 (defn ensure-jarfile [uri db]
   (let [jar-scheme? (fast= "jar" (get db [:settings :dependency-scheme]))]

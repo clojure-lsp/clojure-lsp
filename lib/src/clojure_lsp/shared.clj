@@ -16,6 +16,7 @@
     URLDecoder]
    [java.nio.charset StandardCharsets]
    [java.nio.file Paths]
+   [java.security MessageDigest]
    [java.util.regex Matcher]))
 
 (set! *warn-on-reflection* true)
@@ -608,3 +609,8 @@
 
 (def severity->level
   (set/map-invert level->severity))
+
+(defn md5 [bytes]
+  (let [algorithm (MessageDigest/getInstance "MD5")
+        raw (.digest algorithm bytes)]
+    (format "%032x" (BigInteger. 1 raw))))

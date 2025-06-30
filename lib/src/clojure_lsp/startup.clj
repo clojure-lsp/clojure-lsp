@@ -187,6 +187,7 @@
                          (merge (select-keys db-cache [:classpath
                                                        :analysis-checksums
                                                        :project-hash
+                                                       :settings-hash
                                                        :kondo-config-hash
                                                        :dependency-scheme
                                                        :stubs-generation-namespaces]))
@@ -196,6 +197,7 @@
 (defn ^:private build-db-cache [db]
   (-> db
       (select-keys [:project-hash
+                    :settings-hash
                     :kondo-config-hash
                     :dependency-scheme
                     :project-analysis-type
@@ -255,10 +257,12 @@
     (publish-task-progress producer (:finding-cache task-list) progress-token)
     (load-db-cache! root-path db*)
     (let [project-hash (classpath/project-specs->hash root-path settings)
+          settings-hash (config/settings-hash project-settings)
           kondo-config-hash (lsp.kondo/config-hash (str root-path))
           dependency-scheme (:dependency-scheme settings)
           dependency-scheme-changed? (not= dependency-scheme (:dependency-scheme @db*))
           use-db-analysis? (and (= (:project-hash @db*) project-hash)
+                                (= (:settings-hash @db*) settings-hash)
                                 (= (:kondo-config-hash @db*) kondo-config-hash)
                                 (not dependency-scheme-changed?))
           fast-startup? (or use-db-analysis?
@@ -276,6 +280,7 @@
           (when-let [classpath (classpath/scan-classpath! components)]
             (swap! db* assoc
                    :project-hash project-hash
+                   :settings-hash settings-hash
                    :kondo-config-hash kondo-config-hash
                    :analysis-checksums (if dependency-scheme-changed? nil (:analysis-checksums @db*))
                    :analysis (if dependency-scheme-changed? nil (:analysis @db*))

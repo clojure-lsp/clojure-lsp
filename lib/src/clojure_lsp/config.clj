@@ -79,6 +79,11 @@
                      (resolve-global-config global-lsp-config-file))
               project-configs))))
 
+(defn settings-hash [project-settings]
+  (-> (str project-settings)
+      (.getBytes)
+      (shared/md5)))
+
 (defn ^:private jar-file->config
   [^java.io.File file config-paths]
   (with-open [jar (JarFile. file)]

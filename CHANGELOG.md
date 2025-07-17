@@ -5,6 +5,7 @@
   - update neovim editor configuration for clojure lsp
 
 - General
+  - New feature: Add `clojure-lsp/self-requiring-namespace` linter to detect when a namespace requires itself.
   - New feature: Add `clojure-lsp/cyclic-dependencies` linter to detect cyclic dependencies between namespaces in the project.
   - New optional `:kondo-config-dir` setting to configure clj-kondo execution.
   - Parallelize and log the time spent on built-in linters execution.

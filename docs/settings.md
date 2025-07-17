@@ -244,6 +244,19 @@ It has the possible keys/values:
                                            :exclude-aliases #{foo}}}}
 ```
 
+##### clojure-lsp/self-requiring-namespace
+
+A linter that detects when a namespace requires itself, which is unnecessary and can be confusing. Self-requiring creates circular references within the same namespace.
+
+It has the possible keys/values:
+
+- `:level` with available values: `:info`, `:warning`, `:error` or `:off` with default value of `:off`.
+
+`.lsp/config.edn`
+```clojure
+{:linters {:clojure-lsp/self-requiring-namespace {:level :warning}}}
+```
+
 ##### clojure-lsp/cyclic-dependencies
 
 A linter that detects cyclic dependencies between namespaces in your project. Cyclic dependencies can cause issues during compilation and make code harder to understand and maintain.

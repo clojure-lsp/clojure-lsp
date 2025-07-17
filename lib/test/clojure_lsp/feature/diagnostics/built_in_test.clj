@@ -65,6 +65,31 @@
        {:uri (h/file-uri "file:///d.clj")}]
       (lint! [h/default-uri] {:linters {:clojure-lsp/different-aliases {:level :error :exclude-aliases #{'sut}}}}))))
 
+(deftest lint-project-self-requiring-namespace
+  (h/load-code-and-locs "(ns foo.bar.baz
+  (:require [foo.bar.baz :as baz]
+            [clojure.string :as str]))"
+                        (h/file-uri "file:///self-requiring.clj"))
+  (testing "when namespace requires itself"
+    (h/assert-submaps
+      [{:uri (h/file-uri "file:///self-requiring.clj")
+        :severity 3
+        :source "clojure-lsp"
+        :message "Namespace 'foo.bar.baz' is requiring itself"
+        :code "clojure-lsp/self-requiring-namespace"}]
+      (lint! [(h/file-uri "file:///self-requiring.clj")] {:linters {:clojure-lsp/self-requiring-namespace {:level :info}}})))
+  (testing "when linter level is :off"
+    (h/assert-submaps
+      []
+      (lint! [(h/file-uri "file:///self-requiring.clj")] {:linters {:clojure-lsp/self-requiring-namespace {:level :off}}})))
+  (testing "when namespace doesn't require itself"
+    (h/load-code-and-locs "(ns normal.namespace
+  (:require [clojure.string :as str]))"
+                          (h/file-uri "file:///normal.clj"))
+    (h/assert-submaps
+      []
+      (lint! [(h/file-uri "file:///normal.clj")] {:linters {:clojure-lsp/self-requiring-namespace {:level :info}}}))))
+
 (deftest unused-public-var-declared-outside-test-namespaces
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                         :settings {:source-paths [(h/file-path "/project/src")
@@ -464,7 +489,7 @@
   (testing "complex cycle with branches"
     (h/reset-components!)
     ;; Create a more complex dependency structure:
-    ;; main -> [util, core] 
+    ;; main -> [util, core]
     ;; util -> core
     ;; core -> main (creates cycle: main -> core -> main, but not main -> util -> core -> main)
     (h/load-code-and-locs "(ns main (:require [util :as u] [core :as c]))" (h/file-uri "file:///main.clj"))
@@ -478,7 +503,7 @@
         (lint! [(h/file-uri "file:///main.clj") (h/file-uri "file:///util.clj") (h/file-uri "file:///core.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}}))))
 
-  ;; TODO: Fix ignore comment functionality for cyclic dependencies  
+  ;; TODO: Fix ignore comment functionality for cyclic dependencies
   #_(testing "cycle with ignore comment"
       (h/reset-components!)
       (h/load-code-and-locs (h/code "#_{:clojure-lsp/ignore [:clojure-lsp/cyclic-dependencies :clojure-lsp/unused-public-var]}"

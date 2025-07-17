@@ -106,6 +106,24 @@
                     (:to namespace-alias))
             nil))))))
 
+(defn ^:private self-requiring-namespace [narrowed-db _project-db settings]
+  (let [level (get-in settings [:linters :clojure-lsp/self-requiring-namespace :level] :off)]
+    (when-not (identical? :off level)
+      (for [[_uri analysis] (:analysis narrowed-db)
+            :let [namespace-definitions (:namespace-definitions analysis)
+                  namespace-aliases (:namespace-alias analysis)]
+            :when (and (seq namespace-definitions) (seq namespace-aliases))
+            namespace-def namespace-definitions
+            :let [current-ns (:name namespace-def)]
+            namespace-alias namespace-aliases
+            :when (= (:to namespace-alias) current-ns)]
+        (element->diagnostic
+          namespace-alias
+          level
+          "clojure-lsp/self-requiring-namespace"
+          (format "Namespace '%s' is requiring itself" current-ns)
+          nil)))))
+
 (defn ^:private setting-for-ns [settings ns-name filename]
   (let [ns-groups (cons ns-name (kondo.config/ns-groups settings ns-name filename))
         configs-in-ns (seq (keep #(get (:config-in-ns settings) %) ns-groups))]
@@ -301,11 +319,14 @@
           different* (future (shared/logging-task
                                :internal/built-in-linters.different-aliases
                                (different-aliases db-of-uris project-db settings)))
+          self-requiring* (future (shared/logging-task
+                                    :internal/built-in-linters.self-requiring-namespace
+                                    (self-requiring-namespace db-of-uris project-db settings)))
           cyclic* (future (shared/logging-task
                             :internal/built-in-linters.cyclic-dependencies
                             (cyclic-dependencies db-of-uris project-db settings)))
           all-diags (remove #(ignore-diag? % @ignores*)
-                            (concat @unused* @different* @cyclic*))]
+                            (concat @unused* @different* @self-requiring* @cyclic*))]
       (merge empty-diags
              (reduce
                (fn [acc diag]

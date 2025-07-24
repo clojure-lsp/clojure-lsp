@@ -131,9 +131,9 @@
     (lsp.server/discarding-stdout
       (shared/logging-task
         :lsp/publish-diagnostics
-        (->> diagnostic
-             (conform-or-log ::coercer/publish-diagnostics-params)
-             (lsp.server/send-notification server "textDocument/publishDiagnostics")))))
+        (some->> diagnostic
+                 (conform-or-log ::coercer/publish-diagnostics-params)
+                 (lsp.server/send-notification server "textDocument/publishDiagnostics")))))
 
   (refresh-code-lens [_this]
     (lsp.server/discarding-stdout
@@ -142,22 +142,21 @@
 
   (publish-workspace-edit [_this edit]
     (lsp.server/discarding-stdout
-      (let [request (->> {:edit edit}
-                         (conform-or-log ::coercer/workspace-edit-params)
-                         (lsp.server/send-request server "workspace/applyEdit"))
-            response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
-        (if (= ::timeout response)
-          (logger/error ":apply-workspace-edit No response from client after 10 seconds while applying workspace-edit.")
-          response))))
+      (when-let [conformed (conform-or-log ::coercer/workspace-edit-params {:edit edit})]
+        (let [request (lsp.server/send-request server "workspace/applyEdit" conformed)
+              response (lsp.server/deref-or-cancel request 10e3 ::timeout)]
+          (if (= ::timeout response)
+            (logger/error ":apply-workspace-edit No response from client after 10 seconds while applying workspace-edit.")
+            response)))))
 
   (show-document-request [_this document-request]
     (lsp.server/discarding-stdout
       (when (get-in @db* [:client-capabilities :window :show-document])
         (shared/logging-task
           :lsp/show-document-request
-          (->> document-request
-               (conform-or-log ::coercer/show-document-request)
-               (lsp.server/send-request server "window/showDocument"))))))
+          (some->> document-request
+                   (conform-or-log ::coercer/show-document-request)
+                   (lsp.server/send-request server "window/showDocument"))))))
 
   (publish-progress [_this percentage message progress-token]
     (lsp.server/discarding-stdout
@@ -167,15 +166,15 @@
 
   (show-message-request [_this message type actions]
     (lsp.server/discarding-stdout
-      (let [request (->> {:type    type
-                          :message message
-                          :actions actions}
-                         (conform-or-log ::coercer/show-message-request)
-                         (lsp.server/send-request server "window/showMessageRequest"))
-            ;; High timeout as we probably want to wait some time for user input
-            response (lsp.server/deref-or-cancel request 10e5 ::timeout)]
-        (when-not (= response ::timeout)
-          (:title response)))))
+      (when-let [conformed (conform-or-log ::coercer/show-message-request
+                                           {:type    type
+                                            :message message
+                                            :actions actions})]
+        (let [request (lsp.server/send-request server "window/showMessageRequest" conformed)
+              ;; High timeout as we probably want to wait some time for user input
+              response (lsp.server/deref-or-cancel request 10e5 ::timeout)]
+          (when-not (= response ::timeout)
+            (:title response))))))
 
   (show-message [_this message type extra]
     (lsp.server/discarding-stdout
@@ -184,9 +183,9 @@
                              :extra extra}]
         (shared/logging-task
           :lsp/show-message
-          (->> message-content
-               (conform-or-log ::coercer/show-message)
-               (lsp.server/send-notification server "window/showMessage"))))))
+          (some->> message-content
+                   (conform-or-log ::coercer/show-message)
+                   (lsp.server/send-notification server "window/showMessage"))))))
 
   (refresh-test-tree [_this uris]
     (async/thread

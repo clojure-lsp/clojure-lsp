@@ -50,9 +50,10 @@
   [dirs db*]
   (let [normalization-config {:external? true
                               :filter-analysis #(dissoc % :namespace-usages)}
-        result (shared/logging-task
-                 :stub/analyze
-                 (lsp.kondo/run-kondo-on-paths! dirs db* normalization-config nil))]
+        result (-> (shared/logging-task
+                     :stub/analyze
+                     (lsp.kondo/run-kondo-on-paths! dirs db* normalization-config nil))
+                   (dissoc :findings :diagnostics))]
     (swap! db* lsp.kondo/db-with-results result)
     (db/read-and-update-cache!
       @db*

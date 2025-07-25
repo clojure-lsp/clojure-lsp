@@ -12,6 +12,9 @@
   - Fix caching issue when :source-aliases changes. #2081
   - Fix emitting invalid messages if there's an internal error.
 
+- Editor
+  - Avoid lint .lsp/stubs folder when starting.
+
 ## 2025.06.13-20.45.44
 
 - General

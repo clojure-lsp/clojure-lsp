@@ -138,6 +138,16 @@
       "hash": "sha256-BZ+DCljzs1VjFwXoqu/dWNDsIeX5Egf+1N5OoXT4hGo="
     },
     {
+      "mvn-path": "borkdude/edamame/1.4.31/edamame-1.4.31.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-x/xGcsNM3A3k87wRGKw2/lOUVIavuSztVZKSQF4Wx/o="
+    },
+    {
+      "mvn-path": "borkdude/edamame/1.4.31/edamame-1.4.31.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-y1v0wYvtx/zakI3RS3VZHK0p4z1ksRu0l+8P6CRACt4="
+    },
+    {
       "mvn-path": "borkdude/graal.locking/0.0.2/graal.locking-0.0.2.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-eFlpdVXBVNcgMM6zRTTPuqcKxLWJhAQdN4ULU733FF4="
@@ -166,6 +176,16 @@
       "mvn-path": "borkdude/sci.impl.reflector/0.0.3/sci.impl.reflector-0.0.3.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-BgheqqI9xCa0v1nkO9XV5RoE5YV7zLyo68lVu6n+qWI="
+    },
+    {
+      "mvn-path": "borkdude/sci.impl.reflector/0.0.5/sci.impl.reflector-0.0.5.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-ULIGq1nIGIBKA/ft2ZzAfBmt639zeH6LKiiKjxYjT5I="
+    },
+    {
+      "mvn-path": "borkdude/sci.impl.reflector/0.0.5/sci.impl.reflector-0.0.5.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-lg6Shg3GTbkqLG287wZ8DoCjTjUUeFJvp7vw5chW0sc="
     },
     {
       "mvn-path": "camel-snake-kebab/camel-snake-kebab/0.4.3/camel-snake-kebab-0.4.3.jar",
@@ -253,14 +273,14 @@
       "hash": "sha256-r/kF09oR/1EVcpq2SfSI/mEXxUm/CP/dnHHRO2nSu0k="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2025.06.05/clj-kondo-2025.06.05.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2025.07.26/clj-kondo-2025.07.26.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-YFK+7xqCkzW10kvQl87YdqZsaRo2Jsu0hEig2d1Jz1w="
+      "hash": "sha256-kamtBfQS72LqlxgpsKHwKcIaozX5Cx2QSUA+o5UaSQg="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2025.06.05/clj-kondo-2025.06.05.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2025.07.26/clj-kondo-2025.07.26.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-gkQvpTpaFT5QD73Ehl14Ha8GCxZKfqUsLkxKZd8tBYQ="
+      "hash": "sha256-tDJGw2Vbc3np2vsWAwZY/xgZT+3Q3WS+CVCnwrfw3KA="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -2341,6 +2361,16 @@
       "mvn-path": "org/babashka/sci.impl.types/0.0.2/sci.impl.types-0.0.2.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-G2nywdVJ8si0e2uT3KcQPW/sQFBryQvVqXV1zWpEeh4="
+    },
+    {
+      "mvn-path": "org/babashka/sci/0.10.47/sci-0.10.47.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-OQQQo2DnfT3iCwwQduTBop+TG8R47tccLPZQWgKWgFg="
+    },
+    {
+      "mvn-path": "org/babashka/sci/0.10.47/sci-0.10.47.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-F1sHlOoX+xYkIjQ5PYAHPDuTBjn7VX2HzhHI+IqEMtw="
     },
     {
       "mvn-path": "org/babashka/sci/0.9.45/sci-0.9.45.jar",

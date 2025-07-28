@@ -11,7 +11,7 @@
   - Fix #1851: Error when source files have non-ASCII characters in their path or name
   - Fix caching issue when :source-aliases changes. #2081
   - Fix emitting invalid messages if there's an internal error.
-  - Bump clj-kondo to `2025.07.26` improving considerable memory usage.
+  - Bump clj-kondo to `2025.07.28` considerably improving memory usage.
 
 - Editor
   - Avoid lint .lsp/stubs folder when starting.

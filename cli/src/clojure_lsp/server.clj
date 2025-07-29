@@ -517,7 +517,8 @@
                                   :token-modifiers semantic-tokens/token-modifiers-str
                                   :range true
                                   :full true})
-     :execute-command-provider f.command/available-commands
+     :execute-command-provider (f.command/available-commands
+                                 (:custom-commands settings))
      :text-document-sync (:text-document-sync-kind settings)
      :completion-provider {:resolve-provider true :trigger-characters [":" "/"]}
      :folding-range-provider true

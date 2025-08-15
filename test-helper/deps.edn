@@ -1,6 +1,6 @@
 {:paths ["src"]
  :deps {clojure-lsp/lib {:local/root "../lib"}}
  :aliases {:build {:extra-paths ["../lib/resources"]
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.7" :sha "573711e"}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.10" :sha "deedd62"}
                                   slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}}}

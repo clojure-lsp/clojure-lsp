@@ -5,6 +5,8 @@
 [![cljdoc](https://cljdoc.org/badge/com.github.clojure-lsp/clojure-lsp)](https://cljdoc.org/d/com.github.clojure-lsp/clojure-lsp)
 [![Slack community](https://img.shields.io/badge/Slack-chat-blue?style=flat-square)](https://clojurians.slack.com/archives/CPABC1H61)
 [![Github stars](https://img.shields.io/github/stars/clojure-lsp/clojure-lsp?style=social)](https://github.com/clojure-lsp/clojure-lsp)
+[![Downloads](https://img.shields.io/github/downloads/clojure-lsp/clojure-lsp/total.svg?style=flat-square)](https://github.com/clojure-lsp/clojure-lsp/releases/latest)
+
 
 # clojure-lsp
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix `clojure-lsp/cyclic-dependencies` custom linter default level to be `error`.
+
 ## 2025.08.15-15.37.37
 - Docs
   - update neovim editor configuration for clojure lsp

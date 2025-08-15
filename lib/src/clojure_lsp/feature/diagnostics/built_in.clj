@@ -8,7 +8,11 @@
    [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.set :as set]
    [clojure.string :as string]
-   [rewrite-clj.zip :as z]))
+   [rewrite-clj.zip :as z])
+  (:import
+   [clojure.lang PersistentVector]))
+
+(set! *warn-on-reflection* true)
 
 (defn ^:private ignore-diag? [diagnostic ignores]
   (let [diag-range {:name-row (-> diagnostic :range :start :line inc)
@@ -242,7 +246,7 @@
                 (case (get @colors dependency)
                   :white (dfs-visit dependency)  ; Unvisited - recurse
                   :gray  ; Back edge found - cycle detected!
-                  (let [path @current-path
+                  (let [path ^PersistentVector @current-path
                         cycle-start (.indexOf path dependency)
                         cycle-path (subvec path cycle-start)
                         ;; Create complete cycle by adding the back edge
@@ -262,7 +266,7 @@
 (defn ^:private cyclic-dependencies
   "Detects cyclic dependencies and generates diagnostics for each namespace in a cycle."
   [narrowed-db _project-db settings]
-  (let [level (get-in settings [:linters :clojure-lsp/cyclic-dependencies :level] :off)]
+  (let [level (get-in settings [:linters :clojure-lsp/cyclic-dependencies :level] :error)]
     (when-not (identical? :off level)
       (let [cycles (find-dependency-cycles (:dep-graph narrowed-db))
             exclude-namespaces (set (get-in settings [:linters :clojure-lsp/cyclic-dependencies :exclude-namespaces] #{}))

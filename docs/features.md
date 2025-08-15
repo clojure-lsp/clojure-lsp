@@ -390,6 +390,13 @@ For more information on how to configure it, check the [diagnostics settings sec
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 
+##### clojure-lsp/cyclic-dependencies
+
+![](images/features/cyclic-dependencies.png)
+
+For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
+
+
 #### Custom linters
 
 ![](images/features/custom-linters.png)

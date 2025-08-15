@@ -43,7 +43,7 @@
     <dependency>
       <groupId>com.github.steffan-westcott</groupId>
       <artifactId>clj-otel-api</artifactId>
-      <version>0.2.7</version>
+      <version>0.2.8</version>
     </dependency>
     <dependency>
       <groupId>rewrite-clj</groupId>

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.08.15-17.11.38
+
 - Fix `clojure-lsp/cyclic-dependencies` custom linter default level to be `error`.
 
 ## 2025.08.15-15.37.37

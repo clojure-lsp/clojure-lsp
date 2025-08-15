@@ -367,9 +367,12 @@
         []
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :off}}})))
-    (testing "linter level by default is :off"
+    (testing "linter level by default is :error"
       (h/assert-submaps
-        []
+        [{:severity 1
+          :code "clojure-lsp/cyclic-dependencies"}
+         {:severity 1
+          :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")] {}))))
 
   (testing "three-namespace cycle"

@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 2025.08.15-15.37.37
 - Docs
   - update neovim editor configuration for clojure lsp
 

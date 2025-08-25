@@ -17,7 +17,7 @@
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
         io.forward/semver {:mvn/version "0.1.0"}
-        babashka/fs {:mvn/version "0.5.22"}
+        babashka/fs {:mvn/version "0.5.26"}
         org.babashka/sci {:mvn/version "0.9.45"}
         com.github.clojure-lsp/lsp4clj {:mvn/version "1.13.1"
                                         #_#_:local/root "../../lsp4clj"

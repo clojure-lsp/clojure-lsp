@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.08.25-14.21.46
+
 - Change `clojure-lsp/cyclic-dependencies` custom linter default level to be `off` until corner cases are fixed.
 
 ## 2025.08.15-17.11.38

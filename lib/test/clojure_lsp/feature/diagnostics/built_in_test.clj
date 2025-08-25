@@ -362,17 +362,14 @@
           :code "clojure-lsp/cyclic-dependencies"}]
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})))
-    (testing "when linter level is :off"
+    (testing "when linter level is :error"
       (h/assert-submaps
         []
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :off}}})))
-    (testing "linter level by default is :error"
+    (testing "linter level by default is :off"
       (h/assert-submaps
-        [{:severity 1
-          :code "clojure-lsp/cyclic-dependencies"}
-         {:severity 1
-          :code "clojure-lsp/cyclic-dependencies"}]
+        []
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")] {}))))
 
   (testing "three-namespace cycle"

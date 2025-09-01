@@ -21,7 +21,10 @@ exec /usr/local/bin/clojure-lsp
 
 ## Emacs
 
-[lsp-mode](https://emacs-lsp.github.io/lsp-mode) has built in support for `clojure-lsp`. With `use-package`, add the following to your emacs config:
+[eglot](https://www.gnu.org/software/emacs/manual/html_node/eglot/index.html)
+and [lsp-mode](https://emacs-lsp.github.io/lsp-mode) are the two LSP clients for Emacs. Both of them have built-in support for `clojure-lsp` out of the box if it is on your `$PATH`.
+
+With `lsp-mode` and `use-package`, you can add the following to your emacs config:
 
 ```elisp
 (use-package lsp-mode

@@ -314,7 +314,7 @@ clojure-lsp supports defining custom linters in a project or lib (via [classpath
 
 #### clj-depend
 
-clojure-lsp uses [clj-depend](https://github.com/clj-depend/clj-depend) when any clj-depend config is found either on clojure-lsp config or as a `.clj-depend/config.edn` file.
+clojure-lsp uses [clj-depend](https://github.com/fabiodomingues/clj-depend) when any clj-depend config is found either on clojure-lsp config or as a `.clj-depend/config.edn` file.
 
 The clj-depend config should be within the `:config` key.
 

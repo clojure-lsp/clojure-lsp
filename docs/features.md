@@ -407,7 +407,7 @@ For more information on how to configure it, check the [diagnostics settings sec
 
 #### clj-depend
 
-Clojure-lsp has a optional integration with [clj-depend](https://github.com/clj-depend/clj-depend), making it easier to configure namespaces relationship.
+Clojure-lsp has a optional integration with [clj-depend](https://github.com/fabiodomingues/clj-depend), making it easier to configure namespaces relationship.
 
 For more information on how to configure it, check the [diagnostics settings section](settings.md#diagnostics-linter).
 

@@ -210,6 +210,20 @@
            (and (fast= :token (z/tag zloc))
                 (fast= :refer (-> zloc z/up z/left z/sexpr))))))
 
+(defn namespaced-map
+  "Returns the namespace string if zloc is inside a namespaced map like #:foo{:bar 1},
+   otherwise returns nil."
+  [zloc]
+  (when zloc
+    (let [parent (z/up zloc)
+          grandparent (when parent (z/up parent))]
+      (when (and grandparent
+                 (fast= :namespaced-map (z/tag grandparent)))
+        (some-> grandparent
+                z/down
+                z/string
+                (subs 1)))))) ; remove leading ":"
+
 (defn inside-rcf?
   [zloc]
   (find-ops-up zloc "comment"))

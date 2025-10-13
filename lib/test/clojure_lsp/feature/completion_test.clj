@@ -528,6 +528,22 @@
          {:label ":bar" :kind :keyword}]
         (f.completion/completion (h/file-uri "file:///b.clj") bar-r bar-c (h/db))))))
 
+(deftest completing-namespaced-maps
+  (let [_ (h/load-code-and-locs (h/code "(ns a)"
+                                        ":foo/bar"
+                                        ":foo/baq"
+                                        ":foo/xdi"
+                                        ":foob/bol"
+                                        ":bar/barr"))
+        [[foo-b-r foo-b-c]] (h/load-code-and-locs (h/code "(ns b)"
+                                                          "#:foo{:b| }") (h/file-uri "file:///b.clj"))]
+
+    (testing "keywords which match the namespace are available"
+      (h/assert-submaps
+        [{:label ":baq" :kind :keyword}
+         {:label ":bar" :kind :keyword}]
+        (f.completion/completion (h/file-uri "file:///b.clj") foo-b-r foo-b-c (h/db))))))
+
 (deftest completing-aliased-keywords
   (h/load-code-and-locs
     (h/code "(ns some.alpaca (:require [clojure.spec.alpha :as s]))"

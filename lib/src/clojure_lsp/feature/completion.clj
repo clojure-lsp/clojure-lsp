@@ -465,13 +465,30 @@
   [cursor-element cursor-loc matches-fn _simple-cursor? caller-var-definition db resolve-support]
   (if (:arglist-kws caller-var-definition)
     (with-definition-kws-args-element-items cursor-loc matches-fn caller-var-definition resolve-support)
-    (into [] (comp
-               q/xf-analysis->keywords
-               (bucket-elems-xf :keyword-usages matches-fn cursor-element)
-               (map #(element->completion-item % nil (if (= (:from cursor-element) (:from %))
-                                                       :keyword-same-ns
-                                                       :keyword) resolve-support)))
-          (:analysis db))))
+    (let [namespaced-map-ns (edit/namespaced-map cursor-loc)
+          items (into [] (comp
+                           q/xf-analysis->keywords
+                           ;; Filter to only keywords matching the namespaced map's namespace
+                           (if namespaced-map-ns
+                             (filter #(= (str (:ns %)) namespaced-map-ns))
+                             identity)
+                           (bucket-elems-xf :keyword-usages matches-fn cursor-element)
+                           (map #(element->completion-item
+                                   %
+                                   nil
+                                   (if (= (:from cursor-element) (:from %))
+                                     :keyword-same-ns
+                                     :keyword)
+                                   resolve-support)))
+                      (:analysis db))]
+      ;; Strip namespace from labels when inside a namespaced map
+      (if namespaced-map-ns
+        (mapv (fn [item]
+                (if (string/starts-with? (:label item) (str ":" namespaced-map-ns "/"))
+                  (assoc item :label (str ":" (subs (:label item) (+ 2 (count namespaced-map-ns)))))
+                  item))
+              items)
+        items))))
 
 (defn ^:private with-core-items [matches-fn {:keys [uri ns-name symbols priority]} resolve-support]
   (keep (fn [{:keys [name kind]}]

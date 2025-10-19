@@ -3,6 +3,7 @@
 ## Unreleased
 
 - New keywords completion inside namespaced maps. #2113
+- Pass current namespace aliases to cljfmt when range-formatting. #2129
 
 ## 2025.08.25-14.21.46
 

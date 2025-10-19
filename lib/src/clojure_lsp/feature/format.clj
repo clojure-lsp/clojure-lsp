@@ -128,9 +128,12 @@
           :new-text new-text}]))
     []))
 
-(defn range-formatting [doc-id format-pos db]
-  (when-let [root-loc (parser/safe-zloc-of-file db doc-id)]
-    (let [cljfmt-settings (cljfmt-config db)
+(defn range-formatting [uri format-pos db]
+  (when-let [root-loc (parser/safe-zloc-of-file db uri)]
+    (let [namespace (shared/uri->namespace uri db)
+          alias-map (when namespace (q/namespace-aliases (symbol namespace) db))
+          cljfmt-settings (update (cljfmt-config db)
+                                  :alias-map merge alias-map)
           start-loc (or (parser/to-pos root-loc (:row format-pos) (:col format-pos))
                         (z/leftmost* root-loc))
           start-top-loc (edit/to-top start-loc)

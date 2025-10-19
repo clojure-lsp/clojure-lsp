@@ -930,3 +930,13 @@
     :keyword-definitions :function
     :keyword-usages :field
     :null))
+
+(defn namespace-aliases [namespace db]
+  (dissoc
+    (reduce
+      (fn [aliases dependency-ns]
+        (merge aliases
+               (update-vals (get-in db [:dep-graph dependency-ns :aliases]) (constantly dependency-ns))))
+      {}
+      (keys (get-in db [:dep-graph namespace :dependencies])))
+    nil))

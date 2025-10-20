@@ -131,7 +131,10 @@
 (defn range-formatting [uri format-pos db]
   (when-let [root-loc (parser/safe-zloc-of-file db uri)]
     (let [namespace (shared/uri->namespace uri db)
-          alias-map (when namespace (q/namespace-aliases (symbol namespace) db))
+          alias-map (when namespace
+                      (-> (q/namespace-aliases (symbol namespace) db)
+                          (update-keys str)
+                          (update-vals str)))
           cljfmt-settings (update (cljfmt-config db)
                                   :alias-map merge alias-map)
           start-loc (or (parser/to-pos root-loc (:row format-pos) (:col format-pos))

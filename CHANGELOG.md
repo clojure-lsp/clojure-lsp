@@ -4,7 +4,7 @@
 
 - New keywords completion inside namespaced maps. #2113
 - Pass current namespace aliases to cljfmt when range-formatting. #2129
-- bump clj-konto to `2025.09.24-20251020.183110-9`.
+- bump clj-konto to `2025.09.24-20251021.151059-11` improving performance and fixing false-positives.
 
 ## 2025.08.25-14.21.46
 

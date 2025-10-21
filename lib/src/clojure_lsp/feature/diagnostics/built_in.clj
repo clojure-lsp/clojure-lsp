@@ -1,6 +1,6 @@
 (ns clojure-lsp.feature.diagnostics.built-in
   (:require
-   [clj-kondo.impl.config :as kondo.config]
+   [clj-kondo.core :as kondo]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -110,11 +110,24 @@
                     (:to namespace-alias))
             nil))))))
 
+(defn ^:private kondo-ns-groups
+  "Copied from kondo but without perf optimizations"
+  [config ns-name filename]
+  (keep (fn [{:keys [pattern
+                     filename-pattern
+                     name]}]
+          (when (or (and (string? pattern) (symbol? name)
+                         (re-find (re-pattern pattern) (str ns-name)))
+                    (and (string? filename-pattern) (symbol? name)
+                         (re-find (re-pattern filename-pattern) filename)))
+            name))
+        (:ns-groups config)))
+
 (defn ^:private setting-for-ns [settings ns-name filename]
-  (let [ns-groups (cons ns-name (kondo.config/ns-groups settings ns-name filename))
+  (let [ns-groups (cons ns-name (kondo-ns-groups settings ns-name filename))
         configs-in-ns (seq (keep #(get (:config-in-ns settings) %) ns-groups))]
     (if configs-in-ns
-      (apply kondo.config/merge-config! settings configs-in-ns)
+      (kondo/merge-configs configs-in-ns)
       settings)))
 
 (defn ^:private exclude-public-diagnostic-definition? [db settings definition]

@@ -1070,14 +1070,14 @@
       "hash": "sha256-Xe66kz8gwkNNCBozUpigMJuTl2+p1ZQc+QwEgldebZA="
     },
     {
-      "mvn-path": "dev/weavejester/cljfmt/0.13.0/cljfmt-0.13.0.jar",
+      "mvn-path": "dev/weavejester/cljfmt/0.15.1/cljfmt-0.15.1.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-JrR6biafbRqMIVzwhvcuYK7gpOtO6sw+CQdSQyNqt7g="
+      "hash": "sha256-24Wq/f/vHJtjWdgFbq9Qw/g6VhUNOXNBVVP21ddoZ5s="
     },
     {
-      "mvn-path": "dev/weavejester/cljfmt/0.13.0/cljfmt-0.13.0.pom",
+      "mvn-path": "dev/weavejester/cljfmt/0.15.1/cljfmt-0.15.1.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-M+OK7KqWzeLkgCwUlM+vQV/GKhxKYDYHbBqlJ8VtHMM="
+      "hash": "sha256-PBN8AKZ1PPxuWLY35Dy5E/i0Ikv6YOuI6yGc6YbBMgI="
     },
     {
       "mvn-path": "expound/expound/0.9.0/expound-0.9.0.jar",
@@ -2725,6 +2725,11 @@
       "hash": "sha256-CRbXpBVYuVAKQnyIb6KYJ6zlJZIGvjrTPmTilvwaYRE="
     },
     {
+      "mvn-path": "org/clojure/pom.contrib/1.3.0/pom.contrib-1.3.0.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-g5qUXfrO6lvVB5+CSPM0bdIULesJFGyj9dG/riYxCWc="
+    },
+    {
       "mvn-path": "org/clojure/spec.alpha/0.2.194/spec.alpha-0.2.194.jar",
       "mvn-repo": "https://repo.maven.apache.org/maven2/",
       "hash": "sha256-z2iZ+YUpjGSxPqEplGrZAo3uja3w6rmuGORVAn04JJw="
@@ -2853,6 +2858,16 @@
       "mvn-path": "org/clojure/tools.cli/1.1.230/tools.cli-1.1.230.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-v7Yh5LAaW4vOEWpgcIQNzdWUnomceEaNgRtuiqqf0cc="
+    },
+    {
+      "mvn-path": "org/clojure/tools.cli/1.2.245/tools.cli-1.2.245.jar",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-fxANwSXHROgDhSTShuwioYv+0UxC5+G2ZQDow9QywVE="
+    },
+    {
+      "mvn-path": "org/clojure/tools.cli/1.2.245/tools.cli-1.2.245.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-B4WhevIetxpNXZZQ09YRzRGJ3uvRPyXKLG7sY59YyLY="
     },
     {
       "mvn-path": "org/clojure/tools.deps/0.22.1492/tools.deps-0.22.1492.jar",

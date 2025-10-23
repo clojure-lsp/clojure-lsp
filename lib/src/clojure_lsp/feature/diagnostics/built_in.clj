@@ -111,27 +111,30 @@
             nil))))))
 
 (defn ^:private kondo-ns-groups
-  "Copied from kondo but without perf optimizations"
-  [config ns-name filename]
+  "Optimized version of ns-groups that uses memoized variation of re-find with
+  signature (string, string) -> boolean"
+  [{:keys [re-find-memo ns-groups]} ns-name filename]
   (keep (fn [{:keys [pattern
                      filename-pattern
                      name]}]
           (when (or (and (string? pattern) (symbol? name)
-                         (re-find (re-pattern pattern) (str ns-name)))
+                         (re-find-memo pattern (str ns-name)))
                     (and (string? filename-pattern) (symbol? name)
-                         (re-find (re-pattern filename-pattern) filename)))
+                         (re-find-memo filename-pattern filename)))
             name))
-        (:ns-groups config)))
+        ns-groups))
 
-(defn ^:private setting-for-ns [settings ns-name filename]
-  (let [ns-groups (cons ns-name (kondo-ns-groups settings ns-name filename))
+(defn ^:private setting-for-ns [settings definition]
+  (let [ns-name (:ns definition)
+        filename (-> definition :uri shared/uri->filename)
+        ns-groups (cons ns-name (kondo-ns-groups settings ns-name filename))
         configs-in-ns (seq (keep #(get (:config-in-ns settings) %) ns-groups))]
     (if configs-in-ns
       (kondo/merge-configs configs-in-ns)
       settings)))
 
 (defn ^:private exclude-public-diagnostic-definition? [db settings definition]
-  (let [settings (setting-for-ns settings (:ns definition) (-> definition :uri shared/uri->filename))
+  (let [settings (setting-for-ns settings definition)
         excluded-syms-regex (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-regex] #{})
         excluded-defined-by-syms-regex (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-defined-by-regex] #{})
         excluded-metas (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})
@@ -174,7 +177,12 @@
 
 (defn ^:private unused-public-vars [narrowed-db project-db settings]
   (when-not (identical? :off (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info))
-    (let [ignore-test-references? (get-in settings
+    (let [;; cache expensive regex creationg + matching by (string,string) -> boolean
+          settings (assoc settings :re-find-memo
+                          (let [re-pattern-memo (memoize re-pattern)]
+                            (memoize (fn [pattern-str file-str]
+                                       (re-find (re-pattern-memo pattern-str) file-str)))))
+          ignore-test-references? (get-in settings
                                           [:linters :clojure-lsp/unused-public-var :ignore-test-references?]
                                           false)
           test-locations-regex (into #{}
@@ -216,7 +224,7 @@
            (keep (fn [element]
                    (let [keyword-def? (identical? :keyword-definitions (:bucket element))
                          settings (if (:ns element)
-                                    (setting-for-ns settings (:ns element) (-> element :uri shared/uri->filename))
+                                    (setting-for-ns settings element)
                                     settings)
                          level (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info)]
                      (when-not (identical? :off level)

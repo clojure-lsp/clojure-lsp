@@ -98,7 +98,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>timbre</artifactId>
-      <version>6.7.0-alpha1</version>
+      <version>6.8.0</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>

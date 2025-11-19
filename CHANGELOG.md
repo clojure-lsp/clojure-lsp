@@ -6,6 +6,7 @@
 - Pass current namespace aliases to cljfmt when range-formatting. #2129
 - bump clj-kondo to `2025.10.24-20251106.135932-6` improving performance and fixing false-positives.
 - Bump cljfmt to `0.15.2` - adding support for vertical alignment.
+- Support `squint` projects when having `squint.edn`. #2158
 
 ## 2025.08.25-14.21.46
 

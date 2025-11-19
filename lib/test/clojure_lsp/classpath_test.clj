@@ -115,7 +115,16 @@ components reference to it."
       {:exit 1})))
 
 (deftest classpath
+  (testing "squint"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-redefs [classpath/locate-executable (locate-executable-mock {"clojure" "pathto/clojure.xyz"})
+                    classpath/shell
+                    (shell-mock {["pathto/clojure.xyz" "-Sdeps" "squint.edn" "-Spath" :dir (.toString temp-dir)]
+                                 (str/join fs/path-separator ["a" "b"])})]
 
+        (let [components (make-components temp-dir "squint.edn")]
+          (is (= #{"a" "b"} (classpath/scan-classpath! components)))))))
   (testing "babashka"
     (fs/with-temp-dir
       [temp-dir {}]

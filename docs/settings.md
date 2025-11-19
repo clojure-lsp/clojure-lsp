@@ -130,6 +130,7 @@ This is a summary of the current logic and supported project types:
 - `boot`: If a `build.boot` is found at the project root, clojure-lsp will run `boot show --fake-classpath`.
 - `shadow-cljs`: If a `shadow-cljs.edn` is found at the project root, clojure-lsp will run `npx shadow-cljs classpath`.
 - `babashka`: If a `bb.edn` is found at the project root, clojure-lsp will run `bb print-deps --format classpath`.
+- `squint`: If a `squint.edn` is found at the project root, clojure-lsp will run `clojure -Sdeps squint.edn -Spath` with `:source-aliases` specified if any. It's recommended to configure inside `squint.edn`, in your source-alias (`dev` for example), the clojurescript dependency.
 
 Note that it's possible to have more than one project type at the same time e.g. deps + babashka, clojure-lsp will merge the classpath and everything should work fine.
 

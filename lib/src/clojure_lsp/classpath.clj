@@ -213,5 +213,11 @@
          :classpath-cmd ["npx" "shadow-cljs" "classpath"]}
         {:project-path "bb.edn"
          :env nil
-         :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}]
+         :classpath-cmd ["bb" "print-deps" "--format" "classpath"]}
+        {:project-path "squint.edn"
+         :env nil
+         :classpath-cmd (->> ["clojure" "-Sdeps" "squint.edn" "-Spath" (deps-source-aliases source-aliases)]
+                             flatten
+                             (remove nil?)
+                             vec)}]
        (map #(update % :classpath-cmd classpath-cmd->normalize))))

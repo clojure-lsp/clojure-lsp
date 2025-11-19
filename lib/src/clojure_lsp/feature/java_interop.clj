@@ -58,7 +58,7 @@
                     :pom-content pom-content}))))))
        first))
 
-(defn ^:private decompile-file [^JarFile jar entry db]
+(defn ^:private decompile-file ^String [^JarFile jar entry db]
   (let [cache-path (config/local-cache-dir db)
         class-file (io/file cache-path "java" "classes" (str entry))
         decompile-folder-file (io/file cache-path "java" "decompiled")
@@ -70,7 +70,7 @@
     (decompile! (.getCanonicalPath class-file) (.getCanonicalPath decompile-folder-file))
     (shared/filename->uri (.getCanonicalPath java-file) db)))
 
-(defn ^:private decompile-jar-as-java-project
+(defn ^:private decompile-jar-as-java-project ^String
   [{:keys [group-id artifact-id version jar-path source-path pom-content]}
    ^JarFile$JarFileEntry entry
    db
@@ -105,11 +105,15 @@
           url (URL. jar-uri)
           connection ^JarURLConnection (.openConnection url)
           jar (.getJarFile connection)
-          entry (.getJarEntry connection)]
-      (if-let [java-project-info (and (settings/get db [:java :decompile-jar-as-project?] true)
-                                      (jar->java-project-info jar))]
-        (decompile-jar-as-java-project java-project-info entry db producer)
-        (decompile-file jar entry db)))
+          entry (.getJarEntry connection)
+          decompiled-uri (if-let [java-project-info (and (settings/get db [:java :decompile-jar-as-project?] true)
+                                                         (jar->java-project-info jar))]
+                           (decompile-jar-as-java-project java-project-info entry db producer)
+                           (decompile-file jar entry db))]
+      (if-let [inner-class-pos (.indexOf decompiled-uri "$")]
+        (str (subs decompiled-uri 0 inner-class-pos)
+             ".java")
+        decompiled-uri))
     uri))
 
 (defn uri->translated-uri [uri db producer]

@@ -110,7 +110,7 @@
                                                          (jar->java-project-info jar))]
                            (decompile-jar-as-java-project java-project-info entry db producer)
                            (decompile-file jar entry db))]
-      (if-let [inner-class-pos (.indexOf decompiled-uri "$")]
+      (if-let [inner-class-pos (string/index-of decompiled-uri "$")]
         (str (subs decompiled-uri 0 inner-class-pos)
              ".java")
         decompiled-uri))

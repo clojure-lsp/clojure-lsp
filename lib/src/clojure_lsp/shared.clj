@@ -2,7 +2,6 @@
   (:require
    [babashka.fs :as fs]
    [clojure-lsp.logger :as logger]
-   [clojure-lsp.shared :as shared]
    [clojure.core.async :refer [<! >! alts! chan go-loop timeout]]
    [clojure.java.io :as io]
    [clojure.set :as set]
@@ -594,12 +593,12 @@
 (defn dir-uris->file-uris [dir-uris db]
   (into []
         (comp
-          (map shared/uri->filename)
+          (map uri->filename)
           (mapcat (fn [filename]
                     (if (re-matches (re-pattern clj-extensions-regex) filename)
                       [filename]
                       (fs/glob filename clj-file-regex))))
-          (map (comp #(shared/filename->uri % db) str fs/canonicalize)))
+          (map (comp #(filename->uri % db) str fs/canonicalize)))
         dir-uris))
 
 (def level->severity

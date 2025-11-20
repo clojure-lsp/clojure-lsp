@@ -1,8 +1,10 @@
 (ns clojure-lsp.queries-test
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.queries :as q]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
+   [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)
@@ -809,6 +811,9 @@
                                 "(defrecord SomeRecord [foo bar])"
                                 "(defprotocol SomeProtocol"
                                 "  (do-stuff [this]))") (h/file-uri "file:///project/my/fabulous_namespace.clj"))
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "Parent.java"))))
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "ParentTwo.class"))))
+  (h/load-java-path (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "ParentTwo$ChildTwo.class"))))
 
   (testing "Finding defrecord definition from imported java class"
     (let [[[from-ns-row from-ns-col]
@@ -832,7 +837,76 @@
         (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/other_namespace.clj") from-ns-row from-ns-col))
       (h/assert-submap
         expected
-        (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/other_namespace.clj") from-defrecord-row from-defrecord-col)))))
+        (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/other_namespace.clj") from-defrecord-row from-defrecord-col))))
+
+  (testing "Finding java class"
+    (let [[[from-ns-row from-ns-col]
+           [from-usage-row from-usage-col]]
+          (h/load-code-and-locs
+            (h/code "(ns my.java-first-namespace"
+                    "  (:import [my_class |Parent]))"
+                    ""
+                    "(|Parent.)") (h/file-uri "file:///project/my/java_first_namespace.clj"))
+          expected {:external? true
+                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
+                    :class "my_class.Parent"
+                    :uri (h/file-uri
+                           (shared/filename->uri
+                             (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "Parent.java")))
+                             (h/db)))
+                    :bucket :java-class-definitions}]
+      (h/assert-submap
+        expected
+        (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/java_first_namespace.clj") from-ns-row from-ns-col))
+      (h/assert-submap
+        expected
+        (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/java_first_namespace.clj") from-usage-row from-usage-col))))
+
+  (testing "Finding java inner class"
+    (let [[[from-ns-row from-ns-col]
+           [from-usage-row from-usage-col]]
+          (h/load-code-and-locs
+            (h/code "(ns my.java-second-namespace"
+                    "  (:import [my_class |Parent$Child]))"
+                    ""
+                    "(|Parent$Child.)") (h/file-uri "file:///project/my/java_second_namespace.clj"))
+          expected {:external? true
+                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
+                    :class "my_class.Parent$Child"
+                    :uri (h/file-uri
+                           (shared/filename->uri
+                             (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "Parent.java")))
+                             (h/db)))
+                    :bucket :java-class-definitions}]
+      (h/assert-submap
+        expected
+        (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/java_second_namespace.clj") from-ns-row from-ns-col))
+      (h/assert-submap
+        expected
+        (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/java_second_namespace.clj") from-usage-row from-usage-col))))
+
+  (testing "Finding compiled java inner class"
+    (let [[[from-ns-row from-ns-col]
+           [from-usage-row from-usage-col]]
+          (h/load-code-and-locs
+            (h/code "(ns my.java-third-namespace"
+                    "  (:import [my_class |ParentTwo$ChildTwo]))"
+                    ""
+                    "(|ParentTwo$ChildTwo.)") (h/file-uri "file:///project/my/java_third_namespace.clj"))
+          expected {:external? true
+                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
+                    :class "my_class.ParentTwo$ChildTwo"
+                    :uri (h/file-uri
+                           (shared/filename->uri
+                             (str (fs/canonicalize (io/file "test" "fixtures" "java_interop" "ParentTwo$ChildTwo.class")))
+                             (h/db)))
+                    :bucket :java-class-definitions}]
+      (h/assert-submap
+        expected
+        (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/java_third_namespace.clj") from-ns-row from-ns-col))
+      (h/assert-submap
+        expected
+        (q/find-definition-from-cursor (h/db) (h/file-uri "file:///project/my/java_third_namespace.clj") from-usage-row from-usage-col)))))
 
 (deftest find-declaration-from-cursor
   (h/load-code-and-locs (h/code "(ns foo.baz) (def other 123)"))

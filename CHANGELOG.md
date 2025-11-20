@@ -4,9 +4,10 @@
 
 - New keywords completion inside namespaced maps. #2113
 - Pass current namespace aliases to cljfmt when range-formatting. #2129
-- bump clj-kondo to `2025.10.24-20251106.135932-6` improving performance and fixing false-positives.
+- bump clj-kondo to `2025.10.24-20251120.193408-8` improving performance, fixing false-positives and supporting java inner classes.
 - Bump cljfmt to `0.15.5` - adding support for vertical alignment.
 - Support `squint` projects when having `squint.edn`. #2158
+- Support find definition of java inner classes (Foo$Bar). #2157
 
 ## 2025.08.25-14.21.46
 

@@ -8,6 +8,7 @@
 - Bump cljfmt to `0.15.5` - adding support for vertical alignment.
 - Support `squint` projects when having `squint.edn`. #2158
 - Support find definition of java inner classes (Foo$Bar). #2157
+- Bump babashka/fs to `0.5.28`.
 
 ## 2025.08.25-14.21.46
 

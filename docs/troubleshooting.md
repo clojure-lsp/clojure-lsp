@@ -10,7 +10,7 @@ clojure-lsp logs most of what is doing to a file which location could be found:
 - Auto generated every server start on `/tmp/clojure-lsp.<TIMESTAMP>.out` or `/var/folders/...` for MacOS.
 
 <details>
-<summary><b>Emacs users</b></summary>
+<summary><b>Emacs/lsp-mode</b></summary>
 You can open server logs in a buffer with <code>M-x</code> <code>lsp-clojure-server-log</code>.
 
 </details>

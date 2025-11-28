@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2025.08.25-14.21.46</version>
+  <version>2025.11.28-12.47.43</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -58,7 +58,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2025.10.23</version>
+      <version>2025.10.24-20251120.193408-8</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
@@ -78,7 +78,7 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
-      <version>1.47.0</version>
+      <version>1.51.0</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>
@@ -134,12 +134,12 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-exporter-otlp</artifactId>
-      <version>1.47.0</version>
+      <version>1.51.0</version>
     </dependency>
     <dependency>
       <groupId>babashka</groupId>
       <artifactId>fs</artifactId>
-      <version>0.5.22</version>
+      <version>0.5.28</version>
     </dependency>
     <dependency>
       <groupId>nrepl</groupId>
@@ -183,6 +183,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2025.08.25-14.21.46</tag>
+    <tag>2025.11.28-12.47.43</tag>
   </scm>
 </project>

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2025.11.28-12.47.43
+
 - New keywords completion inside namespaced maps. #2113
 - Pass current namespace aliases to cljfmt when range-formatting. #2129
 - bump clj-kondo to `2025.10.24-20251120.193408-8` improving performance, fixing false-positives and supporting java inner classes.

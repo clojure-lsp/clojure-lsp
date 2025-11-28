@@ -249,7 +249,7 @@ jobs:
   macos-amd64:
     needs: [build-cli-jar, release-dev-build]
     continue-on-error: true
-    runs-on: macos-13
+    runs-on: macos-15-intel
     strategy:
       fail-fast: false
     steps:

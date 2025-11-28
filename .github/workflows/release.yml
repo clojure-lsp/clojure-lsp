@@ -299,7 +299,7 @@ jobs:
   macos-amd64:
     name: Build native MacOS amd64 binary
     needs: [build-lib-jar, build-cli-jar]
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

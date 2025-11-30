@@ -65,6 +65,7 @@
    "clojure.core/for"
    "clojure.core/->"
    "clojure.core/->>"
+   "clojure.core/as->"
    "clojure.test/deftest"
    "clj-kondo.lint-as/def-catch-all"])
 

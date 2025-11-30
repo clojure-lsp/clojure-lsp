@@ -88,7 +88,7 @@
     <dependency>
       <groupId>org.babashka</groupId>
       <artifactId>cli</artifactId>
-      <version>0.8.65</version>
+      <version>0.8.67</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>

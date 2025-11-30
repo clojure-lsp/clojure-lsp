@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `as->` to the "Resolve macro as" list
+
 ## 2025.11.28-12.47.43
 
 - New keywords completion inside namespaced maps. #2113

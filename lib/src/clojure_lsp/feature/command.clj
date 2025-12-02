@@ -80,6 +80,9 @@
 (defmethod run-command :extract-function [{:keys [loc uri args db]}]
   (apply r.transform/extract-function loc uri (concat args [db])))
 
+(defmethod run-command :extract-function-2 [{:keys [row col row-end col-end loc loc-end uri args db]}]
+  (apply r.transform/extract-function-2 row col row-end col-end loc loc-end uri (concat args [db])))
+
 (defmethod run-command :extract-to-def [{:keys [loc args]}]
   (apply r.transform/extract-to-def loc args))
 
@@ -211,21 +214,34 @@
     (shared/client-changes changes db)))
 
 (defn call-command [command arguments {:keys [db*] :as components}]
+  ;; when no selection for command: [uri line character & args] or 
+  ;; if there is selection: [uri line character line-end character-end & args]
   (let [[uri line character & args] arguments
+        has-selection (> (count args) 1)
+        line-end (if has-selection (nth args 0) line)
+        character-end (if has-selection (nth args 1) character)
+        fn-args (if has-selection (drop 2 args) args)
         db @db*
         row (inc (int line))
         col (inc (int character))
-        ;; TODO Instead of v=0 should I send a change AND a document change
+        row-end (inc (int (or line-end line)))
+        col-end (inc (int (or character-end character)))
+            ;; TODO Instead of v=0 should I send a change AND a document change
         version (get-in db [:documents uri :v] 0)
         loc (some-> (parser/zloc-of-file db uri)
                     (parser/to-pos row col))
+        loc-end (some-> (parser/zloc-of-file db uri)
+                        (parser/to-pos row-end col-end))
         result (run-command {:command command
                              :uri uri
                              :db db
                              :loc loc
+                             :loc-end loc-end
                              :row row
                              :col col
-                             :args args
+                             :row-end row-end
+                             :col-end col-end
+                             :args fn-args
                              :version version
                              :components components})]
     (cond

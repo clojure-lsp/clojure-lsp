@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.command.custom :as f.custom-command]
    [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.development-info :as f.development-info]
@@ -18,8 +19,8 @@
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.transform :as r.transform]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
@@ -197,17 +198,18 @@
 (defmethod run-command :cursor-info  [{:keys [uri components args]}]
   (apply f.development-info/cursor-info-log uri components args))
 
-(def available-commands
-  (->> run-command
-       methods
-       keys
-       (map name)
-       sort
-       vec))
+(defn available-commands [custom-commands]
+  (-> (concat (->> run-command
+                   methods
+                   keys
+                   (map name))
+              (map (comp name key) custom-commands))
+      sort
+      vec))
 
 (defn ^:private command-client-seq-changes [uri version result db]
   (let [changes [{:text-document {:uri uri :version version}
-                  :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
+                  :edits (r.transform/locs-to-ranges result)}]]
     (shared/client-changes changes db)))
 
 (defn call-command [command arguments {:keys [db*] :as components}]
@@ -219,15 +221,21 @@
         version (get-in db [:documents uri :v] 0)
         loc (some-> (parser/zloc-of-file db uri)
                     (parser/to-pos row col))
-        result (run-command {:command command
-                             :uri uri
-                             :db db
-                             :loc loc
-                             :row row
-                             :col col
-                             :args args
-                             :version version
-                             :components components})]
+        result (if-let [[fqns params] (first (settings/get db [:custom-commands (keyword command)]))]
+                 (f.custom-command/run {:fqns fqns
+                                        :params params
+                                        :uri uri
+                                        :db db
+                                        :loc loc})
+                 (run-command {:command command
+                               :uri uri
+                               :db db
+                               :loc loc
+                               :row row
+                               :col col
+                               :args args
+                               :version version
+                               :components components}))]
     (cond
       (:no-op? result)
       nil
@@ -246,8 +254,7 @@
             changes (concat resource-changes
                             (vec (for [[doc-id sub-results] changes-by-uri]
                                    {:text-document {:uri doc-id :version (if (= uri doc-id) version -1)}
-                                    :edits (mapv #(medley/update-existing % :range shared/->range)
-                                                 (r.transform/result sub-results))})))]
+                                    :edits (r.transform/locs-to-ranges sub-results)})))]
         (when-let [change (first (filter #(= "create" (:kind %)) resource-changes))]
           (swap! db* assoc-in [:create-ns-blank-files-denylist (:uri change)] (:kind change)))
         {:show-document-after-edit show-document-after-edit

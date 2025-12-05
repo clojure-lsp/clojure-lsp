@@ -44,6 +44,7 @@
                                             "drag-param-forward"
                                             "expand-let"
                                             "extract-function"
+                                            "extract-function-2"
                                             "extract-to-def"
                                             "forward"
                                             "forward-barf"

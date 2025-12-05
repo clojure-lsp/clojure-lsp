@@ -496,6 +496,51 @@
                           [] {}
                           (h/db)))))
 
+(deftest extract-function2-code-action
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "\n"
+                             "(defn my-foo []\n  \\x)\n"
+                             "(comment (+ 1 1))")
+                        (h/file-uri "file:///a.clj"))
+  (testing "when in non function location it's OK to show extract function menu item"
+    (h/assert-contains-submaps
+      [{:title "Extract function 2"
+        :command {:command "extract-function-2"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          2
+                          1
+                          2
+                          1
+                          [] {}
+                          (h/db))))
+  (testing "when in function show extract function menu item"
+    (h/assert-contains-submaps
+      [{:title "Extract function 2"
+        :command {:command "extract-function-2"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          4
+                          3
+                          4
+                          3
+                          [] {}
+                          (h/db))))
+  (testing "when in rich comment show extract function menu item"
+    (h/assert-contains-submaps
+      [{:title "Extract function 2"
+        :command {:command "extract-function-2"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          5
+                          9
+                          5
+                          9
+                          [] {}
+                          (h/db))))
+  ;; TODO: is there anyplace this shouldn't be displayed?
+  )
+
 (deftest extract-to-def-code-action
   (h/load-code-and-locs "{:a 1}"
                         (h/file-uri "file:///a.clj"))

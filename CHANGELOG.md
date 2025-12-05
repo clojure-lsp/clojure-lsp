@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add `as->` to the "Resolve macro as" list
+- Add extract function code action (with selection option) #2118
 
 ## 2025.11.28-12.47.43
 

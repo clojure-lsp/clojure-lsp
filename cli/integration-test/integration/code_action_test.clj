@@ -22,6 +22,8 @@
     (h/assert-submaps
       [{:title "Move to let"
         :kind "refactor.extract"}
+       {:title "Extract function 2"
+        :kind "refactor.extract"}
        {:title "Cycle privacy"
         :kind "refactor.rewrite"}
        {:title "Extract function"

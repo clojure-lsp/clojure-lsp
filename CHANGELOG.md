@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add `as->` to the "Resolve macro as" list
+- new features: refactor cond to if, and refactor if to cond
 
 ## 2025.11.28-12.47.43
 

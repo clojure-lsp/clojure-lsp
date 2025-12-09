@@ -146,6 +146,12 @@
 (defmethod run-command :create-function [{:keys [loc uri db]}]
   (r.transform/create-function loc uri db))
 
+(defmethod run-command :if->cond-refactor [{:keys [loc]}]
+  (r.transform/if->cond loc))
+
+(defmethod run-command :cond->if-refactor [{:keys [loc]}]
+  (r.transform/cond->if loc))
+
 (defmethod run-command :create-test [{:keys [loc uri db components]}]
   (r.transform/create-test loc uri db components))
 

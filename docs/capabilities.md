@@ -99,10 +99,12 @@ All commands expect the first three args to be `[document-uri, line, character]`
 | √    | add-missing-import  | `[document-uri, line, character, import-name]`                            |       |
 | √    | add-missing-libspec |                                                                           |       |
 | √    | clean-ns            |                                                                           |       |
+| √    | cond->if-refactor   |                                                                           |       |
 | √    | cycle-coll          |                                                                           |       |
 | √    | cycle-privacy       |                                                                           |       |
 | √    | expand-let          |                                                                           |       |
 | √    | extract-function    | `[document-uri, line, character, function-name]`                          |       |
+| √    | if->cond-refactor   |                                                                           |       |
 | √    | inline-symbol       |                                                                           |       |
 | √    | introduce-let       | `[document-uri, line, character, binding-name]`                           |       |
 | √    | move-to-let         | `[document-uri, line, character, binding-name]`                           |       |

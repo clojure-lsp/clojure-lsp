@@ -496,6 +496,134 @@
                           [] {}
                           (h/db)))))
 
+(deftest if->cond-code-action
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "\n"
+                             "(if (true? true)\n"
+                             "  :x)\n"
+                             "  (if (true? true)\n"
+                             "    :x)\n"
+                             "(comment (+ 1 1))")
+                        (h/file-uri "file:///a.clj"))
+  (testing "when not near if, if->cond menu isn't generated"
+    (is (not-any? #(= (:title %) "Change nested if to cond")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                      (h/file-uri "file:///a.clj")
+                                      1 1
+                                      [] {}
+                                      (h/db)))))
+  (testing "when standing on if, show if->cond menu"
+    (h/assert-contains-submaps
+      [{:title "Change nested if to cond"
+        :command {:command "if->cond-refactor"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          3
+                          2
+                          [] {}
+                          (h/db))))
+  (testing "when just before if, show if->cond menu"
+    (h/assert-contains-submaps
+      [{:title "Change nested if to cond"
+        :command {:command "if->cond-refactor"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          5
+                          1
+                          [] {}
+                          (h/db))))
+  (testing "when just after if, show if->cond menu"
+    (h/assert-contains-submaps
+      [{:title "Change nested if to cond"
+        :command {:command "if->cond-refactor"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          3
+                          4
+                          [] {}
+                          (h/db))))
+  (testing "when deep inside if parts, don't show if->cond menu"
+    (is (not-any? #(= (:title %) "Change nested if to cond")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                      (h/file-uri "file:///a.clj")
+                                      4 1
+                                      [] {}
+                                      (h/db)))))
+  (testing "when inside comment, don't show if->cond menu"
+    (is (not-any? #(= (:title %) "Change nested if to cond")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                      (h/file-uri "file:///a.clj")
+                                      7 9
+                                      [] {}
+                                      (h/db))))))
+
+(deftest cond->if-code-action
+  (h/load-code-and-locs (str "(ns some-ns)\n"
+                             "\n"
+                             " (cond  \n"
+                             "   (true? true)\n"
+                             "   :x)\n"
+                             "(comment (+ 1 1))")
+                        (h/file-uri "file:///a.clj"))
+  (testing "when not near cond, cond->if menu isn't generated"
+    (is (not-any? #(= (:title %) "Change cond to nested if")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                      (h/file-uri "file:///a.clj")
+                                      1 1
+                                      [] {}
+                                      (h/db)))))
+  (testing "when standing on cond, show cond->if menu"
+    (h/assert-contains-submaps
+      [{:title "Change cond to nested if"
+        :command {:command "cond->if-refactor"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          2
+                          4
+                          [] {}
+                          (h/db))))
+  (testing "when just before cond, show cond->if menu"
+    (h/assert-contains-submaps
+      [{:title "Change cond to nested if"
+        :command {:command "cond->if-refactor"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          3
+                          1
+                          [] {}
+                          (h/db))))
+  (testing "when just after cond, show cond->if menu"
+    (h/assert-contains-submaps
+      [{:title "Change cond to nested if"
+        :command {:command "cond->if-refactor"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          3
+                          7
+                          [] {}
+                          (h/db))))
+  (testing "when deep inside cond parts, don't show cond->if menu"
+    (is (not-any? #(= (:title %) "Change cond to nested if")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                      (h/file-uri "file:///a.clj")
+                                      5 1
+                                      [] {}
+                                      (h/db)))))
+  (testing "when inside comment, don't show cond->if menu"
+    (is (not-any? #(= (:title %) "Change cond to nested if")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                      (h/file-uri "file:///a.clj")
+                                      6 9
+                                      [] {}
+                                      (h/db)))))
+  (testing "when at end, don't show cond->if menu"
+    (is (not-any? #(= (:title %) "Change cond to nested if")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                      (h/file-uri "file:///a.clj")
+                                      17 6
+                                      [] {}
+                                      (h/db))))))
+
 (deftest extract-to-def-code-action
   (h/load-code-and-locs "{:a 1}"
                         (h/file-uri "file:///a.clj"))

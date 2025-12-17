@@ -129,10 +129,10 @@
                 (custom-diagnostics->diagnostics uri db))))))
 
 (defn ^:private publish-diagnostic!* [{:keys [diagnostics-chan]} diagnostic]
-  (async/put! diagnostics-chan diagnostic))
+  (async/>!! diagnostics-chan diagnostic))
 
 (defn ^:private publish-all-diagnostics!* [{:keys [diagnostics-chan]} diagnostics]
-  (async/onto-chan! diagnostics-chan diagnostics false))
+  (async/<!! (async/onto-chan!! diagnostics-chan diagnostics false)))
 
 (defn ^:private diagnostics-of-uri [uri db]
   {:uri uri

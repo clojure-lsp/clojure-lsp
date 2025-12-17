@@ -39,7 +39,7 @@
   (h/load-code-and-locs "(ns bar) d e f" (h/file-uri "file:///user/project/src/clj/bar.clj"))
   (h/load-code-and-locs "(ns some-jar)" (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj"))
   (testing "when file exists on disk"
-    (let [mock-diagnostics-chan (async/chan 1)
+    (let [mock-diagnostics-chan (h/make-diagnostics-channel)
           uri (h/file-uri "file:///user/project/src/clj/foo.clj")]
       (with-redefs [shared/file-exists? (constantly true)]
         (f.file-management/did-close uri (assoc (h/components)
@@ -50,7 +50,7 @@
       (is (get-in (h/db) [:documents uri]))
       (h/assert-no-take mock-diagnostics-chan 500)))
   (testing "when local file not exists on disk"
-    (let [mock-diagnostics-chan (async/chan 1)
+    (let [mock-diagnostics-chan (h/make-diagnostics-channel)
           uri (h/file-uri "file:///user/project/src/clj/bar.clj")]
       (with-redefs [shared/file-exists? (constantly false)]
         (f.file-management/did-close uri (assoc (h/components)
@@ -63,7 +63,7 @@
               :diagnostics []}
              (h/take-or-timeout mock-diagnostics-chan 500)))))
   (testing "when file is external we do not remove analysis but publish empty diagnostics"
-    (let [mock-diagnostics-chan (async/chan 1)
+    (let [mock-diagnostics-chan (h/make-diagnostics-channel)
           uri (h/file-uri "file:///some/path/to/jar.jar:/some/file.clj")]
       (with-redefs [shared/file-exists? (constantly false)]
         (f.file-management/did-close uri (assoc (h/components)
@@ -79,7 +79,7 @@
 (deftest did-open
   (testing "on an empty file"
     (let [mock-edits-chan (async/chan 1)
-          mock-diagnostics-chan (async/chan 1)
+          mock-diagnostics-chan (h/make-diagnostics-channel)
           uri (h/file-uri "file:///user/project/src/aaa/bbb.clj")]
       (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                    :source-paths #{(h/file-path "/user/project/src")}}

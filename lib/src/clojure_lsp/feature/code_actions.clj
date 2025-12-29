@@ -217,6 +217,20 @@
              :command   "extract-function"
              :arguments [uri line character "new-function"]}})
 
+(defn ^:private refactor-if->cond-action [uri line character]
+  {:title   "Change nested if to cond"
+   :kind    :refactor-extract
+   :command {:title     "Change nested if to cond"
+             :command   "if->cond-refactor"
+             :arguments [uri line character]}})
+
+(defn ^:private refactor-cond->if-action [uri line character]
+  {:title   "Change cond to nested if"
+   :kind    :refactor-extract
+   :command {:title     "Change cond to nested if"
+             :command   "cond->if-refactor"
+             :arguments [uri line character]}})
+
 (defn ^:private extract-to-def-action [uri line character]
   {:title   "Extract to def"
    :kind    :refactor-extract
@@ -399,6 +413,8 @@
         can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
         can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
         can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
+        near-if?* (future (r.transform/near-if? zloc))
+        near-cond?* (future (r.transform/near-cond? zloc))
         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
         inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
         cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
@@ -496,6 +512,12 @@
       (and workspace-edit-capability?
            (seq diagnostics))
       (into (suppress-diagnostic-actions diagnostics uri))
+
+      @near-if?*
+      (conj (refactor-if->cond-action uri line character))
+
+      @near-cond?*
+      (conj (refactor-cond->if-action uri line character))
 
       (and workspace-edit-capability?
            @can-create-test?*)

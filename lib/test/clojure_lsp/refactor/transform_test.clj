@@ -973,6 +973,457 @@
 (defn suppress-diagnostic [code diagnostic-code]
   (h/with-strings (transform/suppress-diagnostic (h/zloc-from-code code) diagnostic-code)))
 
+(defn ^:private do-if->cond [code]
+  (let [file-uri "file:///a.clj"
+        zloc-start (h/load-code-and-zloc code file-uri)]
+    (transform/if->cond zloc-start)))
+
+(deftest if->cond-test
+  (testing "one level of if with simple expressions"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    is-true"
+                    "    :val-is-true"
+                    ""
+                    "    :else"
+                    "    :val-is-false)")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true]\n"
+                               "  |(if is-true\n"
+                               "    :val-is-true\n"
+                               "    :val-is-false))"))))))
+  (testing "one level of if with simple expressions and comments"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    ; if comment"
+                    "    is-true"
+                    "    :val-is-true"
+                    ""
+                    "    ; else comment"
+                    "    :else"
+                    "    :val-is-false)")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true]\n"
+                               "  |(if is-true\n"
+                               "    ; if comment\n"
+                               "    :val-is-true\n"
+                               "    ; else comment\n"
+                               "    :val-is-false))"))))))
+
+  (testing "one level of if with comments only on the else"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    is-true"
+                    "    :val-is-true"
+                    ""
+                    "    ; else comment"
+                    "    :else"
+                    "    :val-is-false)")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true]\n"
+                               "  |(if is-true\n"
+                               "    :val-is-true\n"
+                               "    ; else comment\n"
+                               "    :val-is-false))"))))))
+  (testing "one level of if with no else"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    is-true"
+                    "    :val-is-true)")]
+           (as-strings
+             (do-if->cond "(let [is-true true]\n  |(if is-true\n  :val-is-true))")))))
+  (testing "one level of if with no else but if comment is present"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    ; true comment"
+                    "    is-true"
+                    "    :val-is-true)")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true]\n"
+                               "  |(if is-true\n"
+                               "    ; true comment\n"
+                               "    :val-is-true))"))))))
+  (testing "cursor before if expression with whitespace"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    is-true"
+                    "    :val-is-true)")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true]\n"
+                               " | (if is-true\n"
+                               "    :val-is-true))"))))))
+
+  (testing "cursor after if with whitespace"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    is-true"
+                    "    :val-is-true)")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true]\n"
+                               "  (if | is-true\n"
+                               "    :val-is-true))"))))))
+  (testing "cursor standing on if"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    is-true"
+                    "    :val-is-true)")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true]\n"
+                               "  (i|f is-true\n"
+                               "    :val-is-true))"))))))
+
+  (testing "one level of if but with complex expressions"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    (true? is-true)"
+                    "    (+ 1 2)"
+                    ""
+                    "    :else"
+                    "    (+ 1 3))")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true]\n"
+                               "  |(if (true? is-true)\n"
+                               "    (+ 1 2)\n"
+                               "    (+ 1 3)))"))))))
+  (testing "two levels of if"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(cond"
+                    "    (true? is-true)"
+                    "    (+ 1 2)"
+                    ""
+                    "    (other-test? val)"
+                    "    (+ 5 3)"
+                    ""
+                    "    :else"
+                    "    (+ 1 3))")]
+           (as-strings
+             (do-if->cond (str "(let [is-true true my-var :abc]\n"
+                               "  |(if (true? is-true)\n"
+                               "    (+ 1 2)\n"
+                               "    (if (other-test? val)\n"
+                               "      (+ 5 3)"
+                               "      (+ 1 3))))"))))))
+  (testing "not an if"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= {:error {:message "Not an if expression"
+                    :code :invalid-params}}
+           (do-if->cond (str "(let [is-true true my-var :abc]\n"
+                             "  |(println \"hello\"))"))))))
+
+(defn ^:private do-cond->if [code]
+  (let [file-uri "file:///a.clj"
+        zloc-start (h/load-code-and-zloc code file-uri)]
+    (transform/cond->if zloc-start)))
+
+(deftest cond->if-test
+  (testing "two cond expressions that are simple"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    :val-is-true"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "     is-true\n"
+                               "     :val-is-true\n\n"
+                               "     :else\n"
+                               "     :val-is-false))"))))))
+  (testing "cond with comments"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    ; true comment"
+                      "    :val-is-true"
+                      "    ; false comment"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "     ; true comment\n"
+                               "     is-true\n"
+                               "     :val-is-true\n"
+                               "\n"
+                               "     ; false comment\n"
+                               "     :else\n"
+                               "     :val-is-false))"))))))
+  (testing "cond with multiline comments"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    ; wordy comment"
+                      "    ; true comment"
+                      "    :val-is-true"
+                      "    ; lots of explaination"
+                      "    ; about the"
+                      "    ; false comment"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "     ; wordy comment\n"
+                               "\n"
+                               "     ; true comment\n"
+                               "     is-true\n"
+                               "     :val-is-true\n"
+                               "\n"
+                               "     ; lots of explaination\n"
+                               "     ; about the\n"
+                               "     ; false comment\n"
+                               "     :else\n"
+                               "     :val-is-false))"))))))
+
+  (testing "cond with comments before and after test expressions"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    ; true comment"
+                      "    ; stuff about val being true"
+                      "    :val-is-true"
+                      "    ; lots of explaination"
+                      "    ; about the"
+                      "    ; false comment"
+                      "    ; stuff about val being false"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "\n"
+                               "     ; true comment\n"
+                               "     is-true\n"
+                               "     ; stuff about val being true\n"
+                               "     :val-is-true\n"
+                               "\n"
+                               "     ; lots of explaination\n"
+                               "     ; about the\n"
+                               "     ; false comment\n"
+                               "     :else\n"
+                               "     ; stuff about val being false\n"
+                               "     :val-is-false))"))))))
+  (testing "skip whitespace when looking forward for cond"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    :val-is-true"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "|  (cond\n"
+                               "    is-true\n\n"
+                               "    :val-is-true\n"
+                               "    :else :val-is-false))"))))))
+  (testing "skip comment when looking forward for cond"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    :val-is-true"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |;; my comment\n"
+                               "  (cond\n"
+                               "  is-true\n"
+                               "  :val-is-true\n"
+                               "  :else :val-is-false))"))))))
+  (testing "will check if in first level of cond"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    :val-is-true"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  (cond|\n"
+                               "    is-true\n"
+                               "    :val-is-true\n"
+                               "    :else :val-is-false))"))))))
+  (testing "will check if in first level of cond with whitespace"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    :val-is-true"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  (cond | is-true\n"
+                               "    :val-is-true\n"
+                               "    :else :val-is-false))"))))))
+  (testing "will check if standing on cond itself"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if is-true"
+                      "    :val-is-true"
+                      "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  (co|nd\n"
+                               "    is-true\n"
+                               "    :val-is-true\n"
+                               "    :else :val-is-false))"))))))
+  (testing "will check if standing before the cond"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if is-true"
+                    "    :val-is-true"
+                    "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  (| cond\n"
+                               "    is-true\n"
+                               "    :val-is-true\n"
+                               "    :else :val-is-false))"))))))
+  (testing "only two pairs but with complex expressions"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if (true? is-true)"
+                    "    (+ 1 2)"
+                    "    (+ 1 3))")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "   (true? is-true)\n"
+                               "    (+ 1 2)\n"
+                               "    :else (+ 1 3)))"))))))
+  (testing "cond with only one expression pair"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if is-true"
+                    "    :val-is-true)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "  is-true\n"
+                               "  :val-is-true))"))))))
+  (testing "cond with comment only after test"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if is-true"
+                    "    ; stuff about val being true"
+                    "    :val-is-true)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "    is-true\n"
+                               "    ; stuff about val being true\n"
+                               "    :val-is-true))"))))))
+
+  (testing "cond with only one expression pair and comments"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if is-true"
+                    "    ; a true comment"
+                    "    :val-is-true)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "\n"
+                               "    ; a true comment\n"
+                               "    is-true\n"
+                               "    :val-is-true))"))))))
+  (testing "three levels of conditions"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if (true? is-true)"
+                    "    (+ 1 2)"
+                    "    (if (other-test? my-var)"
+                    "      (+ 2 3)"
+                    "      (+ 1 3)))")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true my-var :abc]\n"
+                               "  |(cond (true? is-true)\n"
+                               "  (+ 1 2)\n\n"
+                               "  (other-test? my-var)\n"
+                               "  (+ 2 3)\n\n"
+                               "  :else\n"
+                               "  (+ 1 3)))"))))))
+  (testing "if in true expression position"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if (true? is-true)"
+                    "    (if (true? my-val) (+ 4 5))"
+                    "    (if (other-test? my-var)"
+                    "      (+ 2 3)"
+                    "      (+ 1 3)))")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true my-var :abc]\n"
+                               "  |(cond (true? is-true)\n"
+                               "    (if (true? my-val) (+ 4 5))\n\n"
+                               "    (other-test? my-var)\n (+ 2 3)\n\n"
+                               "   :else\n"
+                               "    (+ 1 3)))"))))))
+  (testing "multiline value expression whitespace indentation preserved"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code   "(if (true? is-true)"
+                      "    :a"
+                      "    (if (other-test? my-var)"
+                      "      (-> 1"
+                      "        (+ 2)"
+                      "        (+ 3))"
+                      "      (+ 1 3)))")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true my-var :abc]\n"
+                               "  |(cond\n"
+                               "    (true? is-true)\n"
+                               "    :a\n\n"
+                               "    (other-test? my-var)\n"
+                               "    (-> 1\n        (+ 2)\n        (+ 3))\n\n"
+                               "    :else\n"
+                               "    (+ 1 3)))"))))))
+  (testing "complex last expressions are handled correctly"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if (true? is-true)"
+                    "  :a"
+                    "  (if (other-test? my-var)"
+                    "    (-> 1"
+                    "    (+ 2))))")]
+           (as-strings
+             (do-cond->if (str  "|(cond\n"
+                                "  (true? is-true)\n"
+                                "  :a\n\n"
+                                "  (other-test? my-var)\n"
+                                "  (-> 1\n"
+                                "    (+ 2)))\n"))))))
+  (testing "degenerate case: keywords other than :else work as if they are an :else"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if is-true"
+                    "    :val-is-true"
+                    "    :val-is-false)")]
+           (as-strings
+             (do-cond->if (str "(let [is-true true]\n"
+                               "  |(cond\n"
+                               "    is-true\n"
+                               "    :val-is-true\n"
+                               "    :default :val-is-false))"))))))
+  (testing "degenerate case: use true in if, when only an :else in cond pairs"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if true"
+                    "  :a)")]
+           (as-strings
+             (do-cond->if (str "|(cond"
+                               "  :else :a)"))))))
+
+  (testing "degenerate case: cond with no test pairs"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "nil")]
+           (as-strings
+             (do-cond->if "|(cond)")))))
+
+  (testing "degenerate case: if multiple keyword tests, use true for each"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= [(h/code "(if true"
+                    "  :a"
+                    "  (if true"
+                    "    :b"
+                    "    :c))")]
+           (as-strings
+             (do-cond->if (str "|(cond\n"
+                               "  :else\n"
+                               "  :a\n"
+                               "\n"
+                               "  :else2\n"
+                               "  :b\n"
+                               "\n"
+                               "  :else3\n"
+                               "  :c)\n"))))))
+
+  (testing "return an error if this is not a cond"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= {:error {:message "Not a cond"
+                    :code :invalid-params}}
+           (do-cond->if "(let [is-true true]\n  |(+ 1 1))"))))
+  (testing "return an error if cond forms are uneven"
+    (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= {:error {:message "Requires an even number of forms"
+                    :code :invalid-params}}
+           (do-cond->if (str  "|(cond\n"
+                              "  (true? is-true)\n"
+                              "  :a\n\n"
+                              "  (other-test? my-var))\n"))))))
+
 (deftest suppress-diagnostic-test
   (testing "when op has no spaces"
     (swap! (h/db*) shared/deep-merge {:client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})

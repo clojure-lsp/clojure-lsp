@@ -817,6 +817,231 @@
                                            :range min-range}]
                                          defn-edits)}}))))
 
+(defn ^:private find-nearby-node [zloc node-name]
+  ;; Note: can't use z/leftmost here because it spookily
+  ;; works at a distance from the user's perspective (like 
+  ;; the far end of an expression)
+  (cond
+    ;; standing on the cond node (co|nd ...
+    (= node-name (z/string zloc))
+    (z/skip-whitespace z/up (z/up zloc))
+
+    ;; just after the cond node (cond | ...  
+    (= node-name (z/string (z/left zloc)))
+    (z/skip-whitespace z/up zloc)
+
+    ;; just before the cond node (| cond ...
+    (= node-name (z/string (z/right zloc)))
+    (z/skip-whitespace z/up zloc)
+
+    ;; just before the cond expression: |(cond ... or | (cond ...
+    :else
+    (z/find-tag zloc z/right :list)))
+
+(defn ^:private insert-cond-case-part [zloc indent-spaces case-expr]
+  (-> zloc
+      (z/insert-space-right indent-spaces)
+      (z/right*)
+      (z/insert-right (z/node case-expr))))
+
+(defn near-if?
+  "return true if nearby an 'if', otherwise return false"
+  [zloc]
+  (= "if" (-> (find-nearby-node zloc "if") z/down z/string)))
+
+(defn near-cond?
+  "return true if nearby a 'cond', otherwise return false"
+  [zloc]
+  (= "cond" (-> (find-nearby-node zloc "cond") z/down z/string)))
+
+(defn ^:private is-if-expr?
+  "return false if this is something other than an if (including an else)"
+  [loc]
+  (= "if" (z/string (z/down loc))))
+
+(defn ^:private gather-comments-left [zloc]
+  (as-> (z/left* zloc) v
+    (iterate z/left* v)
+    (take-while #(n/whitespace-or-comment? (z/node %)) v)
+    (filter #(n/comment? (z/node %)) v)
+    (reverse v)))
+
+(defn ^:private insert-comments-right [zloc indent-spaces comment-locs]
+  (let [insert-comment (fn [acc comment-loc]
+                         (-> acc
+                             (z/insert-space-right indent-spaces)
+                             (z/right*)
+                             (z/insert-right* (z/node comment-loc))
+                             (z/right*)))]
+    (reduce insert-comment zloc comment-locs)))
+
+(defn ^:private insert-comments [zloc comment-locs indent-spaces]
+  (if (seq comment-locs)
+    (insert-comments-right zloc indent-spaces comment-locs)
+    zloc))
+
+(defn if->cond
+  "transforms an if form into an equivalent cond form"
+  [zloc]
+  (let [if-start-loc (find-nearby-node zloc "if")
+        if-range (meta (z/node if-start-loc))
+        top-loc-col (:col if-range)
+        indent-level (inc top-loc-col)
+        cond-start-zloc (-> (z/of-string "(cond)")
+                            (z/down))]
+    (loop [cond-insert-point cond-start-zloc
+           if-form-loc if-start-loc]
+
+      (if (is-if-expr? if-form-loc)
+        (let [if-test-expr (z/right (z/down if-form-loc))
+              if-true-expr (z/right if-test-expr)
+              true-comment-locs (gather-comments-left if-true-expr)
+              if-false-expr (z/right if-true-expr)
+              start-of-pair (if (= cond-start-zloc cond-insert-point)
+                              ;; no double newline for first case pair after cond
+                              cond-insert-point
+                              (-> cond-insert-point (z/insert-newline-right) (z/right*)))
+              tree (-> start-of-pair
+                       (z/insert-newline-right) (z/right*)
+                       (insert-comments true-comment-locs indent-level)
+                       (insert-cond-case-part indent-level if-test-expr)
+                       (z/right)
+                       (z/insert-newline-right)
+                       (z/right*)
+                       (insert-cond-case-part indent-level if-true-expr)
+                       (z/right*))]
+          (recur tree if-false-expr))
+
+        ;; almost done - not an if, this must be the else part or nothing
+        (cond
+          (= if-form-loc if-start-loc)
+          {:error {:message "Not an if expression"
+                   :code :invalid-params}}
+
+          ;; last else of ifs
+          if-form-loc
+          (let [else-comment-locs (gather-comments-left if-form-loc)]
+            [{:loc (-> cond-insert-point
+                       (z/insert-newline-right) (z/right*)
+                       (z/insert-newline-right) (z/right*)
+                       (insert-comments else-comment-locs indent-level)
+                       (insert-cond-case-part indent-level (z/of-string ":else"))
+                       (z/right)
+                       (z/insert-newline-right)
+                       (z/right*)
+                       (insert-cond-case-part indent-level if-form-loc)
+                       z/up)
+              :range if-range}])
+
+          ;; no else in this if  (eg: (if x :a))
+          :else
+          [{:loc (-> cond-insert-point z/up)
+            :range if-range}])))))
+
+(defn ^:private keyword->true-node [cond-test-loc]
+  ;; All keywords are transformed into a true node.
+  ;; This is a degenerate case, idomatically only :else
+  ;; is translated, and that would only be the "else" part of the
+  ;; new if.  But because the user could specify multiple keywords
+  ;; as tests, or only an :else case, it's here for completeness.
+  (let [test-node (z/node cond-test-loc)
+        if-test-node (if (n/keyword-node? test-node)
+                       (z/node (z/of-string "true"))
+                       test-node)]
+    if-test-node))
+
+(defn ^:private insert-if-test [zloc cond-test-loc]
+  (-> zloc
+      (z/insert-right (keyword->true-node cond-test-loc))
+      (z/right)
+      (z/insert-newline-right)))
+
+(defn ^:private insert-space-count [zloc indent-spaces]
+  (if (> indent-spaces 0)
+    (-> zloc
+        (z/insert-space-right indent-spaces)
+        (z/right*))
+    zloc))
+
+;; used for inserting both true and false branches of an if
+(defn ^:private insert-if-result [zloc indent-spaces result-loc]
+  (-> zloc
+      (insert-space-count indent-spaces)
+      (z/insert-right (z/node result-loc))
+      (z/right)))
+
+(defn ^:private insert-if [zloc indent-spaces]
+  (-> zloc
+      (z/insert-newline-right)
+      (z/right*)
+      (insert-space-count indent-spaces)
+      (z/insert-right (z/node (z/of-string "(if)")))))
+
+(defn ^:private check-for-cond-errors [cond-expr]
+  (cond
+    (not= "cond" (-> cond-expr z/down z/string))
+    {:error {:message "Not a cond"
+             :code :invalid-params}}
+
+    (odd? (count (take-while some? (iterate z/right (-> cond-expr
+                                                        z/down
+                                                        z/right)))))
+    {:error {:message "Requires an even number of forms"
+             :code :invalid-params}}))
+
+;; Inserts an "if", the "test" expr of the if, and the result part if the if;
+;; then loop back and add more.  The dummy node is used as a root placeholder
+;; to keep the code smaller and is not returned to the caller.
+(defn cond->if
+  "transforms a cond form into an equivalent if form"
+  [zloc]
+  (let [cond-expr (find-nearby-node zloc "cond")]
+    (if-let [error (check-for-cond-errors cond-expr)]
+      error
+      (let [cond-indentation (dec (:col (meta (z/node cond-expr))))]
+        (loop [if-start-loc (z/of-string "dummy")
+               cond-test-loc (z/right (z/down cond-expr))
+               cond-result-loc (z/right cond-test-loc)
+               if-nesting-level 1]
+          (if (some? cond-test-loc)
+            (let [cond-comment-pre-locs (gather-comments-left cond-test-loc)
+                  cond-comment-post-locs (gather-comments-left cond-result-loc)
+                  if-indent-spaces (+ (* 2 (dec if-nesting-level)) cond-indentation)
+                  result-indent-spaces (+ (* 2 if-nesting-level) cond-indentation)
+                  more-expressions? (some? (z/right (z/right cond-result-loc)))
+                  test-is-keyword? (n/keyword-node? (z/node cond-test-loc))
+                  last-else-case? (and test-is-keyword?
+                                       (> if-nesting-level 1)
+                                       (not more-expressions?))
+                  if-subtree (if last-else-case?
+                               ;; finish previous if's else branch with result
+                               (-> if-start-loc
+                                   (z/insert-newline-right) (z/right*)
+                                   (insert-comments cond-comment-pre-locs if-indent-spaces)
+                                   (insert-comments cond-comment-post-locs if-indent-spaces)
+                                   (insert-if-result if-indent-spaces cond-result-loc))
+                               ;; start next nested if
+                               (-> if-start-loc
+                                   (insert-if if-indent-spaces) (z/right)
+                                   z/down
+                                   (insert-if-test cond-test-loc) (z/right*)
+                                   (insert-comments cond-comment-pre-locs result-indent-spaces)
+                                   (insert-comments cond-comment-post-locs result-indent-spaces)
+                                   (insert-if-result result-indent-spaces cond-result-loc)))]
+              (recur if-subtree
+                     (z/right cond-result-loc)
+                     (z/right (z/right cond-result-loc))
+                     (inc if-nesting-level)))
+
+            ;; final part of if
+            (let [;; degenerate case of just (cond) with no expression pairs
+                  is-degenerate-cond (and (= 1 if-nesting-level) (nil? cond-result-loc))
+                  next-if-loc (if is-degenerate-cond
+                                (z/right (z/insert-right if-start-loc (z/node (z/of-string "nil"))))
+                                if-start-loc)]
+              [{:loc (z/find next-if-loc z/up edit/top?)
+                :range (meta (z/node cond-expr))}])))))))
+
 (defn create-function [local-zloc uri db]
   (when (and local-zloc
              (identical? :token (z/tag local-zloc)))

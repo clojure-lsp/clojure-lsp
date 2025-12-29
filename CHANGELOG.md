@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Add `as->` to the "Resolve macro as" list
+- Bump clj-kondo to `2025.12.24-20251229.120141-5`.
+- New code actions: refactor cond to if, and refactor if to cond
 
 ## 2025.11.28-12.47.43
 

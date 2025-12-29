@@ -108,6 +108,16 @@
       "hash": "sha256-uGsu5r3B27iJXrkyPgGsWlYGjBGP0H9034turmtYHW0="
     },
     {
+      "mvn-path": "babashka/fs/0.5.30/fs-0.5.30.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-Wf4BeIxSN9FAHd57aFL7OzWjO6lH9XG+BK4MPDs81VI="
+    },
+    {
+      "mvn-path": "babashka/fs/0.5.30/fs-0.5.30.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-fCwnSrKop60b0zcqrhvYUSZ7Yk/QOOrRoE8Y/X6k6Ko="
+    },
+    {
       "mvn-path": "babashka/process/0.5.22/process-0.5.22.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-22BH7RRkuVkJ2+/dHOD2dZ/bVroQS2ySO/dhFGToz0Y="
@@ -273,16 +283,16 @@
       "hash": "sha256-r/kF09oR/1EVcpq2SfSI/mEXxUm/CP/dnHHRO2nSu0k="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2025.10.24-SNAPSHOT/clj-kondo-2025.10.24-20251120.193408-8.jar",
-      "snapshot": "clj-kondo-2025.10.24-SNAPSHOT.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2025.12.24-SNAPSHOT/clj-kondo-2025.12.24-20251229.120141-5.jar",
+      "snapshot": "clj-kondo-2025.12.24-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-NHyDlJN5a5249G0hj2626EB35Df2rWTqHcYQArPVuVU="
+      "hash": "sha256-1A4yeEK/jV749z04qWKHFu6rHyXZBAQFfNu3/6z9OiY="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2025.10.24-SNAPSHOT/clj-kondo-2025.10.24-20251120.193408-8.pom",
-      "snapshot": "clj-kondo-2025.10.24-SNAPSHOT.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2025.12.24-SNAPSHOT/clj-kondo-2025.12.24-20251229.120141-5.pom",
+      "snapshot": "clj-kondo-2025.12.24-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-SvvKTLFLgLzFwHHGTBK1GdmKpQBuR/goAo9SjJwfrrU="
+      "hash": "sha256-FM1i+8hULexwVPQ5ahEjNsfwF/DyV3rEUi1XM8M61YM="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -485,6 +495,11 @@
       "hash": "sha256-lR2zV/nEmlyId8CJYMSoroa9jJqohwYmZL0E96/+6pU="
     },
     {
+      "mvn-path": "com/fasterxml/jackson/core/jackson-core/2.6.6/jackson-core-2.6.6.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-FBG05nI1xvoyhdFIbk8zj/wRqPksm1CBOOwimQCnbBs="
+    },
+    {
       "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.12.4/jackson-databind-2.12.4.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-6Zp7S4kHS8aJqrzZ6x8sExi2jMXDSXna8+NO3FWMegE="
@@ -493,6 +508,11 @@
       "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.12.4/jackson-databind-2.12.4.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-mUN+jfYJpvJRoMHUrAYQO2qklT6MLJyG90TNcQXIJGg="
+    },
+    {
+      "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.6.6/jackson-databind-2.6.6.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-JVEXkl7QzmBeKiLGeSuW8IBjxoplCC3Hurkrp/C9ags="
     },
     {
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.10.2/jackson-dataformat-cbor-2.10.2.jar",
@@ -533,6 +553,11 @@
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.17.0/jackson-dataformat-cbor-2.17.0.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-Niz1VWDxh5GL5n6L0ej33T5VKZU/uPKNv1x/m8MInQE="
+    },
+    {
+      "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.6.6/jackson-dataformat-cbor-2.6.6.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-HSZtuGTqrQ99EbEsQA14+a2pyxSvVc54/3zc2pgVt78="
     },
     {
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-smile/2.10.2/jackson-dataformat-smile-2.10.2.jar",

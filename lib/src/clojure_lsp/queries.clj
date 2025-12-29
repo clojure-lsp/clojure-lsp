@@ -663,8 +663,13 @@
 
 (defn find-references-from-cursor [db uri row col include-definition?]
   (try
-    (when-let [element (find-element-under-cursor db uri row col)]
-      (find-references db element include-definition?))
+    (let [elements (find-all-elements-under-cursor db uri row col)]
+      (when (seq elements)
+        (into []
+              (comp
+                (mapcat #(find-references db % include-definition?))
+                (medley/distinct-by (juxt :uri :name :row :col)))
+              elements)))
     (catch Throwable e
       (logger/error e "can't find references"))))
 

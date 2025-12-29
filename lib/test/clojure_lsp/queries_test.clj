@@ -363,6 +363,57 @@
        {:name 'map->MyRecord :bucket :var-usages :name-row map-to-r :name-col map-to-c}]
       (q/find-references-from-cursor db (h/file-uri "file:///a.clj") def-r def-c false))))
 
+(deftest find-references-from-macro-with-multiple-var-definitions
+  (testing "when a custom macro produces multiple vars at the same cursor position"
+    (h/reset-components!)
+    ;; Simulate clj-kondo analysis hook producing multiple var-definitions at the same position
+    ;; This mimics the behavior described in issue #2176 where a macro like defthings
+    ;; produces Example1 and Example2 from (defthings Example)
+    (let [uri (h/file-uri "file:///a.clj")
+          _ (h/load-code (h/code "(ns a)") uri)
+          ;; Manually insert two var-definitions at the same position (simulating clj-kondo hook)
+          ;; Position them at row 1, col 8 (after "(ns a) ")
+          _ (swap! (h/db*) update-in [:analysis uri :var-definitions]
+                   (fn [defs]
+                     (conj (vec defs)
+                           {:bucket :var-definitions
+                            :ns 'a
+                            :name 'Example1
+                            :name-row 1
+                            :name-col 8
+                            :name-end-row 1
+                            :name-end-col 16
+                            :row 1
+                            :col 8
+                            :end-row 1
+                            :end-col 16
+                            :uri uri
+                            :defined-by 'defthings}
+                           {:bucket :var-definitions
+                            :ns 'a
+                            :name 'Example2
+                            :name-row 1
+                            :name-col 8
+                            :name-end-row 1
+                            :name-end-col 16
+                            :row 1
+                            :col 8
+                            :end-row 1
+                            :end-col 16
+                            :uri uri
+                            :defined-by 'defthings})))
+          [[usage1-r usage1-c]
+           [usage2-r usage2-c]] (h/load-code-and-locs (h/code "(ns b (:require [a]))"
+                                                              "(|a/Example1)"
+                                                              "(|a/Example2)")
+                                                      (h/file-uri "file:///b.clj"))
+          db (h/db)]
+      (testing "from macro call definition site finds all var usages"
+        (h/assert-submaps
+          [{:name 'Example1 :name-row usage1-r :name-col usage1-c :to 'a}
+           {:name 'Example2 :name-row usage2-r :name-col usage2-c :to 'a}]
+          (q/find-references-from-cursor db uri 1 8 false))))))
+
 (deftest find-references-excluding-function-different-arity
   (let [a-code (h/code "(ns a)"
                        "(defn foo [] (foo))"

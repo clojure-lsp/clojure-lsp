@@ -74,6 +74,9 @@
   (-debug [_this _fmeta arg1 arg2] (println arg1 arg2))
   (-debug [_this _fmeta arg1 arg2 arg3] (println arg1 arg2 arg3)))
 
+(defn make-diagnostics-channel []
+  (async/chan (async/sliding-buffer 1024)))
+
 (defn ^:private make-components []
   {:db* (atom (assoc db/initial-db
                      :env :unit-test
@@ -81,7 +84,7 @@
    :logger (->TestLogger)
    :producer (->TestProducer)
    :current-changes-chan (async/chan 1)
-   :diagnostics-chan (async/chan 1)
+   :diagnostics-chan (make-diagnostics-channel)
    :watched-files-chan (async/chan 1)
    :edits-chan (async/chan 1)})
 

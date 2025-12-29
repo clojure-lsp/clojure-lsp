@@ -5,7 +5,6 @@
    [clojure-lsp.feature.diagnostics.custom :as f.diagnostics.custom]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
-   [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing]]))
 
 (h/reset-components-before-test)
@@ -192,7 +191,7 @@
                   (foo 1)
                   (foo 1 ['a 'b])
                   (foo 1 2 3 {:k 1 :v 2})"
-            mock-diagnostics-chan (async/chan 1)]
+            mock-diagnostics-chan (h/make-diagnostics-channel)]
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
@@ -227,7 +226,7 @@
                     (foo)
                     (foo 1)
                     (bar))"
-            mock-diagnostics-chan (async/chan 1)]
+            mock-diagnostics-chan (h/make-diagnostics-channel)]
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
@@ -247,7 +246,7 @@
                   (foo foo foo)
                   (bar :a)
                   (bar :a :b)"
-            mock-diagnostics-chan (async/chan 1)]
+            mock-diagnostics-chan (h/make-diagnostics-channel)]
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
@@ -263,7 +262,7 @@
                   (foo)
                   (foo 1 2)
                   (foo 1)"
-            mock-diagnostics-chan (async/chan 1)]
+            mock-diagnostics-chan (h/make-diagnostics-channel)]
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
@@ -273,7 +272,7 @@
                  (map :message diagnostics)))))))
   (testing "custom unused namespace declaration"
     (h/reset-components!)
-    (let [mock-diagnostics-chan (async/chan 1)]
+    (let [mock-diagnostics-chan (h/make-diagnostics-channel)]
       (h/load-code-and-locs "(ns foo.bar)" (h/file-uri "file:///foo/bar.clj") (assoc (h/components)
                                                                                      :diagnostics-chan mock-diagnostics-chan))
       (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]

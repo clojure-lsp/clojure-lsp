@@ -26,8 +26,11 @@
 (defn- replace-last
   "Replaces the last occurrence of `old-value` in `s` with `new-value`."
   [s old-value new-value]
-  (string/reverse
-    (string/replace-first (string/reverse s) (string/reverse old-value) (string/reverse new-value))))
+  (let [s (if (string? s)
+            s
+            (str (fs/path s)))]
+    (string/reverse
+      (string/replace-first (string/reverse s) (string/reverse old-value) (string/reverse new-value)))))
 
 (deftest analyze-project-and-deps!
   (testing "when project-root is not a file"

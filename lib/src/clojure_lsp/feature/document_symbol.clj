@@ -33,6 +33,15 @@
         (rest coll)
         (cons (first coll) (lazy-seq (remove-first item-to-remove (rest coll))))))))
 
+(defn ^:private element-position [{:keys [row col]}]
+  [row col])
+
+(defn ^:private find-first-by-position [pred coll]
+  (->> coll
+       (filter pred)
+       (sort-by element-position)
+       first))
+
 (defn ^:private edn->element-tree [m keyword-elements* symbol-elements*]
   ;; TODO use tail recur for better performance
   (when (coll? m)
@@ -50,8 +59,8 @@
                :else
                (let [[k v] (vec entry)
                      element (or (if (keyword? k)
-                                   (last (filter #(= (:name %) (name k)) @keyword-elements*))
-                                   (last (filter #(= (:symbol %) k) @symbol-elements*)))
+                                   (find-first-by-position #(= (:name %) (name k)) @keyword-elements*)
+                                   (find-first-by-position #(= (:symbol %) k) @symbol-elements*))
                                  ;; fallback to dumb element
                                  {:symbol (or (some-> k str) "nil") :row 0 :col 0 :end-row 0 :end-col 0})
                      _ (swap! keyword-elements* #(remove-first element %))

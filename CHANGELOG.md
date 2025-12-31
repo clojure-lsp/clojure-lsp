@@ -6,6 +6,7 @@
 - Bump clj-kondo to `2025.12.24-20251229.120141-5`.
 - New code actions: refactor cond to if, and refactor if to cond
 - Allow finding references of multiple definitions at cursor. #2176
+- Bump rewrite-clj to 1.2.51.
 
 ## 2025.11.28-12.47.43
 

@@ -495,11 +495,6 @@
       "hash": "sha256-lR2zV/nEmlyId8CJYMSoroa9jJqohwYmZL0E96/+6pU="
     },
     {
-      "mvn-path": "com/fasterxml/jackson/core/jackson-core/2.6.6/jackson-core-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-FBG05nI1xvoyhdFIbk8zj/wRqPksm1CBOOwimQCnbBs="
-    },
-    {
       "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.12.4/jackson-databind-2.12.4.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-6Zp7S4kHS8aJqrzZ6x8sExi2jMXDSXna8+NO3FWMegE="
@@ -508,11 +503,6 @@
       "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.12.4/jackson-databind-2.12.4.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-mUN+jfYJpvJRoMHUrAYQO2qklT6MLJyG90TNcQXIJGg="
-    },
-    {
-      "mvn-path": "com/fasterxml/jackson/core/jackson-databind/2.6.6/jackson-databind-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-JVEXkl7QzmBeKiLGeSuW8IBjxoplCC3Hurkrp/C9ags="
     },
     {
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.10.2/jackson-dataformat-cbor-2.10.2.jar",
@@ -553,11 +543,6 @@
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.17.0/jackson-dataformat-cbor-2.17.0.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-Niz1VWDxh5GL5n6L0ej33T5VKZU/uPKNv1x/m8MInQE="
-    },
-    {
-      "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.6.6/jackson-dataformat-cbor-2.6.6.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-HSZtuGTqrQ99EbEsQA14+a2pyxSvVc54/3zc2pgVt78="
     },
     {
       "mvn-path": "com/fasterxml/jackson/dataformat/jackson-dataformat-smile/2.10.2/jackson-dataformat-smile-2.10.2.jar",
@@ -3635,14 +3620,14 @@
       "hash": "sha256-6rULcjyeeEkPWDy5n7HUa8KA/xH9X4Ujub7XamTq8CM="
     },
     {
-      "mvn-path": "rewrite-clj/rewrite-clj/1.2.50/rewrite-clj-1.2.50.jar",
+      "mvn-path": "rewrite-clj/rewrite-clj/1.2.51/rewrite-clj-1.2.51.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-WcCPKuzIIU9oLkGvlz71qohtwt8KtnTPyyIuyorvy4Y="
+      "hash": "sha256-zrYm5fJ27Z8aij3AgmAiXU5S+cse6b7Iyvb8e+JZxjc="
     },
     {
-      "mvn-path": "rewrite-clj/rewrite-clj/1.2.50/rewrite-clj-1.2.50.pom",
+      "mvn-path": "rewrite-clj/rewrite-clj/1.2.51/rewrite-clj-1.2.51.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-tQj8qmvR2eOgzTsTdPbPX9iDIO0vlSG9WJswh7MpKCE="
+      "hash": "sha256-21KyK5e/4znEslmzfFK9t4Ry8j129v+iv41oDgInQPs="
     },
     {
       "mvn-path": "s3-wagon-private/s3-wagon-private/1.3.5/s3-wagon-private-1.3.5.jar",

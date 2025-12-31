@@ -105,6 +105,7 @@ All commands expect the first three args to be `[document-uri, line, character]`
 | √    | expand-let          |                                                                           |       |
 | √    | extract-function    | `[document-uri, line, character, function-name]`                          |       |
 | √    | if->cond-refactor   |                                                                           |       |
+| √    | inline-function   |                                                                           |       |
 | √    | inline-symbol       |                                                                           |       |
 | √    | introduce-let       | `[document-uri, line, character, binding-name]`                           |       |
 | √    | move-to-let         | `[document-uri, line, character, binding-name]`                           |       |

@@ -55,6 +55,7 @@
                                             "get-in-more"
                                             "get-in-none"
                                             "if->cond-refactor"
+                                            "inline-function"
                                             "inline-symbol"
                                             "introduce-let"
                                             "kill-sexp"

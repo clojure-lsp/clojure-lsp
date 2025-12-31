@@ -6,6 +6,7 @@
 - Fix inline-def to work with defs with metas.
 - Bump clj-kondo to `2026.01.20-20260305.171638-23`.
 - bump up timeout for code action performance measurement, include p90 measurement #2236
+- implementation of inline function. #1827
 
 ## 2026.02.20-16.08.58
 

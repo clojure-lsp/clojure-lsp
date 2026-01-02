@@ -431,11 +431,11 @@
       :lsp/code-actions
       (let [db @db*
             diagnostics (-> context :diagnostics)
-            [start-row start-col] (shared/position->row-col (:start range))
+            [row col] (shared/position->row-col (:start range))
             [end-row end-col] (some-> (:end range) shared/position->row-col)
             root-zloc (parser/safe-zloc-of-file db (:uri text-document))
             client-capabilities (get db :client-capabilities)]
-        (f.code-actions/all root-zloc (:uri text-document) start-row start-col end-row end-col diagnostics client-capabilities db)))))
+        (f.code-actions/all root-zloc (:uri text-document) row col end-row end-col diagnostics client-capabilities db)))))
 
 (defn code-lens
   [{:keys [db*] :as components} {:keys [text-document]}]

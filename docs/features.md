@@ -428,8 +428,10 @@ LSP clients will allow you to bind these commands to shortcuts or menu items usi
 
 Arguments:
 - `file-uri`: Absolute file uri. e.x. `file:///home/user/project/src/main.clj`
-- `row`: line-number of the cursor, 0 based.
-- `col`: col-number of the cursor, 0 based.
+- `row`: line-number of the cursor, 0 based.  When selection is active, start line-number of selection.
+- `col`: col-number of the cursor, 0 based.  When selection is active, end line-number of selection.
+- `end-row`: when selection is active, end line-number of the end of selection, 0 based; otherwise unused.
+- `end-col`: when selection is active, col-number of the end of selection, 0 based; otherwise unused.
 - `name`: Used when introducing a name, usually a string for a valid clojure symbol.
 - `filename`: Filename path. e.x. `src/utils.clj`
 
@@ -450,7 +452,7 @@ Arguments:
 | df       | drag-forward                 | Drag forward                              | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Drag forward and backward](images/features/drag.gif)](images/features/drag.gif)                                                    |
 | dk       | destructure-keys             | Destructure keys                          | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Destructure keys](images/features/destructure-keys.gif)](images/features/destructure-keys.gif)                                     |
 | ed       | extract-to-def               | Extract to def                            | `[file-uri,row,col,name]`                        | ✅                        | [![Screen recording of Extract to def](images/features/extract-to-def.gif)](images/features/extract-to-def.gif)                                           |
-| ef       | extract-function             | Extract function                          | `[file-uri,row,col,name]`                        | ✅                        | [![Screen recording of Extract function](images/features/extract-function.gif)](images/features/extract-function.gif)                                     |
+| ef       | extract-function             | Extract function                          | without selection: <br/> `[file-uri,row,col,name]` <br/>  when selection is active: <br/>`[file-uri,row,col,name,end-row,end-col]`                  | ✅                        | [![Screen recording of Extract function](images/features/extract-function.gif)](images/features/extract-function.gif) [![Screen recording of Extract function with selection](images/features/extract-function-selection.gif)](images/features/extract-function-selection.gif)                                     |
 | el       | expand-let                   | Expand let                                | `[file-uri,row,col]`                             |                           |                                                                                                                                                           |
 | fe       | create-function              | Create function from example              | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Create function from example](images/features/create-private-function.gif)](images/features/create-private-function.gif)           |
 | ga       | get-in-all                   | Move all expressions to get/get-in        | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Threading get](images/features/thread-get.gif)](images/features/thread-get.gif)                                                    |

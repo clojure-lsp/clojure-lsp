@@ -475,19 +475,19 @@
     :else
     (z/up (edit/find-op expression-start-zloc))))
 
-(defn ^:private single-cursor? [row-start col-start row-end col-end]
+(defn ^:private single-cursor? [row-start col-start end-row end-col]
   (or
-    (and (= row-start row-end) (= col-start col-end))
-    (= row-end col-end nil)))        ;; *-end shouldn't be nil, but it's possible that a client may remove them
+    (and (= row-start end-row) (= col-start end-col))
+    (= end-row end-col nil)))        ;; end-* shouldn't be nil, but it's possible that a client may remove them
 
 (defn ^:private next-not-executable? [start-zloc expression-start-zloc]
   (and (fast= :whitespace (z/tag start-zloc)) (not (fast= :list (z/tag expression-start-zloc)))))
 
-(defn ^:private find-expressions-in-range [start-zloc row-start col-start row-end col-end]
-  (let [has-selection? (not (single-cursor? col-start row-start col-end row-end))
+(defn ^:private find-expressions-in-range [start-zloc row-start col-start end-row end-col]
+  (let [has-selection? (not (single-cursor? col-start row-start end-col end-row))
         token? (fast= :token (z/tag start-zloc))
-        expression-start-zloc (next-expr-start start-zloc (not has-selection?) row-end col-end)
-        inside-selection? (fn [zloc] (and (some? zloc) (not (past? zloc row-end col-end))))]
+        expression-start-zloc (next-expr-start start-zloc (not has-selection?) end-row end-col)
+        inside-selection? (fn [zloc] (and (some? zloc) (not (past? zloc end-row end-col))))]
     (cond
       ;; cursor standing on token or non-token  (|add 4 5) or if the expression to the right 
       ;; doesn't look like a function call  [1| 2 3] grab the parent
@@ -521,12 +521,12 @@
   (let [normalized-end-zloc (or sel-end-zloc (edit/to-top sel-start-zloc))]
     (not= (z/up sel-start-zloc) (z/up normalized-end-zloc))))
 
-(defn ^:private check-for-errors [selected-expressions sel-start-zloc sel-end-zloc row-start col-start row-end col-end]
+(defn ^:private check-for-errors [selected-expressions sel-start-zloc sel-end-zloc row-start col-start end-row end-col]
   (cond (all-ignorable? selected-expressions) {:error
                                                {:message "No expressions to extract"
                                                 :code :invalid-params}}
         (and
-          (not (single-cursor? row-start col-start row-end col-end))
+          (not (single-cursor? row-start col-start end-row end-col))
           (different-parents?  sel-start-zloc sel-end-zloc)) {:error
                                                               {:message "Expressions must be at the same level"
                                                                :code :invalid-params}}
@@ -547,9 +547,9 @@
   "Extract selected expressions to a new function and replace with a function call. If no selection, extract
    the expression to the right.  When selection ends don't have the same parent or no expressions are
    found, return an error."
-  [row-start col-start row-end col-end sel-start-zloc sel-end-zloc uri fn-name db]
-  (let [selected-expressions (find-expressions-in-range sel-start-zloc row-start col-start row-end col-end)]
-    (if-let [error (check-for-errors selected-expressions sel-start-zloc sel-end-zloc row-start col-start row-end col-end)]
+  [row-start col-start end-row end-col sel-start-zloc sel-end-zloc uri fn-name db]
+  (let [selected-expressions (find-expressions-in-range sel-start-zloc row-start col-start end-row end-col)]
+    (if-let [error (check-for-errors selected-expressions sel-start-zloc sel-end-zloc row-start col-start end-row end-col)]
       error
       (let [top-loc (edit/to-top sel-start-zloc)
             {top-loc-col :col} (meta (z/node top-loc))

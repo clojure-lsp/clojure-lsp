@@ -77,8 +77,8 @@
 (defmethod run-command :drag-param-forward [{:keys [loc row col uri components]}]
   (f.drag-param/drag-forward loc {:row row :col col} uri components))
 
-(defmethod run-command :extract-function [{:keys [row col row-end col-end loc loc-end uri args db]}]
-  (apply r.transform/extract-function row col row-end col-end loc loc-end uri (concat args [db])))
+(defmethod run-command :extract-function [{:keys [row col end-row end-col loc loc-end uri args db]}]
+  (apply r.transform/extract-function row col end-row end-col loc loc-end uri (concat args [db])))
 
 (defmethod run-command :extract-to-def [{:keys [loc args]}]
   (apply r.transform/extract-to-def loc args))
@@ -231,14 +231,14 @@
         db @db*
         row (inc (int line))
         col (inc (int character))
-        row-end (inc (int (or line-end line)))
-        col-end (inc (int (or character-end character)))
-            ;; TODO Instead of v=0 should I send a change AND a document change
+        end-row (inc (int (or line-end line)))
+        end-col (inc (int (or character-end character)))
+        ;; TODO Instead of v=0 should I send a change AND a document change
         version (get-in db [:documents uri :v] 0)
         loc (some-> (parser/zloc-of-file db uri)
                     (parser/to-pos row col))
         loc-end (some-> (parser/zloc-of-file db uri)
-                        (parser/to-pos row-end col-end))
+                        (parser/to-pos end-row end-col))
         result (run-command {:command command
                              :uri uri
                              :db db
@@ -246,8 +246,8 @@
                              :loc-end loc-end
                              :row row
                              :col col
-                             :row-end row-end
-                             :col-end col-end
+                             :end-row end-row
+                             :end-col end-col
                              :args fn-args
                              :version version
                              :components components})]

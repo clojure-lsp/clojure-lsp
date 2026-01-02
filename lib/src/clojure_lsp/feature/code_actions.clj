@@ -210,26 +210,12 @@
                :command   "promote-fn"
                :arguments [uri line character nil]}}))
 
-(defn ^:private extract-function-action [uri start-line start-character end-line end-character]
+(defn ^:private extract-function-action [uri line character end-line end-character]
   {:title   "Extract function"
    :kind    :refactor-extract
    :command {:title     "Extract function"
              :command   "extract-function"
-             :arguments [uri start-line start-character "new-function" end-line end-character]}})
-
-(defn ^:private refactor-if->cond-action [uri line character]
-  {:title   "Change nested if to cond"
-   :kind    :refactor-extract
-   :command {:title     "Change nested if to cond"
-             :command   "if->cond-refactor"
-             :arguments [uri line character]}})
-
-(defn ^:private refactor-cond->if-action [uri line character]
-  {:title   "Change cond to nested if"
-   :kind    :refactor-extract
-   :command {:title     "Change cond to nested if"
-             :command   "cond->if-refactor"
-             :arguments [uri line character]}})
+             :arguments [uri line character "new-function" end-line end-character]}})
 
 (defn ^:private refactor-if->cond-action [uri line character]
   {:title   "Change nested if to cond"
@@ -532,15 +518,8 @@
             (seq diagnostics))
        (into (suppress-diagnostic-actions diagnostics uri))
 
-      @near-if?*
-      (conj (refactor-if->cond-action uri line character))
-
-      @near-cond?*
-      (conj (refactor-cond->if-action uri line character))
-
-      (and workspace-edit-capability?
-           @can-create-test?*)
-      (conj (create-test-action (:function-name-loc @can-create-test?*) uri line character))
+       @near-if?*
+       (conj (refactor-if->cond-action uri line character))
 
        @near-cond?*
        (conj (refactor-cond->if-action uri line character))

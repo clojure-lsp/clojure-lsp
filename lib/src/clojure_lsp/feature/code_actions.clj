@@ -210,12 +210,26 @@
                :command   "promote-fn"
                :arguments [uri line character nil]}}))
 
-(defn ^:private extract-function-action [uri line character]
+(defn ^:private extract-function-action [uri start-line start-character end-line end-character]
   {:title   "Extract function"
    :kind    :refactor-extract
    :command {:title     "Extract function"
              :command   "extract-function"
-             :arguments [uri line character "new-function"]}})
+             :arguments [uri start-line start-character "new-function" end-line end-character]}})
+
+(defn ^:private refactor-if->cond-action [uri line character]
+  {:title   "Change nested if to cond"
+   :kind    :refactor-extract
+   :command {:title     "Change nested if to cond"
+             :command   "if->cond-refactor"
+             :arguments [uri line character]}})
+
+(defn ^:private refactor-cond->if-action [uri line character]
+  {:title   "Change cond to nested if"
+   :kind    :refactor-extract
+   :command {:title     "Change cond to nested if"
+             :command   "cond->if-refactor"
+             :arguments [uri line character]}})
 
 (defn ^:private refactor-if->cond-action [uri line character]
   {:title   "Change nested if to cond"
@@ -383,135 +397,140 @@
              :command   "get-in-none"
              :arguments [uri line character]}})
 
-(defn all [root-zloc uri row col diagnostics client-capabilities db]
-  (let [zloc (parser/to-pos root-zloc row col)
-        line (dec row)
-        character (dec col)
-        resolvable-diagnostics (resolvable-diagnostics diagnostics root-zloc)
-        workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
-        inside-function?* (future (r.transform/find-function-form zloc))
-        private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))
-        public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db))
-        other-colls* (future (r.transform/find-other-colls zloc))
-        can-thread?* (future (r.transform/can-thread? zloc))
-        can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
-        can-get-in-more?* (future (f.thread-get/can-get-in-more? zloc))
-        can-get-in-less?* (future (f.thread-get/can-get-in-less? zloc))
-        can-create-test?* (future (r.transform/can-create-test? zloc uri db))
-        macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
-        resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "syntax"} resolvable-diagnostics)
-        resolvable-refer-all-diagnostics (diagnostics-with-code #{"refer-all"} resolvable-diagnostics)
-        missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
-        missing-imports* (future (find-missing-imports resolvable-require-diagnostics db))
-        require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
-        can-sort-clauses?* (future (f.sort-clauses/can-sort? zloc uri db))
-        allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
-        allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
-        allow-drag-param-backward?* (future (f.drag-param/can-drag-backward? zloc uri db))
-        allow-drag-param-forward?* (future (f.drag-param/can-drag-forward? zloc uri db))
-        can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
-        can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
-        can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
-        can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
-        near-if?* (future (r.transform/near-if? zloc))
-        near-cond?* (future (r.transform/near-cond? zloc))
-        can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
-        inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
-        cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
-        can-add-let? (or (z/skip-whitespace z/right zloc)
-                         (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
-    (cond-> []
-      (seq resolvable-refer-all-diagnostics)
-      (into (replace-refer-all-actions uri resolvable-refer-all-diagnostics))
+(defn all
+  ([root-zloc uri row col diagnostics client-capabilities db]
+   (all root-zloc uri row col nil nil diagnostics client-capabilities db))
+  ([root-zloc uri row col end-row end-col diagnostics client-capabilities db]
+   (let [zloc (parser/to-pos root-zloc row col)
+         line (dec row)
+         character (dec col)
+         end-character (when end-col (dec end-col))
+         end-line (when end-row (dec end-row))
+         resolvable-diagnostics (resolvable-diagnostics diagnostics root-zloc)
+         workspace-edit-capability? (get-in client-capabilities [:workspace :workspace-edit])
+         inside-function?* (future (r.transform/find-function-form zloc))
+         private-function-to-create* (future (find-private-function-to-create resolvable-diagnostics))
+         public-function-to-create* (future (find-public-function-to-create uri resolvable-diagnostics db))
+         other-colls* (future (r.transform/find-other-colls zloc))
+         can-thread?* (future (r.transform/can-thread? zloc))
+         can-unwind-thread?* (future (r.transform/can-unwind-thread? zloc))
+         can-get-in-more?* (future (f.thread-get/can-get-in-more? zloc))
+         can-get-in-less?* (future (f.thread-get/can-get-in-less? zloc))
+         can-create-test?* (future (r.transform/can-create-test? zloc uri db))
+         macro-sym* (future (f.resolve-macro/find-full-macro-symbol-to-resolve zloc uri db))
+         resolvable-require-diagnostics (diagnostics-with-code #{"unresolved-namespace" "unresolved-symbol" "syntax"} resolvable-diagnostics)
+         resolvable-refer-all-diagnostics (diagnostics-with-code #{"refer-all"} resolvable-diagnostics)
+         missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
+         missing-imports* (future (find-missing-imports resolvable-require-diagnostics db))
+         require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
+         can-sort-clauses?* (future (f.sort-clauses/can-sort? zloc uri db))
+         allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
+         allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
+         allow-drag-param-backward?* (future (f.drag-param/can-drag-backward? zloc uri db))
+         allow-drag-param-forward?* (future (f.drag-param/can-drag-forward? zloc uri db))
+         can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
+         can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
+         can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
+         can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
+         near-if?* (future (r.transform/near-if? zloc))
+         near-cond?* (future (r.transform/near-cond? zloc))
+         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
+         inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
+         cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
+         can-add-let? (or (z/skip-whitespace z/right zloc)
+                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
+     (cond-> []
+       (seq resolvable-refer-all-diagnostics)
+       (into (replace-refer-all-actions uri resolvable-refer-all-diagnostics))
 
-      (seq @missing-imports*)
-      (into (missing-import-actions uri @missing-imports*))
+       (seq @missing-imports*)
+       (into (missing-import-actions uri @missing-imports*))
 
-      (seq @require-suggestions*)
-      (into (require-suggestion-actions uri @require-suggestions*))
+       (seq @require-suggestions*)
+       (into (require-suggestion-actions uri @require-suggestions*))
 
-      @private-function-to-create*
-      (conj (create-private-function-action uri @private-function-to-create*))
+       @private-function-to-create*
+       (conj (create-private-function-action uri @private-function-to-create*))
 
-      @public-function-to-create*
-      (conj (create-public-function-action uri @public-function-to-create*))
+       @public-function-to-create*
+       (conj (create-public-function-action uri @public-function-to-create*))
 
-      @macro-sym*
-      (conj (resolve-macro-as-action uri line character @macro-sym*))
+       @macro-sym*
+       (conj (resolve-macro-as-action uri line character @macro-sym*))
 
-      @inline-symbol?*
-      (conj (inline-symbol-action uri line character))
+       @inline-symbol?*
+       (conj (inline-symbol-action uri line character))
 
-      @other-colls*
-      (into (change-colls-actions uri line character @other-colls*))
+       @other-colls*
+       (into (change-colls-actions uri line character @other-colls*))
 
-      @cycle-kwd-status*
-      (conj (cycle-kwd-action uri line character @cycle-kwd-status*))
+       @cycle-kwd-status*
+       (conj (cycle-kwd-action uri line character @cycle-kwd-status*))
 
-      can-add-let?
-      (conj (move-to-let-action uri line character))
+       can-add-let?
+       (conj (move-to-let-action uri line character)
+             (extract-function-action uri line character end-line end-character))
 
-      @inside-function?*
-      (conj (cycle-privacy-action uri line character)
-            (extract-function-action uri line character))
+       @inside-function?*
+       (conj (cycle-privacy-action uri line character))
 
-      @can-promote-fn?*
-      (conj (promote-fn-action uri line character @can-promote-fn?*))
+       @can-promote-fn?*
+       (conj (promote-fn-action uri line character @can-promote-fn?*))
 
-      @can-demote-fn?*
-      (conj (demote-fn-action uri line character))
+       @can-demote-fn?*
+       (conj (demote-fn-action uri line character))
 
-      @can-destructure-keys?*
-      (conj (destructure-keys-action uri line character))
+       @can-destructure-keys?*
+       (conj (destructure-keys-action uri line character))
 
-      @can-restructure-keys?*
-      (conj (restructure-keys-action uri line character))
+       @can-restructure-keys?*
+       (conj (restructure-keys-action uri line character))
 
-      @can-extract-to-def?*
-      (conj (extract-to-def-action uri line character))
+       @can-extract-to-def?*
+       (conj (extract-to-def-action uri line character))
 
-      @can-thread?*
-      (conj (thread-first-all-action uri line character)
-            (thread-last-all-action uri line character))
+       @can-thread?*
+       (conj (thread-first-all-action uri line character)
+             (thread-last-all-action uri line character))
 
-      @can-unwind-thread?*
-      (conj (unwind-thread-action uri line character)
-            (unwind-all-action uri line character))
+       @can-unwind-thread?*
+       (conj (unwind-thread-action uri line character)
+             (unwind-all-action uri line character))
 
-      @can-get-in-more?*
-      (conj (get-in-more-action uri line character)
-            (get-in-all-action uri line character))
+       @can-get-in-more?*
+       (conj (get-in-more-action uri line character)
+             (get-in-all-action uri line character))
 
-      @can-get-in-less?*
-      (conj (get-in-less-action uri line character)
-            (get-in-none-action uri line character))
+       @can-get-in-less?*
+       (conj (get-in-less-action uri line character)
+             (get-in-none-action uri line character))
 
-      (and workspace-edit-capability?
-           @can-sort-clauses?*)
-      (conj (sort-clauses-action uri line character @can-sort-clauses?*))
+       (and workspace-edit-capability?
+            @can-sort-clauses?*)
+       (conj (sort-clauses-action uri line character @can-sort-clauses?*))
 
-      (and workspace-edit-capability?
-           @allow-drag-backward?*)
-      (conj (drag-backward-action uri line character))
+       (and workspace-edit-capability?
+            @allow-drag-backward?*)
+       (conj (drag-backward-action uri line character))
 
-      (and workspace-edit-capability?
-           @allow-drag-forward?*)
-      (conj (drag-forward-action uri line character))
+       (and workspace-edit-capability?
+            @allow-drag-forward?*)
+       (conj (drag-forward-action uri line character))
 
-      (and workspace-edit-capability?
-           @allow-drag-param-backward?*)
-      (conj (drag-param-backward-action uri line character))
+       (and workspace-edit-capability?
+            @allow-drag-param-backward?*)
+       (conj (drag-param-backward-action uri line character))
 
-      (and workspace-edit-capability?
-           @allow-drag-param-forward?*)
-      (conj (drag-param-forward-action uri line character))
+       (and workspace-edit-capability?
+            @allow-drag-param-forward?*)
+       (conj (drag-param-forward-action uri line character))
 
-      can-add-let?
-      (conj (introduce-let-action uri line character))
+       can-add-let?
+       (conj (introduce-let-action uri line character))
 
-      (and workspace-edit-capability?
-           (seq diagnostics))
-      (into (suppress-diagnostic-actions diagnostics uri))
+       (and workspace-edit-capability?
+            (seq diagnostics))
+       (into (suppress-diagnostic-actions diagnostics uri))
 
       @near-if?*
       (conj (refactor-if->cond-action uri line character))
@@ -523,5 +542,12 @@
            @can-create-test?*)
       (conj (create-test-action (:function-name-loc @can-create-test?*) uri line character))
 
-      workspace-edit-capability?
-      (conj (clean-ns-action uri line character)))))
+       @near-cond?*
+       (conj (refactor-cond->if-action uri line character))
+
+       (and workspace-edit-capability?
+            @can-create-test?*)
+       (conj (create-test-action (:function-name-loc @can-create-test?*) uri line character))
+
+       workspace-edit-capability?
+       (conj (clean-ns-action uri line character))))))

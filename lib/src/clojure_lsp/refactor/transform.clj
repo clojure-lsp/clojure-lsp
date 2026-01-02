@@ -398,18 +398,33 @@
                 (z/append-child* params))
             body)))
 
+(defn ^:private calculate-row-placement [prev-end-row-w-space existing-row existing-end-row]
+  (cond
+     ;; no previous row - existing row had the first expression
+    (nil? prev-end-row-w-space)
+    existing-row
+
+     ;; previous expression is on the same line as the current one
+    (= prev-end-row-w-space (inc existing-end-row))
+    (dec prev-end-row-w-space)
+
+     ;; use previously computed previous row
+    :else
+    prev-end-row-w-space))
+
 (defn prepend-preserving-comment
   "Returns an edit that places `new-loc` before `existing-loc`, keeping any
   comments or whitespace that preceed `existing-loc` close to it."
   [existing-loc new-loc]
   (let [{existing-row :row
+         existing-end-row :end-row
          new-col :col} (meta (z/node existing-loc))
         prev-end-row-w-space (some-> (z/find-next existing-loc z/left z/sexpr-able?)
                                      z/node
                                      meta
                                      :end-row
                                      inc)
-        new-row (or prev-end-row-w-space existing-row)
+        new-row (calculate-row-placement prev-end-row-w-space existing-row existing-end-row)
         new-range {:row     new-row
                    :col     new-col
                    :end-row new-row
@@ -421,37 +436,140 @@
     {:loc   new-edit
      :range new-range}))
 
+(defn ^:private combine-range [selected-expressions]
+  (let [meta-last (meta (z/node (last selected-expressions)))
+        meta-first (meta (z/node (first selected-expressions)))]
+    (if-let [prev-whitespace (z/left* (first selected-expressions))]
+      {:row (:end-row (meta (z/node prev-whitespace)))
+       :col (:end-col (meta (z/node prev-whitespace)))
+       :end-row (:end-row meta-last)
+       :end-col (:end-col meta-last)}
+      {:row (:row meta-first)
+       :end-col (:end-col meta-last)
+       :col (:col meta-first)
+       :end-row (:end-row meta-last)})))
+
+(defn ^:private past? [loc check-row check-col]
+  (let [{loc-row :row loc-col :col} (meta (z/node loc))]
+    (or (> loc-row check-row)
+        (and (= loc-row check-row)
+             (>= loc-col check-col)))))
+
+;; may return nil if no expression in range to right - selection range is only checked if there 
+;; is a selection (that is, single-cursor? is false)
+(defn ^:private next-expr-start [start-zloc single-cursor? sel-row-end sel-col-end]
+  (z/find start-zloc #(and (not (n/whitespace-or-comment? (z/node %)))
+                           (not (and (not single-cursor?) (past? % sel-row-end sel-col-end))))))
+
+(defn ^:private locate-parent-expr [expression-start-zloc]
+  (cond
+    ;; already at top, no more parents, so return self
+    (edit/top? expression-start-zloc)
+    expression-start-zloc
+
+    ;; vector, map, set, return the whole thing
+    (contains? #{:vector :map :set} (z/tag (z/up expression-start-zloc)))
+    (z/up expression-start-zloc)
+
+    ;; find parent operation
+    :else
+    (z/up (edit/find-op expression-start-zloc))))
+
+(defn ^:private single-cursor? [row-start col-start row-end col-end]
+  (or
+    (and (= row-start row-end) (= col-start col-end))
+    (= row-end col-end nil)))        ;; *-end shouldn't be nil, but it's possible that a client may remove them
+
+(defn ^:private next-not-executable? [start-zloc expression-start-zloc]
+  (and (fast= :whitespace (z/tag start-zloc)) (not (fast= :list (z/tag expression-start-zloc)))))
+
+(defn ^:private find-expressions-in-range [start-zloc row-start col-start row-end col-end]
+  (let [has-selection? (not (single-cursor? col-start row-start col-end row-end))
+        token? (fast= :token (z/tag start-zloc))
+        expression-start-zloc (next-expr-start start-zloc (not has-selection?) row-end col-end)
+        inside-selection? (fn [zloc] (and (some? zloc) (not (past? zloc row-end col-end))))]
+    (cond
+      ;; cursor standing on token or non-token  (|add 4 5) or if the expression to the right 
+      ;; doesn't look like a function call  [1| 2 3] grab the parent
+      (and (not has-selection?) (or token? (nil? expression-start-zloc) (next-not-executable? start-zloc expression-start-zloc)))
+      (if-let [parent (locate-parent-expr start-zloc)]
+        [parent]
+        [])
+
+      ;; selection with no expressions in selection (add | | 4 5) - return whatever we were 
+      ;; standing on; this will probably be an error later
+      (and has-selection? (nil? expression-start-zloc))
+      [start-zloc]
+
+      ;; single cursor, but there was a non-token (eg list) found next;
+      ;; return that non-token  | (add 4 5)
+      (not has-selection?)
+      [expression-start-zloc]
+
+      ;; selection with expression(s) |(print "hello") (print "world")|
+      :else
+      (let [exprs (->> expression-start-zloc
+                       (iterate z/right)
+                       (take-while inside-selection?))]
+        (if (empty? exprs) [expression-start-zloc] (vec exprs))))))
+
+(defn ^:private all-ignorable? [selected-expressions]
+  (every? #(n/whitespace-or-comment? (z/node %)) selected-expressions))
+
+(defn ^:private different-parents? [sel-start-zloc sel-end-zloc]
+  ;; when sel-end-zloc is nil, it is at EOF; change it to a toplevel loc for parent check
+  (let [normalized-end-zloc (or sel-end-zloc (edit/to-top sel-start-zloc))]
+    (not= (z/up sel-start-zloc) (z/up normalized-end-zloc))))
+
+(defn ^:private check-for-errors [selected-expressions sel-start-zloc sel-end-zloc row-start col-start row-end col-end]
+  (cond (all-ignorable? selected-expressions) {:error
+                                               {:message "No expressions to extract"
+                                                :code :invalid-params}}
+        (and
+          (not (single-cursor? row-start col-start row-end col-end))
+          (different-parents?  sel-start-zloc sel-end-zloc)) {:error
+                                                              {:message "Expressions must be at the same level"
+                                                               :code :invalid-params}}
+        :else nil))
+
+;; what's happening here:
+;; - sort (row,col) by first -> last
+;; - find the first and last expressions
+;; - ensure that the first and last expressions have the same parent
+;; - if so, get the list of expressions to extract (first to last)
+;; - create new defn
+;; - create new function invocation
+;;    - when computing the area to replace with the function call, don't include leading whitespace
+;; 
+;; sel-end-zloc is actually not what was last selected expression, but the entity to the right of it
+;; (may be whitespace)
 (defn extract-function
-  [zloc uri fn-name db]
-  (when-let [zloc (or (z/skip-whitespace z/right zloc)
-                      (z/skip-whitespace z/up zloc))]
-    (let [;; the expression that will be extracted
-          expr-loc (if (fast= :token (z/tag zloc))
-                     (z/up (edit/find-op zloc))
-                     zloc)
-          ;; the top-level form it will be extracted from
-          form-loc (edit/to-top expr-loc)]
-      (when (and expr-loc form-loc)
-        (let [expr-node (z/node expr-loc)
-              expr-meta (meta expr-node)
-              {defn-col :col} (meta (z/node form-loc))
+  "Extract selected expressions to a new function and replace with a function call. If no selection, extract
+   the expression to the right.  When selection ends don't have the same parent or no expressions are
+   found, return an error."
+  [row-start col-start row-end col-end sel-start-zloc sel-end-zloc uri fn-name db]
+  (let [selected-expressions (find-expressions-in-range sel-start-zloc row-start col-start row-end col-end)]
+    (if-let [error (check-for-errors selected-expressions sel-start-zloc sel-end-zloc row-start col-start row-end col-end)]
+      error
+      (let [top-loc (edit/to-top sel-start-zloc)
+            {top-loc-col :col} (meta (z/node top-loc))
+            private? true
+            replacement-range (combine-range selected-expressions)
+            new-fn-body (into [] (mapcat (fn [expr] (vector (n/newlines 1) (n/spaces (+ top-loc-col 1)) (z/node expr)))
+                                         selected-expressions))
+            new-fn-sym (symbol fn-name)
+            used-syms (into []
+                            (comp (map :name)
+                                  (distinct))
+                            (q/find-local-usages-defined-outside-form db uri replacement-range))
 
-              fn-sym (symbol fn-name)
-              used-syms (into []
-                              (comp (map :name)
-                                    (distinct))
-                              (q/find-local-usages-defined-outside-form db uri expr-meta))
+            new-defn-loc (new-defn-zloc new-fn-sym private? used-syms new-fn-body db)
 
-              expr-edit (z/of-node (list* fn-sym used-syms))
-              private? true
-              defn-loc (new-defn-zloc fn-sym private? used-syms
-                                      [(n/newlines 1)
-                                       (n/spaces (+ defn-col 1))
-                                       expr-node]
-                                      db)]
-          [(prepend-preserving-comment form-loc defn-loc)
-           {:loc   expr-edit
-            :range expr-meta}])))))
+            new-fn-call (z/of-node (list* new-fn-sym used-syms))]
+
+        [(prepend-preserving-comment top-loc new-defn-loc)
+         {:loc   new-fn-call
+          :range replacement-range}]))))
 
 (defn ^:private extract-to-def-params [zloc]
   ;; the expression that will be extracted

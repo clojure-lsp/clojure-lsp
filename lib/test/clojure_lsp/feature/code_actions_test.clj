@@ -475,24 +475,44 @@
 
 (deftest extract-function-code-action
   (h/load-code-and-locs (str "(ns some-ns)\n"
-                             "(def foo)")
+                             "\n"
+                             "(defn my-foo []\n  \\x)\n"
+                             "(comment (+ 1 1))")
                         (h/file-uri "file:///a.clj"))
-  (testing "when non function location"
-    (is (not-any? #(= (:title %) "Extract function")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
-                                      (h/file-uri "file:///a.clj")
-                                      1
-                                      5
-                                      [] {}
-                                      (h/db)))))
-  (testing "when on function location"
+  (testing "when in non function location it's OK to show extract function menu item"
     (h/assert-contains-submaps
       [{:title "Extract function"
         :command {:command "extract-function"}}]
       (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
                           (h/file-uri "file:///a.clj")
                           2
+                          1
+                          2
+                          1
+                          [] {}
+                          (h/db))))
+  (testing "when in function show extract function menu item"
+    (h/assert-contains-submaps
+      [{:title "Extract function"
+        :command {:command "extract-function"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
+                          4
+                          3
+                          4
+                          3
+                          [] {}
+                          (h/db))))
+  (testing "when in rich comment show extract function menu item"
+    (h/assert-contains-submaps
+      [{:title "Extract function"
+        :command {:command "extract-function"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                          (h/file-uri "file:///a.clj")
                           5
+                          9
+                          5
+                          9
                           [] {}
                           (h/db)))))
 

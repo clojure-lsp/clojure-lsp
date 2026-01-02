@@ -532,17 +532,574 @@
 (defn ^:private update-map [m f]
   (into {} (for [[k v] m] [k (f v)])))
 
-(defn- extract-function
-  ([code new-fn-name] (extract-function code new-fn-name h/default-uri))
+(defn ^:private selection->position [code preserve-position]
+  (let [replacement-pattern (if (= preserve-position :preserve-start)
+                              "$1|$2$3"
+                              "$1$2|$3")]
+    (string/replace code #"(?s)^(.*)\|(.*)\|(.*)$" replacement-pattern)))
+
+(defn- do-extract-function
+  ([code new-fn-name] (do-extract-function code new-fn-name h/default-uri))
   ([code new-fn-name filepath]
    (let [file-uri (h/file-uri filepath)
-         zloc     (h/load-code-and-zloc code file-uri)]
-     (transform/extract-function zloc
+         code-start (selection->position code :preserve-start)
+         code-end (selection->position code :preserve-end)
+         [[start-row start-col]] (h/load-code-and-locs code-start)
+         [[end-row end-col]] (h/load-code-and-locs code-end)
+         zloc-start     (h/load-code-and-zloc code-start file-uri)
+         zloc-end     (h/load-code-and-zloc code-end file-uri)]
+     (transform/extract-function start-row start-col
+                                 end-row end-col
+                                 zloc-start
+                                 zloc-end
                                  file-uri
                                  new-fn-name
                                  (h/db)))))
 
 (deftest extract-function-test
+  (testing "simple extract function with one expression selected"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (println \"hello world\"))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] |(println \"hello world\")|)"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract function with two expressions selected"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (println \"hello world\")"
+                                  "  (println \"second\"))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [] |(println \"hello world\") (println \"second\")|)"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract function with one expression that needs parameters selected"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo [b c]"
+                                  "  (println \"hello world \" b c))"
+                                  "")
+                          (h/code "(foo b c)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b c] |(println \"hello world \" b c)|)"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract function with no selection"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (println \"hello world\"))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] |(println \"hello world\"))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract of vector without selection"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  [1 2 3])"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] [1 2 3|])"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract of vector without selection with cursor at the beginning of the vector"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  [1 2 3])"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] [|1 2 3])"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract of vector without selection and cursor in the middle of the elements"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  [1 2 3])"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] [1 |2 3])"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract of vector without selection and cursor on a space in the middle of the elements"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  [1  2 3])"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] [1 | 2 3])"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract of set without selection"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  #{1 2 3})"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] #{1 2 3|})"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple extract of map without selection"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  {:a 1})"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] {:a 1|})"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracting just one expression causes only the expression to be extracted"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  42)"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] (+ |42| b))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracting just one expression causes only the expression to be extracted"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  42)"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] (+ |42| b))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  ;; What should we do if there are multiple expressions in a selection?  Eg: [1 |2 3| 4]. For now we're
+  ;; assuming that the user knows what they are doing, so we extract all of them although the result may not be sensible
+  (testing "simple extract of expression with child at the beginning of a list, with no selection, should promote to the parent expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo [b]"
+                                  "  (let [c 1] (b c)))"
+                                  "")
+                          (h/code "(foo b)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] (|let [c 1] (b c)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection is only whitespace, don't do anything"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "No expressions to extract"
+                                  :code :invalid-params}}
+
+                         (do-extract-function "(defn a [b] (println \"hello\" | |))"
+                                              "foo"
+                                              filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection is only whitespace and newlines, don't do anything"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "No expressions to extract"
+                                  :code :invalid-params}}
+
+                         (do-extract-function "(defn a [b] (println \"hello\" | \n\n |))"
+                                              "foo"
+                                              filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection is only whitespace between expressions, don't do anything"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "No expressions to extract"
+                                  :code :invalid-params}}
+
+                         (do-extract-function "(defn a [b] (println \"hello\" | | (+ 1 1)))"
+                                              "foo"
+                                              filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection includes leading whitespace and an expression, ignore the leading whitespace when placing the new function call"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:col 14, :row 1, :end-col 28, :end-row 1}
+                         (:range (second (do-extract-function "(defn a [b] | (println \"hi\")|)"
+                                                              "foo"
+                                                              filepath)))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection includes leading whitespace/newlines and an expression, ignore the leading whitespace when placing the new function call"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (println \"hi\"))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings (do-extract-function "(defn a [b]\n|\n\n  (println \"hi\")|)"
+                                                          "foo"
+                                                          filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection includes leading whitespace/newlines and an expression, place the new function call after the whitespace"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:col 3, :row 4, :end-col 17, :end-row 4}
+                         (:range (second (do-extract-function "(defn a [b]\n|\n\n  (println \"hi\")|)"
+                                                              "foo"
+                                                              filepath)))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if there is a selected expression and another expression directly preceeds it without whitespace, return the correct position"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:col 20, :row 1, :end-col 34, :end-row 1}
+                         (:range (second
+                                   (do-extract-function "(defn a [b] (+ 1 1)|(println \"hi\")| )"
+                                                        "foo"
+                                                        filepath)))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection includes leading whitespace and an expression, just extract the expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (println \"hi\"))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] | (println \"hi\")|)"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection includes an expression and trailing whitespace, just extract the expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (println \"hi\"))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] |(println \"hi\")  \n  | (+ 1 1))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if all toplevel expressions in the selection don't have the same parent, return an error"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "Expressions must be at the same level"
+                                  :code :invalid-params}}
+
+                         (do-extract-function "(defn a1 [b] (print|ln \"hello\" b) (println \"world\")| (+ 1 1))"
+                                              "foo"
+                                              filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection is of a single element at the beginning of a list, extract a function returning that element"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  println)"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn a [b] (|println| \"hi\"))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if this selection is of a single element at the beginning of a list, replace the selected element"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:col 14, :row 1, :end-col 21, :end-row 1}
+                         (:range (last
+                                   (do-extract-function "(defn a [b] (|println| \"hi\"))"
+                                                        "foo"
+                                                        filepath)))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if the end of the selection hits the beginning of an expression, don't include that expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo [b]"
+                                  "  (println \"hello\" b))"
+                                  "")
+                          (h/code "(foo b)")]
+                         (as-strings
+                           (do-extract-function "(defn a1 [b] |(println \"hello\" b) |(println \"world\")) "
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if no selection and cursor is at whitespace, look for next expression to the right"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo [b]"
+                                  "  (println \"hello\" b))"
+                                  "")
+                          (h/code "(foo b)")]
+                         (as-strings
+                           (do-extract-function "(defn a1 [b]\n |     (println \"hello\" b) (println \"world\")) "
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "can create new function outside comment from within a rich comment"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (+ 1 1))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(comment   |(+ 1 1))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "can create new function outside comment from within a rich comment, above the rich comment"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:row 1, :col 1, :end-row 1, :end-col 1}
+                         (:range
+                          (first (do-extract-function "(comment   |(+ 1 1))"
+                                                      "foo"
+                                                      filepath)))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "can extract a toplevel expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (+ 1 1))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "|(+ 1 1)| (+ 2 2)"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracted toplevel selection goes above invocation"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (let [extract-results (do-extract-function "|(+ 1 1)| (+ 2 2)"
+                                                                 "foo"
+                                                                 filepath)
+                            new-defn-line (-> (first extract-results) :range :row)
+                            new-invoke-line (-> (second extract-results) :range :row)]
+                        (<= new-defn-line new-invoke-line)))
+
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracted toplevel selection after first expression in line goes above invocation"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (let [extract-results (do-extract-function "(+ 1 1) |(+ 2 2)|"
+                                                                 "foo"
+                                                                 filepath)
+                            new-defn-line (-> (first extract-results) :range :row)
+                            new-invoke-line (-> (second extract-results) :range :row)]
+                        (<= new-defn-line new-invoke-line)))
+
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracting a toplevel expression creates a function above the expressions extracted"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (let [extract-results (do-extract-function "(+ 1 1) |(+ 2 2)| (+ 3 3)"
+                                                                 "foo"
+                                                                 filepath)
+                            new-defn-line (-> (first extract-results) :range :row)
+                            new-invoke-line (-> (second extract-results) :range :row)]
+                        (<= new-defn-line new-invoke-line)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "can extract multiple toplevel expressions"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (+ 1 1)"
+                                  "  (+ 2 2))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "|(+ 1 1) (+ 2 2) | (+ 3 3)"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "can extract multiple toplevel expressions at the end of a document"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (+ 1 1)"
+                                  "  (+ 2 2))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "|(+ 1 1) (+ 2 2)|"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracting only a comment doesn't do anything"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "No expressions to extract"
+                                  :code :invalid-params}}
+
+                         (do-extract-function "| ;;; |"
+                                              "foo"
+                                              filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracting only commas doesn't do anything"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "No expressions to extract"
+                                  :code :invalid-params}}
+
+                         (do-extract-function "| ,,, |"
+                                              "foo"
+                                              filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts expression if in whitespace in cursor mode"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (println \"hi\"  ))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [] (println \"hi\" | )  )"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts expression if at end of list in cursor mode"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code ""
+                                  "(defn- foo []"
+                                  "  (println \"hi\" ))"
+                                  "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [] (println \"hi\" |)  )"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
   (testing "simple extract"
     (are [filepath] (do
                       (h/reset-components!)
@@ -552,9 +1109,9 @@
                                   "")
                           (h/code "(foo b)")]
                          (as-strings
-                           (extract-function "(defn a [b] (|let [c 1] (b c)))"
-                                             "foo"
-                                             filepath))))
+                           (do-extract-function "(defn a [b] (|let [c 1] (b c)))"
+                                                "foo"
+                                                filepath))))
       "file:///a.clj"
       "file:///a.cljc"
       "file:///a.cljs"))
@@ -566,7 +1123,7 @@
             (h/code "(foo a)")]
            (-> (h/code "(let [a 1 b 2 c 3]"
                        "  |(+ 1 a))")
-               (extract-function "foo")
+               (do-extract-function "foo")
                as-strings))))
   (testing "with-setting"
     (h/reset-components!)
@@ -577,7 +1134,7 @@
                     "")
             (h/code "(foo)")]
            (-> "(|inc 1)"
-               (extract-function "foo")
+               (do-extract-function "foo")
                as-strings))))
   (testing "after local usage"
     (h/reset-components!)
@@ -587,7 +1144,7 @@
                     "")
             (h/code "(foo b c)")]
            (-> "(defn a [b] (let [c 1] (+ 2 b |c)))"
-               (extract-function "foo")
+               (do-extract-function "foo")
                as-strings))))
   (testing "On multi-arity function"
     (h/reset-components!)
@@ -601,7 +1158,7 @@
                        "   (if |(= a b)"
                        "      1"
                        "      2)))")
-               (extract-function "foo")
+               (do-extract-function "foo")
                as-strings))))
   (testing "from comment"
     (h/reset-components!)
@@ -614,7 +1171,7 @@
                        "  ;; |comment"
                        ""
                        "  (+ 1 a))")
-               (extract-function "foo")
+               (do-extract-function "foo")
                as-strings))))
   (testing "from whitespace"
     (h/reset-components!)
@@ -627,7 +1184,7 @@
                        "|  ;; comment"
                        ""
                        "  (+ 1 a))")
-               (extract-function "foo")
+               (do-extract-function "foo")
                as-strings))))
   (testing "from trailing comment"
     (h/reset-components!)
@@ -643,7 +1200,7 @@
                        "  (+ 1 a)"
                        "  |;; comment"
                        ")")
-               (extract-function "foo")
+               (do-extract-function "foo")
                as-strings))))
   (testing "with comments above origin function"
     (h/reset-components!)
@@ -658,7 +1215,7 @@
       (-> (h/code "(ns foo)"
                   ";; {:something true}"
                   "(defn a [b] (|let [c 1] (b c)))")
-          (extract-function "foo")
+          (do-extract-function "foo")
           h/with-strings)))
   (testing "with comments above origin function with spaces"
     (h/reset-components!)
@@ -675,7 +1232,7 @@
                   ""
                   "#_{:something true}"
                   "(defn a [b] (|let [c 1] (b c)))")
-          (extract-function "foo")
+          (do-extract-function "foo")
           h/with-strings)))
   (testing "with comments above origin function with multi line comments"
     (h/reset-components!)
@@ -692,15 +1249,16 @@
                   ";; {:something true}"
                   ";; other comment"
                   "(defn a [b] (|let [c 1] (b c)))")
-          (extract-function "foo")
+          (do-extract-function "foo")
           h/with-strings)))
   (testing "from end of file"
     (h/reset-components!)
-    (is (nil? (transform/extract-function nil (h/file-uri "file:///a.clj") "foo" (h/db))))
-    (h/assert-submaps
-      []
-      (extract-function "|;; comment"
-                        "foo"))))
+    (is (= {:error {:message "No expressions to extract", :code :invalid-params}}
+           (transform/extract-function 0 0 nil nil nil nil (h/file-uri "file:///a.clj") "foo" (h/db))))
+    (is (=
+          {:error {:message "No expressions to extract", :code :invalid-params}}
+          (do-extract-function "|;; comment"
+                               "foo")))))
 
 (defn- create-function [code]
   (transform/create-function (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db)))

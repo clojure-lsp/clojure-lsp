@@ -3,11 +3,11 @@
    [clojure.core.async :as async]
    [clojure.string :as string]
    [integration.helper :as h]
-   [lsp4clj.coercer :as coercer]
-   [lsp4clj.io-chan :as lsp.io-chan]
-   [lsp4clj.lsp.requests :as lsp.requests]
-   [lsp4clj.lsp.responses :as lsp.responses]
-   [lsp4clj.protocols.endpoint :as protocols.endpoint])
+   [jsonrpc4clj.coercer :as coercer]
+   [jsonrpc4clj.io-chan :as jsonrpc.io-chan]
+   [jsonrpc4clj.protocols.endpoint :as protocols.endpoint]
+   [jsonrpc4clj.requests :as jsonrpc.requests]
+   [jsonrpc4clj.responses :as jsonrpc.responses])
   (:import
    [java.time LocalDateTime]
    [java.time.format DateTimeFormatter]))
@@ -102,7 +102,7 @@
   (log [this color msg params]
     (async/put! log-ch (format-log this color msg params)))
   (send-request [this method body]
-    (let [req (lsp.requests/request (swap! request-id inc) method body)
+    (let [req (jsonrpc.requests/request (swap! request-id inc) method body)
           p (promise)
           start-ns (System/nanoTime)]
       (protocols.endpoint/log this :cyan "sending request:" req)
@@ -113,7 +113,7 @@
       (async/>!! output req)
       p))
   (send-notification [this method body]
-    (let [notif (lsp.requests/notification method body)]
+    (let [notif (jsonrpc.requests/notification method body)]
       (protocols.endpoint/log this :blue "sending notification:" notif)
       (async/>!! output notif)))
   (receive-response [this {:keys [id] :as resp}]
@@ -129,7 +129,7 @@
     (protocols.endpoint/log this :magenta "received request:" req)
     (swap! received-requests conj req)
     (when-let [mock-resp (get @mock-responses (keyword method))]
-      (let [resp (lsp.responses/response id mock-resp)]
+      (let [resp (jsonrpc.responses/response id mock-resp)]
         (protocols.endpoint/log this :magenta "sending mock response:" resp)
         resp)))
   (receive-notification [this _ notif]
@@ -144,8 +144,8 @@
 (defn client [server-in server-out]
   (map->Client
     {:client-id (swap! client-id inc)
-     :input (lsp.io-chan/input-stream->input-chan server-out {:keyword-function keyword})
-     :output (lsp.io-chan/output-stream->output-chan server-in)
+     :input (jsonrpc.io-chan/input-stream->input-chan server-out {:keyword-function keyword})
+     :output (jsonrpc.io-chan/output-stream->output-chan server-in)
      :log-ch (async/chan (async/sliding-buffer 20))
      :join (promise)
      :request-id (atom 0)

@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure {:mvn/version "1.12.4"}
         rewrite-clj/rewrite-clj {:mvn/version "1.2.51"}
         borkdude/rewrite-edn {:mvn/version "0.4.9" :exclusions [rewrite-clj/rewrite-clj]}
-        org.clojure/core.async {:mvn/version "1.6.681"}
+        org.clojure/core.async {:mvn/version "1.8.741"}
         dev.weavejester/cljfmt {:mvn/version "0.15.6"
                                 :exclusions [rewrite-clj/rewrite-clj
                                              com.googlecode.java-diff-utils/diffutils]}
@@ -19,7 +19,7 @@
         io.forward/semver {:mvn/version "0.1.0"}
         babashka/fs {:mvn/version "0.5.30"}
         org.babashka/sci {:mvn/version "0.11.50"}
-        com.github.clojure-lsp/lsp4clj {:mvn/version "1.13.1"
+        com.github.clojure-lsp/lsp4clj {:mvn/version "2.0.1"
                                         #_#_:local/root "../../lsp4clj"
                                         :exclusions [funcool/promesa]}}
  :paths ["src" "resources"]

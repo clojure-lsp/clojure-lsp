@@ -3,12 +3,13 @@
 ## Unreleased
 
 - Add `as->` to the "Resolve macro as" list
-- Bump clj-kondo to `2025.12.24-20251229.120141-5`.
 - New code actions: refactor cond to if, and refactor if to cond
 - Allow finding references of multiple definitions at cursor. #2176
-- Bumps:
+- Lots of bumps:
+  - clj-kondo: 2025.12.24-20251229.120141-5
   - rewrite-clj: 1.2.50 -> 1.2.51
   - clojure: 1.12.0 -> 1.12.4
+  - core.async: 1.6.681 -> 1.8.741
   - cljfmt: 0.15.5 -> 0.15.6
   - babashka/fs: 0.5.28 -> 0.5.30
   - babashka/sci: 0.9.45 -> 0.11.50
@@ -18,6 +19,7 @@
   - clj-otel-api: 0.2.7 -> 0.2.10
   - opentelemetry: 1.51.0 -> 1.57.0
   - bb.pods: -> ed5e1f3
+  - lsp4clj: 1.13.1 -> 2.0.1
 
 ## 2025.11.28-12.47.43
 

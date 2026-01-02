@@ -6,7 +6,18 @@
 - Bump clj-kondo to `2025.12.24-20251229.120141-5`.
 - New code actions: refactor cond to if, and refactor if to cond
 - Allow finding references of multiple definitions at cursor. #2176
-- Bump rewrite-clj to 1.2.51.
+- Bumps:
+  - rewrite-clj: 1.2.50 -> 1.2.51
+  - clojure: 1.12.0 -> 1.12.4
+  - cljfmt: 0.15.5 -> 0.15.6
+  - babashka/fs: 0.5.28 -> 0.5.30
+  - babashka/sci: 0.9.45 -> 0.11.50
+  - babashka/cli: 0.8.65 -> 0.8.67
+  - babashka/process: 0.5.22 -> 0.6.25
+  - timbre: 6.7.0-alpha1 -> 6.8.0
+  - clj-otel-api: 0.2.7 -> 0.2.10
+  - opentelemetry: 1.51.0 -> 1.57.0
+  - bb.pods: -> ed5e1f3
 
 ## 2025.11.28-12.47.43
 

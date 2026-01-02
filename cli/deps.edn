@@ -1,16 +1,16 @@
-{:deps {org.babashka/cli {:mvn/version "0.8.65"}
+{:deps {org.babashka/cli {:mvn/version "0.8.67"}
         borkdude/dynaload {:mvn/version "0.3.5"}
         nrepl/bencode {:mvn/version "1.2.0"}
-        com.taoensso/timbre {:mvn/version "6.7.0-alpha1"}
-        com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.7"}
-        io.opentelemetry/opentelemetry-sdk-extension-autoconfigure {:mvn/version "1.51.0"}
-        io.opentelemetry/opentelemetry-exporter-otlp {:mvn/version "1.51.0"}
+        com.taoensso/timbre {:mvn/version "6.8.0"}
+        com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.10"}
+        io.opentelemetry/opentelemetry-sdk-extension-autoconfigure {:mvn/version "1.57.0"}
+        io.opentelemetry/opentelemetry-exporter-otlp {:mvn/version "1.57.0"}
         clojure-lsp/lib {:local/root "../lib"}
-        funcool/promesa {:mvn/version "10.0.594"}}
+        funcool/promesa {:mvn/version "11.0.678"}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/test-helper {:local/root "../test-helper"}
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}
-                               nubank/matcher-combinators {:mvn/version "3.9.1"}}
+                               nubank/matcher-combinators {:mvn/version "3.9.2"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test
@@ -19,23 +19,23 @@
                            cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
                                                   :sha "9d36f36ff541dac680a05010e4348c744333f191"}
                            babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"
-                                                   :sha "75c2216649bf5caf3ae41e7b8fc202e45b090ea9"}}
+                                                   :sha "ed5e1f3390b9dfca564f66b6e79c739c3cd82d78"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
-                   :extra-deps {babashka/fs {:mvn/version "0.5.28"}
-                                babashka/process {:mvn/version "0.5.22"}}
-                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.7" :sha "573711e"}
+                   :extra-deps {babashka/fs {:mvn/version "0.5.30"}
+                                babashka/process {:mvn/version "0.6.25"}}
+                   :replace-deps {io.github.clojure/tools.build {:tag "v0.10.11" :sha "c6c670a"}
                                   com.github.ericdallo/deps-bin {:mvn/version "1.0.0"}
                                   slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}
            :run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}
            :debug {:extra-paths ["dev"]
-                   :extra-deps {cider/cider-nrepl {:mvn/version "0.53.2"}
-                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.1"}
+                   :extra-deps {cider/cider-nrepl {:mvn/version "0.58.0"}
+                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.2"}
                                 com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.4.0"}
                                 criterium/criterium {:mvn/version "0.4.6"}
-                                nrepl/nrepl {:mvn/version "1.3.0"}}
+                                nrepl/nrepl {:mvn/version "1.5.2"}}
                    :jvm-opts   ["-Djdk.attach.allowAttachSelf"]}
            :native {:jvm-opts ["-Xmx2g"
                                "-server"

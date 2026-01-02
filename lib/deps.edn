@@ -1,8 +1,8 @@
-{:deps {org.clojure/clojure {:mvn/version "1.12.0"}
+{:deps {org.clojure/clojure {:mvn/version "1.12.4"}
         rewrite-clj/rewrite-clj {:mvn/version "1.2.51"}
         borkdude/rewrite-edn {:mvn/version "0.4.9" :exclusions [rewrite-clj/rewrite-clj]}
         org.clojure/core.async {:mvn/version "1.6.681"}
-        dev.weavejester/cljfmt {:mvn/version "0.15.5"
+        dev.weavejester/cljfmt {:mvn/version "0.15.6"
                                 :exclusions [rewrite-clj/rewrite-clj
                                              com.googlecode.java-diff-utils/diffutils]}
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
@@ -17,17 +17,17 @@
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
         io.forward/semver {:mvn/version "0.1.0"}
-        babashka/fs {:mvn/version "0.5.28"}
-        org.babashka/sci {:mvn/version "0.9.45"}
+        babashka/fs {:mvn/version "0.5.30"}
+        org.babashka/sci {:mvn/version "0.11.50"}
         com.github.clojure-lsp/lsp4clj {:mvn/version "1.13.1"
                                         #_#_:local/root "../../lsp4clj"
                                         :exclusions [funcool/promesa]}}
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/test-helper {:local/root "../test-helper"}
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}
-                               com.taoensso/timbre {:mvn/version "6.7.0-alpha1"}
-                               org.clojure/test.check {:mvn/version "1.1.1"}
-                               nubank/matcher-combinators {:mvn/version "3.9.1"}}
+                               com.taoensso/timbre {:mvn/version "6.8.0"}
+                               org.clojure/test.check {:mvn/version "1.1.3"}
+                               nubank/matcher-combinators {:mvn/version "3.9.2"}}
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
@@ -39,7 +39,7 @@
                        :exec-fn cognitect.test-runner.api/test}
            :build {:extra-paths ["resources"]
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
-                                                         :tag "v0.10.7"
-                                                         :sha "573711e"}
+                                                         :tag "v0.10.11"
+                                                         :sha "c6c670a"}
                           slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}}}

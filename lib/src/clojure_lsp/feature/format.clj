@@ -88,10 +88,8 @@
                                                           :meta
                                                           :style/indent
                                                           style-indent->cljfmt-spec)]
-                                  [(if (:macro var-def)
-                                     (:name var-def)
-                                     (symbol (name (:ns   var-def))
-                                             (name (:name var-def))))
+                                  [(symbol (name (:ns var-def))
+                                           (name (:name var-def)))
                                    indent]))))
                   (:analysis db))})
 

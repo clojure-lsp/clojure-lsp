@@ -6,6 +6,7 @@
 - New code actions: refactor cond to if, and refactor if to cond
 - Allow finding references of multiple definitions at cursor. #2176
 - Fix CLI format `:style/indent` support via project type flag.
+- Fix format `:style/indent` conflicts with core macros. #2197
 - Lots of bumps:
   - clj-kondo: 2025.12.24-20251229.120141-5
   - rewrite-clj: 1.2.50 -> 1.2.51

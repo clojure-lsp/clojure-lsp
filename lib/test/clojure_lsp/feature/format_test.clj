@@ -46,18 +46,19 @@
                   {:var-definitions
                    (for [[sym indent] macro-styles]
                      {:name  sym
-                      :ns    'ignored.namespace
+                      :ns    'some.ns
                       :macro true
                       :meta  {:style/indent indent}})}}]
     (are [sym expected] (= expected (-> {:analysis analysis}
                                         (#'f.format/extract-style-indent-metadata)
                                         :indents
                                         (get sym)))
-      'myletfn     [[:block 1] [:inner 2 0]]
-      'mydefrecord [[:block 2] [:inner 1]]
-      'mydefn      [[:inner 0]]
-      'myblock1    [[:block 1]]
-      'no-style    nil)))
+      'myletfn             nil
+      'some.ns/myletfn     [[:block 1] [:inner 2 0]]
+      'some.ns/mydefrecord [[:block 2] [:inner 1]]
+      'some.ns/mydefn      [[:inner 0]]
+      'some.ns/myblock1    [[:block 1]]
+      'some.ns/no-style    nil)))
 
 (deftest test-formatting
   (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///project")})

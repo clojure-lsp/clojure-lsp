@@ -223,8 +223,9 @@
 (defn ^:private dynamic-setup-project-analysis! [options default-analysis-type components]
   (case (get-in options [:analysis :type] default-analysis-type)
     :project-and-full-dependencies (setup-project-and-full-deps-analysis! options components)
-    :project-and-shallow-analysis (setup-project-and-shallow-analysis! options components)
-    :project-only (setup-project-only-analysis! options components)))
+    :project-and-shallow-analysis (setup-project-and-shallow-analysis! options components) 
+    :project-only (setup-project-only-analysis! options components)
+    :project-namespaces-only (setup-project-ns-only-analysis! options components)))
 
 (defn ^:private open-file! [uri components]
   (f.file-management/load-document! uri (slurp uri) (:db* components))
@@ -372,10 +373,9 @@
 
 (defn ^:private format!* [{:keys [dry?] :as options} {:keys [db*] :as components}]
   (setup-api! components)
-  ;; This breaks the :style/indent support, but improves performance a lot
-  ;; if anyone suffers from that specific feature we should check how to support
-  ;; that better
-  (setup-project-ns-only-analysis! options components)
+  ;; :project-namespaces-only breaks the :style/indent support, but improves performance a lot
+  ;; if anyone need that specific feature, should pass the analysis :type config
+  (dynamic-setup-project-analysis! options :project-namespaces-only components)
   (cli-println options "Formatting namespaces...")
   (let [db @db*
         edits (->> (options->uris options db)

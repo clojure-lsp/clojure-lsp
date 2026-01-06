@@ -77,8 +77,8 @@
 (defmethod run-command :drag-param-forward [{:keys [loc row col uri components]}]
   (f.drag-param/drag-forward loc {:row row :col col} uri components))
 
-(defmethod run-command :extract-function [{:keys [loc uri args db]}]
-  (apply r.transform/extract-function loc uri (concat args [db])))
+(defmethod run-command :extract-function [{:keys [row col end-row end-col loc loc-end uri args db]}]
+  (apply r.transform/extract-function row col end-row end-col loc loc-end uri (concat args [db])))
 
 (defmethod run-command :extract-to-def [{:keys [loc args]}]
   (apply r.transform/extract-to-def loc args))
@@ -217,21 +217,38 @@
     (shared/client-changes changes db)))
 
 (defn call-command [command arguments {:keys [db*] :as components}]
+  ;; when no selection for command: args is [opaque-args...]
+  ;; if there is selection: [opaque-args... line-end character-end],
+  ;; where opaque-args could be one or more arguments to the command.  line-end 
+  ;; and character-end are put at the end of the argument list so clients that
+  ;; had already hardcoded array values (such as Calva changing the new function name
+  ;; in args[3]) won't need to change
   (let [[uri line character & args] arguments
+        selection? (= :extract-function command)
+        line-end (if selection? (nth args 1) line)
+        character-end (if selection? (nth args 2) character)
+        fn-args (if selection? (drop-last 2 args) args)
         db @db*
         row (inc (int line))
         col (inc (int character))
+        end-row (inc (int (or line-end line)))
+        end-col (inc (int (or character-end character)))
         ;; TODO Instead of v=0 should I send a change AND a document change
         version (get-in db [:documents uri :v] 0)
         loc (some-> (parser/zloc-of-file db uri)
                     (parser/to-pos row col))
+        loc-end (some-> (parser/zloc-of-file db uri)
+                        (parser/to-pos end-row end-col))
         result (run-command {:command command
                              :uri uri
                              :db db
                              :loc loc
+                             :loc-end loc-end
                              :row row
                              :col col
-                             :args args
+                             :end-row end-row
+                             :end-col end-col
+                             :args fn-args
                              :version version
                              :components components})]
     (cond

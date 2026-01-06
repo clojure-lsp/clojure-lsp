@@ -22,6 +22,7 @@
   - opentelemetry: 1.51.0 -> 1.57.0
   - bb.pods: -> ed5e1f3
   - lsp4clj: 1.13.1 -> 2.0.1
+- Add selection to Extract Function code action #2118
 
 ## 2025.11.28-12.47.43
 

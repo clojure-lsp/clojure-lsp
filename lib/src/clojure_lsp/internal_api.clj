@@ -223,7 +223,7 @@
 (defn ^:private dynamic-setup-project-analysis! [options default-analysis-type components]
   (case (get-in options [:analysis :type] default-analysis-type)
     :project-and-full-dependencies (setup-project-and-full-deps-analysis! options components)
-    :project-and-shallow-analysis (setup-project-and-shallow-analysis! options components) 
+    :project-and-shallow-analysis (setup-project-and-shallow-analysis! options components)
     :project-only (setup-project-only-analysis! options components)
     :project-namespaces-only (setup-project-ns-only-analysis! options components)))
 

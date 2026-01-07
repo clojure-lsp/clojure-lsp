@@ -29,8 +29,7 @@
               :loc alias-loc}]
             (when (seq usages)
               (mapv (fn [usage]
-                      (let [zloc (z/find-next-tag (edit/find-at-element loc usage) z/next :token)
-                            zloc (z/edit-> zloc
+                      (let [zloc (z/edit-> (edit/find-at-element-name loc usage)
                                            (edit/z-replace-preserving-meta (n/token-node (symbol fake-alias (str (:name usage))))))]
                         {:range (meta (z/node zloc))
                          :loc zloc}))

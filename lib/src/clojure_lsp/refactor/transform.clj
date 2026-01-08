@@ -391,12 +391,27 @@
                  (format "(defn ^:private %s)" fn-name)
 
                  :else
-                 (format "(defn- %s)" fn-name)))]
-    (reduce z/append-child*
-            (-> root
-                (z/append-child* (n/spaces 1))
-                (z/append-child* params))
-            body)))
+                 (format "(defn- %s)" fn-name)))
+        ;; position for inserting the body nodes into the new defn
+        body-start-loc (-> root
+                           (z/append-child* (n/spaces 1))
+                           (z/append-child* params)
+                           z/down
+                           z/right
+                           z/right)
+        generated-body (reduce
+                         (fn [fn-loc-acc body-elt-loc]
+                           (-> fn-loc-acc (z/insert-right* body-elt-loc) (z/right*)))
+                         body-start-loc
+                         body)]
+    (edit/to-top generated-body)))
+
+(defn ^:private interpose-newlines [body-nodes]
+  (reduce
+    (fn [acc-list node]
+      (concat acc-list [(n/newlines 1) (n/spaces 2) node]))
+    []
+    body-nodes))
 
 (defn ^:private calculate-row-placement [prev-end-row-w-space existing-row existing-end-row]
   (cond
@@ -436,7 +451,7 @@
     {:loc   new-edit
      :range new-range}))
 
-(defn ^:private combine-range [selected-expressions]
+(defn ^:private combine-ranges [selected-expressions]
   (let [meta-last (meta (z/node (last selected-expressions)))
         meta-first (meta (z/node (first selected-expressions)))]
     (if-let [prev-whitespace (z/left* (first selected-expressions))]
@@ -455,11 +470,11 @@
         (and (= loc-row check-row)
              (>= loc-col check-col)))))
 
-;; may return nil if no expression in range to right - selection range is only checked if there 
+;; may return nil if no expression in range to right - selection range is only checked if there
 ;; is a selection (that is, single-cursor? is false)
-(defn ^:private next-expr-start [start-zloc single-cursor? sel-row-end sel-col-end]
-  (z/find start-zloc #(and (not (n/whitespace-or-comment? (z/node %)))
-                           (not (and (not single-cursor?) (past? % sel-row-end sel-col-end))))))
+(defn ^:private next-expr-start [start-zloc single-cursor? sel-end-row sel-end-col]
+  (z/find start-zloc z/right* #(and (not (z/whitespace? %))
+                                    (not (and (not single-cursor?) (past? % sel-end-row sel-end-col))))))
 
 (defn ^:private locate-parent-expr [expression-start-zloc]
   (cond
@@ -481,22 +496,41 @@
     (= end-row end-col nil)))        ;; end-* shouldn't be nil, but it's possible that a client may remove them
 
 (defn ^:private next-not-executable? [start-zloc expression-start-zloc]
-  (and (fast= :whitespace (z/tag start-zloc)) (not (fast= :list (z/tag expression-start-zloc)))))
+  (let [next-sexp-zloc (z/find expression-start-zloc z/sexpr-able?)]
+    (and (fast= :whitespace (z/tag start-zloc)) (not (fast= :list (z/tag next-sexp-zloc))))))
 
-(defn ^:private find-expressions-in-range [start-zloc row-start col-start end-row end-col]
+(defn ^:private collect-to-first-sexpr
+  "returns all zlocs up to and including the first sexpr. These zlocs may include 
+   comments but not whitespace."
+  [start-zloc]
+  (let [[first-part second-part] (->> start-zloc
+                                      (iterate z/right*)
+                                      (take-while some?)
+                                      (filter (complement z/whitespace?))
+                                      (partition-by z/sexpr-able?))]
+    (if second-part
+      (concat first-part [(first second-part)])
+      [(first first-part)])))
+
+(defn ^:private find-zlocs-in-range
+  "If there is a selection, return all nodes contained in the selection except whitespace nodes
+   (comment nodes are included).
+   If there is just a cursor find the next sexpr to return (including comments leading to it).
+   If there is just a cursor and no next sexpr, return the parent sexpr."
+  [start-zloc row-start col-start end-row end-col]
   (let [has-selection? (not (single-cursor? col-start row-start end-col end-row))
         token? (fast= :token (z/tag start-zloc))
         expression-start-zloc (next-expr-start start-zloc (not has-selection?) end-row end-col)
         inside-selection? (fn [zloc] (and (some? zloc) (not (past? zloc end-row end-col))))]
     (cond
-      ;; cursor standing on token or non-token  (|add 4 5) or if the expression to the right 
+      ;; cursor standing on token or non-token (|add 4 5) or if the expression to the right
       ;; doesn't look like a function call  [1| 2 3] grab the parent
       (and (not has-selection?) (or token? (nil? expression-start-zloc) (next-not-executable? start-zloc expression-start-zloc)))
       (if-let [parent (locate-parent-expr start-zloc)]
         [parent]
         [])
 
-      ;; selection with no expressions in selection (add | | 4 5) - return whatever we were 
+      ;; selection with no expressions in selection (add | | 4 5) - return whatever we were
       ;; standing on; this will probably be an error later
       (and has-selection? (nil? expression-start-zloc))
       [start-zloc]
@@ -504,12 +538,13 @@
       ;; single cursor, but there was a non-token (eg list) found next;
       ;; return that non-token  | (add 4 5)
       (not has-selection?)
-      [expression-start-zloc]
+      (collect-to-first-sexpr expression-start-zloc)
 
       ;; selection with expression(s) |(print "hello") (print "world")|
       :else
       (let [exprs (->> expression-start-zloc
-                       (iterate z/right)
+                       (iterate z/right*)
+                       (filter (complement z/whitespace?))
                        (take-while inside-selection?))]
         (if (empty? exprs) [expression-start-zloc] (vec exprs))))))
 
@@ -530,7 +565,149 @@
           (different-parents?  sel-start-zloc sel-end-zloc)) {:error
                                                               {:message "Expressions must be at the same level"
                                                                :code :invalid-params}}
+        (and (= (count (drop-while z/whitespace-or-comment? selected-expressions)) 1)
+             ((set/union thread-first-symbols thread-last-symbols) (z/sexpr (first (drop-while z/whitespace-or-comment? selected-expressions)))))
+        {:error
+         {:message "Can't extract a macro"
+          :code :invalid-params}}
+
         :else nil))
+
+(defn ^:private threading-op [selected-expressions]
+  (z/sexpr (z/leftmost (first selected-expressions))))
+
+(defn ^:private thread-first-expressions? [selected-expressions]
+  (and (thread-first-symbols (z/sexpr (z/leftmost (first selected-expressions))))
+       (or (> (count selected-expressions) 1)
+           (not (thread-first-symbols (-> (first selected-expressions) z/left z/sexpr))))))
+
+(defn ^:private thread-last-expressions? [selected-expressions]
+  (and (thread-last-symbols (z/sexpr (z/leftmost (first selected-expressions))))
+       (or (> (count selected-expressions) 1)
+           (not (thread-last-symbols (-> (first selected-expressions) z/left z/sexpr))))))
+
+(defn ^:private generate-thread-symbol
+  "returns a common symbol to use as the first expression in a newly generated threading form.  Starts
+   with some short options and falls back to a generated unique symbol if the short options are all used."
+  [used-syms]
+  (let [thread-vars (filterv (complement (set used-syms)) ['t 'th 'thd 'x 'a 'b 'c 'd])]
+    (if-let [tv (first thread-vars)]
+      tv
+      (gensym "t"))))
+
+(defn ^:private threaded-context? [selected-expressions]
+  (or (thread-first-expressions? selected-expressions)
+      (thread-last-expressions? selected-expressions)))
+
+(defn ^:private trim-comment-nodes
+  "trim the newline off the end of any comment nodes in 'nodes' - used to make inserting newlines easier later"
+  [nodes]
+  (mapv #(if (n/comment? %) (n/comment-node (subs (string/trim-newline (n/string %)) 1)) %) nodes))
+
+(defn ^:private trim-thead-macro
+  "if the a thread macro is in the body nodes, drop the macro"
+  [body-nodes]
+  (let [[_ others] (split-with #(when (n/sexpr-able? %) (thread-symbols (n/sexpr %))) body-nodes)]
+    others))
+
+(defn ^:private trim-initial-threading-expr
+  "if we know that the first expression is the initial expr in a threading chain, drop it"
+  [includes-first-expr? body-nodes]
+  (if includes-first-expr?
+    [(take-while n/whitespace-or-comment? body-nodes) (rest (drop-while n/whitespace-or-comment? body-nodes))]
+    [nil body-nodes]))
+
+(defn ^:private insert-comment-nodes-right
+  "insert comment nodes (not zlocs) to the right of zloc and position after the
+   comments"
+  [zloc indent-spaces comment-nodes]
+  (if (seq comment-nodes)
+    (let [start-loc (-> zloc
+                        z/insert-newline-right
+                        z/right*)
+          insert-comment (fn [acc comment-loc]
+                           (-> acc
+                               (z/insert-space-right indent-spaces)
+                               (z/right*)
+                               (z/insert-right* comment-loc)
+                               (z/right*)
+                               z/insert-newline-right
+                               z/right*
+                               (z/insert-space-right indent-spaces)
+                               (z/right*)))]
+      (reduce insert-comment start-loc comment-nodes))
+    zloc))
+
+(defn ^:private wrap-with-threading
+  "wraps body-nodes with the threading symbol (eg -> or ->>) with
+   initial-symbol as the initial thread expression if the initial expression
+   isn't included in body-nodes"
+  [body-nodes threading-op includes-initial-expr? initial-symbol]
+  (let [trimmed-body (trim-comment-nodes body-nodes)
+        body-without-thread-macro (trim-thead-macro trimmed-body)
+        [up-to-first-expr-nodes body-without-first-expr-nodes] (trim-initial-threading-expr
+                                                                 includes-initial-expr? body-without-thread-macro)
+        starting-expr (if includes-initial-expr?
+                        (first (drop-while (complement n/sexpr-able?) body-without-thread-macro))
+                        (str initial-symbol))
+        threading-expression (format "(%s %s)" (str threading-op) starting-expr)
+        space-indent (+ 4 (count (str threading-op)))
+        start-loc (-> (z/of-string threading-expression)
+                      z/down
+                      z/right*
+                      (insert-comment-nodes-right space-indent up-to-first-expr-nodes)
+                      z/right*)]
+    (z/up (reduce #(-> %1
+                       (z/insert-newline-right) (z/right*)
+                       (z/insert-space-right space-indent) (z/right*)
+                       (z/insert-right* %2) (z/right*))
+                  start-loc
+                  body-without-first-expr-nodes))))
+
+(defn ^:private selected-thread-op?
+  "did the selection include a threading (eg ->, ->>, ...) macro?"
+  [selected-expressions]
+  (when-let [first-sexpr (some-> (remove z/whitespace-or-comment? selected-expressions)
+                                 first
+                                 z/sexpr)]
+    (thread-symbols first-sexpr)))
+
+(defn ^:private selected-first-threaded-expr?
+  "did the selection include the first expression in the threading expression chain?"
+  [selected-expressions]
+  (let [expressions (if (selected-thread-op? selected-expressions)
+                      (rest (drop-while #(z/whitespace-or-comment? %) selected-expressions))
+                      selected-expressions)
+        first-expression (first (filter #(not (z/whitespace-or-comment? %)) expressions))
+        potential-threading-macro (-> first-expression z/left z/sexpr)]
+    (thread-symbols potential-threading-macro)))
+
+(defn ^:private create-threaded-body [selected-expressions used-syms new-fn-body-nodes]
+  (let [thread-first-call? (thread-first-expressions? selected-expressions)
+        thread-last-call? (thread-last-expressions? selected-expressions)
+        sel-thread-op? (selected-thread-op? selected-expressions)
+        sel-first-expr? (selected-first-threaded-expr? selected-expressions)
+        local-thread-sym (generate-thread-symbol used-syms)
+        new-fn-body-nodes [(z/node (wrap-with-threading new-fn-body-nodes
+                                                        (threading-op selected-expressions)
+                                                        sel-first-expr?
+                                                        local-thread-sym))]
+        only-threaded-exprs? (and (not sel-first-expr?) (not sel-thread-op?))
+        thread-first-exprs? (and thread-first-call? only-threaded-exprs?)
+        thread-last-exprs? (and thread-last-call? only-threaded-exprs?)
+        used-syms (into [] (cond
+                             ;; for expressions in a ->, add a variable at the beginning for threading to use
+                             thread-first-exprs?
+                             (cons (symbol local-thread-sym) used-syms)
+
+                             ;; for expressions in a ->>, add a variable at the end for threading to use
+                             thread-last-exprs?
+                             (concat used-syms [local-thread-sym])
+
+                             :else
+                             used-syms))]
+    {:new-fn-body-nodes new-fn-body-nodes
+     :used-syms used-syms}))
 
 ;; what's happening here:
 ;; - sort (row,col) by first -> last
@@ -540,33 +717,32 @@
 ;; - create new defn
 ;; - create new function invocation
 ;;    - when computing the area to replace with the function call, don't include leading whitespace
-;; 
+;;
 ;; sel-end-zloc is actually not what was last selected expression, but the entity to the right of it
 ;; (may be whitespace)
 (defn extract-function
   "Extract selected expressions to a new function and replace with a function call. If no selection, extract
-   the expression to the right.  When selection ends don't have the same parent or no expressions are
+   the expression to the right.  When selection start and end zlocs don't have the same parent or no expressions are
    found, return an error."
   [row-start col-start end-row end-col sel-start-zloc sel-end-zloc uri fn-name db]
-  (let [selected-expressions (find-expressions-in-range sel-start-zloc row-start col-start end-row end-col)]
+
+  (let [selected-expressions (find-zlocs-in-range sel-start-zloc row-start col-start end-row end-col)]
     (if-let [error (check-for-errors selected-expressions sel-start-zloc sel-end-zloc row-start col-start end-row end-col)]
       error
       (let [top-loc (edit/to-top sel-start-zloc)
-            {top-loc-col :col} (meta (z/node top-loc))
             private? true
-            replacement-range (combine-range selected-expressions)
-            new-fn-body (into [] (mapcat (fn [expr] (vector (n/newlines 1) (n/spaces (+ top-loc-col 1)) (z/node expr)))
-                                         selected-expressions))
+            replacement-range (combine-ranges selected-expressions)
             new-fn-sym (symbol fn-name)
-            used-syms (into []
-                            (comp (map :name)
-                                  (distinct))
-                            (q/find-local-usages-defined-outside-form db uri replacement-range))
-
-            new-defn-loc (new-defn-zloc new-fn-sym private? used-syms new-fn-body db)
-
-            new-fn-call (z/of-node (list* new-fn-sym used-syms))]
-
+            invoked-params (into [] (comp (map :name)
+                                          (distinct))
+                                 (q/find-local-usages-defined-outside-form db uri replacement-range))
+            body-nodes (mapv (fn [expr] (z/node expr)) selected-expressions)
+            {:keys [new-fn-body-nodes used-syms]} (if (threaded-context? selected-expressions)
+                                                    (create-threaded-body selected-expressions invoked-params body-nodes)
+                                                    {:new-fn-body-nodes (trim-comment-nodes body-nodes)
+                                                     :used-syms invoked-params})
+            new-fn-call (z/of-node (list* new-fn-sym invoked-params))
+            new-defn-loc (new-defn-zloc new-fn-sym private? used-syms (interpose-newlines new-fn-body-nodes) db)]
         [(prepend-preserving-comment top-loc new-defn-loc)
          {:loc   new-fn-call
           :range replacement-range}]))))
@@ -1203,7 +1379,7 @@
           defn-loc (new-defn-zloc fn-name
                                   (not ns-or-alias)
                                   params
-                                   ;; empty body
+                                  ;; empty body
                                   [(n/newlines 1) (n/spaces 2)]
                                   db)]
       (if ns-or-alias

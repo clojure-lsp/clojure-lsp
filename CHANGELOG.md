@@ -24,6 +24,7 @@
   - lsp4clj: 1.13.1 -> 2.0.1
 - Add selection to Extract Function code action #2118
 - Fix replace-refer-all mangling unrelated symbols #2150
+- Fix unused-public-var :exclude-when-contains-meta not being considered for .lsp/config.edn.
 
 ## 2025.11.28-12.47.43
 

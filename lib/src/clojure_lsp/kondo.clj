@@ -266,10 +266,12 @@
       (assoc-in [:config :linters :unresolved-namespace :report-duplicates] true)
       (assoc-in [:config :linters :unresolved-var :report-duplicates] true))))
 
-(defn ^:private var-definition-metas [db]
-  (let [metas (get-in (:kondo-config db) [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})]
+(defn ^:private var-definition-metas [db settings]
+  (let [kondo-metas (get-in (:kondo-config db) [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})
+        lsp-metas (get-in settings [:linters :clojure-lsp/unused-public-var :exclude-when-contains-meta] #{})]
     (cond-> [:arglists :style/indent]
-      (seq metas) (concat metas))))
+      (seq kondo-metas) (concat kondo-metas)
+      (seq lsp-metas) (concat lsp-metas))))
 
 (defn ^:private kondo-config-dir [db]
   (settings/get db [:kondo-config-dir] (some-> db :project-root-uri project-config-dir)))
@@ -301,7 +303,7 @@
                                        :java-class-usages full-analysis?
                                        :context [:clojure.test
                                                  :re-frame.core]
-                                       :var-definitions {:meta (var-definition-metas db)
+                                       :var-definitions {:meta (var-definition-metas db settings)
                                                          :callstack true}
                                        :symbols (and full-analysis? (get-in settings [:analysis :symbols] true))}))))
 
@@ -317,7 +319,7 @@
                                        :java-class-definitions (and full-analysis? (get-in settings [:analysis :java :class-definitions] true))
                                        :java-member-definitions (and full-analysis? (get-in settings [:analysis :java :member-definitions] true))
                                        :var-definitions {:shallow true
-                                                         :meta (var-definition-metas db)}}))))
+                                                         :meta (var-definition-metas db settings)}}))))
 
 (defn ^:private config-for-copy-configs [paths db]
   {:cache true
@@ -356,7 +358,7 @@
                              :java-class-usages true
                              :context [:clojure.test
                                        :re-frame.core]
-                             :var-definitions {:meta (var-definition-metas db)
+                             :var-definitions {:meta (var-definition-metas db settings)
                                                :callstack true}
                              :symbols (get-in settings [:analysis :symbols] true)}}}
         (shared/assoc-in-some [:lang] (when (not= :unknown lang)

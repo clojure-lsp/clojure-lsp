@@ -3,9 +3,12 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
-   [clojure.test :refer [deftest is]]))
+   [clojure.test :refer [deftest is]]
+   [rewrite-clj.zip :as z]))
 
 (h/reset-components-before-test)
+
+(z/string (h/load-code-and-zloc "(f |x)" "file:///a.clj"))
 
 (deftest kwd-string-test
   (is (= :foo (settings/kwd-string :foo)))

@@ -129,9 +129,10 @@
         filename (-> definition :uri shared/uri->filename)
         ns-groups (cons ns-name (kondo-ns-groups settings ns-name filename))
         configs-in-ns (seq (keep #(get (:config-in-ns settings) %) ns-groups))]
-    (if configs-in-ns
-      (kondo/merge-configs configs-in-ns)
-      settings)))
+    (reduce
+      kondo/merge-configs
+      settings
+      configs-in-ns)))
 
 (defn ^:private exclude-public-diagnostic-definition? [db settings definition]
   (let [settings (setting-for-ns settings definition)

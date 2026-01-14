@@ -3,8 +3,7 @@
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
-   [clojure.test :refer [deftest is]]
-   [rewrite-clj.zip :as z]))
+   [clojure.test :refer [deftest is]]))
 
 (h/reset-components-before-test)
 

@@ -39,7 +39,7 @@
       (and (= (-> loc z/node meta :end-col)
               (:end-col pos))
            (z/rightmost? loc)
-           (contains? #{:list :vector :map :set} (z/tag (z/up loc)))
+           (contains? #{:list :vector :map :set :fn} (z/tag (z/up loc)))
            (some-> loc z/up z/node meta (in-range? pos)))))
 
 (defn find-by-heritability

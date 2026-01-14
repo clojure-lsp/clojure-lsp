@@ -26,6 +26,7 @@
 - Fix replace-refer-all mangling unrelated symbols #2150
 - Fix unused-public-var :exclude-when-contains-meta not being considered for .lsp/config.edn.
 - Fix unused-public-var not working with :config-in-ns in kondo config.
+- Include reader functions in special cases for finding the last element in a container
 
 ## 2025.11.28-12.47.43
 

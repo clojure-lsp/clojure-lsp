@@ -8,8 +8,6 @@
 
 (h/reset-components-before-test)
 
-(z/string (h/load-code-and-zloc "(f |x)" "file:///a.clj"))
-
 (deftest kwd-string-test
   (is (= :foo (settings/kwd-string :foo)))
   (is (= :foo (settings/kwd-string "foo")))

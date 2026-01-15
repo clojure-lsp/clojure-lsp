@@ -169,7 +169,7 @@
              :source "clj-depend"}]
            (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/bar.clj") (h/db))))))
 
-(deftest test-find-diagnostics
+(deftest find-diagnostics-test
   (testing "wrong arity"
     (testing "for argument destructuring"
       (h/reset-components!)
@@ -244,8 +244,8 @@
                   (defn ^:private bar ^String [^Class x & rest] (str x rest))
                   (foo foo)
                   (foo foo foo)
-                  (bar :a)
-                  (bar :a :b)"
+                  (bar String)
+                  (bar String Number)"
             mock-diagnostics-chan (h/make-diagnostics-channel)]
         (h/load-code-and-locs code h/default-uri (assoc (h/components)
                                                         :diagnostics-chan mock-diagnostics-chan))

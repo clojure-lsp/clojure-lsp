@@ -8,7 +8,7 @@
 - Fix CLI format `:style/indent` support via project type flag.
 - Fix format `:style/indent` conflicts with core macros. #2197
 - Lots of bumps:
-  - clj-kondo: 2025.12.24-20251229.120141-5
+  - clj-kondo: 2026.01.12
   - rewrite-clj: 1.2.50 -> 1.2.51
   - clojure: 1.12.0 -> 1.12.4
   - core.async: 1.6.681 -> 1.8.741
@@ -25,6 +25,9 @@
 - Add selection to Extract Function code action #2118
 - Fix replace-refer-all mangling unrelated symbols #2150
 - Add threading to Extract Function code action #2175
+- Fix unused-public-var :exclude-when-contains-meta not being considered for .lsp/config.edn.
+- Fix unused-public-var not working with :config-in-ns in kondo config.
+- Include reader functions in special cases for finding the last element in a container
 
 ## 2025.11.28-12.47.43
 

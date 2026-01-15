@@ -14,6 +14,7 @@
   (is (= "1" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 1) z/string)))
   (is (= "2" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 10) z/string)))
   (is (= "3" (-> "1 #?(+ 1 2) 3" z/of-string (edit/find-at-pos 1 13) z/string)))
+  (is (= "x" (-> "#(+ x)" z/of-string (edit/find-at-pos 1 6) z/string)))
   (is (= "some" (-> "some (def other {:foo/bar 1})" z/of-string (edit/find-at-pos 1 1) z/string)))
   (is (= "some" (-> "some (def other #:foo{:bar 1})" z/of-string (edit/find-at-pos 1 1) z/string)))
   (testing "finds in any branch"

@@ -24,6 +24,7 @@
   - lsp4clj: 1.13.1 -> 2.0.1
 - Add selection to Extract Function code action #2118
 - Fix replace-refer-all mangling unrelated symbols #2150
+- Add threading to Extract Function code action #2175
 - Fix unused-public-var :exclude-when-contains-meta not being considered for .lsp/config.edn.
 - Fix unused-public-var not working with :config-in-ns in kondo config.
 - Include reader functions in special cases for finding the last element in a container

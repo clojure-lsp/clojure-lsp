@@ -1100,6 +1100,390 @@
       "file:///a.clj"
       "file:///a.cljc"
       "file:///a.cljs"))
+  (testing "extracts an expression with no variables in a thread first form with the threading parameter as the first parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t]"
+                            "  (-> t"
+                            "      (+ 1)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (-> y |(+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  (testing "extracts a threaded expression with comments in it to a new function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t]"
+                            "  (-> t"
+                            "      (+ 1)"
+                            "      ; my comment 2"
+                            "      (+ 2)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function (str "(defn x [y] 
+                                                        (-> y 
+                                                          ; my comment 1
+                                                          |(+ 1)
+                                                          ; my comment 2
+                                                          (+ 2)|))")
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  (testing "extracts in cursor mode after a comment ignores the comment"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo []"
+                            "  (println \"there\"))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function (str "(defn x []"
+                                                     "  ; prints hi\n"
+                                                     "  (println \"hi\")\n"
+                                                     "  ; prints there\n"
+                                                     " | (println \"there\"))")
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts in cursor mode from a first node that is a comment only extracts the comment and next expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo []"
+                            "  ; prints hi"
+                            "  ; and then there"
+                            "  (println \"hi\"))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function (str "(defn x []"
+                                                     "  ; prints |hi\n"
+                                                     "  ; and then there\n"
+                                                     "  (println \"hi\")\n"
+                                                     "  (println \"there\"))")
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a threaded expression to a function that uses metadata for privacy"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
+                      (= [(h/code
+                            ""
+                            "(defn ^:private foo [t]"
+                            "  (-> t"
+                            "      (+ 1)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (-> y |(+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a some-> threaded expression to a function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t]"
+                            "  (some-> t"
+                            "          (+ 1)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (some-> y |(+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a some->> threaded expression to a function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t]"
+                            "  (some->> t"
+                            "           (+ 1)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (some->> y |(+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "when extracting only the first expression from a threaded-first expression, don't include the threading"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y]"
+                            "  y)"
+                            "")
+                          (h/code "(foo y)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (-> |y| (+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "when extracting several expressions from a threaded-first expression that includes the first expression, 
+            make the first expression first in the new threading and don't include the implicit threading variable in
+            the function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y]"
+                            "  (-> y"
+                            "      (+ 1 y)))"
+                            "")
+                          (h/code "(foo y)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (-> |y (+ 1 y)| (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts an expression with two variables in a thread first form with the threading parameter as the first parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t y z]"
+                            "  (-> t"
+                            "      (+ 1 y z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> y |(+ 1 y z) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if a thread form selection has a leading comment, include it "
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y z]"
+                            "  (-> "
+                            "      ;; info about expr"
+                            "      y"
+                            "      (+ 1 y z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> |;; info about expr\n  y (+ 1 y z)| (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if an expression is first in a threaded expression, use the expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y z]"
+                            "  (-> (+ 1 y)"
+                            "      (+ 1 y z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> |(+ 1 y) (+ 1 y z)| (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a selection with multiple variables in a thread first form with the threading parameter as the first parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t y z]"
+                            "  (-> t"
+                            "      (+ 1 y)"
+                            "      (+ 2 z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> y |(+ 1 y) (+ 2 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a selection with multiple variables in a thread using a different threading variable if t is already used"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [th y t z]"
+                            "  (-> th"
+                            "      (+ 1 y t)"
+                            "      (+ 2 z)))"
+                            "")
+                          (h/code "(foo y t z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z t] (-> y |(+ 1 y t) (+ 2 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  (testing "extracts a selection with multiple variables in a thread using a different threading variable if t and other preconfigured options are already used"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [x y t th thd z]"
+                            "  (-> x"
+                            "      (+ 1 y t th thd)"
+                            "      (+ 2 z)))"
+                            "")
+                          (h/code "(foo y t th thd z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z t th thd] (-> y |(+ 1 y t th thd) (+ 2 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  (testing "extracts a selection with multiple variables in a thread using a generated threading variable if t and all other preconfigured options are already used"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [x y t th thd z]"
+                            "  (-> x"
+                            "      (+ 1 y t th thd)"
+                            "      (+ 2 z)))"
+                            "")
+                          (h/code "(foo y t th thd z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z t th thd] (-> y |(+ 1 y t th thd) (+ 2 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts an expression with enough variables in a thread last form that the predefined threading 
+            parameter list is completely used so a generated threading parameter is used as the last parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [a b c t th thd x d genvar_t]"
+                            "  (->> genvar_t"
+                            "       (+ 1 a b c t th thd x d)))"
+                            "")
+                          (h/code "(foo a b c t th thd x d)")]
+                         (let [orig-gensym gensym]
+                           (as-strings
+                             (with-redefs [gensym (fn ([] (orig-gensym)) ([prefix] (symbol (str "genvar_" prefix))))]
+                               (do-extract-function "(defn xyz [myth a b c t th thd x d] (->> myth |(+ 1 a b c t th thd x d) (+ 2)))"
+                                                    "foo"
+                                                    filepath))))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  ;; TODO: put this back as before??
+  (testing "extracts an expression with several variables in a thread last form with the threading parameter as the last parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [a b c t]"
+                            "  (->> t"
+                            "       (+ 1 a b c)))"
+                            "")
+                          (h/code "(foo a b c)")]
+                         (as-strings
+                           (do-extract-function "(defn x [a b c] (->> y |(+ 1 a b c) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts an expression with an additional variable in a thread-first form with the threading parameter as the first parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t z]"
+                            "  (-> t"
+                            "      (+ 1 z)))"
+                            "")
+                          (h/code "(foo z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> y |(+ 1 z)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  ;; TODO: is this the right approach?  Other ideas include widening the selection to 
+  ;; include the whole -> form 
+  (testing "when selection includes the threading macro, ignore that macro"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y z]"
+                            "  (-> y"
+                            "      (+ 1 z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (|-> y (+ 1 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "when selection is just the threading macro, return an error"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "Can't extract a macro"
+                                  :code :invalid-params}}
+                         (do-extract-function "(defn x [y z] (|->| y (+ 1 z)))"
+                                              "foo"
+                                              filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
   (testing "simple extract"
     (are [filepath] (do
                       (h/reset-components!)
@@ -1164,6 +1548,7 @@
     (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a]"
+                    "  ;; comment"
                     "  (+ 1 a))"
                     "")
             (h/code "(foo a)")]
@@ -1177,6 +1562,7 @@
     (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a]"
+                    "  ;; comment"
                     "  (+ 1 a))"
                     "")
             (h/code "(foo a)")]

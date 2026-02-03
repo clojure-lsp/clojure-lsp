@@ -28,6 +28,7 @@
 - Fix unused-public-var :exclude-when-contains-meta not being considered for .lsp/config.edn.
 - Fix unused-public-var not working with :config-in-ns in kondo config.
 - Include reader functions in special cases for finding the last element in a container
+- Wrap hovered function definitions in parentheses.
 
 ## 2025.11.28-12.47.43
 

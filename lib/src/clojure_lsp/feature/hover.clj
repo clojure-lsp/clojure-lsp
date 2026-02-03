@@ -135,10 +135,11 @@
                  (str "." method-name)
 
                  (str namespace "/" name))
-        args (apply str (map (partial str " ") arglist-strs))]
+        args (apply str (map (partial str " ") arglist-strs))
+        call (str "(" caller args ")")]
     (if markdown?
-      (str clojure-opening-code "#_calling: " caller args closing-code line-break)
-      (str "calling: " caller args))))
+      (str clojure-opening-code "#_calling: " call closing-code line-break)
+      (str "calling: " call))))
 
 (defn hover-documentation
   [{sym-ns :ns sym-name :name :keys [doc uri return-type bucket] :as definition}
@@ -152,14 +153,15 @@
                                 (settings/get db [:show-docs-arity-on-same-line?]))
         hide-filename? (settings/get db [:hover :hide-file-location?])
         additional-edits-warning-text (settings/get db [:completion :additional-edits-warning-text])
-        join-char (if arity-on-same-line? " " "\n")
+        join-char (if arity-on-same-line? " " "\n ")
         signatures (hover-signatures definition join-char)
         sym (cond-> ""
               return-type (str return-type " ")
               sym-ns (str sym-ns "/")
               sym-name (str sym-name))
-        sym-line (str sym (when signatures
-                            (str join-char signatures)))
+        sym-line (if signatures
+                   (str "(" sym join-char signatures ")")
+                   sym)
         markdown? (some #{"markdown"} content-formats)
         doc-line (find-docstring db markdown? uri doc 0)
         clojuredocs (or (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)

@@ -80,7 +80,7 @@
     (testing "LSP features work on external clojure opened files"
       (h/assert-submap
         {:language "clojure"
-         :value "[x]\n[x message]"}
+         :value "[x]\n [x message]"}
         (-> (lsp/request! (fixture/hover-external-uri-request uri 7612 5))
             :contents
             (get 1))))))
@@ -101,7 +101,7 @@
     (testing "LSP features work on external clojure opened files"
       (h/assert-submap
         {:language "clojure"
-         :value "[x]\n[x message]"}
+         :value "[x]\n [x message]"}
         (-> (lsp/request! (fixture/hover-external-uri-request uri 7612 5))
             :contents
             (get 1))))))
@@ -124,7 +124,7 @@
       (testing "LSP hover feature works on external clojure opened files"
         (h/assert-submap
           {:language "clojure"
-           :value "[x]\n[x message]"}
+           :value "[x]\n [x message]"}
           (-> (lsp/request! (fixture/hover-external-uri-request (h/escape-uri uri) 7612 5))
               :contents
               (get 1))))

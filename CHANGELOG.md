@@ -8,7 +8,7 @@
 - Fix CLI format `:style/indent` support via project type flag.
 - Fix format `:style/indent` conflicts with core macros. #2197
 - Lots of bumps:
-  - clj-kondo: 2026.01.12
+  - clj-kondo: 2026.01.19
   - rewrite-clj: 1.2.50 -> 1.2.51
   - clojure: 1.12.0 -> 1.12.4
   - core.async: 1.6.681 -> 1.8.741

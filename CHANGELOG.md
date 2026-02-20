@@ -7,6 +7,7 @@
 - Add `as->` to the "Resolve macro as" list
 - New code actions: refactor cond to if, and refactor if to cond
 - Allow finding references of multiple definitions at cursor. #2176
+- All var definitions sharing a location are considered used if a single member has a usage. #2192
 - Fix CLI format `:style/indent` support via project type flag.
 - Fix format `:style/indent` conflicts with core macros. #2197
 - Lots of bumps:

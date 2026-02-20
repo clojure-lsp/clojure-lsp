@@ -158,6 +158,14 @@
                [(:ns var-def) var-name]))
         (var-definition-names var-def)))
 
+(defn var-definition-location-key [var-def]
+  (let [uri (:uri var-def)
+        name-row (or (:name-row var-def) (:row var-def))
+        name-col (or (:name-col var-def) (:col var-def))
+        name-end-row (or (:name-end-row var-def) (:end-row var-def))
+        name-end-col (or (:name-end-col var-def) (:end-col var-def))]
+    [uri name-row name-col name-end-row name-end-col]))
+
 (defn xf-same-ns
   ([ns] (xf-same-ns ns :ns))
   ([ns get-ns]

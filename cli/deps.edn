@@ -3,8 +3,8 @@
         nrepl/bencode {:mvn/version "1.2.0"}
         com.taoensso/timbre {:mvn/version "6.8.0"}
         com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.10"}
-        io.opentelemetry/opentelemetry-sdk-extension-autoconfigure {:mvn/version "1.57.0"}
-        io.opentelemetry/opentelemetry-exporter-otlp {:mvn/version "1.57.0"}
+        io.opentelemetry/opentelemetry-sdk-extension-autoconfigure {:mvn/version "1.59.0"}
+        io.opentelemetry/opentelemetry-exporter-otlp {:mvn/version "1.59.0"}
         clojure-lsp/lib {:local/root "../lib"}
         funcool/promesa {:mvn/version "11.0.678"}}
  :paths ["src" "resources"]
@@ -22,7 +22,7 @@
                                                    :sha "ed5e1f3390b9dfca564f66b6e79c739c3cd82d78"}}
             :main-opts ["-m" "cognitect.test-runner" "-d" "pod-test"]}
            :build {:extra-paths ["../lib/resources"]
-                   :extra-deps {babashka/fs {:mvn/version "0.5.30"}
+                   :extra-deps {babashka/fs {:mvn/version "0.5.31"}
                                 babashka/process {:mvn/version "0.6.25"}}
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.10.5" :sha "2a21b7a"}
                                   com.github.ericdallo/deps-bin {:mvn/version "1.0.0"}

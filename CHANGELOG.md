@@ -12,14 +12,14 @@
   - rewrite-clj: 1.2.50 -> 1.2.51
   - clojure: 1.12.0 -> 1.12.4
   - core.async: 1.6.681 -> 1.8.741
-  - cljfmt: 0.15.5 -> 0.15.6
-  - babashka/fs: 0.5.28 -> 0.5.30
-  - babashka/sci: 0.9.45 -> 0.11.50
+  - cljfmt: 0.15.5 -> 0.16.0
+  - babashka/fs: 0.5.28 -> 0.5.31
+  - babashka/sci: 0.9.45 -> 0.12.51
   - babashka/cli: 0.8.65 -> 0.8.67
   - babashka/process: 0.5.22 -> 0.6.25
   - timbre: 6.7.0-alpha1 -> 6.8.0
   - clj-otel-api: 0.2.7 -> 0.2.10
-  - opentelemetry: 1.51.0 -> 1.57.0
+  - opentelemetry: 1.51.0 -> 1.59.0
   - bb.pods: -> ed5e1f3
   - lsp4clj: 1.13.1 -> 2.0.1
 - Add selection to Extract Function code action #2118

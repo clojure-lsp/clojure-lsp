@@ -15,7 +15,7 @@
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test
            {:replace-paths ["pod-test"]
-            :replace-deps {com.cognitect/transit-clj {:mvn/version "1.0.333"}
+            :replace-deps {com.cognitect/transit-clj {:mvn/version "1.1.347"}
                            cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
                                                   :sha "3f288f1f16d167723ad87cc35b1dfee3c1681e10"}
                            babashka/babashka.pods {:git/url "https://github.com/babashka/babashka.pods"

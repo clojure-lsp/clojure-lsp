@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.02.20-16.08.58
+
 - Add `as->` to the "Resolve macro as" list
 - New code actions: refactor cond to if, and refactor if to cond
 - Allow finding references of multiple definitions at cursor. #2176

@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2025.11.28-12.47.43</version>
+  <version>2026.02.20-16.08.58</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -17,7 +17,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.12.0</version>
+      <version>1.12.4</version>
     </dependency>
     <dependency>
       <groupId>org.benf</groupId>
@@ -32,7 +32,7 @@
     <dependency>
       <groupId>com.github.clojure-lsp</groupId>
       <artifactId>lsp4clj</artifactId>
-      <version>1.13.1</version>
+      <version>2.0.1</version>
       <exclusions>
         <exclusion>
           <groupId>funcool</groupId>
@@ -43,12 +43,12 @@
     <dependency>
       <groupId>com.github.steffan-westcott</groupId>
       <artifactId>clj-otel-api</artifactId>
-      <version>0.2.7</version>
+      <version>0.2.10</version>
     </dependency>
     <dependency>
       <groupId>rewrite-clj</groupId>
       <artifactId>rewrite-clj</artifactId>
-      <version>1.2.50</version>
+      <version>1.2.51</version>
     </dependency>
     <dependency>
       <groupId>io.forward</groupId>
@@ -63,7 +63,7 @@
     <dependency>
       <groupId>dev.weavejester</groupId>
       <artifactId>cljfmt</artifactId>
-      <version>0.15.5</version>
+      <version>0.16.0</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-clj</groupId>
@@ -78,7 +78,7 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
-      <version>1.51.0</version>
+      <version>1.59.0</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.java-diff-utils</groupId>
@@ -88,7 +88,7 @@
     <dependency>
       <groupId>org.babashka</groupId>
       <artifactId>cli</artifactId>
-      <version>0.8.65</version>
+      <version>0.8.67</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>
@@ -98,7 +98,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>timbre</artifactId>
-      <version>6.7.0-alpha1</version>
+      <version>6.8.0</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>
@@ -113,12 +113,12 @@
     <dependency>
       <groupId>funcool</groupId>
       <artifactId>promesa</artifactId>
-      <version>10.0.594</version>
+      <version>11.0.678</version>
     </dependency>
     <dependency>
       <groupId>org.babashka</groupId>
       <artifactId>sci</artifactId>
-      <version>0.9.45</version>
+      <version>0.12.51</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>
@@ -134,12 +134,12 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-exporter-otlp</artifactId>
-      <version>1.51.0</version>
+      <version>1.59.0</version>
     </dependency>
     <dependency>
       <groupId>babashka</groupId>
       <artifactId>fs</artifactId>
-      <version>0.5.28</version>
+      <version>0.5.31</version>
     </dependency>
     <dependency>
       <groupId>nrepl</groupId>
@@ -159,7 +159,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>core.async</artifactId>
-      <version>1.6.681</version>
+      <version>1.8.741</version>
     </dependency>
   </dependencies>
   <repositories>
@@ -183,6 +183,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2025.11.28-12.47.43</tag>
+    <tag>2026.02.20-16.08.58</tag>
   </scm>
 </project>

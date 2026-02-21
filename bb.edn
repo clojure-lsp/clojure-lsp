@@ -40,6 +40,8 @@
          pod-test make/pod-test
          integration-test make/integration-test
 
+         performance-test make/performance-test
+
          lint-clean make/lint-clean
          lint-format make/lint-format
          lint-diagnostics make/lint-diagnostics

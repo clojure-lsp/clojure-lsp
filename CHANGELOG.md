@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Measure performance of code actions
 
 ## 2026.02.20-16.08.58
 

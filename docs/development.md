@@ -161,7 +161,7 @@ These are the steps:
 
 **Seeing is believing.** An easy way to convince yourself that you can actually change clojure-lsp mid-flight is to:
 
-1. Modify the `server-info` function in `src/clojure_lsp/handlers.clj`
+1. Modify the `server-info` function in `lib/src/clojure_lsp/feature/development_info.clj`
     - Say, you add a `:foo :bar` entry to the map returned
 1. Evaluate the new `server-info` function definition
 1. Issue the clojure-lsp `serverInfo` command

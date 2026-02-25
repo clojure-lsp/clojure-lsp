@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
+
 ## 2026.02.20-16.08.58
 
 - Add `as->` to the "Resolve macro as" list

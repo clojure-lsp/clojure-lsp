@@ -10,7 +10,7 @@
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/test-helper {:local/root "../test-helper"}
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}
-                               nubank/matcher-combinators {:mvn/version "3.9.2"}}
+                               nubank/matcher-combinators {:mvn/version "3.10.0"}}
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test

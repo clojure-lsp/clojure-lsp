@@ -15,7 +15,7 @@
         com.fabiodomingues/clj-depend {:mvn/version "0.11.1"}
         ;; Work around https://github.com/fabiodomingues/clj-depend/issues/65
         ;; Can be removed, potentially, after https://github.com/fabiodomingues/clj-depend/pulls/66 is merged
-        org.clojure/tools.namespace {:mvn/version "1.5.0"}
+        org.clojure/tools.namespace {:mvn/version "1.5.1"}
         com.cognitect/transit-clj {:mvn/version "1.0.333"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}

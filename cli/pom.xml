@@ -128,7 +128,7 @@
     <dependency>
       <groupId>borkdude</groupId>
       <artifactId>rewrite-edn</artifactId>
-      <version>0.4.9</version>
+      <version>0.5.9</version>
       <exclusions>
         <exclusion>
           <groupId>rewrite-clj</groupId>

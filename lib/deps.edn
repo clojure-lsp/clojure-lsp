@@ -1,6 +1,6 @@
 {:deps {org.clojure/clojure {:mvn/version "1.12.4"}
         rewrite-clj/rewrite-clj {:mvn/version "1.2.51"}
-        borkdude/rewrite-edn {:mvn/version "0.4.9" :exclusions [rewrite-clj/rewrite-clj]}
+        borkdude/rewrite-edn {:mvn/version "0.5.9" :exclusions [rewrite-clj/rewrite-clj]}
         org.clojure/core.async {:mvn/version "1.8.741"}
         dev.weavejester/cljfmt {:mvn/version "0.16.0"
                                 :exclusions [rewrite-clj/rewrite-clj

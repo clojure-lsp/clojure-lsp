@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Measure performance of code actions
 
 - Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
 

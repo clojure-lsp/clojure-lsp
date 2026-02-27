@@ -4,7 +4,7 @@
    [clojure.test :as t]
    [medley.core :as medley]))
 
-(def namespaces
+(def namespaces-integration
   '[integration.initialize-test
     integration.definition-test
     integration.declaration-test
@@ -31,6 +31,10 @@
     integration.api.rename-test
     integration.api.references-test
     integration.api.dump-test])
+
+;; these tests reuse the integration-test.out log file
+(def namespaces-performance
+  '[performance.code-action-test])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))
@@ -65,20 +69,19 @@
              t/report log-tail-report]
      ~@body))
 
-#_{:clojure-lsp/ignore [:clojure-lsp/unused-public-var]}
-(defn run-all [& args]
+(defn run-all-namespaces [test-namespaces & args]
   (when-not (first args)
     (println "First arg must be path to clojure-lsp binary")
     (System/exit 0))
 
-  (apply require namespaces)
+  (apply require test-namespaces)
 
   (let [timeout-minutes (if (re-find #"(?i)win|mac" (System/getProperty "os.name"))
                           25 ;; win and mac ci runs take longer
                           15)
         test-results (timeout (* timeout-minutes 60 1000)
                               #(with-log-tail-report
-                                 (apply t/run-tests namespaces)))]
+                                 (apply t/run-tests test-namespaces)))]
 
     (when (= test-results :timed-out)
       (print-log-tail!)
@@ -88,3 +91,11 @@
 
     (let [{:keys [fail error]} test-results]
       (System/exit (+ fail error)))))
+
+#_{:clojure-lsp/ignore [:clojure-lsp/unused-public-var]}
+(defn run-all-integration [& args]
+  (run-all-namespaces namespaces-integration args))
+
+#_{:clojure-lsp/ignore [:clojure-lsp/unused-public-var]}
+(defn run-all-performance [& args]
+  (run-all-namespaces namespaces-performance args))

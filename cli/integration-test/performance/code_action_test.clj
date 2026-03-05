@@ -6,7 +6,6 @@
    [integration.lsp :as lsp]))
 
 ;; read files from the actual clojure-lsp codebase.  Note that this relies on the directory structure
-;; TODO: would it be better to use "git rev-parse --show-toplevel"?
 (def ^:private sample-file-name "../../../../../lib/src/clojure_lsp/feature/code_actions.clj")
 (def ^:private sample-file-with-many-lines "../../../../../lib/src/clojure_lsp/refactor/transform.clj")
 (def ^:private sample-file-with-many-symbols "../../../../../lib/src/clojure_lsp/queries.clj")
@@ -16,7 +15,7 @@
 ;; test will fail if average is higher than this
 (def ^:private max-runtime-ms 500)
 
-(def ^:private execution-count 100)
+(def ^:private execution-count 15)
 
 (defn ^:private nano->ms [end-time start-time]
   (int (/ (- end-time start-time) 1000000)))
@@ -65,27 +64,27 @@
         (is (< (compute-median execution-times) max-runtime-ms))))
 
     (testing "measure many locations in simple sample file"
-      (doseq [line-num (range 1 301 50)]
+      (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-name line-num 1)))]
           (is (< (compute-median execution-times) max-runtime-ms)))))
 
     (testing "measure many locations in sample file with many lines"
-      (doseq [line-num (range 1 301 10)]
+      (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-with-many-lines line-num 1)))]
           (is (< (compute-median execution-times) max-runtime-ms)))))
 
     (testing "measure many locations in sample file with many symbols"
-      (doseq [line-num (range 1 301 10)]
+      (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-with-many-symbols line-num 1)))]
           (is (< (compute-median execution-times) max-runtime-ms)))))
 
     (testing "measure many locations in sample file with high fanout of imports"
-      (doseq [line-num (range 1 301 10)]
+      (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-with-high-fanout line-num 1)))]
           (is (< (compute-median execution-times) max-runtime-ms)))))
 
     (testing "measure many locations in sample file with large structures"
-      (doseq [line-num (range 1 301 10)]
+      (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-with-large-structures line-num 1)))]
           (is (< (compute-median execution-times) max-runtime-ms)))))))
 

@@ -5,6 +5,7 @@
 - Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
 - Fix inline-def to work with defs with metas.
 - Bump clj-kondo to `2026.01.20-20260305.171638-23`.
+- Exclude `.clj-kondo` directory from file watcher analysis by default, avoiding noisy diagnostics on third-party hook files.
 
 ## 2026.02.20-16.08.58
 

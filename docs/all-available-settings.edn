@@ -4,7 +4,7 @@
  :test-locations-regex #{"_test\\.clj[a-z]?$"} ;; Patterns matched with clojure.core/re-find
  :source-aliases #{:dev :test}
  :project-specs [] ;; Check the default at clojure-lsp.classpath/default-project-specs
- :source-paths-ignore-regex ["target.*"]
+ :source-paths-ignore-regex ["target.*" "\\.clj-kondo.*"]
  :paths-ignore-regex []
  :lint-project-files-after-startup? true
  :notify-references-on-file-change true

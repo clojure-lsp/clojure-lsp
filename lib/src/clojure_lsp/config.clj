@@ -12,7 +12,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def default-source-path-ignore-regexs ["target.*"])
+(def default-source-path-ignore-regexs ["target.*" "\\.clj-kondo.*"])
 
 (defn read-edn-file [^java.io.File file]
   (try

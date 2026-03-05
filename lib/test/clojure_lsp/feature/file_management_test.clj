@@ -163,6 +163,19 @@
         (assoc (h/components)
                :watched-files-chan mock-watched-files-chan))
       (is (= (h/file-uri "file:///project/src/a.clj") (h/take-or-timeout mock-watched-files-chan 1000)))
+      (h/assert-no-take mock-watched-files-chan 500)))
+  (testing ".clj-kondo files ignored by default source-path-ignore-regex"
+    (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
+                                      :project-root-uri (h/file-uri "file:///project")})
+    (let [mock-watched-files-chan (async/chan 2)]
+      (f.file-management/did-change-watched-files
+        [{:type :changed
+          :uri (h/file-uri "file:///project/.clj-kondo/imports/nubank/codestyle/linters/foo.clj")}
+         {:type :changed
+          :uri (h/file-uri "file:///project/src/a.clj")}]
+        (assoc (h/components)
+               :watched-files-chan mock-watched-files-chan))
+      (is (= (h/file-uri "file:///project/src/a.clj") (h/take-or-timeout mock-watched-files-chan 1000)))
       (h/assert-no-take mock-watched-files-chan 500))))
 
 (deftest var-dependency-reference-uris

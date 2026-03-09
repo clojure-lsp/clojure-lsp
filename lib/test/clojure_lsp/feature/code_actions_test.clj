@@ -850,7 +850,7 @@
                                 ""
                                 "(defn foo []"
                                 "  {:g 2 :s 3 :kj 3 :a 5})")
-                        "file:///project/src/some_ns.clj")
+                        (h/file-uri "file:///project/src/some_ns.clj"))
   (testing "on map bracket"
     (h/assert-contains-submaps
       [{:title "Sort map"

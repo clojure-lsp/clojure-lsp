@@ -76,7 +76,8 @@
 
   (apply require test-namespaces)
 
-  (let [timeout-minutes (if (re-find #"(?i)win|mac" (System/getProperty "os.name"))
+  (let [timeout-minutes (if (or (= test-namespaces namespaces-performance)
+                                (re-find #"(?i)win|mac" (System/getProperty "os.name")))
                           25 ;; win and mac ci runs take longer
                           15)
         test-results (timeout (* timeout-minutes 60 1000)

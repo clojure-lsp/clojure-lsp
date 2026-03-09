@@ -217,6 +217,13 @@
              :command   "extract-function"
              :arguments [uri line character "new-function" end-line end-character]}})
 
+(defn ^:private inline-function-action [uri line character]
+  {:title   "Inline function"
+   :kind    :refactor-inline
+   :command {:title     "Inline function"
+             :command   "inline-function"
+             :arguments [uri line character]}})
+
 (defn ^:private refactor-if->cond-action [uri line character]
   {:title   "Change nested if to cond"
    :kind    :refactor-extract
@@ -416,6 +423,7 @@
          allow-drag-param-forward?* (future (f.drag-param/can-drag-forward? zloc uri db))
          can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
          can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
+         can-inline-fn?* (future (r.transform/can-inline-fn? zloc uri db))
          can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
          can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
          near-if?* (future (r.transform/near-if? zloc))
@@ -465,6 +473,9 @@
 
        @can-demote-fn?*
        (conj (demote-fn-action uri line character))
+
+       @can-inline-fn?*
+       (conj (inline-function-action uri line character))
 
        @can-destructure-keys?*
        (conj (destructure-keys-action uri line character))

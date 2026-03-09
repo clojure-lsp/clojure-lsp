@@ -1,6 +1,7 @@
 (ns performance.code-action-test
   "run performance tests for Code Actions"
   (:require
+   [clojure.math :as math]
    [clojure.test :refer [deftest is testing]]
    [integration.fixture :as fixture]
    [integration.lsp :as lsp]))
@@ -13,7 +14,8 @@
 (def ^:private sample-file-with-large-structures "../../../../../lib/src/clojure_lsp/common_symbols.clj")
 
 ;; test will fail if average is higher than this
-(def ^:private max-runtime-ms 500)
+(def ^:private median-max-runtime-ms 500)
+(def ^:private p90-max-runtime-ms 1000)
 
 (def ^:private execution-count 15)
 
@@ -30,7 +32,6 @@
              (let [end-time (System/nanoTime)]
                (nano->ms end-time start-time))))))
 
-;; TODO: also check P90 and median?
 (defn ^:private compute-mean [execution-times]
   (int (/ (apply + execution-times) (count execution-times))))
 
@@ -46,6 +47,12 @@
             top-val (nth sorted halfway)]
         (compute-mean [bottom-val top-val])))))
 
+(defn ^:private compute-percentile [p coll]
+  (let [sorted (sort coll)
+        cnt (count sorted)
+        index (int (math/ceil (* p (dec cnt))))]
+    (nth sorted index)))
+
 (lsp/clean-after-test)
 
 (deftest view-and-execute-code-action
@@ -60,31 +67,37 @@
   (testing "Verify code action requests aren't over max average runtime"
     (testing "measure only one location near top of file"
       (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-name 5 4)))]
-        (is (< (compute-mean execution-times) max-runtime-ms))
-        (is (< (compute-median execution-times) max-runtime-ms))))
+        (is (< (compute-mean execution-times) median-max-runtime-ms))
+        (is (< (compute-median execution-times) median-max-runtime-ms))
+        (is (< (compute-percentile 0.9 execution-times) p90-max-runtime-ms))))
 
     (testing "measure many locations in simple sample file"
       (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-name line-num 1)))]
-          (is (< (compute-median execution-times) max-runtime-ms)))))
+          (is (< (compute-median execution-times) median-max-runtime-ms))
+          (is (< (compute-percentile 0.9 execution-times) p90-max-runtime-ms)))))
 
     (testing "measure many locations in sample file with many lines"
       (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-with-many-lines line-num 1)))]
-          (is (< (compute-median execution-times) max-runtime-ms)))))
+          (is (< (compute-median execution-times) median-max-runtime-ms))
+          (is (< (compute-percentile 0.9 execution-times) p90-max-runtime-ms)))))
 
     (testing "measure many locations in sample file with many symbols"
       (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-with-many-symbols line-num 1)))]
-          (is (< (compute-median execution-times) max-runtime-ms)))))
+          (is (< (compute-median execution-times) median-max-runtime-ms))
+          (is (< (compute-percentile 0.9 execution-times) p90-max-runtime-ms)))))
 
     (testing "measure many locations in sample file with high fanout of imports"
       (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-with-high-fanout line-num 1)))]
-          (is (< (compute-median execution-times) max-runtime-ms)))))
+          (is (< (compute-median execution-times) median-max-runtime-ms))
+          (is (< (compute-percentile 0.9 execution-times) p90-max-runtime-ms)))))
 
     (testing "measure many locations in sample file with large structures"
       (doseq [line-num (range 1 301)]
         (let [execution-times (execute-multiple #(lsp/request! (fixture/code-action-request sample-file-with-large-structures line-num 1)))]
-          (is (< (compute-median execution-times) max-runtime-ms)))))))
+          (is (< (compute-median execution-times) median-max-runtime-ms))
+          (is (< (compute-percentile 0.9 execution-times) p90-max-runtime-ms)))))))
 

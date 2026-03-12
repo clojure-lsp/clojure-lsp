@@ -341,6 +341,24 @@
         [(h/file-uri "file:///project/src/h_b.clj")]
         {:linters {:clojure-lsp/unused-public-var {:level :info}}}))))
 
+(deftest unused-public-var-gen-class-with-unparseable-file
+  (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
+                        :settings {:source-paths [(h/file-path "/project/src")]}})
+  (h/load-code-and-locs "(ns broken-ns (:gen-class)) (defn -handler [] 1)"
+                        (h/file-uri "file:///project/src/broken.clj"))
+  (swap! (h/db*) assoc-in [:documents (h/file-uri "file:///project/src/broken.clj") :text]
+         "(ns broken-ns (:gen-class)) (defn -handler [] 1")
+  (testing "when a source file has syntax errors (unbalanced parens),
+            the linter does not crash and reports the dash-prefixed
+            function as unused since it cannot verify :gen-class"
+    (h/assert-submaps
+      [{:code "clojure-lsp/unused-public-var"
+        :uri (h/file-uri "file:///project/src/broken.clj")
+        :message "Unused public var 'broken-ns/-handler'"}]
+      (lint!
+        [(h/file-uri "file:///project/src/broken.clj")]
+        {}))))
+
 (deftest lint-project-cyclic-dependencies
   (testing "simple two-namespace cycle"
     (h/reset-components!)

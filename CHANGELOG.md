@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bump rewrite-clj to `1.2.54`.
+
 ## 2026.02.20-16.08.58
 
 - Add `as->` to the "Resolve macro as" list

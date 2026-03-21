@@ -247,3 +247,23 @@
     (when-let [err (not-empty (string/trim (str err)))]
       (logger/warn logger-tag (format "[%s] stderr: %s" fqns err)))
     sci-res))
+
+(defonce *params (atom nil))
+(comment
+  (let [{:keys [fqns params uri db loc]} @*params]
+    (sci/create-ns 'clojure-lsp.custom-commands-api nil)
+    (let [sci-ctx (sci/init (sci-init-opts db))
+          out (StringWriter.)
+          err (StringWriter.)]
+      (sci/binding [sci/out out
+                    sci/err err]
+        (let [code (let [ns (namespace fqns)]
+                     (format "(require '%s %s)\n%s"
+                             ns
+                             (if *reload* :reload "")
+                             fqns))
+              cmd-fn (sci/eval-string* sci-ctx code)]
+          (cmd-fn {:loc loc
+                   :uri uri
+                   :db db
+                   :params params}))))))

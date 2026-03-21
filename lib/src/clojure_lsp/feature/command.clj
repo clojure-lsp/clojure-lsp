@@ -242,11 +242,14 @@
         loc-end (some-> (parser/zloc-of-file db uri)
                         (parser/to-pos end-row end-col))
         result (if-let [[fqns params] (first (settings/get db [:custom-commands (keyword command)]))]
-                 (f.custom-command/run {:fqns fqns
-                                        :params params
-                                        :uri uri
-                                        :db db
-                                        :loc loc})
+                 (do
+                   (reset! f.custom-command/*params
+                           [fqns params uri db loc])
+                   (f.custom-command/run {:fqns fqns
+                                          :params params
+                                          :uri uri
+                                          :db db
+                                          :loc loc}))
                  (run-command {:command command
                                :uri uri
                                :db db

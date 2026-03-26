@@ -8,6 +8,7 @@
 - bump up timeout for code action performance measurement, include p90 measurement #2236
 - Fix initialization crash when a source file has syntax errors (e.g. unbalanced parens) by using safe parser in unused-public-var linter's `:gen-class` check. #2242
 - Bump rewrite-clj to `1.2.54`.
+- Measure performance of didOpen and didChange
 
 ## 2026.02.20-16.08.58
 

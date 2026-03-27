@@ -155,7 +155,7 @@
         (:export definition)
         (when starts-with-dash?
           ;; check if if namespace has :gen-class
-          (some-> (parser/zloc-of-file db (:uri definition))
+          (some-> (parser/safe-zloc-of-file db (:uri definition))
                   edit/find-namespace
                   (z/find-next-value z/next :gen-class))))))
 

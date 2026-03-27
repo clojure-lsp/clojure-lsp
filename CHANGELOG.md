@@ -4,9 +4,11 @@
 - Measure performance of code actions
 - Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
 - Fix inline-def to work with defs with metas.
-- Bump clj-kondo to `2026.01.20-20260305.171638-23`.
+- Bump clj-kondo to `2026.01.20-20260325.162821-29`.
 - bump up timeout for code action performance measurement, include p90 measurement #2236
 - implementation of inline function. #1827
+- Fix initialization crash when a source file has syntax errors (e.g. unbalanced parens) by using safe parser in unused-public-var linter's `:gen-class` check. #2242
+- Bump rewrite-clj to `1.2.54`.
 
 ## 2026.02.20-16.08.58
 

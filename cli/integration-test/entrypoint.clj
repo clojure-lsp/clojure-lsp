@@ -34,7 +34,9 @@
 
 ;; these tests reuse the integration-test.out log file
 (def namespaces-performance
-  '[performance.code-action-test])
+  '[performance.code-action-test
+    performance.did-open-test
+    performance.did-change-test])
 
 (defn timeout [timeout-ms callback]
   (let [fut (future (callback))

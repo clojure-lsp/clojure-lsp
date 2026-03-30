@@ -80,8 +80,8 @@
 (defmethod run-command :extract-function [{:keys [row col end-row end-col loc loc-end uri args db]}]
   (apply r.transform/extract-function row col end-row end-col loc loc-end uri (concat args [db])))
 
-(defmethod run-command :extract-to-def [{:keys [loc args]}]
-  (apply r.transform/extract-to-def loc args))
+(defmethod run-command :extract-to-def [{:keys [loc args db]}]
+  (apply r.transform/extract-to-def loc (concat args [db])))
 
 (defmethod run-command :get-in-more [{:keys [loc]}]
   (f.thread-get/get-in-more loc))

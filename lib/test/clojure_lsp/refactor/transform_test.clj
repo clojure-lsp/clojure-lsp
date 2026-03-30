@@ -1509,11 +1509,22 @@
                        "  |(+ 1 a))")
                (do-extract-function "foo")
                as-strings))))
-  (testing "with-setting"
+  (testing "with :use-metadata-for-privacy? setting"
     (h/reset-components!)
     (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= [(h/code ""
                     "(defn ^:private foo []"
+                    "  (inc 1))"
+                    "")
+            (h/code "(foo)")]
+           (-> "(|inc 1)"
+               (do-extract-function "foo")
+               as-strings))))
+  (testing "with :private-by-default-on-extract? false"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:private-by-default-on-extract? false}})
+    (is (= [(h/code ""
+                    "(defn foo []"
                     "  (inc 1))"
                     "")
             (h/code "(foo)")]
@@ -1790,7 +1801,7 @@
 (defn- extract-to-def
   [code new-def-name]
   (let [zloc (h/zloc-from-code code)]
-    (transform/extract-to-def zloc new-def-name)))
+    (transform/extract-to-def zloc new-def-name (h/db))))
 
 (deftest extract-to-def-test
   (h/reset-components!)
@@ -1810,7 +1821,18 @@
           (h/code "new-value")]
          (-> "|{:a 1}"
              (extract-to-def nil)
-             as-strings))))
+             as-strings)))
+  (testing "with :private-by-default-on-extract? false"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:private-by-default-on-extract? false}})
+    (is (= [(h/code ""
+                    "(def foo"
+                    "  {:a 1})"
+                    "")
+            (h/code "foo")]
+           (-> "|{:a 1}"
+               (extract-to-def "foo")
+               as-strings)))))
 
 (deftest can-create-test?
   (testing "when on multiples functions"

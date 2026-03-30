@@ -730,7 +730,7 @@
     (if-let [error (check-for-errors selected-expressions sel-start-zloc sel-end-zloc row-start col-start end-row end-col)]
       error
       (let [top-loc (edit/to-top sel-start-zloc)
-            private? true
+            private? (settings/get db [:private-by-default-on-extract?] true)
             replacement-range (combine-ranges selected-expressions)
             new-fn-sym (symbol fn-name)
             invoked-params (into [] (comp (map :name)
@@ -759,14 +759,17 @@
 (defn can-extract-to-def? [zloc]
   (boolean (extract-to-def-params zloc)))
 
-(defn extract-to-def [zloc def-name]
+(defn extract-to-def [zloc def-name db]
   (when-let [{:keys [zloc form-loc]} (extract-to-def-params zloc)]
     (let [expr-node (z/node zloc)
           expr-meta (meta expr-node)
 
           def-name (or def-name "new-value")
+          private? (settings/get db [:private-by-default-on-extract?] true)
           expr-edit (z/of-node (symbol def-name))
-          def-loc (-> (format "(def ^:private %s\n  )" def-name)
+          def-loc (-> (if private?
+                        (format "(def ^:private %s\n  )" def-name)
+                        (format "(def %s\n  )" def-name))
                       z/of-string
                       (z/append-child* expr-node))]
       [(prepend-preserving-comment form-loc def-loc)

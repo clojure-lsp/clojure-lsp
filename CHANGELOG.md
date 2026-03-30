@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Add `:private-by-default-on-extract?` setting to control whether extracted functions and defs are private by default. #2258
 - Measure performance of code actions
 - Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
 - Fix inline-def to work with defs with metas.

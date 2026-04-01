@@ -10,8 +10,11 @@
  :paths ["src" "resources"]
  :aliases {:test {:extra-deps {clojure-lsp/test-helper {:local/root "../test-helper"}
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}
-                               nubank/matcher-combinators {:mvn/version "3.9.2"}}
-                  :extra-paths ["test"]
+                               nubank/matcher-combinators {:mvn/version "3.9.2"}
+                               com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.2"}
+                               com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.4.0"}
+                               criterium/criterium {:mvn/version "0.4.6"}}
+                  :extra-paths ["test" "dev"]
                   :main-opts ["-m" "kaocha.runner"]}
            :pod-test
            {:replace-paths ["pod-test"]

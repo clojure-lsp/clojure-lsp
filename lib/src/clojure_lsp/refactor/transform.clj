@@ -36,6 +36,10 @@
                 (dissoc :loc))))
         zip-edits))
 
+(defn locs-to-ranges [my-result]
+  (mapv #(medley/update-existing % :range shared/->range)
+        (result my-result)))
+
 (defn- coll-tag [zloc]
   (get #{:vector :set :list :map} (z/tag zloc)))
 

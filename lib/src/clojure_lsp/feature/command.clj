@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
+   [clojure-lsp.feature.command.custom :as f.custom-command]
    [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.development-info :as f.development-info]
@@ -18,8 +19,8 @@
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.refactor.transform :as r.transform]
+   [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared]
-   [medley.core :as medley]
    [rewrite-clj.zip :as z]))
 
 (set! *warn-on-reflection* true)
@@ -158,62 +159,63 @@
 (defmethod run-command :move-form [{:keys [loc uri args components]}]
   (apply f.move-form/move-form loc uri components args))
 
-(defmethod run-command :cycle-keyword-auto-resolve  [{:keys [loc uri db components]}]
+(defmethod run-command :cycle-keyword-auto-resolve [{:keys [loc uri db components]}]
   (f.cycle-keyword/cycle-keyword-auto-resolve loc uri db components))
 
-(defmethod run-command :replace-refer-all-with-refer  [{:keys [loc args]}]
+(defmethod run-command :replace-refer-all-with-refer [{:keys [loc args]}]
   (apply f.replace-refer-all/replace-with-refers loc args))
 
-(defmethod run-command :replace-refer-all-with-alias  [{:keys [loc uri db]}]
+(defmethod run-command :replace-refer-all-with-alias [{:keys [loc uri db]}]
   (f.replace-refer-all/replace-with-alias loc uri db))
 
-(defmethod run-command :forward-slurp  [{:keys [uri loc row col]}]
+(defmethod run-command :forward-slurp [{:keys [uri loc row col]}]
   (f.paredit/forward-slurp uri loc row col))
 
-(defmethod run-command :forward-barf  [{:keys [loc uri row col]}]
+(defmethod run-command :forward-barf [{:keys [loc uri row col]}]
   (f.paredit/forward-barf uri loc row col))
 
-(defmethod run-command :backward-slurp  [{:keys [loc uri row col]}]
+(defmethod run-command :backward-slurp [{:keys [loc uri row col]}]
   (f.paredit/backward-slurp uri loc row col))
 
-(defmethod run-command :backward-barf  [{:keys [loc uri row col]}]
+(defmethod run-command :backward-barf [{:keys [loc uri row col]}]
   (f.paredit/backward-barf uri loc row col))
 
-(defmethod run-command :raise-sexp  [{:keys [loc uri row col]}]
+(defmethod run-command :raise-sexp [{:keys [loc uri row col]}]
   (f.paredit/raise uri loc row col))
 
-(defmethod run-command :kill-sexp  [{:keys [loc uri row col]}]
+(defmethod run-command :kill-sexp [{:keys [loc uri row col]}]
   (f.paredit/kill uri loc row col))
 
-(defmethod run-command :forward  [{:keys [loc uri row col]}]
+(defmethod run-command :forward [{:keys [loc uri row col]}]
   (f.paredit/forward uri loc row col))
 
-(defmethod run-command :forward-select  [{:keys [loc uri row col]}]
+(defmethod run-command :forward-select [{:keys [loc uri row col]}]
   (f.paredit/forward-select uri loc row col))
 
-(defmethod run-command :backward  [{:keys [loc uri row col]}]
+(defmethod run-command :backward [{:keys [loc uri row col]}]
   (f.paredit/backward uri loc row col))
 
-(defmethod run-command :backward-select  [{:keys [loc uri row col]}]
+(defmethod run-command :backward-select [{:keys [loc uri row col]}]
   (f.paredit/backward-select uri loc row col))
 
-(defmethod run-command :server-info  [{:keys [components]}]
+(defmethod run-command :server-info [{:keys [components]}]
   (f.development-info/server-info-log components))
 
-(defmethod run-command :cursor-info  [{:keys [uri components args]}]
+(defmethod run-command :cursor-info [{:keys [uri components args]}]
   (apply f.development-info/cursor-info-log uri components args))
 
-(def available-commands
-  (->> run-command
-       methods
-       keys
-       (map name)
-       sort
-       vec))
+(defn available-commands [custom-commands]
+  (-> (concat (->> run-command
+                   methods
+                   keys
+                   (map name))
+              (map (comp name key) custom-commands))
+      sort
+      vec))
 
 (defn ^:private command-client-seq-changes [uri version result db]
   (let [changes [{:text-document {:uri uri :version version}
-                  :edits (mapv #(medley/update-existing % :range shared/->range) (r.transform/result result))}]]
+                  :edits (r.transform/locs-to-ranges result)}]]
     (shared/client-changes changes db)))
 
 (defn call-command [command arguments {:keys [db*] :as components}]
@@ -239,18 +241,27 @@
                     (parser/to-pos row col))
         loc-end (some-> (parser/zloc-of-file db uri)
                         (parser/to-pos end-row end-col))
-        result (run-command {:command command
-                             :uri uri
-                             :db db
-                             :loc loc
-                             :loc-end loc-end
-                             :row row
-                             :col col
-                             :end-row end-row
-                             :end-col end-col
-                             :args fn-args
-                             :version version
-                             :components components})]
+        result (if-let [[fqns params] (first (settings/get db [:custom-commands (keyword command)]))]
+                 (do
+                   (reset! f.custom-command/*params
+                           [fqns params uri db loc])
+                   (f.custom-command/run {:fqns fqns
+                                          :params params
+                                          :uri uri
+                                          :db db
+                                          :loc loc}))
+                 (run-command {:command command
+                               :uri uri
+                               :db db
+                               :loc loc
+                               :loc-end loc-end
+                               :row row
+                               :col col
+                               :end-row end-row
+                               :end-col end-col
+                               :args fn-args
+                               :version version
+                               :components components}))]
     (cond
       (:no-op? result)
       nil
@@ -269,8 +280,7 @@
             changes (concat resource-changes
                             (vec (for [[doc-id sub-results] changes-by-uri]
                                    {:text-document {:uri doc-id :version (if (= uri doc-id) version -1)}
-                                    :edits (mapv #(medley/update-existing % :range shared/->range)
-                                                 (r.transform/result sub-results))})))]
+                                    :edits (r.transform/locs-to-ranges sub-results)})))]
         (when-let [change (first (filter #(= "create" (:kind %)) resource-changes))]
           (swap! db* assoc-in [:create-ns-blank-files-denylist (:uri change)] (:kind change)))
         {:show-document-after-edit show-document-after-edit

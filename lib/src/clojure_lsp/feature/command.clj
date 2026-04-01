@@ -104,6 +104,9 @@
 (defmethod run-command :move-to-let [{:keys [loc uri db args]}]
   (apply r.transform/move-to-let loc uri db args))
 
+(defmethod run-command :move-to-for-let [{:keys [loc uri db args]}]
+  (apply r.transform/move-to-for-let loc uri db args))
+
 (defmethod run-command :thread-first [{:keys [loc db]}]
   (r.transform/thread-first loc db))
 

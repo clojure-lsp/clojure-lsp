@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Preserve existing `:same-line` formatting when adding a missing require/import, so a one-libspec add no longer re-flows the whole `:require`/`:import` block. When the user has not explicitly set `:clean :ns-inner-blocks-indentation` and the ns is already in `:same-line` style, the automatic post-refactor clean-up now behaves as if `:keep` were configured.
 - Add `:private-by-default-on-extract?` setting to control whether extracted functions and defs are private by default. #2258
 - Measure performance of code actions
 - Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.

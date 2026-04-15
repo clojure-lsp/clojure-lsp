@@ -70,11 +70,11 @@
                         ;; so the cleanup doesn't reflow every libspec just to
                         ;; add one entry.
                         db (cond-> db
-                             (or (settings/get db [:clean :ns-inner-blocks-indentation])
-                                 (settings/get db [:keep-require-at-start?])
-                                 (not (some-> reread-loc
-                                              edit/find-namespace
-                                              same-line-ns-block?)))
+                             (and (not (settings/get db [:clean :ns-inner-blocks-indentation]))
+                                  (not (settings/get db [:keep-require-at-start?]))
+                                  (some-> reread-loc
+                                          edit/find-namespace
+                                          same-line-ns-block?))
                              (assoc-in [:settings :clean :ns-inner-blocks-indentation]
                                        :keep))]
                     (some-> reread-loc

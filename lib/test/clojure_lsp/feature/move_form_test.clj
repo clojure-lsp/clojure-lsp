@@ -65,8 +65,7 @@
                                  "(bar 1)"
                                  "(apple/bar 2)"
                                  "(a/bar 3)")
-                :result (h/code "(ns crumb (:require"
-                                "           [bread :as b :refer [bar]]))"
+                :result (h/code "(ns crumb (:require [bread :as b :refer [bar]]))"
                                 "(bar 1)"
                                 "(b/bar 2)"
                                 "(b/bar 3)")}
@@ -75,9 +74,8 @@
                                  "(a/qux 1)"
                                  "(apple/foo 1)"
                                  "(bar 2)")
-                :result (h/code "(ns diner (:require"
-                                "           [apple :as a]"
-                                "           [bread :as b :refer [bar]]))"
+                :result (h/code "(ns diner (:require [apple :as a]"
+                                "                    [bread :as b :refer [bar]]))"
                                 "(a/qux 1)"
                                 "(apple/foo 1)"
                                 "(bar 2)")}
@@ -85,17 +83,15 @@
         e-code {:initial (h/code "(ns eater (:require [apple :as a] [crumb :as c]))"
                                  "(a/bar 2)"
                                  "(c/c 3)")
-                :result (h/code "(ns eater (:require"
-                                "           [bread :as b]"
-                                "           [crumb :as c]))"
+                :result (h/code "(ns eater (:require [bread :as b]"
+                                "                    [crumb :as c]))"
                                 "(b/bar 2)"
                                 "(c/c 3)")}
 
         f-code {:initial (h/code "(ns fruit (:require [apple :as a] [bread :as b]))"
                                  "(a/bar 2)"
                                  "(b/foo 3)")
-                :result (h/code "(ns fruit (:require"
-                                "           [bread :as b]))"
+                :result (h/code "(ns fruit (:require [bread :as b]))"
                                 "(b/bar 2)"
                                 "(b/foo 3)")}]
     (testing "complex"

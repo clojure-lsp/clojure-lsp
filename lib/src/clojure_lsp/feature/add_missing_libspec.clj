@@ -75,7 +75,7 @@
                                  (not (some-> reread-loc
                                               edit/find-namespace
                                               same-line-ns-block?)))
-                             (assoc-in [:settings :clean :ns-inner-blocks-indentation] 
+                             (assoc-in [:settings :clean :ns-inner-blocks-indentation]
                                        :keep))]
                     (some-> reread-loc
                             (f.clean-ns/clean-ns-edits uri db)

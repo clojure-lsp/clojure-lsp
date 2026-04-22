@@ -141,8 +141,11 @@
             "c.t.l"
             {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))))
 
-(defn find-require-suggestions [code]
-  (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
+(defn find-require-suggestions
+  ([code] (find-require-suggestions code "file:///a.clj"))
+  ([code uri]
+   (f.add-missing-libspec/find-require-suggestions
+     (h/load-code-and-zloc code uri) uri (h/db))))
 
 (deftest find-require-suggestions-test
   (testing "Suggested namespaces"
@@ -167,6 +170,29 @@
       [{:ns "project.some.cool.namespace"
         :refer "blow"}]
       (find-require-suggestions "|blow")))
+  (testing "Do not suggest refer from namespace defined in a different language"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns cljs.only.ns) (def blow 2)" "file:///only.cljs")
+    (h/load-code-and-locs "(ns clj.only.ns) (def blow 3)" "file:///only.clj")
+    (testing "from a .clj file we don't suggest a .cljs-only refer"
+      (h/assert-submaps
+        [{:ns "clj.only.ns" :refer "blow"}]
+        (find-require-suggestions "|blow" "file:///a.clj")))
+    (testing "from a .cljs file we don't suggest a .clj-only refer"
+      (h/assert-submaps
+        [{:ns "cljs.only.ns" :refer "blow"}]
+        (find-require-suggestions "|blow" "file:///a.cljs")))
+    (testing "from a .cljc file we suggest refers from both .clj and .cljs files"
+      (h/assert-submaps
+        #{{:ns "cljs.only.ns" :refer "blow"}
+          {:ns "clj.only.ns" :refer "blow"}}
+        (set (find-require-suggestions "|blow" "file:///a.cljc")))))
+  (testing "Do not suggest refer from a namespace defined only in a .cljc file when the current file is .clj and ns is not loadable on JVM"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns cljc.ns) (def blow 1)" "file:///cljc.cljc")
+    (h/assert-submaps
+      [{:ns "cljc.ns" :refer "blow"}]
+      (find-require-suggestions "|blow" "file:///a.clj")))
   (testing "Suggested core"
     (h/assert-submaps
       [{:ns "clojure.set" :alias "set"}

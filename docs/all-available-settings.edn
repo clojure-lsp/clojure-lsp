@@ -40,6 +40,7 @@
         :decompile-jar-as-project? true}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true
+ :private-by-default-on-extract? true
  :use-metadata-for-privacy? false
  :auto-add-ns-to-new-files? true
  :keep-parens-when-threading? false

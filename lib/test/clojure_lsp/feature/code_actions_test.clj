@@ -849,12 +849,13 @@
   (h/load-code-and-locs (h/code "(ns some-ns)"
                                 ""
                                 "(defn foo []"
-                                "  {:g 2 :s 3 :kj 3 :a 5})"))
+                                "  {:g 2 :s 3 :kj 3 :a 5})")
+                        (h/file-uri "file:///project/src/some_ns.clj"))
   (testing "on map bracket"
     (h/assert-contains-submaps
       [{:title "Sort map"
         :command {:command "sort-clauses"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///project/src/some_ns.clj"))
                           (h/file-uri "file:///project/src/some_ns.clj")
                           4
                           3
@@ -865,7 +866,7 @@
     (h/assert-contains-submaps
       [{:title "Sort map"
         :command {:command "sort-clauses"}}]
-      (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+      (f.code-actions/all (zloc-of (h/file-uri "file:///project/src/some_ns.clj"))
                           (h/file-uri "file:///project/src/some_ns.clj")
                           4
                           5
@@ -874,7 +875,7 @@
                           (h/db))))
   (testing "not on map"
     (is (not-any? #(= (:title %) "Sort map")
-                  (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///project/src/some_ns.clj"))
                                       (h/file-uri "file:///project/src/some_ns.clj")
                                       3
                                       7

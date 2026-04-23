@@ -80,6 +80,9 @@
 (defmethod run-command :extract-function [{:keys [row col end-row end-col loc loc-end uri args db]}]
   (apply r.transform/extract-function row col end-row end-col loc loc-end uri (concat args [db])))
 
+(defmethod run-command :inline-function [{:keys [loc uri args db]}]
+  (apply r.transform/inline-function loc uri (concat args [db])))
+
 (defmethod run-command :extract-to-def [{:keys [loc args db]}]
   (apply r.transform/extract-to-def loc (concat args [db])))
 
@@ -103,6 +106,9 @@
 
 (defmethod run-command :move-to-let [{:keys [loc uri db args]}]
   (apply r.transform/move-to-let loc uri db args))
+
+(defmethod run-command :move-to-for-let [{:keys [loc uri db args]}]
+  (apply r.transform/move-to-for-let loc uri db args))
 
 (defmethod run-command :thread-first [{:keys [loc db]}]
   (r.transform/thread-first loc db))

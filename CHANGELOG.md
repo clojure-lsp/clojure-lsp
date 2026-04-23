@@ -493,7 +493,7 @@
 ## 2022.10.05-16.39.51
 
 - General
-  - Improve clj-depend merge config to overwrite `source-paths` only if it is nil or empty. #1264
+  - Improve clj-depend merge config to overwrite `source-paths` only if it is nil or empty.  #1264
   - Fix stubs generation issue on MS-Windows, coming out of enabling all integrations tests on windows. #1211
   - Improve MS-Windows support by fixing various path, URI and line ending issues coming out of repairing the unit tests suite on windows. #1211
   - End dep-graph-queries experiment; clojure-lsp now uses the dep-graph to optimize queries whenever possible
@@ -504,7 +504,7 @@
   - Bump graalvm version for MS-Windows to 22.2.0, in sync with the other archs. #1211
 
 - Editor
-  - Fix to avoid error when checking code actions from an #\_x uneval node. #1227
+  - Fix to avoid error when checking code actions from an #_x uneval node. #1227
   - Add support to decompile jar as a java project when finding the definition of a java class, allowing to have LSP features on that java project. #1187
   - Add refactorings similar to `Sort map`: `Sort vector`, `Sort list`, `Sort set`, and `Sort clauses` for functions like `assoc`. #1155
   - Support java class decompilation for zipfile scheme (vim users).
@@ -690,10 +690,10 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Improve completion performance for most cases, reducing time to compute clj/cljs core symbols.
   - completion: suggest functions defined in Clojure 1.10 and 1.11
   - completion: Fix to no require extra ns when alias is already required. #920
-  - promote-fn: _new feature_ Promote a fn to a top-level defn. #783 @mainej
+  - promote-fn: *new feature* Promote a fn to a top-level defn. #783 @mainej
     - promote-fn can also promote a literal #() to a fn
   - demote-fn: Demote a fn to a literal #()
-  - _breaking_ remove cycle-fn-literal, since the same refactorings can be performed with the more clearly named promote-fn and demote-fn
+  - *breaking* remove cycle-fn-literal, since the same refactorings can be performed with the more clearly named promote-fn and demote-fn
   - drag: Fix to drag element-wise in destructured keys, not pair-wise. #927
   - test-tree: reduce CPU usage, especially during startup
 
@@ -747,7 +747,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Avoid infinite loops when several files are changed simultaneously. #796 @mainej
   - Fix "incoming call hierarchy" not considering usages inside defmethods. #808
   - range-formatting: more efficiently locate extent of range and reduce number of calls to cljfmt, improving performance especially when formatting large ranges. #795 @mainej
-  - cycle-fn-literal: _new feature_ convert between function-literal syntaxes `(fn [] ...)` <-> `#(...)`. #774
+  - cycle-fn-literal: *new feature* convert between function-literal syntaxes `(fn [] ...)` <-> `#(...)`. #774
   - Add find-implementation feature to `defmulti` and `defmethod`. #751
   - Make find-implementation of `defprotocol` names find its implementations and find-implementation on `deftype`/`defrecord` methods find other implementations.
   - Add new code action `Introduce let` for existing command. #825
@@ -880,7 +880,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Change call hierarchy to return selection range of usage, not function definition.
   - Return `edits` in `codeAction/resolve` responses rather than `commands`. #655
   - Improve `:linters :clj-kondo :async-custom-lint?` to avoid infinite loops and default to `true`.
-  - Add new custom LSP feature **Test Tree**, which shows all test hierarchy of a file. #653
+  - Add new custom LSP feature __Test Tree__, which shows all test hierarchy of a file. #653
   - Improve function name finding to consider other function definition types for some features. #666
   - Make `textDocument/hover` return the correct range from LSP spec, the element range instead of the element scope range.
 
@@ -982,7 +982,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
   - Fix expand-let bug that occurs when a list form precedes let. #590
   - Add new command to create test for function at point. #582
   - Add new code action to create test for current function/var
-  - Add `private` to documentSymbol to make clear that a var or function is `private`.
+  - Add `private` to documentSymbol to make clear that a var or function is  `private`.
   - Add new code action `Suppress xxx diagnostic`, adding clj-kondo comment code to ignore the diagnostic. #591
   - Add more semantic tokens: aliases for macros, variable and function definitions.
   - Add [clojuredocs](https://clojuredocs.org/) information during symbol hover. #571
@@ -1346,7 +1346,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 ## 2021.03.06-17.05.35
 
 - Fix incremental didChange, debouncing distincting by uri, fixing some inconsistent file changes
-  when multiple files are changed at same time (rename, iedit, etc).
+when multiple files are changed at same time (rename, iedit, etc).
 - Make unused-public-var ignore -main public functions.
 - Add `:exclude-when-defined-by` option to `unused-public-var` linter, check settings documentation for more information.
 
@@ -1455,7 +1455,7 @@ This release was supported by [Clojurists Together](https://www.clojuriststogeth
 
 ## 2021.02.04-02.08.58
 
-- Fix --version on graalvm native compiled binaries
+ - Fix --version on graalvm native compiled binaries
 
 ## 2021.02.04-01.09.21
 
@@ -1522,8 +1522,8 @@ Huge refactor https://github.com/clojure-lsp/clojure-lsp/pull/261 which uses clj
 
 ## 2021.01.14-23.15.54
 
-- Check for the whole line to add-miising-\* code actions instead of expect the cursor at the ns to be required/imported - Fixes #258
-- Return all possible add-missing-\* code actions to the same line.
+- Check for the whole line to add-miising-* code actions instead of expect the cursor at the ns to be required/imported - Fixes #258
+- Return all possible add-missing-* code actions to the same line.
 
 ## 2021.01.14-17.19.10
 

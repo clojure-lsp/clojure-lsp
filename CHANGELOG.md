@@ -1,14 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Fix `add-missing-require` refer suggestions leaking across languages, so a `.clj` file no longer offers refers defined only in `.cljs` files (and vice versa). #2271
+- Add `:private-by-default-on-extract?` setting to control whether extracted functions and defs are private by default. #2258
 - Measure performance of code actions
 - Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
 - Fix inline-def to work with defs with metas.
-- Bump clj-kondo to `2026.01.20-20260325.162821-29`.
+- Bump clj-kondo to `2026.04.15`.
 - bump up timeout for code action performance measurement, include p90 measurement #2236
 - implementation of inline function. #1827
 - Fix initialization crash when a source file has syntax errors (e.g. unbalanced parens) by using safe parser in unused-public-var linter's `:gen-class` check. #2242
 - Bump rewrite-clj to `1.2.54`.
+- implement move to :let refactoring #1732
 
 ## 2026.02.20-16.08.58
 

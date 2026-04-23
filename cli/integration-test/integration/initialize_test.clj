@@ -62,6 +62,7 @@
                                             "move-coll-entry-down"
                                             "move-coll-entry-up"
                                             "move-form"
+                                            "move-to-for-let"
                                             "move-to-let"
                                             "promote-fn"
                                             "raise-sexp"

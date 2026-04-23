@@ -573,6 +573,7 @@
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
           cursor-name-str (name cursor-sym)
+          cursor-langs (shared/uri->available-langs uri)
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
                                   (find-alias-ns-pairs db uri))
@@ -590,6 +591,7 @@
                                   (comp
                                     (remove #(uri-nses (:ns %)))
                                     (filter #(= cursor-name-str (str (:name %))))
+                                    (filter #(some (q/elem-langs %) cursor-langs))
                                     (map (fn [element]
                                            {:ns (str (:ns element))
                                             :refer cursor-name-str})))

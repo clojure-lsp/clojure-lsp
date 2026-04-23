@@ -382,6 +382,127 @@
           (recur (first (expand-let loc false uri db)) current-edit)
           (some-> previous-edit vector))))))
 
+(defn ^:private past?
+  "check if zipper location loc is past (or equal to) check-row, check-col in the sources"
+  [loc check-row check-col]
+  (let [{loc-row :row loc-col :col} (meta (z/node loc))]
+    (or (> loc-row check-row)
+        (and (= loc-row check-row)
+             (>= loc-col check-col)))))
+
+(defn ^:private find-let-kw-in-bindings
+  "return :let in a doseq or for"
+  [bindings-loc]
+  (loop [loc (z/down bindings-loc)]
+    (cond
+      (or (nil? loc) (z/end? loc)) nil
+      (= :let (z/sexpr loc)) (z/right loc)
+      :else (recur (z/right loc)))))
+
+(def shadowing-exprs #{"let" "loop" "fn" "if-let" "when-let" "doseq" "for"})
+
+(defn shadowing-boundry? [target top]
+  (let [starting-str (z/string target)
+        top-node (meta (z/node top))]
+    (or (nil? top)
+        (shadowing-exprs starting-str)
+        (not (past? target (:row top-node) (:col top-node))))))
+
+(defn ^:private move-to-parent-op [element]
+  (if (z/leftmost? element) (z/leftmost (z/up element)) (z/leftmost element)))
+
+(defn ^:private path-to-op-clear? [top-expr cursor]
+  (let [op-subtree
+        (z/find cursor move-to-parent-op #(shadowing-boundry? % top-expr))]
+    (contains? #{"doseq" "for"} (z/string op-subtree))))
+
+;; cursor should be in the body-expr.  That is, it requires these conditions
+;; 1) a list starting with a for or doseq
+;; 2) the cursor should after the second expression in the list
+;; 3) the second expression should be a vector
+;; 4) there should be no (let) block between the cursor and the containing for or doseq (or there is a chance
+;;    of a shadowed variable)
+(defn can-move-to-:let? [zloc]
+  (boolean
+    (let [zloc-expr (z/skip-whitespace z/right zloc)
+          op-expr (edit/find-ops-up (z/up zloc) "for" "doseq")
+          second-expr (z/right op-expr)
+          {list-end-row :end-row
+           list-end-col :end-col} (meta (when second-expr (z/node second-expr)))]
+      (and zloc-expr
+           op-expr
+           (path-to-op-clear? (z/subzip op-expr) zloc-expr)
+           (fast= :list (z/tag (z/up op-expr)))
+           (contains? #{"for" "doseq"} (z/string op-expr))
+           (fast= :vector (z/tag second-expr))
+           (past? zloc-expr list-end-row list-end-col)))))
+
+;; Note: shadowed variables under the for/doseq will be renamed.  For example moving x at the
+;; caret below will also rename the shadowing x:
+;;   (doseq [x [1 3]] 
+;;     (println "hi " (* |x 5))
+;;     (let [x 7]           <--- this shadowing x will also be renamed
+;;       (println "x here is " x)))
+;; It should be changed so that when an expression is moved, only that
+;; exact expression is renamed.  This might be done using the clojure-lsp.queries package.
+;; This may also allow the restriction of shadowing blocks between the for/doseq
+;; and the cursor in can-move-to-:let? (implemented with contains-potential-shadow).
+;; 
+;; For now, the behavior is similar to that of move-to-let.
+;;
+;; There is a similar issue with quotes.
+;;    (for [x [1 3]] ['(+ x 1) |x])
+;; should result in 
+;;    (for [x [1 3] :let [x new-binding]] ['(+ x 1) |new-binding])
+;; but instead, the x inside the quote is replaced with 'new-binding.  This also occurs with move-to-let.
+(defn move-to-for-let
+  "Adds form and symbol to a :let in a for/doseq further up the tree"
+  [zloc _uri _db binding-name]
+  (let [cursor-zloc (z/skip-whitespace z/right zloc)]
+    (if-let [for-op-loc (edit/find-ops-up (z/up cursor-zloc) "for" "doseq")]
+      (let [for-top-loc (z/up for-op-loc)
+            for-subzip (zsub/subzip for-top-loc)
+            new-binding-sym (symbol binding-name)
+            for-op-loc-in-subzip (z/down for-subzip)
+            bindings-loc (z/right for-op-loc-in-subzip)
+            {:keys [col]} (meta (z/node bindings-loc))
+            let-bindings-loc (find-let-kw-in-bindings bindings-loc)
+            with-binding (if let-bindings-loc
+                           (let [first-bind (z/down let-bindings-loc)
+                                 let-col (:col (meta (z/node (or first-bind let-bindings-loc))))]
+                             (-> let-bindings-loc
+                                 (cond-> first-bind (z/append-child* (n/newlines 1)))
+                                 (cond-> first-bind (z/append-child* (n/spaces (dec (or let-col (+ col 6))))))
+                                 (z/append-child new-binding-sym)
+                                 (z/append-child* (n/spaces 1))
+                                 (z/append-child (z/node cursor-zloc))
+                                 z/down
+                                 z/rightmost))
+                           (-> bindings-loc
+                               (z/append-child* (n/newlines 1))
+                               (z/append-child* (n/spaces col))
+                               (z/append-child :let)
+                               (z/append-child* (n/spaces 1))
+                               (z/append-child (n/vector-node [new-binding-sym (n/spaces 1) (z/node cursor-zloc)]))
+                               z/down
+                               z/rightmost
+                               z/down
+                               z/rightmost))
+            new-for-node (loop [loc (z/next with-binding)]
+                           (cond
+                             (z/end? loc)
+                             (z/root loc)
+
+                             (and (= (z/node loc) (z/node cursor-zloc))
+                                  (not= :quote (z/tag (z/up loc))))
+                             (recur (z/next (z/replace loc new-binding-sym)))
+
+                             :else
+                             (recur (z/next loc))))]
+        [{:range (meta (z/node for-top-loc))
+          :loc (z/replace for-top-loc new-for-node)}])
+      [])))
+
 (defn new-defn-zloc [fn-name private? params body db]
   (let [root (z/of-string
                (cond
@@ -464,12 +585,6 @@
        :end-col (:end-col meta-last)
        :col (:col meta-first)
        :end-row (:end-row meta-last)})))
-
-(defn ^:private past? [loc check-row check-col]
-  (let [{loc-row :row loc-col :col} (meta (z/node loc))]
-    (or (> loc-row check-row)
-        (and (= loc-row check-row)
-             (>= loc-col check-col)))))
 
 ;; may return nil if no expression in range to right - selection range is only checked if there
 ;; is a selection (that is, single-cursor? is false)
@@ -731,7 +846,7 @@
     (if-let [error (check-for-errors selected-expressions sel-start-zloc sel-end-zloc row-start col-start end-row end-col)]
       error
       (let [top-loc (edit/to-top sel-start-zloc)
-            private? true
+            private? (settings/get db [:private-by-default-on-extract?] true)
             replacement-range (combine-ranges selected-expressions)
             new-fn-sym (symbol fn-name)
             invoked-params (into [] (comp (map :name)
@@ -938,14 +1053,17 @@
 (defn can-extract-to-def? [zloc]
   (boolean (extract-to-def-params zloc)))
 
-(defn extract-to-def [zloc def-name]
+(defn extract-to-def [zloc def-name db]
   (when-let [{:keys [zloc form-loc]} (extract-to-def-params zloc)]
     (let [expr-node (z/node zloc)
           expr-meta (meta expr-node)
 
           def-name (or def-name "new-value")
+          private? (settings/get db [:private-by-default-on-extract?] true)
           expr-edit (z/of-node (symbol def-name))
-          def-loc (-> (format "(def ^:private %s\n  )" def-name)
+          def-loc (-> (if private?
+                        (format "(def ^:private %s\n  )" def-name)
+                        (format "(def %s\n  )" def-name))
                       z/of-string
                       (z/append-child* expr-node))]
       [(prepend-preserving-comment form-loc def-loc)

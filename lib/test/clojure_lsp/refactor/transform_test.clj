@@ -195,6 +195,132 @@
                 (move-to-let 'x))))
   (is (nil? (transform/move-to-let nil "file:///a.clj" (h/db) 'x))))
 
+(defn- move-to-for-let [code new-sym]
+  (h/first-edit-as-root-string (transform/move-to-for-let (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db) new-sym)))
+
+(deftest can-move-to-:let-test
+  (testing "can move from inside for body-expr"
+    (is (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x [1 2 3 4]]\n  |(* 2 x))"))))
+  (testing "can move from inside for body-expr with multiple expressions"
+    (is (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x [1 2 3 4]]\n  (* 1 x) | (* 2 x))"))))
+  (testing "can move from sub-expression to :let"
+    (is (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x [1 2 3 4]]\n  (+ 1 x |(* x x)))"))))
+  (testing "can move when doseq is nested inside a for on previous line"
+    (is (transform/can-move-to-:let?
+          (h/load-code-and-zloc "(for [y [1 3]]|\n (doseq [x [1 3]] (println (* x y))))"))))
+  (testing "can move when doseq is nested inside a for on the next line"
+    (is (transform/can-move-to-:let?
+          (h/load-code-and-zloc "(for [y [1 3]]\n |(doseq [x [1 3]] (println (* x y))))"))))
+  (testing "when a let block is between the cursor and the new :let, don't allow movement because it might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (let [x 2 y 5] (* |x y)))")))))
+  (testing "when a let block is between the cursor and the new :let, don't allow movement because the let might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (let [x 2 y 5] | (* x y)))")))))
+  (testing "when a when-let block is between the cursor and the new :let, don't allow movement because the when-let might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (when-let [y 5] | (* 5 y)))")))))
+  (testing "when an if-let block is between the cursor and the new :let, don't allow movement because the if-let might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (if-let [y 5] | (* 4 y)) :no-for)")))))
+  (testing "when a loop is between the cursor and the new :let, don't allow movement because the loop might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (loop [x 2 y 5] | (* x y)))")))))
+  (testing "when a fn is between the cursor and the new :let, don't allow movement because the fn might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n ((fn [x y ] |(* x y)) 2 5))")))))
+  (testing "can't move when cursor is outside for body-expr"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "(for |[x [1 2 3 4]]\n  (* 2 x))")))))
+  (testing "can't move when cursor is inside vector arg"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x | [1 2 3 4]]\n  (* 2 x))")))))
+  (testing "can't move when in empty body-expr"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x [1 2 3 4]]\n  |)")))))
+  (testing "can't move if in non-for"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "(+ | 2 4)")))))
+  (testing "can't move if in empty file"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "|"))))))
+
+(deftest move-to-:let-test
+  (testing "simple move to for :let"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(for [x [1 2 3 4]]\n  |(* 2 x))" 'a))))
+  (testing "move to for :let replacing multiple expressions"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [a (* 2 x)]]"
+                   "  (+ a a))")
+           (move-to-for-let "(for [x [1 2 3 4]]\n  (+ (* 2 x) |(* 2 x)))" 'a))))
+  (testing "move to for :let when :let already exists"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [t \"test\""
+                   "            a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(for [x [1 2 3 4]\n      :let [t \"test\"]]\n  |(* 2 x))" 'a))))
+  (testing "simple move to doseq :let"
+    (is (= (h/code "(doseq [x [1 2 3 4]"
+                   "        :let [a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(doseq [x [1 2 3 4]]\n  |(* 2 x))" 'a))))
+  (testing "when moving symbol to :let don't include quoted symbols"
+    (is (= (h/code "(for [x [1 3]"
+                   "      :let [a x]]"
+                   "  (vector 'x a))")
+           (move-to-for-let "(for [x [1 3]]\n  (vector 'x |x))" 'a))))
+  (testing "when moving symbol to :let don't include quoted expressions"
+    (is (= (h/code "(for [x [1 3]"
+                   "      :let [a (+ 1 x)]]"
+                   "  (vector '(+ 1 x) a))")
+           (move-to-for-let "(for [x [1 3]]\n  (vector '(+ 1 x) |(+ 1 x)))" 'a))))
+
+  ;; TODO: don't move shadowed symbols (see comment in move-to-for-let)
+  ;; (testing "when moving symbol to :let don't include quoted symbols inside expressions"
+  ;;   (is (= (h/code "(for [x [1 3]"
+  ;;                  "      :let [a x]]"
+  ;;                  "  (vector '(+ 1 x) a))")
+  ;;          (move-to-for-let "(for [x [1 3]]\n  (vector '(+ 1 x) |x))" 'a))))
+  ;; (testing "when moving a symbol don't replace shadowed symbols"
+  ;;   (is (= (h/code "(doseq [x [1 3]"
+  ;;                  "        :let [a x]]"
+  ;;                  "  (println (* a 5))"
+  ;;                  "  (let [x 7]"
+  ;;                  "    (println x)))")
+  ;;          (move-to-for-let (str "(doseq [x [1 3]]\n"
+  ;;                                "  (println (* |x 5))\n"
+  ;;                                "  (let [x 7]\n"
+  ;;                                "    (println x)))") 'a))))
+
+  (testing "move to doseq :let when :let already exists"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [b 1"
+                   "            a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(for [x [1 2 3 4]\n      :let [b 1]]\n  |(* 2 x))" 'a))))
+  (testing "move to doseq :let with three :let bindings already present"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [b 1"
+                   "            t :my-test"
+                   "            a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(for [x [1 2 3 4]\n      :let [b 1\n            t :my-test]]\n  |(* 2 x))" 'a))))
+  (testing "move to doseq :let with extra expressions in doseq"
+    (is (= (h/code "(doseq [x [1 2 3 4]"
+                   "        :let [a (* 2 x)]]"
+                   "  a"
+                   "  (+ x 5))")
+           (move-to-for-let "(doseq [x [1 2 3 4]]\n  |(* 2 x)\n  (+ x 5))" 'a))))
+  (testing "move to doseq :let with multiple replacements"
+    (is (= (h/code "(doseq [x [1 2 3 4]"
+                   "        :let [a (* 2 x)]]"
+                   "  a"
+                   "  a)")
+           (move-to-for-let "(doseq [x [1 2 3 4]]\n  |(* 2 x)\n  (* 2 x))" 'a))))
+  (testing "moving nested doseq inside a for"
+    (is (= (h/code "(for [y [1 3]"
+                   "      :let [a (doseq [x [1 3]] (println (* x y)))]]"
+                   " a)")
+           (move-to-for-let "(for [y [1 3]]\n |(doseq [x [1 3]] (println (* x y))))" 'a)))))
+
 (defn- introduce-let [code new-sym]
   (h/first-edit-as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
 
@@ -1986,11 +2112,22 @@
                        "  |(+ 1 a))")
                (do-extract-function "foo")
                as-strings))))
-  (testing "with-setting"
+  (testing "with :use-metadata-for-privacy? setting"
     (h/reset-components!)
     (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= [(h/code ""
                     "(defn ^:private foo []"
+                    "  (inc 1))"
+                    "")
+            (h/code "(foo)")]
+           (-> "(|inc 1)"
+               (do-extract-function "foo")
+               as-strings))))
+  (testing "with :private-by-default-on-extract? false"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:private-by-default-on-extract? false}})
+    (is (= [(h/code ""
+                    "(defn foo []"
                     "  (inc 1))"
                     "")
             (h/code "(foo)")]
@@ -2267,7 +2404,7 @@
 (defn- extract-to-def
   [code new-def-name]
   (let [zloc (h/zloc-from-code code)]
-    (transform/extract-to-def zloc new-def-name)))
+    (transform/extract-to-def zloc new-def-name (h/db))))
 
 (deftest extract-to-def-test
   (h/reset-components!)
@@ -2287,7 +2424,18 @@
           (h/code "new-value")]
          (-> "|{:a 1}"
              (extract-to-def nil)
-             as-strings))))
+             as-strings)))
+  (testing "with :private-by-default-on-extract? false"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:private-by-default-on-extract? false}})
+    (is (= [(h/code ""
+                    "(def foo"
+                    "  {:a 1})"
+                    "")
+            (h/code "foo")]
+           (-> "|{:a 1}"
+               (extract-to-def "foo")
+               as-strings)))))
 
 (deftest can-create-test?
   (testing "when on multiples functions"

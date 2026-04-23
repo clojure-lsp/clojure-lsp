@@ -1,12 +1,14 @@
 # Changelog
 
 ## Unreleased
+
 - Preserve existing `:same-line` formatting when adding a missing require/import, so a one-libspec add no longer re-flows the whole `:require`/`:import` block. When the user has not explicitly set `:clean :ns-inner-blocks-indentation` and the ns is already in `:same-line` style, the automatic post-refactor clean-up now behaves as if `:keep` were configured. #2261
+- Fix `add-missing-require` refer suggestions leaking across languages, so a `.clj` file no longer offers refers defined only in `.cljs` files (and vice versa). #2271
 - Add `:private-by-default-on-extract?` setting to control whether extracted functions and defs are private by default. #2258
 - Measure performance of code actions
 - Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
 - Fix inline-def to work with defs with metas.
-- Bump clj-kondo to `2026.01.20-20260325.162821-29`.
+- Bump clj-kondo to `2026.04.15`.
 - bump up timeout for code action performance measurement, include p90 measurement #2236
 - Fix initialization crash when a source file has syntax errors (e.g. unbalanced parens) by using safe parser in unused-public-var linter's `:gen-class` check. #2242
 - Bump rewrite-clj to `1.2.54`.

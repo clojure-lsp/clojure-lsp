@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.logger :as logger]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -862,6 +863,184 @@
          {:loc   new-fn-call
           :range replacement-range}]))))
 
+(defn ^:private find-formal-usages-in-body [db uri fn-body]
+  (let [full-body-range (combine-ranges (take-while some? (iterate z/right fn-body)))
+        local-usages (q/find-local-usages-defined-outside-form
+                       db
+                       uri
+                       full-body-range)
+        accumulate-local-usage-refs (fn [acc local-usage] (apply conj acc (q/find-references-from-cursor db uri (:name-row local-usage) (:name-col local-usage) false)))]
+    ;; with cljc files we sometimes get duplicate refs from find-references-from-cursor, use distinct
+    (distinct (reduce accumulate-local-usage-refs [] local-usages))))
+
+(defn ^:private map-formal->actual
+  "creates a map from formal param name -> actual param zlocs, including grouping
+   the varargs param's actual parameters into a vector"
+  [args actual-arg-zlocs]
+  (if-let [vararg-pos? (when (seq? (:variadic-arg args)) (count (:args args)))]
+    (let [normal-formal-arg-names (:args args)
+          vararg-param (first (:variadic-arg args))
+          num-varargs (- (count actual-arg-zlocs) vararg-pos?)
+          vararg-actual-zlocs (take-last num-varargs actual-arg-zlocs)
+          vararg-collection (reduce (fn [collection-root e] (z/append-child collection-root (z/node e)))
+                                    (z/of-node (n/vector-node []))
+                                    vararg-actual-zlocs)]
+      (assoc (zipmap normal-formal-arg-names actual-arg-zlocs)
+             vararg-param vararg-collection))
+    (zipmap args actual-arg-zlocs)))
+
+(defn ^:private remove-whitespace [body]
+  (let [body-without-whitespace (filter (complement z/whitespace?) (take-while some? (iterate z/right* body)))
+        body-nodes (map z/node body-without-whitespace)]
+    (z/up (z/of-node (n/forms-node body-nodes)))))
+
+;; simplifing assumption: this relies on rewrite-clj's behavior of not changing other node's metadata 
+;; (that is the metadata :row and :col attributes, not the rewrite-clj z/position) when
+;; a previous node is replaced.  It also relies on parser/to-pos using that (:row, :col) metadata 
+;; to find a position.  If either were to change, we'd have to sort the useage of the formal args
+;; in the body in row/col decending order so we can replace them without affecting the position.  There
+;; is a unit test for this
+(defn ^:private formal-args->actual-args
+  "replace instances of formal args in fn-body with the corresponding actual args"
+  [fn-body formal-args-usage formal-arg-names actual-arg-zlocs]
+  (let [formal-arg-name->actual-arg-value (map-formal->actual formal-arg-names actual-arg-zlocs)]
+    (reduce (fn [acc fa]
+              (let [val (get formal-arg-name->actual-arg-value (str (:name fa)))]
+                (z/edit-> acc
+                          (parser/to-pos (:name-row fa) (:name-col fa))
+                          (z/replace (z/node val)))))
+            fn-body
+            formal-args-usage)))
+
+(defn ^:private find-actual-params
+  "get actual parameters from function call site"
+  [file-zloc fn-ref]
+  (let [call-site-loc  (parser/to-pos file-zloc (:row fn-ref) (:col fn-ref))
+        first-arg-loc (z/right (z/down  call-site-loc))]
+    (take-while some? (iterate z/right first-arg-loc))))
+
+(defn ^:private find-fn-body
+  "given a function's name zloc, returns the body or an error.  If the body
+   is empty, an empty root node is returned to avoid follow-on errors"
+  [fn-loc]
+  (let [after-name-loc (z/right fn-loc)]
+    (loop [loc after-name-loc]
+      (cond
+        ;; function doc string
+        (and (fast= :token (z/tag loc)) (string? (z/sexpr loc)))
+        (recur (z/right loc))
+
+        ;; function arg list - if empty body, return empty toplevel node
+        (fast= :vector (z/tag loc))
+        (or (z/right* loc) (z/of-node (n/forms-node [])))
+
+        ;; multi-arity paren is disallowed, but single-arity is allowed
+        (fast= :list (z/tag loc))
+        (if (nil? (z/right loc))
+          (recur (z/down loc))
+          :error)
+
+        :else
+        :error))))
+
+(defn ^:private interpose-whitespace [body-with-whitespace col]
+  (let [indent-string (str "\n" (apply str (repeat (dec col) " ")))]
+    (->> (z/down* body-with-whitespace)
+         (iterate z/right*)
+         (take-while some?)
+         (map z/node)
+         trim-comment-nodes
+         (interpose (z/node (z/of-string indent-string)))
+         (reduce z/append-child* (z/of-node (n/forms-node []))))))
+
+(defn ^:private inline-fn-calls
+  "turns function calls into LSP :range, :loc map with the body of the function inlined"
+  [db uri fn-call-refs fn-body args]
+  ;; Note: sometimes there :external? true is set indicating this is from a jar file.
+  ;; If that were to happen, (filter (complement :external?) fn-call-refs will work, but
+  ;; that causes problems with renamed files.
+  (let [formal-arg-refs (find-formal-usages-in-body db uri fn-body)
+        file-zloc (parser/zloc-of-file db uri)
+        results (mapv #(hash-map :range (select-keys % [:row :col :end-row :end-col])
+                                 :loc (-> (formal-args->actual-args fn-body formal-arg-refs
+                                                                    args
+                                                                    (find-actual-params file-zloc %))
+                                          remove-whitespace
+                                          (interpose-whitespace (:col %))))
+                      fn-call-refs)]
+    results))
+
+(defn ^:private arglist-contains-destructuring [fn-def]
+  (let [raw-arglist (first (:arglist-strs fn-def))
+        arglist-contents (subs raw-arglist 1 (dec (count raw-arglist)))]
+    (re-matches #".*[\[\{].*" arglist-contents)))
+
+(defn ^:private fn-def->arglist [fn-def]
+  (when-not (arglist-contains-destructuring fn-def)
+    (let [arglist-raw (first (:arglist-strs fn-def))
+          arglist-str (subs arglist-raw 1 (dec (count arglist-raw)))
+          arglist (if (string/blank? arglist-str) [] (string/split arglist-str #" "))
+          arglist-parts (split-with (complement #{"&"}) arglist)
+          normal-arglist (get arglist-parts 0)
+          variadic-arg (rest (get arglist-parts 1))]
+      {:args normal-arglist
+       :variadic-arg variadic-arg})))
+
+(defn inline-function
+  "copies the function body to the call sites, substituting formal parameters
+   with the actual parameters from the call site.
+   call sites are outside of the current file.  Limitations:
+    - functions with destructuring will return an error
+    - multi-arity functions are disallowed (although varargs are allowed)
+    - recursive functions will inline with the recursive calls still present
+    - functions that have side effects may have incorrect behavior
+    - only works with functions contained in the file with the definition
+    - when a call site uses threading or otherwise doesn't list
+      all the arguments explictly, the arguments are not adjusted"
+  [zloc uri db]
+  (let [defn-loc (edit/find-ops-up zloc "defn" "defn-")
+        fn-name-loc (z/right defn-loc)
+        {fn-row :end-row fn-col :end-col} (meta (z/node fn-name-loc))
+        fn-def (q/find-definition-from-cursor db uri fn-row fn-col)
+        fn-calls (q/find-references-from-cursor db uri fn-row fn-col false)
+        fn-body (find-fn-body fn-name-loc)
+        args (fn-def->arglist fn-def)]
+    (if (or (= :error fn-body) (nil? args))
+      {:error {:message "cannot inline function"
+               :code :invalid-params}}
+      (let [replacements (inline-fn-calls db uri fn-calls fn-body args)]
+        (conj replacements (hash-map :range (select-keys fn-def [:row :col :end-row :end-col])
+                                     :loc (z/of-string "")))))))
+
+(defn ^:private validate-ref-arg-count
+  "true if there are at least the number of expected parameters at function call ref"
+  [file-zloc num-expected-args call-ref]
+  (let [call-zloc (parser/to-pos file-zloc (:row call-ref) (:col call-ref))]
+    (some nil? (take num-expected-args (iterate z/right (z/right (z/down call-zloc)))))))
+
+(defn ^:private validate-all-arg-counts [db uri fn-calls args]
+  (let [min-arg-count (count (:args args))
+        file-zloc (parser/zloc-of-file db uri)]
+    (first (filter (partial validate-ref-arg-count file-zloc min-arg-count) fn-calls))))
+
+(defn can-inline-fn?
+  "returns true if a function can be inlined; false otherwise"
+  [zloc uri db]
+  (let [defn-loc (edit/find-ops-up zloc "defn" "defn-")]
+    (when-let [fn-name-loc (z/right defn-loc)]
+      (let [{fn-row :end-row fn-col :end-col} (meta (z/node fn-name-loc))]
+        (when-let [fn-def (q/find-definition-from-cursor db uri fn-row fn-col)]
+          (let [fn-calls (q/find-references-from-cursor db uri fn-row fn-col false)
+                fn-body (find-fn-body fn-name-loc)
+                in-same-ns? (if fn-calls (zero? (count (filter #(not= (:from %) (:to %)) fn-calls))) false)
+                args (fn-def->arglist fn-def)]
+            (and (some? defn-loc)
+                 in-same-ns?
+                 (not= :error fn-body)
+                 (not (arglist-contains-destructuring fn-def))
+                 (not (zero? (count fn-calls)))
+                 (not (validate-all-arg-counts db uri fn-calls args)))))))))
+
 (defn ^:private extract-to-def-params [zloc]
   ;; the expression that will be extracted
   (when-let [zloc (or (z/skip-whitespace z/right zloc)
@@ -1582,3 +1761,4 @@
       :range (assoc form-pos
                     :end-row form-row
                     :end-col form-col)}]))
+

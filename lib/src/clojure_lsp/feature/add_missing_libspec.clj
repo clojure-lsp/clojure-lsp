@@ -42,19 +42,7 @@
   (or (settings/get db [:clean :ns-inner-blocks-indentation])
       (if (settings/get db [:keep-require-at-start?])
         :same-line
-        :next-line)))
-
-(defn- same-line-ns-block?
-  "True when the first child of :require/:import sits on the same row as the
-  keyword. Used to detect `:same-line` user formatting so the auto-clean can
-  preserve it instead of re-flowing the whole block."
-  [ns-zloc]
-  (some (fn [kw]
-          (when-let [kw-loc (z/find-value (zsub/subzip ns-zloc) z/next kw)]
-            (when-let [right (z/right kw-loc)]
-              (= (-> kw-loc z/node meta :row)
-                 (-> right z/node meta :row)))))
-        [:require :import]))
+        :keep)))
 
 (defn cleaning-ns-edits [uri db edits]
   (if (settings/get db [:clean :automatically-after-ns-refactor] true)
@@ -62,25 +50,12 @@
          (map (fn [{:keys [loc range] :as edit}]
                 (if (z/find-value loc z/next 'ns)
                   ;; re-read zloc to get a unchanged zloc with :forms
-                  (let [reread-loc (some-> loc
-                                           z/root-string
-                                           parser/z-of-string*)
-                        ;; When the user hasn't picked an indentation style but
-                        ;; the ns is already using `:same-line`, force `:keep`
-                        ;; so the cleanup doesn't reflow every libspec just to
-                        ;; add one entry.
-                        db (cond-> db
-                             (and (not (settings/get db [:clean :ns-inner-blocks-indentation]))
-                                  (not (settings/get db [:keep-require-at-start?]))
-                                  (some-> reread-loc
-                                          edit/find-namespace
-                                          same-line-ns-block?))
-                             (assoc-in [:settings :clean :ns-inner-blocks-indentation]
-                                       :keep))]
-                    (some-> reread-loc
-                            (f.clean-ns/clean-ns-edits uri db)
-                            first
-                            (assoc :range range)))
+                  (some-> loc
+                          z/root-string
+                          parser/z-of-string*
+                          (f.clean-ns/clean-ns-edits uri db)
+                          first
+                          (assoc :range range))
                   edit)))
          seq)
     edits))

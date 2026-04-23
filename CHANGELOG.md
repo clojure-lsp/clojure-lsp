@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Preserve existing `:same-line` formatting when adding a missing require/import, so a one-libspec add no longer re-flows the whole `:require`/`:import` block. When the user has not explicitly set `:clean :ns-inner-blocks-indentation` and the ns is already in `:same-line` style, the automatic post-refactor clean-up now behaves as if `:keep` were configured. #2261
+- Change the default of `:clean :ns-inner-blocks-indentation` from `:next-line` to `:keep`, so `clean-ns` (including the automatic run after `add-missing-libspec`, `add-require-suggestion`, `add-missing-import`, and `move-form`) no longer reflows the `:require`/`:import` block when the user has not configured an indentation style. Users who want the previous behavior can set `:clean :ns-inner-blocks-indentation :next-line` explicitly. #2261
 - Fix `add-missing-require` refer suggestions leaking across languages, so a `.clj` file no longer offers refers defined only in `.cljs` files (and vice versa). #2271
 - Add `:private-by-default-on-extract?` setting to control whether extracted functions and defs are private by default. #2258
 - Measure performance of code actions

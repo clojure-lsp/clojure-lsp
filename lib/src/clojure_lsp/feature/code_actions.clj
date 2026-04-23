@@ -162,6 +162,13 @@
              :command   "move-to-let"
              :arguments [uri line character "new-binding"]}})
 
+(defn ^:private move-to-for-let-action [uri line character]
+  {:title   "Move to :let"
+   :kind    :refactor-extract
+   :command {:title     "Move to :let"
+             :command   "move-to-for-let"
+             :arguments [uri line character "new-binding"]}})
+
 (defn ^:private cycle-kwd-action [uri line character cycle-kwd-status]
   (let [title (if (= :from-auto-resolve-to-namespace (:status cycle-kwd-status))
                 "Change auto-resolved keyword to namespaced"
@@ -424,7 +431,8 @@
          inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
          cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
          can-add-let? (or (z/skip-whitespace z/right zloc)
-                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
+                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))
+         can-move-to-for-let?* (future (r.transform/can-move-to-:let? zloc))]
      (cond-> []
        (seq resolvable-refer-all-diagnostics)
        (into (replace-refer-all-actions uri resolvable-refer-all-diagnostics))
@@ -456,6 +464,9 @@
        can-add-let?
        (conj (move-to-let-action uri line character)
              (extract-function-action uri line character end-line end-character))
+
+       @can-move-to-for-let?*
+       (conj (move-to-for-let-action uri line character))
 
        @inside-function?*
        (conj (cycle-privacy-action uri line character))

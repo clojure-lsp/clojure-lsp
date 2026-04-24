@@ -42,7 +42,7 @@
   (or (settings/get db [:clean :ns-inner-blocks-indentation])
       (if (settings/get db [:keep-require-at-start?])
         :same-line
-        :next-line)))
+        :keep)))
 
 (defn cleaning-ns-edits [uri db edits]
   (if (settings/get db [:clean :automatically-after-ns-refactor] true)
@@ -244,7 +244,7 @@
                                         (z/up)
                                         (cond->
                                          (or (not add-form-type?)
-                                             (fast= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
+                                             (not (fast= :same-line ns-inner-blocks-indentation))) (z/append-child* (n/newlines 1)))
                                         (z/append-child* (n/spaces (dec col)))
                                         (z/append-child form-to-add)))]
         [{:range (meta (z/node result-loc))

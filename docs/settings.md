@@ -368,6 +368,8 @@ Whether to call clean-ns on the namespace after applying any refactor to it like
 
 How to indent ns children forms like require,import.
 
+Defaults to `:keep`, so `clean-ns` (and the automatic clean-up that runs after `add-missing-libspec` / `add-require-suggestion` / `add-missing-import` / `move-form`) leaves existing `:require`/`:import` indentation alone. Set to `:next-line` or `:same-line` to enforce a specific style.
+
 ##### `next-line`
 
 Keep first child on the next line of `:require`/`:import` and next children following the same indentation. Recommended by [how-to-ns](https://stuartsierra.com/2016/08/27/how-to-ns) guide too.

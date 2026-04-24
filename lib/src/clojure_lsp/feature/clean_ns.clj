@@ -17,7 +17,7 @@
   (or (settings/get db [:clean :ns-inner-blocks-indentation])
       (if (settings/get db [:keep-require-at-start?])
         :same-line
-        :next-line)))
+        :keep)))
 
 (defn ^:private sort-by-if-enabled [fn type db coll]
   (if-let [sort-type (settings/get db [:clean :sort type] true)]

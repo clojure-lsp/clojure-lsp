@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+- Change the default of `:clean :ns-inner-blocks-indentation` from `:next-line` to `:keep`, so `clean-ns` (including the automatic run after `add-missing-libspec`, `add-require-suggestion`, `add-missing-import`, and `move-form`) no longer reflows the `:require`/`:import` block when the user has not configured an indentation style. Users who want the previous behavior can set `:clean :ns-inner-blocks-indentation :next-line` explicitly. #2261
 - Fix `add-missing-require` refer suggestions leaking across languages, so a `.clj` file no longer offers refers defined only in `.cljs` files (and vice versa). #2271
 - Add `:private-by-default-on-extract?` setting to control whether extracted functions and defs are private by default. #2258
 - Measure performance of code actions
@@ -64,6 +66,7 @@
 - Fix `clojure-lsp/cyclic-dependencies` custom linter default level to be `error`.
 
 ## 2025.08.15-15.37.37
+
 - Docs
   - update neovim editor configuration for clojure lsp
 

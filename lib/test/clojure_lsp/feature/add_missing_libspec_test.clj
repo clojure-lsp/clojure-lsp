@@ -290,6 +290,34 @@
                          "  (:require [foo :as bar])) |set/subset?")
                  add-missing-libspec
                  as-str))))
+    (testing "preserves existing :same-line formatting without explicit setting"
+      (h/reset-components!)
+      (is (= (h/code "(ns foo "
+                     "  (:require [clojure.set :as set]"
+                     "            [foo :as bar]))")
+             (-> (h/code "(ns foo "
+                         "  (:require [foo :as bar])) |set/subset?")
+                 add-missing-libspec
+                 as-str))))
+    (testing "preserves existing :next-line formatting without explicit setting"
+      (h/reset-components!)
+      (is (= (h/code "(ns foo "
+                     "  (:require"
+                     "   [clojure.set :as set]"
+                     "   [foo :as bar]))")
+             (-> (h/code "(ns foo "
+                         "  (:require"
+                         "   [foo :as bar])) |set/subset?")
+                 add-missing-libspec
+                 as-str))))
+    (testing "creates multi-line block on empty ns without explicit setting"
+      (h/reset-components!)
+      (is (= (h/code "(ns foo "
+                     "  (:require"
+                     "    [clojure.set :as set]))")
+             (-> "(ns foo) |set/subset?"
+                 add-missing-libspec
+                 as-str))))
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
         (swap! (h/db*) shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor true
@@ -543,6 +571,7 @@
                (add-missing-import-to-rcf "java.util.Date"))))))
 
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer js-require]
+  (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})
   (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer js-require (h/db) {}))
 
 (deftest add-require-suggestion-test

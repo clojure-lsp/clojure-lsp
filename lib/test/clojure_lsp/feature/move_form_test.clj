@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.move-form-test
   (:require
    [clojure-lsp.feature.move-form :as move-form]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
@@ -9,6 +10,7 @@
 (deftest move-form-test
   (testing "simple"
     (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})
     (let [a-uri (h/file-uri "file:///a.clj")
           b-uri (h/file-uri "file:///b.clj")
           zloc (h/load-code-and-zloc (h/code "(ns apple)" "|(def bar inc)" "(bar 1)"))
@@ -26,6 +28,7 @@
 
   (testing "simple cljc"
     (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})
     (let [a-uri (h/file-uri "file:///a.cljc")
           b-uri (h/file-uri "file:///b.cljc")
           zloc (h/load-code-and-zloc (h/code "(ns apple)" "|(def bar inc)" "(bar 1)")
@@ -65,8 +68,7 @@
                                  "(bar 1)"
                                  "(apple/bar 2)"
                                  "(a/bar 3)")
-                :result (h/code "(ns crumb (:require"
-                                "           [bread :as b :refer [bar]]))"
+                :result (h/code "(ns crumb (:require [bread :as b :refer [bar]]))"
                                 "(bar 1)"
                                 "(b/bar 2)"
                                 "(b/bar 3)")}
@@ -75,9 +77,8 @@
                                  "(a/qux 1)"
                                  "(apple/foo 1)"
                                  "(bar 2)")
-                :result (h/code "(ns diner (:require"
-                                "           [apple :as a]"
-                                "           [bread :as b :refer [bar]]))"
+                :result (h/code "(ns diner (:require [apple :as a]"
+                                "                    [bread :as b :refer [bar]]))"
                                 "(a/qux 1)"
                                 "(apple/foo 1)"
                                 "(bar 2)")}
@@ -85,17 +86,15 @@
         e-code {:initial (h/code "(ns eater (:require [apple :as a] [crumb :as c]))"
                                  "(a/bar 2)"
                                  "(c/c 3)")
-                :result (h/code "(ns eater (:require"
-                                "           [bread :as b]"
-                                "           [crumb :as c]))"
+                :result (h/code "(ns eater (:require [bread :as b]"
+                                "                    [crumb :as c]))"
                                 "(b/bar 2)"
                                 "(c/c 3)")}
 
         f-code {:initial (h/code "(ns fruit (:require [apple :as a] [bread :as b]))"
                                  "(a/bar 2)"
                                  "(b/foo 3)")
-                :result (h/code "(ns fruit (:require"
-                                "           [bread :as b]))"
+                :result (h/code "(ns fruit (:require [bread :as b]))"
                                 "(b/bar 2)"
                                 "(b/foo 3)")}]
     (testing "complex"

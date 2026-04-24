@@ -2374,7 +2374,8 @@
     (testing "when namespace is not required and not exists"
       (h/reset-components!)
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                   (h/file-path "/project/test")}}})
+                                                                   (h/file-path "/project/test")}
+                                                   :clean {:ns-inner-blocks-indentation :next-line}}})
       (let [zloc (h/load-code-and-zloc "(ns foo) (|bar.baz/something)"
                                        (h/file-uri "file:///project/src/foo.clj"))
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc (h/file-uri "file:///project/src/foo.clj") (h/db))

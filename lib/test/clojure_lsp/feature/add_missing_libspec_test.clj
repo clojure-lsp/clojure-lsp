@@ -310,6 +310,14 @@
                          "   [foo :as bar])) |set/subset?")
                  add-missing-libspec
                  as-str))))
+    (testing "creates multi-line block on empty ns without explicit setting"
+      (h/reset-components!)
+      (is (= (h/code "(ns foo "
+                     "  (:require"
+                     "    [clojure.set :as set]))")
+             (-> "(ns foo) |set/subset?"
+                 add-missing-libspec
+                 as-str))))
     (testing "with deprecated keep-require-at-start?"
       (testing "we add first require without spaces"
         (swap! (h/db*) shared/deep-merge {:settings {:clean {:automatically-after-ns-refactor true

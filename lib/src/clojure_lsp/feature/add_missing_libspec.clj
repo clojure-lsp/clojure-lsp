@@ -244,7 +244,7 @@
                                         (z/up)
                                         (cond->
                                          (or (not add-form-type?)
-                                             (fast= :next-line ns-inner-blocks-indentation)) (z/append-child* (n/newlines 1)))
+                                             (not (fast= :same-line ns-inner-blocks-indentation))) (z/append-child* (n/newlines 1)))
                                         (z/append-child* (n/spaces (dec col)))
                                         (z/append-child form-to-add)))]
         [{:range (meta (z/node result-loc))

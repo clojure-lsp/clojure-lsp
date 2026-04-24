@@ -115,7 +115,7 @@
                             "     java.util.Date))"
                             "File Date")))))
   (testing "with first require as unused"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [foo  :as f] [bar :as b] baz [z] ))"
@@ -129,7 +129,7 @@
                            "(defn func []"
                            "  (b/some))")))
   (testing "with single unused require on ns"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [foo  :as f] ))"
@@ -139,7 +139,7 @@
                            "(defn func []"
                            "  (b/some))")))
   (testing "with single used require on ns"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [foo  :as f] ))"
@@ -151,14 +151,14 @@
                            "(defn func []"
                            "  (f/some))")))
   (testing "with multiple unused requires on ns"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [foo  :as f]"
                            "   [bar :as b]))")
                    (h/code "(ns foo.bar)")))
   (testing "with duplicate require with different and unused alias"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "  [bar :as b]"
@@ -171,7 +171,7 @@
                            "  [foo :as f]))"
                            "f/bar b/bar")))
   (testing "with duplicate require with both used alias"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "  [bar :as b]"
@@ -185,7 +185,7 @@
                            "  [foo :as fa]))"
                            "f/bar fa/bar b/bar")))
   (testing "with refer at require"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [foo  :as f] [bar :refer [some]] baz [z] ))"
@@ -199,12 +199,12 @@
                            "(defn func []"
                            "  (f/some))")))
   (testing "with refer as single require"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [bar :refer [some]]))")
                    (h/code "(ns foo.bar)"))
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [bar :refer :all]))")
@@ -230,7 +230,7 @@
                              "  (f/some))")
                      false)))
   (testing "with first require as a refer"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [bar :refer [some] ] [foo :as f]))"
@@ -244,7 +244,7 @@
                            "(defn func []"
                            "  (some))")))
   (testing "with first require as a refer with alias"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [bar :as b :refer [some] ] [foo :as f]))"
@@ -260,7 +260,7 @@
                            "  b/some"
                            "  (some))")))
   (testing "unused refer from multiple refers"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [bar :refer [some other] ]))"
@@ -270,7 +270,7 @@
                            "  [bar :refer [some] ]))"
                            "(some)")))
   (testing "unused refer and alias"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "  [baz]"
@@ -279,7 +279,7 @@
                            " (:require"
                            "  [baz]))")))
   (testing "unused refer from single refer but used alias before"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [aba :as a]"
@@ -293,7 +293,7 @@
                            "(a/bla)"
                            "(b/another)")))
   (testing "used refer from single refer and used alias after refer"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [aba :as a]"
@@ -309,7 +309,7 @@
                            "(b/another)"
                            "some")))
   (testing "unused refer from single refer but used alias after"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [aba :as a]"
@@ -323,7 +323,7 @@
                            "(a/bla)"
                            "(b/another)")))
   (testing "unused refer from multiple refers but used alias"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [bar :as b :refer [some other]]))"
@@ -335,7 +335,7 @@
                            "(other)"
                            "(b/another)")))
   (testing "unused middle refer from multiple refers"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [bar :refer [some other baz another] ]))"
@@ -349,7 +349,7 @@
                            "(another)"
                            "(baz)")))
   (testing "unused refer and alias"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:require"
                            "   [bar :refer [some] ]"
@@ -357,7 +357,7 @@
                    (h/code "(ns foo.bar)")))
   (testing "sorting"
     (testing "sorts according to symbols not brackets"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "  []"
@@ -470,7 +470,7 @@
                              "Foo"
                              "ball.")))
     (testing "unsorted used imports"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:import"
                              "  a.c.d.e.A"
@@ -544,7 +544,7 @@
                              "  (a.c E F G H I)))"
                              "  A B C D E F G H I")))
     (testing "unsorted used refer"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "   [some :refer [Dee foo bar baz]]))"
@@ -640,7 +640,7 @@
                              "   foo bar baz")))
     (testing "ns children sorting"
       (testing "keep comments"
-        (test-clean-ns {}
+        (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                        (h/code "(ns foo"
                                " (:require"
                                "  [clojure.set :as set] ;; important comment"
@@ -659,7 +659,7 @@
                                "set/a"
                                "edn/b")))
       (testing "import before require"
-        (test-clean-ns {}
+        (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                        (h/code "(ns foo.bar"
                                " (:import"
                                "  [foo Bar])"
@@ -675,7 +675,7 @@
                                "str/join"
                                "Bar")))
       (testing "import before require with other list between"
-        (test-clean-ns {}
+        (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                        (h/code "(ns foo.bar"
                                " (:import"
                                "  [foo Bar"
@@ -711,19 +711,19 @@
                                "str/join"
                                "Bar")))))
   (testing "single unused full package import"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:import"
                            "  java.util.Date))")
                    (h/code "(ns foo.bar)")))
   (testing "single unused package import"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:import"
                            "  [java.util Date]))")
                    (h/code "(ns foo.bar)")))
   (testing "unused full package imports"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:import "
                            "  java.util.Date java.util.Calendar java.util.List))"
@@ -733,7 +733,7 @@
                            "  java.util.Calendar))"
                            "Calendar.")))
   (testing "unused package imports"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:import "
                            "  [java.util Date Calendar List Map]))"
@@ -761,7 +761,7 @@
                            "Map."
                            "Foo. Bar.")))
   (testing "unused package imports with single import"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:import"
                            "  [java.util Date List]"
@@ -775,7 +775,7 @@
                            "Calendar."
                            "List.")))
   (testing "unused package imports spacing"
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:import"
                            "  [java.util Date"
@@ -788,7 +788,7 @@
                            "  [java.util Date List]))"
                            "Date."
                            "List."))
-    (test-clean-ns {}
+    (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                    (h/code "(ns foo.bar"
                            " (:import"
                            "  [java.util Date"
@@ -802,7 +802,7 @@
                            "List.")))
   (testing "cljc conditional readers"
     (testing "remove reader conditional after removing unused single require alias"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "  #?(:clj [other.zeta :as z])))")
@@ -810,7 +810,7 @@
                      true
                      "file:///a.cljc"))
     (testing "remove reader conditional after removing unused require alias"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "  #?(:cljs [other.foo :as o]
@@ -828,7 +828,7 @@
                      true
                      "file:///a.cljc"))
     (testing "remove reader conditional after removing unused require refer"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "  #?(:cljs [other.foo :refer [o]]
@@ -846,7 +846,7 @@
                      true
                      "file:///a.cljc"))
     (testing "remove reader conditional after removing unused import"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:import"
                              "  #?(:cljs [other.foo O]
@@ -864,7 +864,7 @@
                      true
                      "file:///a.cljc"))
     (testing "remove single unused import inside splicing reader conditional"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:import"
                              "  [java.util Calendar]"
@@ -879,7 +879,7 @@
                      true
                      "file:///a.cljc"))
     (testing "only used import in specific lang for splicing reader conditional"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:import"
                              "  [java.util Calendar]"
@@ -897,7 +897,7 @@
                      true
                      "file:///a.cljc"))
     (testing "only used required alias in specific lang"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "  [other.foo :as f]"
@@ -914,7 +914,7 @@
                      true
                      "file:///a.cljc"))
     (testing "only used required refer in specific lang"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "  [other.foo :refer [f]]"
@@ -931,7 +931,7 @@
                      true
                      "file:///a.cljc"))
     (testing "only used import in specific lang"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
                              " (:import"
                              "  [other.foo F]"
@@ -948,7 +948,7 @@
                      true
                      "file:///a.cljc"))
     (testing "sort reader conditionals before normal requires"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns a"
                              "  (:require"
                              "   [a.b]"
@@ -970,7 +970,7 @@
                      true
                      "file:///a.cljc"))
     (testing "Mixed cases"
-      (test-clean-ns {}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns a"
                              "  (:require"
                              "   [c.b]"

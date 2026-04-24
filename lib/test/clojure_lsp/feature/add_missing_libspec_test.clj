@@ -563,6 +563,7 @@
                (add-missing-import-to-rcf "java.util.Date"))))))
 
 (defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer js-require]
+  (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})
   (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer js-require (h/db) {}))
 
 (deftest add-require-suggestion-test

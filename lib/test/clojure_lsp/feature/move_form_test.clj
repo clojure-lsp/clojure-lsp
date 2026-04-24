@@ -1,6 +1,7 @@
 (ns clojure-lsp.feature.move-form-test
   (:require
    [clojure-lsp.feature.move-form :as move-form]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
    [clojure.test :refer [deftest is testing]]))
 
@@ -9,6 +10,7 @@
 (deftest move-form-test
   (testing "simple"
     (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})
     (let [a-uri (h/file-uri "file:///a.clj")
           b-uri (h/file-uri "file:///b.clj")
           zloc (h/load-code-and-zloc (h/code "(ns apple)" "|(def bar inc)" "(bar 1)"))
@@ -26,6 +28,7 @@
 
   (testing "simple cljc"
     (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})
     (let [a-uri (h/file-uri "file:///a.cljc")
           b-uri (h/file-uri "file:///b.cljc")
           zloc (h/load-code-and-zloc (h/code "(ns apple)" "|(def bar inc)" "(bar 1)")

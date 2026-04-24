@@ -218,7 +218,8 @@
                            ""
                            "(defn func []"
                            "  (f/some))")]
-      (test-clean-ns {:documents {(h/file-uri "file:///a.clj") {:text to-clean}}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}
+                      :documents {(h/file-uri "file:///a.clj") {:text to-clean}}}
                      to-clean
                      (h/code "(ns foo.bar"
                              " (:require"
@@ -554,7 +555,8 @@
                              "  [some :refer [bar baz Dee foo]]))"
                              "   foo bar baz Dee")))
     (testing "unsorted used refer with less max-line-length"
-      (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 30}}}}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line
+                                         :sort {:refer {:max-line-length 30}}}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "   [some :refer [Dee foo bar baz bla blowning]]))"
@@ -565,7 +567,8 @@
                              "                blowning Dee"
                              "                foo]]))"
                              "   foo bar baz Dee bla blowning"))
-      (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 30}}}}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line
+                                         :sort {:refer {:max-line-length 30}}}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "  [some :refer [bar baz bla"
@@ -578,7 +581,8 @@
                              "                blowning Dee"
                              "                foo]]))"
                              "   foo bar baz Dee bla blowning"))
-      (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 30}}}}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line
+                                         :sort {:refer {:max-line-length 30}}}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "   [some :refer [Dee foo bar baz bla blowning cat car clown cobble doo did done danger fear fight]]))"
@@ -594,7 +598,8 @@
                              "                fear fight"
                              "                foo]]))"
                              "   foo bar baz Dee bla blowning cat car clown cobble doo did done danger fear fight"))
-      (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 40}}}}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line
+                                         :sort {:refer {:max-line-length 40}}}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "   [some :refer [Dee foo bar baz bla blowning] :as s]))"
@@ -606,7 +611,8 @@
                              "                Dee foo] :as s]))"
                              "   foo bar baz Dee bla blowning"
                              "   s/foo"))
-      (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 40}}}}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line
+                                         :sort {:refer {:max-line-length 40}}}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "   [some :as s :refer [Dee foo bar baz bla blowning]]))"
@@ -619,7 +625,8 @@
                              "   foo bar baz Dee bla blowning"
                              "   s/foo")))
     (testing "unsorted used refer with infinite max-line-length"
-      (test-clean-ns {:settings {:clean {:sort {:refer {:max-line-length 0}}}}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line
+                                         :sort {:refer {:max-line-length 0}}}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "   [some :refer [Dee foo bar baz bla blowning]]))"
@@ -629,7 +636,8 @@
                              "  [some :refer [bar baz bla blowning Dee foo]]))"
                              "   foo bar baz Dee bla blowning")))
     (testing "unsorted used refer with sort disabled"
-      (test-clean-ns {:settings {:clean {:sort {:refer false}}}}
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line
+                                         :sort {:refer false}}}}
                      (h/code "(ns foo.bar"
                              " (:require"
                              "   [some :refer [foo bar baz]]))"

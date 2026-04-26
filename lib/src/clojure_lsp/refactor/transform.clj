@@ -1690,11 +1690,11 @@
   (loop [loc (z/of-string text)]
     (cond
       (nil? loc) nil
-      
+
       (and (= :list (z/tag loc))
            (let [op (some-> loc z/down z/sexpr)]
              (and (symbol? op) (= "deftest" (name op))))
-           (= test-name (some-> loc z/down z/right z/sexpr))) 
+           (= test-name (some-> loc z/down z/right z/sexpr)))
       loc
 
       :else (recur (z/right loc)))))

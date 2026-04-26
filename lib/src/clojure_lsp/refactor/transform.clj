@@ -1683,6 +1683,22 @@
         (create-function-for-alias local-zloc ns-or-alias defn-loc uri db)
         [(prepend-preserving-comment (edit/to-top local-zloc) defn-loc)]))))
 
+(defn- deftest-loc-with-name
+  "Returns the zloc of the first top-level `(deftest <test-name> ...)` form
+  in `text`, or nil. Matches the deftest op by unqualified name."
+  [text test-name]
+  (loop [loc (z/of-string text)]
+    (cond
+      (nil? loc) nil
+      
+      (and (= :list (z/tag loc))
+           (let [op (some-> loc z/down z/sexpr)]
+             (and (symbol? op) (= "deftest" (name op))))
+           (= test-name (some-> loc z/down z/right z/sexpr))) 
+      loc
+
+      :else (recur (z/right loc)))))
+
 (defn ^:private create-test-for-source-path
   [uri function-name-loc source-path db]
   (let [file-type (shared/uri->file-type uri)
@@ -1692,14 +1708,24 @@
         test-filename (shared/namespace+source-path->filename namespace-test source-path file-type)
         test-uri (shared/filename->uri test-filename db)]
     (if-let [existing-text (shared/slurp-uri test-uri)]
-      (let [lines (count (string/split existing-text #"\n"))
-            test-text (format "(deftest %s\n  (is (= 1 1)))" (str function-name "-test"))
-            test-zloc (z/up (z/of-string (str "\n" test-text)))]
-        {:show-document-after-edit {:uri test-uri
-                                    :take-focus true}
-         :changes-by-uri
-         {test-uri [{:loc test-zloc
-                     :range {:row (inc lines) :col 1 :end-row (+ 3 lines) :end-col 1}}]}})
+      (let [test-name    (symbol (str function-name "-test"))
+            existing-loc (deftest-loc-with-name existing-text test-name)]
+        (if existing-loc
+          {:show-document-after-edit
+           {:uri        test-uri
+            :take-focus true
+            :range      (-> existing-loc z/node meta)}}
+          (let [lines     (count (string/split existing-text #"\n"))
+                test-text (format "(deftest %s\n  (is (= 1 1)))" test-name)
+                test-zloc (z/up (z/of-string (str "\n" test-text)))]
+            {:show-document-after-edit {:uri        test-uri
+                                        :take-focus true}
+             :changes-by-uri
+             {test-uri [{:loc   test-zloc
+                         :range {:row     (inc lines)
+                                 :col     1
+                                 :end-row (+ 3 lines)
+                                 :end-col 1}}]}})))
       (let [ns-text (format "(ns %s\n  (:require\n   [%s.test :refer [deftest is]]\n   [%s :as subject]))"
                             namespace-test
                             (if (= :cljs file-type) "cljs" "clojure")

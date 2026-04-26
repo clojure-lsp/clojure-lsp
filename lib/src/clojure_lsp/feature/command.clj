@@ -230,7 +230,7 @@
   ;; had already hardcoded array values (such as Calva changing the new function name
   ;; in args[3]) won't need to change
   (let [[uri line character & args] arguments
-        selection? (= :extract-function command)
+        selection? (and (= :extract-function command) (> (count args) 2))
         line-end (if selection? (nth args 1) line)
         character-end (if selection? (nth args 2) character)
         fn-args (if selection? (drop-last 2 args) args)

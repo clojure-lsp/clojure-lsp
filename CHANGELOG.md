@@ -16,6 +16,7 @@
 - Bump rewrite-clj to `1.2.54`.
 - implement move to :let refactoring #1732
 - Measure performance of didOpen and didChange
+- if code-action selection end-position args aren't provided, don't try to use them #2276
 
 ## 2026.02.20-16.08.58
 

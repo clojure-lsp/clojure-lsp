@@ -2530,6 +2530,36 @@
                               "  (is (= 1 1)))"),
                  :range {:row 3 :col 1 :end-row 5 :end-col 1}}]}
               results-to-assert)))))
+    (testing "when the deftest already exists, navigates without editing"
+      (doseq [[label test-code expected-row]
+              [["unqualified deftest"
+                (h/code "(ns some.ns-test)"
+                        "(deftest some-other-test)"
+                        "(deftest foo-test"
+                        "  (is (= 1 1)))")
+                3]
+               ["qualified clojure.test/deftest"
+                (h/code "(ns some.ns-test)"
+                        "(clojure.test/deftest foo-test"
+                        "  (is (= 1 1)))")
+                2]]]
+        (testing label
+          (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                       (h/file-path "/project/test")}}
+                                            :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                            :project-root-uri (h/file-uri "file:///project")})
+          (with-redefs [shared/file-exists? #(not (string/ends-with? % "config.edn"))
+                        shared/slurp-uri (constantly test-code)]
+            (h/load-code-and-locs test-code (h/file-uri "file:///project/test/some/ns_test.clj"))
+            (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
+                                             (h/file-uri "file:///project/src/some/ns.clj"))
+                  {:keys [changes-by-uri resource-changes
+                          show-document-after-edit]} (transform/create-test zloc (h/file-uri "file:///project/src/some/ns.clj") (h/db) (h/components))]
+              (is (= nil resource-changes))
+              (is (= nil changes-by-uri))
+              (is (= (h/file-uri "file:///project/test/some/ns_test.clj")
+                     (:uri show-document-after-edit)))
+              (is (= expected-row (get-in show-document-after-edit [:range :row]))))))))
     (testing "when the current source path is already a test"
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
                                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}

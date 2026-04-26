@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Fix `create-test` code action appending a duplicate `deftest` when one with the matching name already exists, now navigating to the existing deftest instead.
+- Fix `create-test` code action appending a duplicate `deftest` when one with the matching name already exists, now navigating to the existing deftest instead. #2274
 - Change the default of `:clean :ns-inner-blocks-indentation` from `:next-line` to `:keep`, so `clean-ns` (including the automatic run after `add-missing-libspec`, `add-require-suggestion`, `add-missing-import`, and `move-form`) no longer reflows the `:require`/`:import` block when the user has not configured an indentation style. Users who want the previous behavior can set `:clean :ns-inner-blocks-indentation :next-line` explicitly. #2261
 - Fix `add-missing-require` refer suggestions leaking across languages, so a `.clj` file no longer offers refers defined only in `.cljs` files (and vice versa). #2271
 - Add `:private-by-default-on-extract?` setting to control whether extracted functions and defs are private by default. #2258

@@ -1683,7 +1683,7 @@
         (create-function-for-alias local-zloc ns-or-alias defn-loc uri db)
         [(prepend-preserving-comment (edit/to-top local-zloc) defn-loc)]))))
 
-(defn- deftest-loc-with-name
+(defn ^:private deftest-loc-with-name
   "Returns the zloc of the first top-level `(deftest <test-name> ...)` form
   in `text`, or nil. Matches the deftest op by unqualified name."
   [text test-name]

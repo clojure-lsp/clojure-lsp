@@ -284,7 +284,7 @@
   [db var-usage]
   (let [resolved-ns (resolved-unknown-var-usage-namespace db var-usage)
         var-usage (cond-> var-usage
-                    resolved-ns (assoc var-usage :to resolved-ns))]
+                    resolved-ns (assoc :to resolved-ns))]
     (or
       (find-last-order-by-project-analysis
         (comp xf-analysis->var-definitions

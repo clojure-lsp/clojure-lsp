@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix `cyclic-dependencies` linter falsely reporting cycles for `(require ...)` calls inside `(comment ...)` forms. #2107
 - Support find-definition for fully qualified vars even when the namespace is not explicitly required. #2028
 - Fix `create-test` code action appending a duplicate `deftest` when one with the matching name already exists, now navigating to the existing deftest instead. #2274
 - Change the default of `:clean :ns-inner-blocks-indentation` from `:next-line` to `:keep`, so `clean-ns` (including the automatic run after `add-missing-libspec`, `add-require-suggestion`, `add-missing-import`, and `move-form`) no longer reflows the `:require`/`:import` block when the user has not configured an indentation style. Users who want the previous behavior can set `:clean :ns-inner-blocks-indentation :next-line` explicitly. #2261

@@ -269,25 +269,39 @@
           (xf-same-lang namespace-usage))
     (db-with-ns-analysis db (:name namespace-usage))))
 
+(defn ^:private resolved-unknown-var-usage-namespace
+  [db {:keys [alias to] :as var-usage}]
+  (when (and (identical? :clj-kondo/unknown-namespace to)
+             alias
+             (find-last-order-by-project-analysis
+               (comp xf-analysis->namespace-definitions
+                     (xf-same-name alias)
+                     (xf-same-lang var-usage))
+               (db-with-ns-analysis db alias)))
+    alias))
+
 (defmethod find-definition :var-usages
   [db var-usage]
-  (or
-    (find-last-order-by-project-analysis
-      (comp xf-analysis->var-definitions
-            (xf-same-fqn (:to var-usage) (:name var-usage))
-            (xf-same-lang var-usage))
-      (db-with-ns-analysis db (:to var-usage)))
-    (when (contains? (elem-langs var-usage) :cljs)
-      ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
-      (let [definition (find-definition db (assoc var-usage :lang :clj))]
-        (when (:macro definition)
-          definition)))
-    ;; Fallback to navigate from clojure to clojurescript vars, see #1403
-    (when-not (:fallbacking? var-usage)
-      (find-definition db (assoc var-usage :lang :cljs :fallbacking? true)))
-    ;; If alias exists but not var, go to the ns definition
-    (when-let [alias (:alias var-usage)]
-      (find-definition db (find-namespace-usage-by-alias db (:uri var-usage) alias)))))
+  (let [resolved-ns (resolved-unknown-var-usage-namespace db var-usage)
+        var-usage (cond-> var-usage resolved-ns (assoc :to resolved-ns))]
+    (or
+      (find-last-order-by-project-analysis
+        (comp xf-analysis->var-definitions
+              (xf-same-fqn (:to var-usage) (:name var-usage))
+              (xf-same-lang var-usage))
+        (db-with-ns-analysis db (:to var-usage)))
+      (when (contains? (elem-langs var-usage) :cljs)
+        ;; maybe loaded by :require-macros, in which case, def will be in a clj file.
+        (let [definition (find-definition db (assoc var-usage :lang :clj))]
+          (when (:macro definition)
+            definition)))
+      ;; Fallback to navigate from clojure to clojurescript vars, see #1403
+      (when-not (:fallbacking? var-usage)
+        (find-definition db (assoc var-usage :lang :cljs :fallbacking? true)))
+      ;; If alias exists but not var, go to the ns definition
+      (when-let [alias (:alias var-usage)]
+        (find-definition db (find-namespace-usage-by-alias db (:uri var-usage)
+                                                           alias))))))
 
 (defmethod find-definition :symbols
   [db quoted-symbol]

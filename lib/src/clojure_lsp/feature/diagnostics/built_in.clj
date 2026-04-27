@@ -322,7 +322,7 @@
   [narrowed-db project-db settings]
   (let [level (get-in settings [:linters :clojure-lsp/cyclic-dependencies :level] :off)]
     (when-not (identical? :off level)
-      (let [dep-graph (remove-comment-form-deps 
+      (let [dep-graph (remove-comment-form-deps
                         (:dep-graph narrowed-db) (:analysis project-db))
             cycles (find-dependency-cycles dep-graph)
             exclude-namespaces (set (get-in settings [:linters :clojure-lsp/cyclic-dependencies :exclude-namespaces] #{}))

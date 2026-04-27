@@ -720,6 +720,17 @@
       (q/find-definition-from-cursor db (h/file-uri "file:///other/bar.clj")
                                      usage-r usage-c))))
 
+(deftest find-definition-from-cursor-with-non-fully-qualified-symbol-without-require
+  (h/load-code-and-locs "(ns some.foo) (def my-var 1)"
+                        (h/file-uri "file:///some/foo.clj"))
+  (let [[[usage-r usage-c]]
+        (h/load-code-and-locs (h/code "(ns other.bar)"
+                                      "|foo.my-var")
+                              (h/file-uri "file:///other/bar.clj"))
+        db (h/db)]
+    (is (nil? (q/find-definition-from-cursor
+                db (h/file-uri "file:///other/bar.clj") usage-r usage-c)))))
+
 (deftest find-definition-from-cursor-when-duplicate-from-external-analysis
   (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "zipfile:///some.jar::some-jar.clj")
         _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "file:///a.clj"))

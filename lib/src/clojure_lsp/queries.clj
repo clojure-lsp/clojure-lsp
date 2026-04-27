@@ -283,8 +283,8 @@
 (defmethod find-definition :var-usages
   [db var-usage]
   (let [resolved-ns (resolved-unknown-var-usage-namespace db var-usage)
-        var-usage (cond-> var-usage 
-                   resolved-ns (assoc var-usage :to resolved-ns))]
+        var-usage (cond-> var-usage
+                    resolved-ns (assoc var-usage :to resolved-ns))]
     (or
       (find-last-order-by-project-analysis
         (comp xf-analysis->var-definitions
@@ -301,7 +301,7 @@
         (find-definition db (assoc var-usage :lang :cljs :fallbacking? true)))
       ;; If alias exists but not var, go to the ns definition
       (when-let [alias (:alias var-usage)]
-        (find-definition db (find-namespace-usage-by-alias db (:uri var-usage) 
+        (find-definition db (find-namespace-usage-by-alias db (:uri var-usage)
                                                            alias))))))
 
 (defmethod find-definition :symbols

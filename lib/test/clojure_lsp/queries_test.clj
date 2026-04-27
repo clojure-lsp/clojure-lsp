@@ -708,6 +708,18 @@
       {:name 'foo :ns 'exec-ns :row 1 :col 14}
       (q/find-definition-from-cursor db (h/file-uri "file:///deps.edn") exec-fn-r exec-fn-c))))
 
+(deftest find-definition-from-cursor-with-fully-qualified-symbol-without-require
+  (h/load-code-and-locs "(ns some.foo) (def my-var 1)" (h/file-uri "file:///some/foo.clj"))
+  (let [[[usage-r usage-c]]
+        (h/load-code-and-locs (h/code "(ns other.bar)"
+                                      "some.foo/|my-var")
+                              (h/file-uri "file:///other/bar.clj"))
+        db (h/db)]
+    (h/assert-submap
+      {:name 'my-var :ns 'some.foo :uri (h/file-uri "file:///some/foo.clj")}
+      (q/find-definition-from-cursor db (h/file-uri "file:///other/bar.clj")
+                                     usage-r usage-c))))
+
 (deftest find-definition-from-cursor-when-duplicate-from-external-analysis
   (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "zipfile:///some.jar::some-jar.clj")
         _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "file:///a.clj"))

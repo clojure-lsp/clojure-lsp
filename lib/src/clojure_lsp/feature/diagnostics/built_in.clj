@@ -285,12 +285,46 @@
           (dfs-visit namespace)))
       @cycles)))
 
+(defn ^:private comment-form-bounds
+  "Var-usages of `comment` define regions of code that are not
+   evaluated. Returns those usages from a single uri's analysis."
+  [var-usages]
+  (filter (fn [{:keys [to name]}]
+            (and (or (fast= 'clojure.core to) (fast= 'cljs.core to))
+                 (fast= 'comment name)))
+          var-usages))
+
+(defn ^:private decrement-dep-edge [dep-graph from to]
+  (let [path [from :dependencies to]]
+    (if (<= (or (get-in dep-graph path) 0) 1)
+      (update-in dep-graph [from :dependencies] dissoc to)
+      (update-in dep-graph path dec))))
+
+(defn ^:private remove-comment-form-deps
+  "Remove dep-graph edges that originate from a (require ...) (or similar) call
+   inside a (comment ...) form, so they don't participate in cycle detection."
+  [dep-graph analysis]
+  (reduce-kv
+    (fn [graph _uri {:keys [namespace-usages var-usages]}]
+      (let [bounds (comment-form-bounds var-usages)]
+        (if (empty? bounds)
+          graph
+          (reduce
+            (fn [g {:keys [from name] :as usage}]
+              (cond-> g
+                (some #(shared/inside? usage %) bounds)
+                (decrement-dep-edge from name)))
+            graph namespace-usages))))
+    dep-graph analysis))
+
 (defn ^:private cyclic-dependencies
   "Detects cyclic dependencies and generates diagnostics for each namespace in a cycle."
-  [narrowed-db _project-db settings]
+  [narrowed-db project-db settings]
   (let [level (get-in settings [:linters :clojure-lsp/cyclic-dependencies :level] :off)]
     (when-not (identical? :off level)
-      (let [cycles (find-dependency-cycles (:dep-graph narrowed-db))
+      (let [dep-graph (remove-comment-form-deps
+                        (:dep-graph narrowed-db) (:analysis project-db))
+            cycles (find-dependency-cycles dep-graph)
             exclude-namespaces (set (get-in settings [:linters :clojure-lsp/cyclic-dependencies :exclude-namespaces] #{}))
             ;; Create diagnostics for each namespace in each cycle
             cycle-diagnostics (for [cycle cycles

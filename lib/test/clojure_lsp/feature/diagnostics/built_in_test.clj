@@ -496,7 +496,46 @@
         (lint! [(h/file-uri "file:///main.clj") (h/file-uri "file:///util.clj") (h/file-uri "file:///core.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :info}}}))))
 
-  ;; TODO: Fix ignore comment functionality for cyclic dependencies  
+  (testing "require inside (comment ...) does not contribute to cycle"
+    (h/reset-components!)
+    (h/load-code-and-locs (h/code "(ns a (:require [b :as b]))"
+                                  "(comment"
+                                  "  (require '[b] :reload))")
+                          (h/file-uri "file:///a.clj"))
+    (h/load-code-and-locs (h/code "(ns b)"
+                                  "(comment"
+                                  "  (require '[a :as a] :reload))")
+                          (h/file-uri "file:///b.clj"))
+    (h/assert-submaps
+      []
+      (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
+             {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})))
+
+  (testing "self-require inside (comment ...) does not flag self-cycle"
+    (h/reset-components!)
+    (h/load-code-and-locs (h/code "(ns my.ns)"
+                                  "(comment"
+                                  "  (require '[my.ns] :reload))")
+                          (h/file-uri "file:///my/ns.clj"))
+    (h/assert-submaps
+      []
+      (lint! [(h/file-uri "file:///my/ns.clj")]
+             {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})))
+
+  (testing "real cycle still detected when comment-form require is present"
+    (h/reset-components!)
+    (h/load-code-and-locs (h/code "(ns a (:require [b :as b]))"
+                                  "(comment"
+                                  "  (require '[unrelated]))")
+                          (h/file-uri "file:///a.clj"))
+    (h/load-code-and-locs "(ns b (:require [a :as a]))" (h/file-uri "file:///b.clj"))
+    (h/assert-submaps
+      [{:message "Cyclic dependency detected: a -> b -> a"}
+       {:message "Cyclic dependency detected: a -> b -> a"}]
+      (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
+             {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})))
+
+  ;; TODO: Fix ignore comment functionality for cyclic dependencies
   #_(testing "cycle with ignore comment"
       (h/reset-components!)
       (h/load-code-and-locs (h/code "#_{:clojure-lsp/ignore [:clojure-lsp/cyclic-dependencies :clojure-lsp/unused-public-var]}"

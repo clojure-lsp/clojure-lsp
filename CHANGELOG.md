@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- add missing namespace form, guessing at the name if outside of project sources, 
+  when adding a missing :require or :import via the Add Require code action.  #1734
+
 
 ## 2026.05.05-12.58.26
 

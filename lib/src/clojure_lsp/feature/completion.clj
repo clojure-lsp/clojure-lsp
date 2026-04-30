@@ -162,13 +162,13 @@
                                            documentation))))))
 
 (defn ^:private completion-item-with-alias-edit
-  [completion-item cursor-loc alias-to-add ns-to-add rcf-pos db]
+  [uri completion-item cursor-loc alias-to-add ns-to-add rcf-pos db]
   (let [zloc (cond-> cursor-loc
                rcf-pos edit/to-root
                rcf-pos (edit/find-at-pos
                          (:row rcf-pos) (:col rcf-pos)))
         edits (some-> zloc
-                      (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add db)
+                      (f.add-missing-libspec/add-known-alias uri alias-to-add ns-to-add db)
                       r.transform/result)]
     (cond-> completion-item
       (seq edits) (assoc :additional-text-edits (mapv #(update % :range shared/->range)
@@ -197,7 +197,7 @@
                                :uri          uri}
                         (string? ns-to-add) (assoc :js-require true)))
     ;; client can't postpone the edit calculation, so do it now, even though it's expensive
-      (completion-item-with-alias-edit completion-item cursor-loc alias-to-add ns-to-add rcf-pos db))))
+      (completion-item-with-alias-edit uri completion-item cursor-loc alias-to-add ns-to-add rcf-pos db))))
 
 (defn ^:private generic-priority->specific-priority
   [element priority]
@@ -768,7 +768,7 @@
     (let [ns-to-add (if js-require
                       ns-to-add
                       (symbol ns-to-add))]
-      (completion-item-with-alias-edit item zloc (symbol alias-to-add) ns-to-add rcf-pos db))
+      (completion-item-with-alias-edit uri item zloc (symbol alias-to-add) ns-to-add rcf-pos db))
     item))
 
 (defn resolve-item [{:keys [data] :as item} db*]

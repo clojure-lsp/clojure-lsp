@@ -20,6 +20,7 @@
 - Measure performance of didOpen and didChange
 - if code-action selection end-position args aren't provided, don't try to use them #2276
 - add unit tests for command actions location args #2279
+- New code actions: replace `:refer` with `:as` and replace `:as` with `:refer`, with support for merging into existing `:refer` vectors.
 
 ## 2026.02.20-16.08.58
 

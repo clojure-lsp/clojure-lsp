@@ -9,15 +9,15 @@
 (def ^:private p50-cold-max-ms 15000)
 (def ^:private p50-warm-max-ms 2000)
 
-(defn- delete-cache! 
-  []
+(defn- delete-cache!
   "safely removes cache files"
+  []
   (let [root-path (.getPath (java.net.URI. (get-in (fixture/initialize-request) [1 :rootUri])))
         cache-dir (io/file root-path ".lsp" ".cache")]
     (when (.exists cache-dir)
       (run! io/delete-file (reverse (file-seq cache-dir))))))
 
-(defn- run-init-test 
+(defn- run-init-test
   [label max-p50 setup-fn]
   (testing (str "measure " label)
     (let [times (sort

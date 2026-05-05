@@ -3067,3 +3067,178 @@
         :range {:row 1 :col 1 :end-row 1 :end-col 1}}]
       (suppress-diagnostic (h/code "|zzz")
                            "unresolved-symbol"))))
+
+(deftest can-refer->as?-test
+  (testing "true when both :refer and :as present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer [baz]]))")]
+      (is (transform/can-refer->as? zloc))))
+  (testing "false when only :as present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b]))")]
+      (is (not (transform/can-refer->as? zloc)))))
+  (testing "false when only :refer present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :refer |[baz]]))")]
+      (is (not (transform/can-refer->as? zloc)))))
+  (testing "false when :refer :all present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer :all]))")]
+      (is (not (transform/can-refer->as? zloc)))))
+  (testing "false when :refer has no vector (malformed)"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer]))")]
+      (is (not (transform/can-refer->as? zloc))))))
+
+(deftest can-as->refer?-test
+  (testing "true when :as present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b]))")]
+      (is (transform/can-as->refer? zloc))))
+  (testing "false when no :as"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :refer |[baz]]))")]
+      (is (not (transform/can-as->refer? zloc)))))
+  (testing "false when :refer :all present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer :all]))")]
+      (is (not (transform/can-as->refer? zloc)))))
+  (testing "false when :refer has no vector (malformed)"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer]))")]
+      (is (not (transform/can-as->refer? zloc))))))
+
+(deftest refer->as-test
+  (testing "single referred symbol used in body"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar :as b |:refer [baz]]))"
+                         ""
+                         "(baz)"))
+          result (transform/refer->as zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b]))"
+                     ""
+                     "(b/baz)")
+             (h/changes->code result (h/db))))))
+  (testing "multiple referred symbols"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar :as |b :refer [baz qux]]))"
+                         ""
+                         "(baz)"
+                         "(qux)"))
+          result (transform/refer->as zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b]))"
+                     ""
+                     "(b/baz)"
+                     "(b/qux)")
+             (h/changes->code result (h/db))))))
+  (testing "mixed usage - some aliased, some referred"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b :refer [baz]]))"
+                         ""
+                         "(baz)"
+                         "(b/qux)"))
+          result (transform/refer->as zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b]))"
+                     ""
+                     "(b/baz)"
+                     "(b/qux)")
+             (h/changes->code result (h/db))))))
+  (testing "does not rewrite same-named qualified usages from another namespace"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar :as b |:refer [baz]]"
+                         "   [other :as o]))"
+                         ""
+                         "(baz)"
+                         "(o/baz)"))
+          result (transform/refer->as zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b]"
+                     "   [other :as o]))"
+                     ""
+                     "(b/baz)"
+                     "(o/baz)")
+             (h/changes->code result (h/db)))))))
+
+(deftest as->refer-test
+  (testing "single aliased symbol used in body, no existing refer"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b]))"
+                         ""
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :refer [qux]]))"
+                     ""
+                     "(qux)")
+             (h/changes->code result (h/db))))))
+  (testing "single aliased symbol with existing refer merges symbols"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b :refer [baz]]))"
+                         ""
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :refer [baz qux]]))"
+                     ""
+                     "(qux)")
+             (h/changes->code result (h/db))))))
+  (testing "multiple aliased usages, no existing refer"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b]))"
+                         ""
+                         "(b/baz)"
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :refer [baz qux]]))"
+                     ""
+                     "(baz)"
+                     "(qux)")
+             (h/changes->code result (h/db))))))
+  (testing "multiple aliased usages with existing refer merges all"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b :refer [zap]]))"
+                         ""
+                         "(b/baz)"
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :refer [baz qux zap]]))"
+                     ""
+                     "(baz)"
+                     "(qux)")
+             (h/changes->code result (h/db))))))
+  (testing "preserves alias used by auto-resolved keywords"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b]))"
+                         ""
+                         "::b/id"
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b :refer [qux]]))"
+                     ""
+                     "::b/id"
+                     "(qux)")
+             (h/changes->code result (h/db)))))))

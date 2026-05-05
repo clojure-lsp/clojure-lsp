@@ -26,7 +26,7 @@
                                 babashka/process {:mvn/version "0.6.25"}}
                    :replace-deps {io.github.clojure/tools.build {:tag "v0.10.5" :sha "2a21b7a"}
                                   com.github.ericdallo/deps-bin {:mvn/version "1.0.0"}
-                                  slipset/deps-deploy {:mvn/version "0.2.2"}}
+                                  slipset/deps-deploy {:mvn/version "0.2.3"}}
                    :ns-default build}
            :run {:main-opts ["-m" "clojure-lsp.main"]
                  :jvm-opts ["-Xmx2g" "-server"]}

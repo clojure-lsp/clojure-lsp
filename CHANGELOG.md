@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.05.05-12.58.26
+
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `(require ...)` calls inside `(comment ...)` forms. #2107
 - Support find-definition for fully qualified vars even when the namespace is not explicitly required. #2028
 - Fix `create-test` code action appending a duplicate `deftest` when one with the matching name already exists, now navigating to the existing deftest instead. #2274

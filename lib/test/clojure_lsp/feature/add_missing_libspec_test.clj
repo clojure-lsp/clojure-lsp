@@ -588,7 +588,7 @@
 
 (defn add-require-suggestion
   ([code chosen-ns chosen-alias chosen-refer js-require]
-   (add-require-suggestion code "file:///a.clj" chosen-ns chosen-alias chosen-refer js-require {}))
+   (add-require-suggestion code (h/file-uri "file:///a.clj") chosen-ns chosen-alias chosen-refer js-require {}))
   ([code uri chosen-ns chosen-alias chosen-refer js-require additional-db]
    (h/reset-components!)
    (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}} additional-db)
@@ -648,7 +648,8 @@
             (-> (h/code
                   ""
                   "|str/a")
-                (add-require-suggestion "file:///path/to/Projects/clojure-lsp/foo/a.my-clojure" "clojure.string" "str" nil nil {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
+                (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/foo/a.my-clojure") "clojure.string" "str" nil nil
+                                        {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
                 as-root-str))))
     (testing "adds newlines after ns form, for new namespace"
       (is (= (h/code ""
@@ -656,7 +657,8 @@
                      "")
              (-> (h/code
                    "(|str/a)")
-                 (add-require-suggestion "file:///path/to/Projects/clojure-lsp/foo/a.clj" "clojure.string" "str" nil nil {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
+                 (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/foo/a.clj") "clojure.string" "str" nil nil
+                                         {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
                  second
                  :loc
                  z/root-string))))
@@ -667,7 +669,8 @@
                         "   [clojure.string :as str]))"
                         ""
                         "(|str/a)")
-                (add-require-suggestion "file:///path/to/Projects/clojure-lsp/foo/a.clj" "clojure.string" "str" nil nil {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
+                (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/foo/a.clj") "clojure.string" "str" nil nil
+                                        {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
                 second))))
     (testing "subdirectory from project root, no ns -> uses subdir and filename as part of namespace"
       (is (= (h/code "(ns foo.a "
@@ -676,7 +679,8 @@
              (-> (h/code
                    ""
                    "|str/a")
-                 (add-require-suggestion "file:///path/to/Projects/clojure-lsp/foo/a.clj" "clojure.string" "str" nil nil {:project-root-uri  (h/file-uri "file:///path/to/Projects/clojure-lsp")})
+                 (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/foo/a.clj") "clojure.string" "str" nil nil
+                                         {:project-root-uri  (h/file-uri "file:///path/to/Projects/clojure-lsp")})
                  as-root-str))))
     (testing "from project source root, no ns -> uses subdir and filename to determine namespace"
       (is (= (h/code "(ns foo.a "
@@ -685,8 +689,9 @@
              (-> (h/code
                    ""
                    "|str/a")
-                 (add-require-suggestion "file:///path/to/Projects/clojure-lsp/lib/src/foo/a.clj" "clojure.string" "str" nil nil {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")
-                                                                                                                                  :settings {:source-paths [(h/file-path "/path/to/Projects/clojure-lsp/lib/src")]}})
+                 (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/lib/src/foo/a.clj") "clojure.string" "str" nil nil
+                                         {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")
+                                          :settings {:source-paths [(h/file-path "/path/to/Projects/clojure-lsp/lib/src")]}})
                  as-root-str))))
     (testing "from project source root, no ns -> use filename only to determine namespace"
       (is (= (h/code "(ns a "
@@ -695,18 +700,9 @@
              (-> (h/code
                    ""
                    "|str/a")
-                 (add-require-suggestion "file:///path/to/Projects/clojure-lsp/lib/src/a.clj" "clojure.string" "str" nil nil {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")
-                                                                                                                              :settings {:source-paths [(h/file-path "/path/to/Projects/clojure-lsp/lib/src")]}})
-                 as-root-str))))
-    (testing "subdirectory from project source root, no ns -> use subdir and filename to determine namespace"
-      (is (= (h/code "(ns foo.a "
-                     "  (:require"
-                     "   [clojure.string :as str]))")
-             (-> (h/code
-                   ""
-                   "|str/a")
-                 (add-require-suggestion "file:///path/to/Projects/clojure-lsp/lib/src/foo/a.clj" "clojure.string" "str" nil nil {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")
-                                                                                                                                  :settings {:source-paths [(h/file-path "/path/to/Projects/clojure-lsp/lib/src")]}})
+                 (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/lib/src/a.clj") "clojure.string" "str" nil nil
+                                         {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")
+                                          :settings {:source-paths [(h/file-path "/path/to/Projects/clojure-lsp/lib/src")]}})
                  as-root-str)))))
 
   (testing "refer"

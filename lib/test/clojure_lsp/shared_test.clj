@@ -131,10 +131,10 @@
            (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db)))))
   (testing "when it has a project root with regex special chars and a source-path"
     (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                                 :source-paths #{(h/file-path "/user.*/project/src")}}
-                                      :project-root-uri (h/file-uri "file:///user.*/project")})
+                                                 :source-paths #{(h/file-path "/user.+/project/src")}}
+                                      :project-root-uri (h/file-uri "file:///user.+/project")})
     (is (= "foo.bar"
-           (shared/uri->namespace (h/file-uri "file:///user.*/project/src/foo/bar.clj") (h/db)))))
+           (shared/uri->namespace (h/file-uri "file:///user.+/project/src/foo/bar.clj") (h/db)))))
   (testing "when it has a project root a source-path on mono repos"
     (swap! (h/db*) medley/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                  :source-paths #{(h/file-path "/user/project/src/clj")

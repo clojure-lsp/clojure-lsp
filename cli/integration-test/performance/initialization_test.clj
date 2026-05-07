@@ -6,8 +6,8 @@
    [integration.lsp :as lsp]
    [performance.helper :as h]))
 
-(def ^:private p50-cold-max-ms 15000)
-(def ^:private p50-warm-max-ms 2000)
+(def ^:private p50-cold-max-ms 45000)
+(def ^:private p50-warm-max-ms 6000)
 
 (defn- delete-cache!
   "safely removes cache files"

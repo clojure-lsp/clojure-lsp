@@ -1788,3 +1788,121 @@
                     :end-row form-row
                     :end-col form-col)}]))
 
+(defn can-refer->as? [loc]
+  (let [start (z/leftmost loc)
+        refer (z/find-token start #(= ":refer" (z/string %)))
+        refer-next (some-> refer z/right)]
+    (and start
+         refer
+         refer-next
+         (z/vector? refer-next)
+         (z/find-token start #(= ":as" (z/string %))))))
+
+(defn can-as->refer? [loc]
+  (let [start (z/leftmost loc)
+        refer (z/find-token start #(= ":refer" (z/string %)))
+        refer-next (some-> refer z/right)]
+    (and start
+         (or (not refer)
+             (and refer-next (z/vector? refer-next)))
+         (z/find-token start #(= ":as" (z/string %))))))
+
+(defn refer->as [loc uri db]
+  (let [begin-loc (z/leftmost loc)
+
+        ns-sym (z/sexpr begin-loc)
+
+        refer-loc (-> begin-loc (z/find-token  #(= ":refer" (z/string %))))
+
+        symbols (-> refer-loc
+                    z/right
+                    z/sexpr
+                    set)
+
+        alias (-> begin-loc (z/find-token #(= ":as" (z/string %)))
+                  z/right
+                  z/sexpr
+                  str)
+
+        usages (get-in db [:analysis uri :var-usages])
+
+        targets (->> usages
+                     (filter (fn [usage]
+                               (and (symbols (:name usage))
+                                    (not (:refer usage))
+                                    (= (:to usage) ns-sym)))))
+
+        top (edit/to-top-or-subzip-top loc)]
+
+    (concat [(let [zloc (-> refer-loc
+                            z/right
+                            z/remove
+                            z/remove
+                            z/up)]
+               {:loc zloc :range (meta (z/node zloc))})]
+            (mapv (fn [{:keys [name-col name-row name]}]
+                    (let [zloc (z/edit-> (edit/find-at-pos top name-row name-col)
+                                         (edit/z-replace-preserving-meta
+                                           (n/token-node (symbol alias (str name)))))]
+                      {:range (meta (z/node zloc))
+                       :loc zloc}))
+                  targets))))
+
+(defn as->refer [loc uri db]
+  (let [begin-loc (z/leftmost loc)
+        as-loc (-> begin-loc (z/find-token  #(= ":as" (z/string %))))
+
+        maybe-refer (-> begin-loc (z/find-token  #(= ":refer" (z/string %))))
+
+        as-sym (-> as-loc
+                   z/right
+                   z/sexpr)
+
+        usages (get-in db [:analysis uri :var-usages])
+        k-usages (get-in db [:analysis uri :keyword-usages])
+
+        targets (->> usages
+                     (filter (fn [{:keys [alias]}]
+                               (= alias as-sym))))
+        keep-alias? (some (fn [{:keys [alias]}] (= alias as-sym)) k-usages)
+
+        maybe-remove-alias (if keep-alias?
+                             identity
+                             (comp z/remove z/remove))
+
+        symbols (into #{}
+                      (map :name targets))
+        top (edit/to-top-or-subzip-top loc)]
+
+    (concat [(if maybe-refer
+               (let [original-symbols (-> maybe-refer z/right z/sexpr set)
+                     zloc (-> maybe-refer
+                              z/right
+                              (z/replace (n/vector-node
+                                           (interpose (n/spaces 1)
+                                                      (->>
+                                                        (set/union original-symbols symbols)
+                                                        sort
+                                                        (mapv n/token-node)))))
+                              z/leftmost
+                              (z/find-token  #(= ":as" (z/string %)))
+                              z/right
+                              maybe-remove-alias
+                              (z/up))]
+                 {:loc zloc :range (meta (z/node zloc))})
+               (let [zloc (-> as-loc
+                              z/right
+                              maybe-remove-alias
+                              (z/insert-right (n/keyword-node :refer))
+                              (z/right)
+                              (z/insert-right (n/vector-node
+                                                (interpose (n/spaces 1)
+                                                           (->> symbols sort (mapv n/token-node)))))
+                              z/up)]
+                 {:loc zloc :range (meta (z/node zloc))}))]
+            (mapv (fn [{:keys [name-col name-row name]}]
+                    (let [zloc (z/edit-> (edit/find-at-pos top name-row name-col)
+                                         (edit/z-replace-preserving-meta (n/token-node (symbol name))))]
+                      {:range (meta (z/node zloc))
+                       :loc zloc}))
+                  targets))))

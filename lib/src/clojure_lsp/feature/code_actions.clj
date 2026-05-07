@@ -397,6 +397,22 @@
              :command   "get-in-none"
              :arguments [uri line character]}})
 
+(defn ^:private refer->as-action [uri line character]
+  {:title   "Replace refer with as"
+   :kind    :refactor-rewrite
+   :command
+   {:title "Replace refer with as"
+    :command "refer-to-as"
+    :arguments [uri line character]}})
+
+(defn ^:private as->refer-action [uri line character]
+  {:title   "Replace as with refer"
+   :kind    :refactor-rewrite
+   :command
+   {:title "Replace as with refer"
+    :command "as-to-refer"
+    :arguments [uri line character]}})
+
 (defn all
   ([root-zloc uri row col diagnostics client-capabilities db]
    (all root-zloc uri row col nil nil diagnostics client-capabilities db))
@@ -440,7 +456,9 @@
          cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
          can-add-let? (or (z/skip-whitespace z/right zloc)
                           (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))
-         can-move-to-for-let?* (future (r.transform/can-move-to-:let? zloc))]
+         can-move-to-for-let?* (future (r.transform/can-move-to-:let? zloc))
+         can-refer->as?* (future (r.transform/can-refer->as? zloc))
+         can-as->refer?* (future (r.transform/can-as->refer? zloc))]
      (cond-> []
        (seq resolvable-refer-all-diagnostics)
        (into (replace-refer-all-actions uri resolvable-refer-all-diagnostics))
@@ -551,4 +569,10 @@
        (conj (create-test-action (:function-name-loc @can-create-test?*) uri line character))
 
        workspace-edit-capability?
-       (conj (clean-ns-action uri line character))))))
+       (conj (clean-ns-action uri line character))
+       (and workspace-edit-capability?
+            @can-refer->as?*)
+       (conj (refer->as-action uri line character))
+       (and workspace-edit-capability?
+            @can-as->refer?*)
+       (conj (as->refer-action uri line character))))))

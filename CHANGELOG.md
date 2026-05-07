@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
+## 2026.05.05-12.58.26
+
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `(require ...)` calls inside `(comment ...)` forms. #2107
 - Support find-definition for fully qualified vars even when the namespace is not explicitly required. #2028
 - Fix `create-test` code action appending a duplicate `deftest` when one with the matching name already exists, now navigating to the existing deftest instead. #2274
@@ -12,7 +14,7 @@
 - Measure performance of code actions
 - Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
 - Fix inline-def to work with defs with metas.
-- Bump clj-kondo to `2026.04.15`.
+- Bump clj-kondo to `2026.04.16-20260503.191510-9`.
 - bump up timeout for code action performance measurement, include p90 measurement #2236
 - implementation of inline function. #1827
 - Fix initialization crash when a source file has syntax errors (e.g. unbalanced parens) by using safe parser in unused-public-var linter's `:gen-class` check. #2242
@@ -21,6 +23,7 @@
 - Measure performance of didOpen and didChange
 - if code-action selection end-position args aren't provided, don't try to use them #2276
 - add unit tests for command actions location args #2279
+- New code actions: replace `:refer` with `:as` and replace `:as` with `:refer`, with support for merging into existing `:refer` vectors.
 
 ## 2026.02.20-16.08.58
 

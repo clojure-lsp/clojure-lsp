@@ -173,6 +173,12 @@
 (defmethod run-command :replace-refer-all-with-alias  [{:keys [loc uri db]}]
   (f.replace-refer-all/replace-with-alias loc uri db))
 
+(defmethod run-command :refer-to-as  [{:keys [loc uri db]}]
+  (r.transform/refer->as loc uri db))
+
+(defmethod run-command :as-to-refer  [{:keys [loc uri db]}]
+  (r.transform/as->refer loc uri db))
+
 (defmethod run-command :forward-slurp  [{:keys [uri loc row col]}]
   (f.paredit/forward-slurp uri loc row col))
 

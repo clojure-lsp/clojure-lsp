@@ -44,5 +44,5 @@
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
                                                          :tag "v0.10.5"
                                                          :sha "2a21b7a"}
-                          slipset/deps-deploy {:mvn/version "0.2.2"}}
+                          slipset/deps-deploy {:mvn/version "0.2.3"}}
                    :ns-default build}}}

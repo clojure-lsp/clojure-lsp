@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
+   [clojure-lsp.settings :as settings]
    [clojure.string :as string]
    [rewrite-clj.node :as n]
    [rewrite-clj.zip :as z])
@@ -9,6 +10,8 @@
    [clojure.lang PersistentVector]))
 
 (set! *warn-on-reflection* true)
+
+(def ^:private core-ns? #{'clojure.core 'cljs.core})
 
 (def token-types
   [:namespace
@@ -108,12 +111,13 @@
       nil)))
 
 (defn ^:private var-usage-element->absolute-tokens
-  [{:keys [name alias macro name-col to full-qualified-symbol?] :as element}]
-  (let [name-str ^String (str name)]
+  [{:keys [name alias macro name-col to full-qualified-symbol?] :as element} core-default-lib?]
+  (let [name-str ^String (str name)
+        modifier (cond-> [] (and core-default-lib? (core-ns? to)) (conj :defaultLibrary))]
     (cond
       (and macro
            (not alias))
-      [(element->absolute-token element :macro)]
+      [(element->absolute-token element :macro modifier)]
 
       (and macro
            alias)
@@ -123,7 +127,7 @@
             name-pos (assoc element :name-col (inc slash))]
         [(element->absolute-token alias-pos :type)
          (element->absolute-token slash-pos :event)
-         (element->absolute-token name-pos :macro)])
+         (element->absolute-token name-pos :macro modifier)])
 
       (or alias
           full-qualified-symbol?)
@@ -133,7 +137,7 @@
             name-pos (assoc element :name-col (inc slash))]
         [(element->absolute-token alias-pos :type)
          (element->absolute-token slash-pos :event)
-         (element->absolute-token name-pos :function)])
+         (element->absolute-token name-pos :function modifier)])
 
       (identical? :clj-kondo/unknown-namespace to)
       nil
@@ -144,7 +148,7 @@
       [(element->absolute-token element :variable [:defaultLibrary])]
 
       :else
-      [(element->absolute-token element :function)])))
+      [(element->absolute-token element :function modifier)])))
 
 (defn ^:private keywords->absolute-tokens
   [{:keys [ns alias name-col auto-resolved namespace-from-prefix] :as element}]
@@ -172,14 +176,14 @@
       [(element->absolute-token $ :keyword)])))
 
 (defn ^:private elements->absolute-tokens
-  [elements]
+  [core-default-lib? elements]
   (->> elements
        (sort-by (juxt :name-row :name-col))
        (keep
          (fn [{:keys [bucket] :as element}]
            (cond
              (identical? :var-usages bucket)
-             (var-usage-element->absolute-tokens element)
+             (var-usage-element->absolute-tokens element core-default-lib?)
 
              (identical? :var-definitions bucket)
              (var-definition-element->absolute-tokens element)
@@ -255,8 +259,9 @@
       (map (partial node->absolute-token :comment) uneval-nodes))))
 
 (defn full-tokens [uri db]
-  (let [buckets (get-in db [:analysis uri])
-        kondo-tokens (->> buckets (mapcat val) elements->absolute-tokens)
+  (let [core-default-lib? (settings/get db [:semantic-tokens :default-library-for-core?] false)
+        buckets (get-in db [:analysis uri])
+        kondo-tokens (->> buckets (mapcat val) (elements->absolute-tokens core-default-lib?))
         rewrite-clj-tokens (rewrite-clj-tokens* uri db)
         tokens (sort-by (juxt first second)
                         (concat kondo-tokens rewrite-clj-tokens))]
@@ -264,16 +269,18 @@
 
 (defn range-tokens
   [uri range db]
-  (let [buckets (get-in db [:analysis uri])]
+  (let [core-default-lib? (settings/get db [:semantic-tokens :default-library-for-core?] false)
+        buckets (get-in db [:analysis uri])]
     (->> buckets
          (mapcat val)
          (filter #(element-inside-range? % range))
-         elements->absolute-tokens
+         (elements->absolute-tokens core-default-lib?)
          absolute-tokens->relative-tokens)))
 
-(defn element->token-type [element]
-  (->> [element]
-       elements->absolute-tokens
-       (mapv (fn [[_ _ _ type modifier]]
-               {:token-type (nth token-types type type)
-                :token-modifier (decimal-bit->token-modifiers modifier)}))))
+(defn element->token-type [db element]
+  (let [core-default-lib? (settings/get db [:semantic-tokens :default-library-for-core?] false)]
+    (->> [element]
+         (elements->absolute-tokens core-default-lib?)
+         (mapv (fn [[_ _ _ type modifier]]
+                 {:token-type (nth token-types type type)
+                  :token-modifier (decimal-bit->token-modifiers modifier)})))))

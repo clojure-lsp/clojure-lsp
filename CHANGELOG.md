@@ -5,6 +5,7 @@
   when adding a missing :require or :import via the Add Require code action.  #1734
 
 
+- Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
 ## 2026.05.05-12.58.26
 
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `(require ...)` calls inside `(comment ...)` forms. #2107

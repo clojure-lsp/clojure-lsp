@@ -1413,3 +1413,16 @@
                 :namespace-definitions 2}
      :external {}}
     (q/analysis-summary (h/db))))
+
+(deftest exclude-public-definition?-test
+  ;; See https://github.com/clojure-lsp/clojure-lsp/issues/2292 for the related bug.
+  (testing ":exclude-when-defined-by as a vector longer than the default set"
+    (let [extra-count (inc (count q/default-public-vars-defined-by-to-exclude))
+          settings {:linters {:clojure-lsp/unused-public-var
+                              {:exclude-when-defined-by
+                               (vec (repeatedly extra-count #(gensym 'some.ns/sym)))}}}
+          definition {:bucket :var-definitions
+                      :ns 'a
+                      :name 'b
+                      :defined-by 'clojure.core/defn}]
+      (is (false? (q/exclude-public-definition? settings definition))))))

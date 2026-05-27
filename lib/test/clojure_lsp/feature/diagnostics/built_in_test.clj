@@ -423,6 +423,30 @@
         (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj") (h/file-uri "file:///c.clj")]
                {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}}))))
 
+  (testing ":as-alias require does not contribute to cycle"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns a (:require [b :as b]))" (h/file-uri "file:///a.clj"))
+    (h/load-code-and-locs "(ns b (:require [a :as-alias a]))"
+                          (h/file-uri "file:///b.clj"))
+    (h/assert-submaps
+      []
+      (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
+             {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})))
+
+  (testing "multiline :as-alias require does not contribute to cycle"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns a (:require [b :as b]))" (h/file-uri "file:///a.clj"))
+    (h/load-code-and-locs (h/code "(ns b"
+                                  "  (:require"
+                                  "   [a"
+                                  "    :as-alias"
+                                  "    a]))")
+                          (h/file-uri "file:///b.clj"))
+    (h/assert-submaps
+      []
+      (lint! [(h/file-uri "file:///a.clj") (h/file-uri "file:///b.clj")]
+             {:linters {:clojure-lsp/cyclic-dependencies {:level :warning}}})))
+
   (testing "self-dependency cycle"
     (h/reset-components!)
     (h/load-code-and-locs "(ns self (:require [self :as s]))" (h/file-uri "file:///self.clj"))

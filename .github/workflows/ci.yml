@@ -170,8 +170,12 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - uses: actions/download-artifact@v4
-        name: clojure-lsp-native
+      - name: Download clojure-lsp-native (with retry)
+        uses: Wandalen/wretry.action@v3
+        with:
+          action: actions/download-artifact@v4
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Setup binary
         run: |
@@ -204,8 +208,12 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - uses: actions/download-artifact@v4
-        name: clojure-lsp-native
+      - name: Download clojure-lsp-native (with retry)
+        uses: Wandalen/wretry.action@v3
+        with:
+          action: actions/download-artifact@v4
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Setup binary
         run: |

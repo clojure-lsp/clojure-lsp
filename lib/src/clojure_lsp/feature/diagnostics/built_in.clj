@@ -300,6 +300,28 @@
       (update-in dep-graph [from :dependencies] dissoc to)
       (update-in dep-graph path dec))))
 
+(defn ^:private text-between-name-and-alias
+  [text {:keys [name-end-row name-end-col alias-row alias-col]}]
+  (when (and text name-end-row name-end-col alias-row alias-col)
+    (let [lines (string/split text #"\r\n|\n|\r" -1)]
+      (if (= name-end-row alias-row)
+        (subs (nth lines (dec name-end-row))
+              (dec name-end-col)
+              (dec alias-col))
+        (str
+          (subs (nth lines (dec name-end-row)) (dec name-end-col))
+          "\n"
+          (string/join
+            "\n"
+            (subvec lines name-end-row (dec alias-row)))
+          "\n"
+          (subs (nth lines (dec alias-row)) 0 (dec alias-col)))))))
+
+(defn ^:private as-alias-usage? [documents {:keys [uri alias] :as usage}]
+  (when alias
+    (some-> (text-between-name-and-alias (get-in documents [uri :text]) usage)
+            (string/includes? ":as-alias"))))
+
 (defn ^:private remove-comment-form-deps
   "Remove dep-graph edges that originate from a (require ...) (or similar) call
    inside a (comment ...) form, so they don't participate in cycle detection."
@@ -317,13 +339,29 @@
             graph namespace-usages))))
     dep-graph analysis))
 
+(defn ^:private remove-as-alias-deps
+  "Remove dep-graph edges from :as-alias requires. They create aliases without
+   loading the target namespace, so they do not participate in cycle detection."
+  [dep-graph analysis documents]
+  (reduce-kv
+    (fn [graph _uri {:keys [namespace-usages]}]
+      (reduce
+        (fn [g {:keys [from name] :as usage}]
+          (cond-> g
+            (as-alias-usage? documents usage)
+            (decrement-dep-edge from name)))
+        graph namespace-usages))
+    dep-graph analysis))
+
 (defn ^:private cyclic-dependencies
   "Detects cyclic dependencies and generates diagnostics for each namespace in a cycle."
   [narrowed-db project-db settings]
   (let [level (get-in settings [:linters :clojure-lsp/cyclic-dependencies :level] :off)]
     (when-not (identical? :off level)
-      (let [dep-graph (remove-comment-form-deps
-                        (:dep-graph narrowed-db) (:analysis project-db))
+      (let [dep-graph (-> (:dep-graph narrowed-db)
+                          (remove-comment-form-deps (:analysis project-db))
+                          (remove-as-alias-deps 
+                            (:analysis project-db) (:documents project-db)))
             cycles (find-dependency-cycles dep-graph)
             exclude-namespaces (set (get-in settings [:linters :clojure-lsp/cyclic-dependencies :exclude-namespaces] #{}))
             ;; Create diagnostics for each namespace in each cycle

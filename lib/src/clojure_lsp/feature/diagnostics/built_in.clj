@@ -360,7 +360,7 @@
     (when-not (identical? :off level)
       (let [dep-graph (-> (:dep-graph narrowed-db)
                           (remove-comment-form-deps (:analysis project-db))
-                          (remove-as-alias-deps 
+                          (remove-as-alias-deps
                             (:analysis project-db) (:documents project-db)))
             cycles (find-dependency-cycles dep-graph)
             exclude-namespaces (set (get-in settings [:linters :clojure-lsp/cyclic-dependencies :exclude-namespaces] #{}))

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- add missing namespace form, guessing at the name if outside of project sources, 
+  when adding a missing :require or :import via the Add Require code action.  #1734
+
 
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
 - Bump clj-kondo to `2026.05.25`.

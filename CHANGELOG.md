@@ -6,6 +6,10 @@
 
 
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
+- Bump clj-kondo to `2026.05.25`.
+- Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292
+- Fix `cyclic-dependencies` linter falsely reporting cycles for `:as-alias` requires. #2108
+
 ## 2026.05.05-12.58.26
 
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `(require ...)` calls inside `(comment ...)` forms. #2107

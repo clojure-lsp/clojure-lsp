@@ -113,9 +113,14 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
@@ -182,9 +187,14 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
@@ -254,9 +264,14 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
@@ -318,9 +333,14 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
@@ -382,9 +402,14 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: configure Pagefile
         uses: al-cheb/configure-pagefile-action@v1.2

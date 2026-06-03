@@ -1,0 +1,3 @@
+{:custom-commands {:underef {frankitox.commands/underef nil}
+                   :add-require {frankitox.commands/add-require nil}
+                   :mock-symbols {frankitox.commands/mock-symbols nil}}}

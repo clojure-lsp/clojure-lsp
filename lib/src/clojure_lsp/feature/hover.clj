@@ -104,6 +104,46 @@
       (when referenced-var-docs
         (recur db markdown? uri referenced-var-docs (inc cnt))))))
 
+(def ^:private def-defined-bys
+  #{'clojure.core/def 'cljs.core/def})
+
+(def ^:private defined-value-max-lines
+  "When a `def` value spans more lines than this, the hover shows only the
+  first lines followed by an ellipsis."
+  5)
+
+(defn ^:private truncate-defined-value [value]
+  (let [lines (string/split-lines value)]
+    (if (> (count lines) defined-value-max-lines)
+      (str (string/join "\n" (take defined-value-max-lines lines)) "\n  ...")
+      value)))
+
+(defn ^:private child-of-top-loc
+  "Climb from `loc` to the direct child of its top-level form that contains it,
+  e.g. the `^{...} foo` meta node (or the bare name) within `(def ^{...} foo v)`."
+  [loc top-loc]
+  (loop [loc loc]
+    (let [up (z/up loc)]
+      (if (or (nil? up) (identical? (z/node up) (z/node top-loc)))
+        loc
+        (recur up)))))
+
+(defn ^:private defined-value
+  "For a `def` var-definition, return the string of the defined value, e.g. for
+  `(def foo \"bar\")` return `\"bar\"`. Returns nil for plain declarations
+  (`(def foo)`), for non-`def` definitions, or when the value can't be parsed."
+  [db {:keys [uri name-row name-col defined-by] :as _definition}]
+  (when (and uri name-row name-col (def-defined-bys defined-by))
+    (when-let [name-loc (some-> (parser/safe-zloc-of-file db uri)
+                                (parser/to-pos name-row name-col))]
+      (when-let [top-loc (edit/to-top name-loc)]
+        (let [;; the name may be wrapped in a meta node, so compare at the
+              ;; def list's child level to detect declarations without a value
+              name-child (child-of-top-loc name-loc top-loc)
+              value-loc (z/rightmost name-child)]
+          (when-not (identical? (z/node name-child) (z/node value-loc))
+            (truncate-defined-value (z/string value-loc))))))))
+
 (defn ^:private hover-signatures
   [{:keys [meta arglist-strs parameters]}
    join-char]
@@ -152,9 +192,16 @@
         arity-on-same-line? (or (settings/get db [:hover :arity-on-same-line?])
                                 (settings/get db [:show-docs-arity-on-same-line?]))
         hide-filename? (settings/get db [:hover :hide-file-location?])
+        hide-defined-value? (settings/get db [:hover :hide-defined-value?])
         additional-edits-warning-text (settings/get db [:completion :additional-edits-warning-text])
         join-char (if arity-on-same-line? " " "\n ")
         signatures (hover-signatures definition join-char)
+        def-value (when (and (not hide-defined-value?) (not signatures))
+                    ;; only show the value for genuine constants/data, not 
+                    ;; function-valued defs (`(def f (fn ...))`, 
+                    ;; `(def f #(...))`) where the arglist signature already 
+                    ;; represents the definition
+                    (defined-value db definition))
         sym (cond-> ""
               return-type (str return-type " ")
               sym-ns (str sym-ns "/")
@@ -178,7 +225,9 @@
        :value (cond-> (str (if (#{:java-member-definitions
                                   :java-class-definitions} bucket)
                              java-opening-code
-                             clojure-opening-code) sym-line closing-code)
+                             clojure-opening-code) sym-line
+                           (when def-value (str "\n" def-value))
+                           closing-code)
                 calling
                 , ((partial str (calling-line calling markdown?)))
                 (and additional-text-edits? additional-edits-warning-text)
@@ -200,6 +249,9 @@
         sym
         , (conj {:language "clojure"
                  :value (str (if arity-on-same-line? sym-line sym))})
+        def-value
+        , (conj {:language "clojure"
+                 :value def-value})
         (and signatures
              (not arity-on-same-line?))
         , (conj {:language "clojure"

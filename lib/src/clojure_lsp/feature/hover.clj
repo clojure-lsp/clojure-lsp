@@ -226,8 +226,8 @@
                                   :java-class-definitions} bucket)
                              java-opening-code
                              clojure-opening-code) sym-line
-                            (when def-value (str "\n" def-value))
-                            closing-code)
+                           (when def-value (str "\n" def-value))
+                           closing-code)
                 calling
                 , ((partial str (calling-line calling markdown?)))
                 (and additional-text-edits? additional-edits-warning-text)

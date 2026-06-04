@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Show the defined value of a `def` on hover, so referencing a constant displays its value at the call-site. Can be disabled with `:hover :hide-defined-value?`. #2302
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
 - Bump clj-kondo to `2026.05.25`.
 - Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292

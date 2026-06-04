@@ -343,21 +343,125 @@
             (testing "Can recurse up to 3 times"
               (is (= [{:language "clojure"
                        :value "a/story-1"}
+                      {:language "clojure"
+                       :value "1"}
                       "Some cool docs"
                       (h/file-path "/a.clj")]
                      (:contents (hover story-1-row story-1-col))))
               (is (= [{:language "clojure"
                        :value "a/story-2"}
+                      {:language "clojure"
+                       :value "2"}
                       "Some cool docs"
                       (h/file-path "/a.clj")]
                      (:contents (hover story-2-row story-2-col))))
               (is (= [{:language "clojure"
                        :value "a/story-3"}
+                      {:language "clojure"
+                       :value "3"}
                       "Some cool docs"
                       (h/file-path "/a.clj")]
                      (:contents (hover story-3-row story-3-col)))))
             (testing "Returns nil if recursing too much"
               (is (= [{:language "clojure"
                        :value "a/story-4"}
+                      {:language "clojure"
+                       :value "4"}
                       (h/file-path "/a.clj")]
                      (:contents (hover story-4-row story-4-col)))))))))))
+
+(deftest test-hover-defined-value
+  (with-db
+    settings-no-clojuredocs
+    (let [contents (fn [code]
+                     (let [[[row col]] (h/load-code-and-locs code)]
+                       (:contents (hover row col))))
+          foo-42 (fn [code]
+                   (is (= [{:language "clojure" :value "a/foo"}
+                           {:language "clojure" :value "42"}
+                           "some doc"
+                           (h/file-path "/a.clj")]
+                          (contents code))))]
+      (testing "shows the value of a `def` constant at the usage site"
+        (let [code (h/code "(ns a)"
+                           "(def foo \"bar\")"
+                           "|foo")]
+          (testing "plain"
+            (is (= [{:language "clojure" :value "a/foo"}
+                    {:language "clojure" :value "\"bar\""}
+                    (h/file-path "/a.clj")]
+                   (contents code))))
+          (testing "markdown"
+            (with-db
+              capabilities-markdown
+              (is (= (join ["```clojure"
+                            "a/foo"
+                            "\"bar\""
+                            "```"
+                            "\n----\n"
+                            (format "*[%s](%s)*"
+                                    (h/file-path "/a.clj")
+                                    (h/file-uri "file:///a.clj"))])
+                     (:value (contents code))))))))
+      (testing "works through a var with metadata and/or docstring"
+        (testing "docstring as the 3rd arg to def"
+          (foo-42 (h/code "(ns a)"
+                          "(def foo \"some doc\" 42)"
+                          "|foo")))
+        (testing "docstring as metadata"
+          (foo-42 (h/code "(ns a)"
+                          "(def ^{:doc \"some doc\"} foo 42)"
+                          "|foo")))
+        (testing "metadata and docstring as the 3rd arg"
+          (foo-42 (h/code "(ns a)"
+                          "(def ^:private foo \"some doc\" 42)"
+                          "|foo"))))
+      (testing "no value shown for a plain declaration"
+        (is (= [{:language "clojure" :value "a/foo"}
+                (h/file-path "/a.clj")]
+               (contents (h/code "(ns a)"
+                                 "(def foo)"
+                                 "|foo")))))
+      (testing "no value shown for a defn"
+        (is (= [{:language "clojure" :value "a/foo"}
+                {:language "clojure" :value "[x]"}
+                (h/file-path "/a.clj")]
+               (contents (h/code "(ns a)"
+                                 "(defn foo [x] x)"
+                                 "|foo")))))
+      (testing "function-valued defs show the arglist, not the redundant body"
+        (testing "(fn ...)"
+          (is (= [{:language "clojure" :value "a/foo"}
+                  {:language "clojure" :value "[x]"}
+                  (h/file-path "/a.clj")]
+                 (contents (h/code "(ns a)"
+                                   "(def foo (fn [x] (inc x)))"
+                                   "|foo")))))
+        (testing "#(...)"
+          (is (= [{:language "clojure" :value "a/foo"}
+                  {:language "clojure" :value "[%1]"}
+                  (h/file-path "/a.clj")]
+                 (contents (h/code "(ns a)"
+                                   "(def foo #(+ % 1))"
+                                   "|foo"))))))
+      (testing "long values are truncated to a few lines"
+        (let [value (-> (contents (h/code "(ns a)"
+                                          "(def foo {:a 1"
+                                          "          :b 2"
+                                          "          :c 3"
+                                          "          :d 4"
+                                          "          :e 5"
+                                          "          :f 6})"
+                                          "|foo"))
+                        second
+                        :value)]
+          (is (string/ends-with? value "\n  ..."))
+          (is (= 6 (count (string/split-lines value))))))
+      (testing "value hidden when :hover :hide-defined-value? is set"
+        (with-db
+          {:settings {:hover {:hide-defined-value? true}}}
+          (is (= [{:language "clojure" :value "a/foo"}
+                  (h/file-path "/a.clj")]
+                 (contents (h/code "(ns a)"
+                                   "(def foo \"bar\")"
+                                   "|foo")))))))))

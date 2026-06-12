@@ -62,7 +62,8 @@
 (defn ^:private element-inside-range?
   [{element-row :name-row element-end-row :name-end-row}
    {:keys [name-row name-end-row]}]
-  (and (>= ^Long element-row ^Long name-row)
+  (and element-row
+       (>= ^Long element-row ^Long name-row)
        (<= ^Long element-end-row ^Long name-end-row)))
 
 (defn ^:private element->absolute-token
@@ -174,6 +175,7 @@
 (defn ^:private elements->absolute-tokens
   [elements]
   (->> elements
+       (filter :name-row)
        (sort-by (juxt :name-row :name-col))
        (keep
          (fn [{:keys [bucket] :as element}]

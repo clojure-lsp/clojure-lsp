@@ -308,9 +308,9 @@
 
       (and (= :jdk-already-installed result)
            global-db)
-      (do
+      (let [analysis (lsp.kondo/canonicalize-java-analysis (:analysis global-db))]
         (swap! db* #(-> %
-                        (lsp.kondo/db-with-analysis {:analysis (:analysis global-db)
+                        (lsp.kondo/db-with-analysis {:analysis analysis
                                                      :external? true})
                         (update :analysis-checksums merge (:analysis-checksums global-db))))
         (logger/info java-logger-tag "JDK source analysis cache loaded successfully."))

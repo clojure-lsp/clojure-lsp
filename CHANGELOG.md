@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reduce memory usage of java class and member definitions analysis. #2314
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
 - Bump clj-kondo to `2026.05.26-20260612.132029-18`.
 - Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292

@@ -182,17 +182,18 @@
   (let [db @db*]
     (when-let [db-cache (db/read-local-cache root-path db)]
       (when (consider-local-db-cache? db db-cache)
-        (swap! db* (fn [state-db]
-                     (-> state-db
-                         (merge (select-keys db-cache [:classpath
-                                                       :analysis-checksums
-                                                       :project-hash
-                                                       :settings-hash
-                                                       :kondo-config-hash
-                                                       :dependency-scheme
-                                                       :stubs-generation-namespaces]))
-                         (lsp.kondo/db-with-analysis {:analysis (:analysis db-cache)
-                                                      :external? true}))))))))
+        (let [analysis (lsp.kondo/canonicalize-java-analysis (:analysis db-cache))]
+          (swap! db* (fn [state-db]
+                       (-> state-db
+                           (merge (select-keys db-cache [:classpath
+                                                         :analysis-checksums
+                                                         :project-hash
+                                                         :settings-hash
+                                                         :kondo-config-hash
+                                                         :dependency-scheme
+                                                         :stubs-generation-namespaces]))
+                           (lsp.kondo/db-with-analysis {:analysis analysis
+                                                        :external? true})))))))))
 
 (defn ^:private build-db-cache [db]
   (-> db

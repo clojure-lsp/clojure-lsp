@@ -20,7 +20,7 @@
                                :custom nil}})
 (defonce db* (atom initial-db))
 
-(def version 14)
+(def version 15)
 
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
@@ -62,6 +62,33 @@
         (proxy-super flush)
         (proxy-super close)))))
 
+(defn ^:private update-analysis-elements [analysis f]
+  (reduce-kv
+    (fn [analysis uri buckets]
+      (assoc analysis uri
+             (reduce-kv
+               (fn [buckets bucket elements]
+                 (assoc buckets bucket (mapv (partial f uri) elements)))
+               buckets
+               buckets)))
+    analysis
+    analysis))
+
+(defn ^:private remove-element-uris
+  "Removes the redundant `:uri` of each analysis element before writing the
+  cache, shrinking the file considerably. The analysis map is already keyed
+  by uri, `restore-element-uris` re-assocs it on read."
+  [analysis]
+  (update-analysis-elements analysis (fn [_uri element] (dissoc element :uri))))
+
+(defn ^:private restore-element-uris
+  "Re-assocs the analysis map key as the `:uri` of each element of a read
+  cache, sharing a single String instance per uri. Transit caches map keys
+  but not string values, so serializing `:uri` inside elements would create
+  one String copy per element."
+  [analysis]
+  (update-analysis-elements analysis (fn [uri element] (assoc element :uri uri))))
+
 (defn ^:private upsert-cache! [cache cache-file]
   (try
     (shared/logging-task
@@ -73,7 +100,9 @@
       (io/make-parents cache-file)
       ;; https://github.com/cognitect/transit-clj/issues/43
       (with-open [os ^OutputStream (no-flush-output-stream (io/output-stream cache-file))]
-        (let [writer (transit/writer os :json)]
+        (let [writer (transit/writer os :json)
+              cache (cond-> cache
+                      (:analysis cache) (update :analysis remove-element-uris))]
           (transit/write writer cache))))
     (catch Throwable e
       (logger/error db-logger-tag (str "Could not upsert db cache to " cache-file) e))))
@@ -86,7 +115,8 @@
         (let [cache (with-open [is (io/input-stream cache-file)]
                       (transit/read (transit/reader is :json)))]
           (when (= version (:version cache))
-            cache))
+            (cond-> cache
+              (:analysis cache) (update :analysis restore-element-uris))))
         (logger/error db-logger-tag (str "No cache DB file found for " cache-file))))
     (catch Throwable e
       (logger/error db-logger-tag "Could not load global cache from DB" e))))

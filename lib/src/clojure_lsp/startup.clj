@@ -212,7 +212,7 @@
 (defn ^:private upsert-db-cache! [db]
   (if (:api? db)
     (db/upsert-local-cache! (build-db-cache db) db)
-    (async/go
+    (async/thread
       (db/upsert-local-cache! (build-db-cache db) db))))
 
 (defn ^:private project-paths-to-analyze [db]

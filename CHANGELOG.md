@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- add missing namespace form, guessing at the name if outside of project sources, 
+  when adding a missing :require or :import via the Add Require code action.  #1734
+
 
 - Reduce memory usage of java class and member definitions analysis. #2314
 - Shrink db cache file considerably not serializing redundant analysis elements uri. #2315

@@ -197,17 +197,23 @@
 
                    :else nil)}))
 
+(defn ^:private create-new-ns-loc [uri db]
+  (when-let [new-ns-name (shared/uri->safe-namespace uri db true)]
+    (z/of-string (str "(ns " new-ns-name ")"))))
+
 (defn add-to-namespace*
   [zloc
+   uri
    {libspec-type :type
     lib-sym :lib
     refer-sym :refer
     alias-sym :alias
     class-sym :class}
    db]
-  (let [ns-loc (edit/find-namespace zloc)
-        ns-zip (zsub/subzip ns-loc)]
-    (when (need-to-add-libspec? ns-zip lib-sym refer-sym alias-sym class-sym)
+  (let [existing-ns-loc (edit/find-namespace zloc)
+        ns-loc (or existing-ns-loc (create-new-ns-loc uri db))
+        ns-zip (when ns-loc (zsub/subzip ns-loc))]
+    (when (and ns-loc (need-to-add-libspec? ns-zip lib-sym refer-sym alias-sym class-sym))
       (let [add-form-type? (not (z/find-value ns-zip z/next libspec-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next libspec-type)
             ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
@@ -247,8 +253,15 @@
                                              (not (fast= :same-line ns-inner-blocks-indentation))) (z/append-child* (n/newlines 1)))
                                         (z/append-child* (n/spaces (dec col)))
                                         (z/append-child form-to-add)))]
-        [{:range (meta (z/node result-loc))
-          :loc result-loc}]))))
+        (if existing-ns-loc
+          [{:range (meta (z/node result-loc))
+            :loc result-loc}]
+          ;; return two edits instead of form because clean-ns-edits will remove
+          ;; the newlines that are outside the ns expression
+          [{:range {:row 1 :col 1 :end-row 1 :end-col 1}
+            :loc result-loc}
+           {:range {:row 1 :col 1 :end-row 1 :end-col 1}
+            :loc (z/of-node (n/newlines 2))}])))))
 
 (defn ^:private add-to-rcf?
   "returns zloc of rcf when require/import should be added to rcf-form, otherwise nil"
@@ -342,7 +355,7 @@
                 :loc result-loc}])))))))
 
 (defn ^:private add-to-namespace
-  [zloc type ns-sym sym db]
+  [zloc uri type ns-sym sym db]
   (when (or (fast= :require-simple type) sym)
     (let [libspec (case type
                     :require-refer {:type :require :lib ns-sym :refer sym}
@@ -355,7 +368,7 @@
             (= :token (z/tag zloc))
             (= "comment" (z/string zloc)))
         (add-to-rcf* zloc libspec db)
-        (add-to-namespace* zloc libspec db)))))
+        (add-to-namespace* zloc uri libspec db)))))
 
 (defn add-missing-import [zloc uri import-name db {:keys [producer]}]
   (when-let [import-name (or import-name
@@ -365,23 +378,23 @@
           class-name (symbol (last split))
           rcf-zloc (add-to-rcf? zloc :import db producer)
           zloc (or rcf-zloc zloc)]
-      (cond->> (add-to-namespace zloc :import package-name class-name db)
+      (cond->> (add-to-namespace zloc uri :import package-name class-name db)
         (nil? rcf-zloc) (cleaning-ns-edits uri db)))))
 
 (defn add-known-alias
-  [zloc alias-to-add qualified-ns-to-add db]
+  [zloc uri alias-to-add qualified-ns-to-add db]
   (when (and qualified-ns-to-add alias-to-add)
-    (add-to-namespace zloc :require-alias qualified-ns-to-add alias-to-add db)))
+    (add-to-namespace zloc uri :require-alias qualified-ns-to-add alias-to-add db)))
 
 (defn add-simple-require
-  [zloc qualified-ns-to-add db]
+  [zloc uri qualified-ns-to-add db]
   (when qualified-ns-to-add
-    (add-to-namespace zloc :require-simple qualified-ns-to-add nil db)))
+    (add-to-namespace zloc uri :require-simple qualified-ns-to-add nil db)))
 
 (defn ^:private add-known-refer
-  [zloc refer-to-add qualified-ns-to-add db]
+  [zloc uri refer-to-add qualified-ns-to-add db]
   (when (and qualified-ns-to-add refer-to-add)
-    (add-to-namespace zloc :require-refer qualified-ns-to-add refer-to-add db)))
+    (add-to-namespace zloc uri :require-refer qualified-ns-to-add refer-to-add db)))
 
 (defn ^:private sub-segment?
   [alias-segs def-segs]
@@ -604,7 +617,7 @@
        (take-while (complement z/end?))
        (filter p?)))
 
-(defn add-ns-to-loc-change [loc chosen-alias]
+(defn ^:private add-ns-to-loc-change [loc chosen-alias]
   (let [replaced-loc (-> loc
                          (z/replace (-> (symbol (name chosen-alias) (-> loc safe-sym name))
                                         n/token-node
@@ -625,13 +638,13 @@
       (->> (concat
              (cond->> (cond
                         chosen-refer
-                        (add-known-refer zloc (symbol chosen-refer) chosen-ns db)
+                        (add-known-refer zloc uri (symbol chosen-refer) chosen-ns db)
 
                         chosen-alias
-                        (add-known-alias zloc (symbol chosen-alias-or-ns) chosen-ns db)
+                        (add-known-alias zloc uri (symbol chosen-alias-or-ns) chosen-ns db)
 
                         :else
-                        (add-simple-require zloc chosen-ns db))
+                        (add-simple-require zloc uri chosen-ns db))
                to-ns? (cleaning-ns-edits uri db))
              (when chosen-alias-or-ns
                (cond

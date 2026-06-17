@@ -20,7 +20,7 @@
                                :custom nil}})
 (defonce db* (atom initial-db))
 
-(def version 15)
+(def version 16)
 
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))

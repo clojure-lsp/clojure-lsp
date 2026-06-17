@@ -76,6 +76,19 @@
       (update-in [:diagnostics :clj-kondo] merge findings)
       (shared/assoc-some :kondo-config config)))
 
+(defn db-without-uris
+  "Remove the given `uris` from the analysis, dep-graph, documents and kondo
+  diagnostics, keeping the dep-graph in sync."
+  [db uris]
+  (reduce (fn [db uri]
+            (-> db
+                (dep-graph/remove-doc uri)
+                (shared/dissoc-in [:documents uri])
+                (shared/dissoc-in [:analysis uri])
+                (shared/dissoc-in [:diagnostics :clj-kondo uri])))
+          db
+          uris))
+
 (defn ^:private element-with-fallback-name-position [element]
   (assoc element
          :name-row (or (:name-row element) (:row element))

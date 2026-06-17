@@ -18,7 +18,14 @@
                :analysis {uri {:var-definitions [{:uri uri :name 'foo :bucket :var-definitions}]
                                :var-usages [{:uri uri :name 'bar :bucket :var-usages}
                                             {:uri uri :name 'baz :bucket :var-usages}]}
-                          jar-uri {:java-class-definitions [{:uri jar-uri :class "foo.Bar" :bucket :java-class-definitions}]}}}
+                          jar-uri {:java-class-definitions [{:uri jar-uri :class "foo.Bar" :bucket :java-class-definitions}]}}
+               :source-paths-checksums {"/project/src/a.clj" 123456}
+               :kondo-findings {uri [{:uri uri :type :unused-namespace :level :warning}]}
+               :dep-graph '{foo.bar {:uris #{"zipfile:///foo.jar::foo/bar.clj"}
+                                     :internal? false
+                                     :aliases {bar 1}}}
+               :documents {uri {:namespaces #{'a} :internal? true :langs #{:clj}}
+                           jar-uri {:namespaces #{'foo.bar} :internal? false :langs #{:clj}}}}
         cache-file (temp-cache-file)]
     (#'db/upsert-cache! cache cache-file)
     (testing "elements are written without the redundant :uri"
@@ -27,7 +34,12 @@
         (is (= [{:name 'foo :bucket :var-definitions}]
                (get-in raw [:analysis uri :var-definitions])))
         (is (= [{:class "foo.Bar" :bucket :java-class-definitions}]
-               (get-in raw [:analysis jar-uri :java-class-definitions])))))
+               (get-in raw [:analysis jar-uri :java-class-definitions])))
+        (testing "dep-graph, documents and source checksums are written untouched"
+          (is (= (:dep-graph cache) (:dep-graph raw)))
+          (is (= (:documents cache) (:documents raw)))
+          (is (= (:source-paths-checksums cache) (:source-paths-checksums raw)))
+          (is (= (:kondo-findings cache) (:kondo-findings raw))))))
     (testing "read cache restores elements :uri"
       (let [read-cache (#'db/read-cache cache-file)]
         (is (= cache read-cache))

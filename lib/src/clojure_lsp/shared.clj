@@ -589,7 +589,7 @@
 (def full-file-range
   (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
-(defn ^:private paths->checksums
+(defn paths->checksums
   "Return a map with file's last modified timestamp by filename."
   [paths]
   (reduce

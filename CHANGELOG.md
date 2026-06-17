@@ -8,6 +8,7 @@
 - Reduce memory usage of java class and member definitions analysis. #2314
 - Shrink db cache file considerably not serializing redundant analysis elements uri. #2315
 - Run the db cache write on a dedicated thread so the blocking write no longer ties up a core.async dispatch thread during startup. #2318
+- Skip re-analysis of unchanged source paths on warm startup by persisting the internal analysis, dep-graph, documents and clj-kondo findings in the db cache and only re-analyzing source files whose checksum changed. #2316
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
 - Bump clj-kondo to `2026.05.26-20260612.132029-18`.
 - Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292

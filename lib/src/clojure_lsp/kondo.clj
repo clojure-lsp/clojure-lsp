@@ -22,6 +22,31 @@
 
 (def clj-kondo-analysis-batch-size 120)
 
+(defonce ^:private filename->uri-cache
+  ;; Process-global cache for filename->uri, which otherwise re-pays a regex and
+  ;; a File->Path->URI conversion for every analysis element of every pass. Keyed
+  ;; by the uri-affecting settings so distinct projects/dbs don't collide.
+  (atom {}))
+
+(def ^:private filename->uri-cache-max 500000)
+
+(defn ^:private filename->uri-fn
+  "Returns a filename->uri fn backed by the process-global `filename->uri-cache`,
+  scoped to the db's uri-affecting settings."
+  [db]
+  (let [cache-key [(get-in db [:settings :dependency-scheme])
+                   (get-in db [:settings :uri-format])]]
+    (fn [filename]
+      (or (get-in @filename->uri-cache [cache-key filename])
+          (let [uri (shared/filename->uri filename db)]
+            (swap! filename->uri-cache update cache-key
+                   (fn [m]
+                     (let [m (or m {})]
+                       (if (>= (count m) filename->uri-cache-max)
+                         {filename uri}
+                         (assoc m filename uri)))))
+            uri)))))
+
 (defn ^:private project-config-dir [project-root-uri]
   ;; TODO: might be better to use clj-kondo.impl.core/config-dir, but it's not
   ;; yet part of the public kondo api.
@@ -257,27 +282,29 @@
       {}
       findings)))
 
-(defn ^:private normalize-analysis [external? settings findings analysis]
+(defn ^:private normalize-analysis [external? settings trade-filename-for-uri findings analysis]
   (let [keyword-definitions-enabled? (get-in settings [:analysis :keywords :definitions] true)
         keyword-usages-enabled? (get-in settings [:analysis :keywords :usages] true)
         canon (canonical-fn)]
     (shared/deep-merge
-      (reduce-kv
-        (fn [result kondo-bucket kondo-elements]
-          (transduce
-            (comp
-              (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?) keyword-definitions-enabled? keyword-usages-enabled? canon))
-              (filter valid-element?))
-            (completing
-              (fn [result {:keys [uri bucket] :as element}]
-                ;; intentionally use element bucket, since it may have been
-                ;; normalized to something besides kondo-bucket
-                (update-in result [uri bucket] (fnil conj []) element)))
-            result
-            kondo-elements))
-        ;; TODO: Can result be a transient?
-        {}
-        analysis)
+      (persistent!
+        (reduce-kv
+          (fn [result kondo-bucket kondo-elements]
+            (transduce
+              (comp
+                (mapcat #(-> (assoc % :bucket kondo-bucket :external? external?)
+                             trade-filename-for-uri
+                             (element->normalized-elements keyword-definitions-enabled? keyword-usages-enabled? canon)))
+                (filter valid-element?))
+              (completing
+                (fn [result {:keys [uri bucket] :as element}]
+                  ;; intentionally use element bucket, since it may have been
+                  ;; normalized to something besides kondo-bucket
+                  (assoc! result uri (update (get result uri) bucket (fnil conj []) element))))
+              result
+              kondo-elements))
+          (transient {})
+          analysis))
       (findings->analysis findings))))
 
 (defn ^:private normalize
@@ -286,7 +313,7 @@
   [{:keys [analysis findings] :as kondo-results}
    {:keys [external? ensure-uris filter-analysis] :or {filter-analysis identity}}
    db]
-  (let [filename->uri (memoize #(shared/filename->uri % db))
+  (let [filename->uri (filename->uri-fn db)
         trade-filename-for-uri (fn [obj]
                                  (-> obj
                                      (assoc :uri (or (some-> (:filename obj) filename->uri)
@@ -299,8 +326,7 @@
                       (group-by :uri))
         analysis (->> analysis
                       filter-analysis
-                      (medley/map-vals #(map trade-filename-for-uri %))
-                      (normalize-analysis external? (settings/all db) findings)
+                      (normalize-analysis external? (settings/all db) trade-filename-for-uri findings)
                       (with-uris ensure-uris {}))
         findings (with-uris (keys analysis) [] findings)]
     (assoc kondo-results
@@ -450,6 +476,18 @@
         (normalize normalization-config db)
         (update-in [:diagnostics :clj-kondo] merge empty-findings))))
 
+(defn ^:private merge-batch-results
+  "Combine two normalized kondo result maps from disjoint path batches. Batches
+  never share uris, so a shallow per-key merge of the uri-indexed maps is
+  equivalent to a deep merge while avoiding its recursive rebuilds. Scalar and
+  config keys (`:external?`, `:config`, `:summary`) are identical across batches,
+  so the first batch's are kept."
+  [a b]
+  (-> a
+      (update :analysis merge (:analysis b))
+      (update :findings merge (:findings b))
+      (update-in [:diagnostics :clj-kondo] merge (get-in b [:diagnostics :clj-kondo]))))
+
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
@@ -474,7 +512,7 @@
            (map (fn [{:keys [index paths]}]
                   (logger/info logger-tag "Analyzing batch" (str index "/" batch-count))
                   (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn index batch-count))))
-           (reduce shared/deep-merge)))))
+           (reduce merge-batch-results)))))
 
 (defn run-kondo-on-reference-uris! [uris db*]
   (let [db @db*

@@ -470,8 +470,9 @@
    (inc (:character position))])
 
 (defn row-col->position [row col]
-  {:line (max 0 (dec row))
-   :character (max 0 (dec col))})
+  ;; nil row/col happens for elements without positions like java definitions
+  {:line (max 0 (dec (or row 1)))
+   :character (max 0 (dec (or col 1)))})
 
 (defn debounce-all
   "Debounce in channel with ms miliseconds returning all values."

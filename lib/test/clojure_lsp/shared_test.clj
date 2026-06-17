@@ -190,7 +190,13 @@
                     :character 0}
             :end   {:line      0
                     :character 0}}
-           (shared/->range {:row 0 :end-row 0 :col 0 :end-col 0})))))
+           (shared/->range {:row 0 :end-row 0 :col 0 :end-col 0}))))
+  (testing "should tolerate elements without positions like java definitions"
+    (is (= {:start {:line      0
+                    :character 0}
+            :end   {:line      0
+                    :character 0}}
+           (shared/->range {:class "foo.Bar" :bucket :java-class-definitions})))))
 
 (def unescape-uri #'shared/unescape-uri)
 

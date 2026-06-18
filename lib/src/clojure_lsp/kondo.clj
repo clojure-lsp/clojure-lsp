@@ -375,6 +375,25 @@
        :file-analyzed-fn file-analyzed-fn}
       (with-additional-config settings)))
 
+(defn ^:private java-member-definitions-mode
+  "Resolves the `[:analysis :java :member-definitions]` setting to one of
+  `:eager` (analyze every dependency's java members up front), `:lazy` (analyze
+  a class's members on demand on first navigation/hover/completion) or `:off`.
+  Defaults to `:lazy` to keep the heavy java-member-definitions bucket out of
+  the upfront classpath analysis."
+  [settings]
+  (case (get-in settings [:analysis :java :member-definitions] :lazy)
+    true :eager
+    false :off
+    (:lazy :on-demand) :lazy
+    :lazy))
+
+(defn lazy-java-member-definitions?
+  "Whether external java member definitions are analyzed lazily (on demand)
+  instead of up front during the classpath scan."
+  [db]
+  (identical? :lazy (java-member-definitions-mode (settings/all db))))
+
 (defn ^:private config-for-internal-paths [paths db file-analyzed-fn]
   ;; source-paths analysis should always include all code data (full-analysis)
   (let [full-analysis? (not= :project-only (:project-analysis-type db))
@@ -385,7 +404,7 @@
                                        :keywords (and full-analysis? (get-in settings [:analysis :keywords] true))
                                        :protocol-impls full-analysis?
                                        :java-class-definitions (and full-analysis? (get-in settings [:analysis :java :class-definitions] true))
-                                       :java-member-definitions (and full-analysis? (get-in settings [:analysis :java :member-definitions] true))
+                                       :java-member-definitions (and full-analysis? (not= :off (java-member-definitions-mode settings)))
                                        :instance-invocations full-analysis?
                                        :java-class-usages full-analysis?
                                        :context [:clojure.test
@@ -404,7 +423,9 @@
                                        :arglists full-analysis?
                                        :protocol-impls full-analysis?
                                        :java-class-definitions (and full-analysis? (get-in settings [:analysis :java :class-definitions] true))
-                                       :java-member-definitions (and full-analysis? (get-in settings [:analysis :java :member-definitions] true))
+                                       ;; member-definitions default to lazy/on-demand for dependencies;
+                                       ;; only emit them up front when explicitly set to eager (true)
+                                       :java-member-definitions (and full-analysis? (identical? :eager (java-member-definitions-mode settings)))
                                        :var-definitions {:shallow true
                                                          :meta (var-definition-metas db settings)}}))))
 
@@ -440,7 +461,7 @@
                              :keywords (get-in settings [:analysis :keywords] true)
                              :protocol-impls true
                              :java-class-definitions (get-in settings [:analysis :java :class-definitions] true)
-                             :java-member-definitions (get-in settings [:analysis :java :member-definitions] true)
+                             :java-member-definitions (not= :off (java-member-definitions-mode settings))
                              :instance-invocations true
                              :java-class-usages true
                              :context [:clojure.test
@@ -544,4 +565,24 @@
                                                                 :java-member-definitions])}]
     (-> (config-for-jdk-source paths db)
         (run-kondo! (str "paths " paths))
+        (normalize normalization-config db))))
+
+(defn ^:private config-for-jar-members [jar-path db]
+  {:lint [jar-path]
+   :skip-lint true
+   :config-dir (kondo-config-dir db)
+   :config {:output {:canonical-paths true}
+            :analysis {:java-class-definitions true
+                       :java-member-definitions true}}})
+
+(defn run-kondo-on-jar-members!
+  "Analyze a single dependency `jar-path` for its java member definitions,
+  used by the lazy/on-demand java analysis. Returns a normalized result keeping
+  only the `:java-member-definitions` bucket (class definitions are already
+  analyzed up front)."
+  [jar-path db]
+  (let [normalization-config {:external? true
+                              :filter-analysis #(select-keys % [:java-member-definitions])}]
+    (-> (config-for-jar-members jar-path db)
+        (run-kondo! (str "jar members " jar-path))
         (normalize normalization-config db))))

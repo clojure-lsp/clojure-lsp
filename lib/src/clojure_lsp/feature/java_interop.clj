@@ -194,6 +194,76 @@
             (update :analysis merge (:analysis results))
             (assoc :version db/version))))))
 
+;;;; Lazy/on-demand java member definitions
+;;
+;; When `[:analysis :java :member-definitions]` is `:lazy` (the default), the
+;; heavy java-member-definitions bucket is skipped during the upfront classpath
+;; scan. We keep java-class-definitions eager, so when the user navigates to,
+;; hovers or completes a java member we can map the class to its jar and analyze
+;; that jar's members on demand, caching the result in memory for the session.
+
+(defn ^:private class-definition-uri->jar-path [uri]
+  (when uri
+    (let [[_ jar-path] (re-find #"^(.*\.jar):" (shared/uri->filename uri))]
+      jar-path)))
+
+(defn ^:private java-class-definitions-seq [db]
+  (for [[_ buckets] (:analysis db)
+        class-def (:java-class-definitions buckets)]
+    class-def))
+
+(defn ^:private jars-defining-class [db match-class?]
+  (into #{}
+        (comp (filter (comp match-class? :class))
+              (keep (comp class-definition-uri->jar-path :uri)))
+        (java-class-definitions-seq db)))
+
+(defn ^:private class-members-loaded? [db match-class?]
+  (boolean
+    (some (fn [[_ buckets]]
+            (some (comp match-class? :class) (:java-member-definitions buckets)))
+          (:analysis db))))
+
+(defn ^:private analyze-jar-members! [db* jar-path]
+  (let [results (shared/logging-task
+                  :java-interop/analyze-jar-members
+                  (lsp.kondo/run-kondo-on-jar-members! jar-path @db*))]
+    (swap! db* #(-> %
+                    (lsp.kondo/db-with-results results)
+                    (update :lazily-analyzed-jars (fnil conj #{}) jar-path)))))
+
+(defn ^:private ensure-jars-analyzed! [db* jar-paths]
+  (let [analyzed (:lazily-analyzed-jars @db*)]
+    (doseq [jar-path jar-paths
+            :when (not (contains? analyzed jar-path))]
+      (analyze-jar-members! db* jar-path)))
+  @db*)
+
+(defn ^:private ensure-members-analyzed! [db* match-class?]
+  (let [db @db*]
+    (if (and (lsp.kondo/lazy-java-member-definitions? db)
+             (not (class-members-loaded? db match-class?)))
+      (ensure-jars-analyzed! db* (jars-defining-class db match-class?))
+      db)))
+
+(defn ensure-java-class-members-analyzed!
+  "Analyze on demand the jar(s) defining `full-class-name` so its java member
+  definitions become available for navigation/hover. No-op in eager/off mode or
+  when already analyzed. Returns the current db value."
+  [db* full-class-name]
+  (if full-class-name
+    (ensure-members-analyzed! db* #(= full-class-name %))
+    @db*))
+
+(defn ensure-java-static-members-analyzed!
+  "Analyze on demand the jar(s) defining classes whose simple name matches
+  `simple-class-name`, used by java static-member completion. No-op in
+  eager/off mode or when already analyzed. Returns the current db value."
+  [db* simple-class-name]
+  (if simple-class-name
+    (ensure-members-analyzed! db* #(= simple-class-name (last (string/split % #"\."))))
+    @db*))
+
 (def ^:private default-jdk-source-uri
   "https://raw.githubusercontent.com/clojure-lsp/jdk-source/main/openjdk-19/reduced/source.zip")
 

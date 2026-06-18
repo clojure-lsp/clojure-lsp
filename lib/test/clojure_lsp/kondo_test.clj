@@ -91,3 +91,13 @@
     (testing "scalar keys are kept from the first batch"
       (is (true? (:external? merged)))
       (is (= {:linters {}} (:config merged))))))
+
+(deftest java-member-definitions-mode-test
+  (testing "defaults to lazy/on-demand"
+    (is (= :lazy (#'lsp.kondo/java-member-definitions-mode {})))
+    (is (= :lazy (#'lsp.kondo/java-member-definitions-mode {:analysis {:java {:member-definitions :lazy}}})))
+    (is (= :lazy (#'lsp.kondo/java-member-definitions-mode {:analysis {:java {:member-definitions :on-demand}}}))))
+  (testing "true keeps the eager upfront analysis"
+    (is (= :eager (#'lsp.kondo/java-member-definitions-mode {:analysis {:java {:member-definitions true}}}))))
+  (testing "false disables member definitions entirely"
+    (is (= :off (#'lsp.kondo/java-member-definitions-mode {:analysis {:java {:member-definitions false}}})))))

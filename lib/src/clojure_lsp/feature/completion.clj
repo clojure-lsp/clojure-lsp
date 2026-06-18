@@ -7,6 +7,7 @@
    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
    [clojure-lsp.feature.format]
    [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -625,7 +626,7 @@
          items)
     items))
 
-(defn completion [uri row col db]
+(defn completion [uri row col db & [db*]]
   (let [root-zloc (parser/safe-zloc-of-file db uri)
         ;; (dec col) because we're completing what's behind the cursor
         cursor-loc (when-let [loc (some-> root-zloc (parser/to-pos row (dec col)))]
@@ -727,7 +728,12 @@
 
                       (and java-class-for-static-member
                            (supports-clj-core? uri))
-                      (into (with-java-static-member-definition-items matches-fn java-class-for-static-member cursor-value db))
+                      (into (with-java-static-member-definition-items
+                              matches-fn java-class-for-static-member cursor-value
+                              ;; analyze the class's jar members on demand when lazy
+                              (if db*
+                                (f.java-interop/ensure-java-static-members-analyzed! db* java-class-for-static-member)
+                                db)))
 
                       (and support-snippets?
                            simple-cursor?)

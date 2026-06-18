@@ -68,15 +68,22 @@
   (when progress-token
     (producer/publish-progress producer (or current-percent start-percent) title progress-token)))
 
+(def ^:private analyzable-source-file-regex
+  ;; clojure files plus java sources, which clj-kondo analyzes to provide local
+  ;; java class/member definitions.
+  (re-pattern (str "(?:" shared/clj-extensions-regex ")|.+\\.java$")))
+
 (defn ^:private enumerate-source-files
-  "Canonical paths of every clojure file under the given source `paths`."
+  "Canonical paths of every source file under the given source `paths` that
+  clj-kondo analyzes, including java sources used for java class/member
+  definitions."
   [paths]
   (into #{}
         (comp
           (mapcat #(file-seq (io/file %)))
           (filter (fn [^File f] (.isFile f)))
           (map (fn [^File f] (.getCanonicalPath f)))
-          (filter #(re-matches (re-pattern shared/clj-extensions-regex) %)))
+          (filter #(re-matches analyzable-source-file-regex %)))
         paths))
 
 (defn ^:private analyze-source-paths!

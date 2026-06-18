@@ -229,7 +229,9 @@
                   :java-interop/analyze-jar-members
                   (lsp.kondo/run-kondo-on-jar-members! jar-path @db*))]
     (swap! db* #(-> %
-                    (lsp.kondo/db-with-results results)
+                    ;; merge (not replace) so the java-class-definitions analyzed
+                    ;; up front at these jar member uris are kept.
+                    (lsp.kondo/db-with-merged-analysis results)
                     (update :lazily-analyzed-jars (fnil conj #{}) jar-path)))))
 
 (defn ^:private ensure-jars-analyzed! [db* jar-paths]

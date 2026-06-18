@@ -92,6 +92,22 @@
       (is (true? (:external? merged)))
       (is (= {:linters {}} (:config merged))))))
 
+(deftest db-with-merged-analysis-test
+  (let [java-uri "file:///dep.jar:foo/Bar.java"
+        class-def {:class "foo.Bar" :uri java-uri :bucket :java-class-definitions}
+        member-def {:class "foo.Bar" :name "baz" :uri java-uri :bucket :java-member-definitions}
+        db {:analysis {java-uri {:java-class-definitions [class-def]}}}
+        results {:external? true
+                 :analysis {java-uri {:java-member-definitions [member-def]}}}]
+    (testing "merging keeps buckets already present at the uri (lazy member analysis)"
+      (let [merged (lsp.kondo/db-with-merged-analysis db results)]
+        (is (= [class-def] (get-in merged [:analysis java-uri :java-class-definitions])))
+        (is (= [member-def] (get-in merged [:analysis java-uri :java-member-definitions])))))
+    (testing "db-with-analysis replaces the per-uri analysis, dropping other buckets"
+      (let [replaced (lsp.kondo/db-with-analysis db results)]
+        (is (nil? (get-in replaced [:analysis java-uri :java-class-definitions])))
+        (is (= [member-def] (get-in replaced [:analysis java-uri :java-member-definitions])))))))
+
 (deftest java-member-definitions-mode-test
   (testing "defaults to lazy/on-demand"
     (is (= :lazy (#'lsp.kondo/java-member-definitions-mode {})))

@@ -80,11 +80,10 @@
           (logger/error (str err)))
         result))))
 
-(defn db-with-analysis
-  "Update `db` with normalized kondo analysis."
-  [db {:keys [analysis external?]}]
+(defn ^:private db-with-analysis*
+  [db {:keys [analysis external?]} merge-analysis]
   (-> db
-      (update :analysis merge analysis)
+      (update :analysis merge-analysis analysis)
       ;; Whenever the analysis is updated, we refresh the dep graph. This is the
       ;; only place this is done, so to keep the dep graph in sync with the
       ;; analysis, everything that puts analysis in the db must either call this
@@ -92,6 +91,20 @@
       (dep-graph/refresh-analysis (select-keys (:analysis db) (keys analysis))
                                   analysis
                                   (not external?))))
+
+(defn db-with-analysis
+  "Update `db` with normalized kondo analysis, replacing any existing analysis
+  for the same uris."
+  [db results]
+  (db-with-analysis* db results merge))
+
+(defn db-with-merged-analysis
+  "Like `db-with-analysis` but merges new buckets into the existing per-uri
+  analysis instead of replacing it, so an additive pass (e.g. the lazy
+  java-member-definitions analysis) keeps buckets already present at a uri such
+  as java-class-definitions."
+  [db results]
+  (db-with-analysis* db results #(merge-with merge %1 %2)))
 
 (defn db-with-results
   "Update `db` with normalized kondo result."

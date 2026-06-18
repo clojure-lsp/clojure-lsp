@@ -84,15 +84,20 @@
   (lsp/notify! (fixture/did-open-source-path-notification "definition/a.clj"))
 
   (let [{:keys [uri]} (lsp/request! (fixture/definition-request (h/source-path->uri "definition/a.clj") 15 2))]
-    (lsp/notify! (fixture/did-open-external-path-notification uri (slurp uri)))
-
-    (testing "LSP features work on external clojure opened files"
-      (h/assert-submap
-        {:language "clojure"
-         :value "[x]\n [x message]"}
-        (-> (lsp/request! (fixture/hover-external-uri-request uri 7612 5))
-            :contents
-            (get 1))))))
+    (println "DEBUG#2326 jar-scheme: definition uri =" uri) (flush)
+    (let [content (slurp uri)]
+      (println "DEBUG#2326 jar-scheme: slurped" (count content) "chars") (flush)
+      (lsp/notify! (fixture/did-open-external-path-notification uri content))
+      (println "DEBUG#2326 jar-scheme: didOpen external sent") (flush)
+      (testing "LSP features work on external clojure opened files"
+        (let [result (lsp/request! (fixture/hover-external-uri-request uri 7612 5))]
+          (println "DEBUG#2326 jar-scheme: hover responded") (flush)
+          (h/assert-submap
+            {:language "clojure"
+             :value "[x]\n [x message]"}
+            (-> result
+                :contents
+                (get 1))))))))
 
 (deftest definition-external-dependency-zipfile-scheme
   (h/delete-project-file "../../.lsp/.cache/")

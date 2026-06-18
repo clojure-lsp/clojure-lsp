@@ -185,9 +185,10 @@
               internal-uris (dep-graph/internal-uris db)
               settings (settings/all db)]
           (when (settings/get db [:lint-project-files-after-startup?] true)
-            (shared/logging-task
-              :internal/publish-all-diagnostics
-              (f.diagnostic/publish-all-diagnostics! internal-uris false components)))
+            (async/thread
+              (shared/logging-task
+                :internal/publish-all-diagnostics
+                (f.diagnostic/publish-all-diagnostics-directly! internal-uris false components))))
           (async/thread
             (startup/publish-task-progress producer (:refresh-clojuredocs post-startup-tasks) work-done-token)
             (f.clojuredocs/refresh-cache! db*)

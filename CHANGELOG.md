@@ -12,6 +12,7 @@
 - Optimize clj-kondo analysis ingestion with single-pass normalization using transients, a process-global filename->uri cache, and shallow batch merging. #2317
 - Scale the JVM server heap to a percentage of available RAM (`-XX:MaxRAMPercentage`) instead of a fixed `-Xmx`, matching the native image and avoiding out-of-memory on very large projects. #2313
 - Analyze external java member definitions lazily on first navigation/hover/completion instead of all up front, drastically reducing memory usage on projects with large dependency sets. Set `:analysis :java :member-definitions` to `true` to keep the previous eager behavior. #2313
+- Add an `:internal/publish-all-diagnostics` timing log to measure startup diagnostics publishing on large projects. #2313
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
 - Bump clj-kondo to `2026.05.26-20260612.132029-18`.
 - Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292

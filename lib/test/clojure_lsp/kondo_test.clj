@@ -1,6 +1,7 @@
 (ns clojure-lsp.kondo-test
   (:require
    [clojure-lsp.kondo :as lsp.kondo]
+   [clojure-lsp.shared :as shared]
    [clojure.test :refer [deftest is testing]]))
 
 (def ^:private uri "file:///my/foo/Bar.class")
@@ -18,7 +19,7 @@
                                             :flags #{:public}}]
                   :java-member-definitions [(java-member "CONSTANT")
                                             (java-member "otherConstant")]}
-        result (#'lsp.kondo/normalize-analysis true {} {} analysis)
+        result (#'lsp.kondo/normalize-analysis true {} identity {} analysis)
         class-def (first (get-in result [uri :java-class-definitions]))
         [member-a member-b] (get-in result [uri :java-member-definitions])]
     (testing "elements are kept even without name positions"
@@ -61,3 +62,58 @@
       (is (identical? (:flags member-a) (:flags member-b))))
     (testing "other analysis stays untouched"
       (is (identical? clj-buckets (get result clj-uri))))))
+
+(deftest merge-batch-results-test
+  (let [batch-a {:external? true
+                 :config {:linters {}}
+                 :analysis {"file:///a.clj" {:var-definitions [{:name 'a}]}}
+                 :findings {"file:///a.clj" [{:type :unused}]}
+                 :diagnostics {:clj-kondo {"file:///a.clj" [{:type :unused}]}}}
+        batch-b {:external? true
+                 :config {:linters {}}
+                 :analysis {"file:///b.clj" {:var-definitions [{:name 'b}]}}
+                 :findings {"file:///b.clj" [{:type :unused2}]}
+                 :diagnostics {:clj-kondo {"file:///b.clj" [{:type :unused2}]}}}
+        merged (#'lsp.kondo/merge-batch-results batch-a batch-b)]
+    (testing "shallow merge of disjoint-uri batches matches deep-merge"
+      (let [deep (shared/deep-merge batch-a batch-b)]
+        (is (= (:analysis deep) (:analysis merged)))
+        (is (= (:findings deep) (:findings merged)))
+        (is (= (get-in deep [:diagnostics :clj-kondo])
+               (get-in merged [:diagnostics :clj-kondo])))))
+    (testing "both batches' uris are present"
+      (is (= {"file:///a.clj" {:var-definitions [{:name 'a}]}
+              "file:///b.clj" {:var-definitions [{:name 'b}]}}
+             (:analysis merged)))
+      (is (= {"file:///a.clj" [{:type :unused}]
+              "file:///b.clj" [{:type :unused2}]}
+             (:findings merged))))
+    (testing "scalar keys are kept from the first batch"
+      (is (true? (:external? merged)))
+      (is (= {:linters {}} (:config merged))))))
+
+(deftest db-with-merged-analysis-test
+  (let [java-uri "file:///dep.jar:foo/Bar.java"
+        class-def {:class "foo.Bar" :uri java-uri :bucket :java-class-definitions}
+        member-def {:class "foo.Bar" :name "baz" :uri java-uri :bucket :java-member-definitions}
+        db {:analysis {java-uri {:java-class-definitions [class-def]}}}
+        results {:external? true
+                 :analysis {java-uri {:java-member-definitions [member-def]}}}]
+    (testing "merging keeps buckets already present at the uri (lazy member analysis)"
+      (let [merged (lsp.kondo/db-with-merged-analysis db results)]
+        (is (= [class-def] (get-in merged [:analysis java-uri :java-class-definitions])))
+        (is (= [member-def] (get-in merged [:analysis java-uri :java-member-definitions])))))
+    (testing "db-with-analysis replaces the per-uri analysis, dropping other buckets"
+      (let [replaced (lsp.kondo/db-with-analysis db results)]
+        (is (nil? (get-in replaced [:analysis java-uri :java-class-definitions])))
+        (is (= [member-def] (get-in replaced [:analysis java-uri :java-member-definitions])))))))
+
+(deftest java-member-definitions-mode-test
+  (testing "defaults to lazy/on-demand"
+    (is (= :lazy (#'lsp.kondo/java-member-definitions-mode {})))
+    (is (= :lazy (#'lsp.kondo/java-member-definitions-mode {:analysis {:java {:member-definitions :lazy}}})))
+    (is (= :lazy (#'lsp.kondo/java-member-definitions-mode {:analysis {:java {:member-definitions :on-demand}}}))))
+  (testing "true keeps the eager upfront analysis"
+    (is (= :eager (#'lsp.kondo/java-member-definitions-mode {:analysis {:java {:member-definitions true}}}))))
+  (testing "false disables member definitions entirely"
+    (is (= :off (#'lsp.kondo/java-member-definitions-mode {:analysis {:java {:member-definitions false}}})))))

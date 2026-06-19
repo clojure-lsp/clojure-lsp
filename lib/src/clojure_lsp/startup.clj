@@ -68,11 +68,48 @@
   (when progress-token
     (producer/publish-progress producer (or current-percent start-percent) title progress-token)))
 
-(defn ^:private analyze-source-paths! [paths db* file-analyzed-fn]
-  (let [kondo-result* (future
+(def ^:private analyzable-source-file-regex
+  ;; clojure files plus java sources, which clj-kondo analyzes to provide local
+  ;; java class/member definitions.
+  (re-pattern (str "(?:" shared/clj-extensions-regex ")|.+\\.java$")))
+
+(defn ^:private enumerate-source-files
+  "Canonical paths of every source file under the given source `paths` that
+  clj-kondo analyzes, including java sources used for java class/member
+  definitions."
+  [paths]
+  (into #{}
+        (comp
+          (mapcat #(file-seq (io/file %)))
+          (filter (fn [^File f] (.isFile f)))
+          (map (fn [^File f] (.getCanonicalPath f)))
+          (filter #(re-matches analyzable-source-file-regex %)))
+        paths))
+
+(defn ^:private analyze-source-paths!
+  "Analyze source `paths` with clj-kondo and the project linters.
+
+  When `force-all?` is false (warm startup) only source files whose checksum
+  changed since the cached run are re-analyzed with clj-kondo, files no longer
+  on disk are evicted, and the cached analysis is reused for everything else.
+  The linters always run over the whole `paths`. Returns whether anything
+  changed, so the caller can decide whether to rewrite the cache."
+  [paths db* file-analyzed-fn force-all?]
+  (let [current-files (enumerate-source-files paths)
+        new-checksums (shared/paths->checksums current-files)
+        cached-checksums (:source-paths-checksums @db*)
+        files-to-analyze (if force-all?
+                           (vec current-files)
+                           (into [] (remove #(= (get cached-checksums %) (get new-checksums %))) current-files))
+        deleted-uris (into [] (comp (remove current-files)
+                                    (map #(shared/filename->uri % @db*)))
+                           (keys cached-checksums))
+        kondo-result* (future
                         (shared/logging-task
                           :internal/project-paths-analyzed-by-clj-kondo
-                          (lsp.kondo/run-kondo-on-paths! paths db* {:external? false} file-analyzed-fn)))
+                          (if (seq files-to-analyze)
+                            (lsp.kondo/run-kondo-on-paths! files-to-analyze db* {:external? false} file-analyzed-fn)
+                            {})))
         depend-result* (future
                          (shared/logging-task
                            :internal/project-paths-analyzed-by-clj-depend
@@ -85,10 +122,13 @@
         depend-result @depend-result*]
     (swap! db* (fn [state-db]
                  (-> state-db
+                     (lsp.kondo/db-without-uris deleted-uris)
                      (lsp.kondo/db-with-results kondo-result)
                      (lsp.depend/db-with-results depend-result)
                      (f.diagnostics.built-in/db-with-results analyze-built-in-fn)
-                     (f.diagnostics.custom/db-with-results custom-lint-fn))))))
+                     (f.diagnostics.custom/db-with-results custom-lint-fn)
+                     (assoc :source-paths-checksums new-checksums))))
+    (boolean (or (seq files-to-analyze) (seq deleted-uris)))))
 
 (defn ^:private analyze-source-paths-namespaces-only! [paths db* _file-analyzed-fn]
   (let [db @db*
@@ -184,16 +224,27 @@
       (when (consider-local-db-cache? db db-cache)
         (let [analysis (lsp.kondo/canonicalize-java-analysis (:analysis db-cache))]
           (swap! db* (fn [state-db]
-                       (-> state-db
-                           (merge (select-keys db-cache [:classpath
-                                                         :analysis-checksums
-                                                         :project-hash
-                                                         :settings-hash
-                                                         :kondo-config-hash
-                                                         :dependency-scheme
-                                                         :stubs-generation-namespaces]))
-                           (lsp.kondo/db-with-analysis {:analysis analysis
-                                                        :external? true})))))))))
+                       (let [state-db (merge state-db
+                                             (select-keys db-cache [:classpath
+                                                                    :analysis-checksums
+                                                                    :source-paths-checksums
+                                                                    :project-hash
+                                                                    :settings-hash
+                                                                    :kondo-config-hash
+                                                                    :dependency-scheme
+                                                                    :stubs-generation-namespaces]))
+                             state-db (cond-> state-db
+                                        (:kondo-findings db-cache)
+                                        (assoc-in [:diagnostics :clj-kondo] (:kondo-findings db-cache)))]
+                         (if-let [cached-dep-graph (:dep-graph db-cache)]
+                           ;; The cache already has the dep-graph and documents built from
+                           ;; this analysis, reuse them instead of replaying refresh-analysis.
+                           (-> state-db
+                               (update :analysis merge analysis)
+                               (assoc :dep-graph cached-dep-graph)
+                               (update :documents merge (:documents db-cache)))
+                           (lsp.kondo/db-with-analysis state-db {:analysis analysis
+                                                                 :external? true}))))))))))
 
 (defn ^:private build-db-cache [db]
   (-> db
@@ -204,15 +255,22 @@
                     :project-analysis-type
                     :classpath
                     :analysis
-                    :analysis-checksums])
+                    :analysis-checksums
+                    :source-paths-checksums
+                    :dep-graph
+                    :documents])
       (merge {:stubs-generation-namespaces (->> db :settings :stubs :generation :namespaces (map str) set)
               :version db/version
-              :project-root (str (shared/uri->path (:project-root-uri db)))})))
+              :project-root (str (shared/uri->path (:project-root-uri db)))
+              ;; clj-kondo findings are consumed by clean-ns/diagnostics and are
+              ;; only produced by analysis, so persist them to survive a warm
+              ;; startup that skips re-analyzing unchanged files.
+              :kondo-findings (get-in db [:diagnostics :clj-kondo])})))
 
 (defn ^:private upsert-db-cache! [db]
   (if (:api? db)
     (db/upsert-local-cache! (build-db-cache db) db)
-    (async/go
+    (async/thread
       (db/upsert-local-cache! (build-db-cache db) db))))
 
 (defn ^:private project-paths-to-analyze [db]
@@ -294,9 +352,7 @@
             (when (contains? #{:project-and-full-dependencies
                                :project-and-shallow-analysis} (:project-analysis-type @db*))
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
-              (analyze-external-classpath! root-path (project-paths-to-analyze @db*) classpath progress-token components))
-            (logger/info logger-tag "Caching db for next startup...")
-            (upsert-db-cache! @db*))))
+              (analyze-external-classpath! root-path (project-paths-to-analyze @db*) classpath progress-token components)))))
       (publish-task-progress producer (:resolving-config task-list) progress-token)
       (when-let [classpath-settings (and (config/classpath-config-paths? settings)
                                          (some-> (:classpath @db*)
@@ -313,14 +369,16 @@
         (logger/info logger-tag "OTLP configured sucessfully."))
       (publish-task-progress producer (:analyzing-project task-list) progress-token)
       (logger/info logger-tag "Analyzing source paths for project root" (str root-path))
-      (let [analyze-source-paths-fn (if (= :project-namespaces-only (:project-analysis-type @db*))
-                                      analyze-source-paths-namespaces-only!
-                                      analyze-source-paths!)]
-        (analyze-source-paths-fn (project-paths-to-analyze @db*)
-                                 db*
-                                 (fn [{:keys [total-files files-done]}]
-                                   (let [task (-> (:analyzing-project task-list)
-                                                  (partial-task files-done total-files))]
-                                     (publish-task-progress producer task progress-token)))))
+      (let [progress-fn (fn [{:keys [total-files files-done]}]
+                          (let [task (-> (:analyzing-project task-list)
+                                         (partial-task files-done total-files))]
+                            (publish-task-progress producer task progress-token)))
+            source-changed? (if (= :project-namespaces-only (:project-analysis-type @db*))
+                              (do (analyze-source-paths-namespaces-only! (project-paths-to-analyze @db*) db* progress-fn)
+                                  (not use-db-analysis?))
+                              (analyze-source-paths! (project-paths-to-analyze @db*) db* progress-fn (not use-db-analysis?)))]
+        (when (or (not use-db-analysis?) source-changed?)
+          (logger/info logger-tag "Caching db for next startup...")
+          (upsert-db-cache! @db*)))
       (swap! db* assoc :settings-auto-refresh? true)
       (publish-task-progress producer (:done task-list) progress-token))))

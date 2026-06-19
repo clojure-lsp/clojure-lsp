@@ -51,6 +51,20 @@
                         (h/code "(def |something \"a thing\" 1)"
                                 "something")))))
 
+(deftest inline-def-with-simple-meta
+  (is (= {(h/file-uri "file:///a.clj") (h/code ""
+                                               "1")}
+         (inline-symbol (h/file-uri "file:///a.clj")
+                        (h/code "(def ^:private |something 1)"
+                                "something")))))
+
+(deftest inline-def-with-map-meta
+  (is (= {(h/file-uri "file:///a.clj") (h/code ""
+                                               "1")}
+         (inline-symbol (h/file-uri "file:///a.clj")
+                        (h/code "(def ^{:foo 1 :bar 2} |something 1)"
+                                "something")))))
+
 (deftest inline-in-invalid-location
   (is (= {}
          (inline-symbol (h/file-uri "file:///a.clj") "|;; comment"))))

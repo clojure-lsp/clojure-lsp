@@ -41,12 +41,18 @@
            :end-row end-row
            :end-col end-col}})
 
+(defn ^:private skip-meta-up [loc]
+  (if (= :meta (some-> loc z/up z/tag))
+    (recur (z/up loc))
+    loc))
+
 (defn ^:private inline-def
   "Inlines a var defined by `def`, replacing the var with its value in any file
   it's used in."
   [uri var-loc references]
   ;; inlining `foo`, defined in a `def`
-  (let [def-loc (z/up var-loc)
+  (let [var-loc (skip-meta-up var-loc)
+        def-loc (z/up var-loc)
         start (if-let [prev-loc (z/left def-loc)]
                 ;; (def bar 2)| (def foo 1)
                 (end-of prev-loc)

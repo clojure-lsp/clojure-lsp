@@ -130,9 +130,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
@@ -193,9 +198,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
@@ -249,9 +259,14 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
@@ -302,9 +317,14 @@ jobs:
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
@@ -361,9 +381,14 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Install clojure build tools
         uses: DeLaGuardo/setup-clojure@master
@@ -420,9 +445,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download clojure-lsp-standalone.jar (with retry)
+        uses: Wandalen/wretry.action@v3
         with:
-          name: clojure-lsp-standalone.jar
+          action: actions/download-artifact@v4
+          with: |
+            name: clojure-lsp-standalone.jar
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: configure Pagefile
         uses: al-cheb/configure-pagefile-action@v1.2
@@ -541,7 +571,12 @@ jobs:
         id: latest-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
 
-      - uses: actions/download-artifact@v4
+      - name: Download all artifacts (with retry)
+        uses: Wandalen/wretry.action@v3
+        with:
+          action: actions/download-artifact@v4
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Upload jar
         uses: svenstaro/upload-release-action@v2

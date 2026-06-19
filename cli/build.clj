@@ -75,7 +75,7 @@
   [opts]
   (println "Generating bin...")
 
-  (let [jvm-opts (concat (:jvm-opts opts []) ["-Xmx3g" "-server"])]
+  (let [jvm-opts (concat (:jvm-opts opts []) ["-XX:MaxRAMPercentage=80.0" "-server"])]
     ((requiring-resolve 'deps-bin.impl.bin/build-bin)
      {:jar standalone-file
       :name "clojure-lsp"

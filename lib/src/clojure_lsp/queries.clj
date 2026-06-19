@@ -633,7 +633,8 @@
 
 (defn ^:private xf-under-cursor [row col]
   (filter (fn [{:keys [name-row name-col name-end-row name-end-col]}]
-            (and (<= name-row row name-end-row)
+            (and name-row
+                 (<= name-row row name-end-row)
                  (<= name-col col name-end-col)))))
 
 (defn find-element-under-cursor

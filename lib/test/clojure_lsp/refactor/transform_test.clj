@@ -195,6 +195,132 @@
                 (move-to-let 'x))))
   (is (nil? (transform/move-to-let nil "file:///a.clj" (h/db) 'x))))
 
+(defn- move-to-for-let [code new-sym]
+  (h/first-edit-as-root-string (transform/move-to-for-let (h/load-code-and-zloc code) (h/file-uri "file:///a.clj") (h/db) new-sym)))
+
+(deftest can-move-to-:let-test
+  (testing "can move from inside for body-expr"
+    (is (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x [1 2 3 4]]\n  |(* 2 x))"))))
+  (testing "can move from inside for body-expr with multiple expressions"
+    (is (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x [1 2 3 4]]\n  (* 1 x) | (* 2 x))"))))
+  (testing "can move from sub-expression to :let"
+    (is (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x [1 2 3 4]]\n  (+ 1 x |(* x x)))"))))
+  (testing "can move when doseq is nested inside a for on previous line"
+    (is (transform/can-move-to-:let?
+          (h/load-code-and-zloc "(for [y [1 3]]|\n (doseq [x [1 3]] (println (* x y))))"))))
+  (testing "can move when doseq is nested inside a for on the next line"
+    (is (transform/can-move-to-:let?
+          (h/load-code-and-zloc "(for [y [1 3]]\n |(doseq [x [1 3]] (println (* x y))))"))))
+  (testing "when a let block is between the cursor and the new :let, don't allow movement because it might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (let [x 2 y 5] (* |x y)))")))))
+  (testing "when a let block is between the cursor and the new :let, don't allow movement because the let might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (let [x 2 y 5] | (* x y)))")))))
+  (testing "when a when-let block is between the cursor and the new :let, don't allow movement because the when-let might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (when-let [y 5] | (* 5 y)))")))))
+  (testing "when an if-let block is between the cursor and the new :let, don't allow movement because the if-let might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (if-let [y 5] | (* 4 y)) :no-for)")))))
+  (testing "when a loop is between the cursor and the new :let, don't allow movement because the loop might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n (loop [x 2 y 5] | (* x y)))")))))
+  (testing "when a fn is between the cursor and the new :let, don't allow movement because the fn might be shadowing a variable"
+    (is (not (transform/can-move-to-:let?
+               (h/load-code-and-zloc "(for [y [1 3]]\n ((fn [x y ] |(* x y)) 2 5))")))))
+  (testing "can't move when cursor is outside for body-expr"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "(for |[x [1 2 3 4]]\n  (* 2 x))")))))
+  (testing "can't move when cursor is inside vector arg"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x | [1 2 3 4]]\n  (* 2 x))")))))
+  (testing "can't move when in empty body-expr"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "(for [x [1 2 3 4]]\n  |)")))))
+  (testing "can't move if in non-for"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "(+ | 2 4)")))))
+  (testing "can't move if in empty file"
+    (is (not (transform/can-move-to-:let? (h/load-code-and-zloc "|"))))))
+
+(deftest move-to-:let-test
+  (testing "simple move to for :let"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(for [x [1 2 3 4]]\n  |(* 2 x))" 'a))))
+  (testing "move to for :let replacing multiple expressions"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [a (* 2 x)]]"
+                   "  (+ a a))")
+           (move-to-for-let "(for [x [1 2 3 4]]\n  (+ (* 2 x) |(* 2 x)))" 'a))))
+  (testing "move to for :let when :let already exists"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [t \"test\""
+                   "            a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(for [x [1 2 3 4]\n      :let [t \"test\"]]\n  |(* 2 x))" 'a))))
+  (testing "simple move to doseq :let"
+    (is (= (h/code "(doseq [x [1 2 3 4]"
+                   "        :let [a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(doseq [x [1 2 3 4]]\n  |(* 2 x))" 'a))))
+  (testing "when moving symbol to :let don't include quoted symbols"
+    (is (= (h/code "(for [x [1 3]"
+                   "      :let [a x]]"
+                   "  (vector 'x a))")
+           (move-to-for-let "(for [x [1 3]]\n  (vector 'x |x))" 'a))))
+  (testing "when moving symbol to :let don't include quoted expressions"
+    (is (= (h/code "(for [x [1 3]"
+                   "      :let [a (+ 1 x)]]"
+                   "  (vector '(+ 1 x) a))")
+           (move-to-for-let "(for [x [1 3]]\n  (vector '(+ 1 x) |(+ 1 x)))" 'a))))
+
+  ;; TODO: don't move shadowed symbols (see comment in move-to-for-let)
+  ;; (testing "when moving symbol to :let don't include quoted symbols inside expressions"
+  ;;   (is (= (h/code "(for [x [1 3]"
+  ;;                  "      :let [a x]]"
+  ;;                  "  (vector '(+ 1 x) a))")
+  ;;          (move-to-for-let "(for [x [1 3]]\n  (vector '(+ 1 x) |x))" 'a))))
+  ;; (testing "when moving a symbol don't replace shadowed symbols"
+  ;;   (is (= (h/code "(doseq [x [1 3]"
+  ;;                  "        :let [a x]]"
+  ;;                  "  (println (* a 5))"
+  ;;                  "  (let [x 7]"
+  ;;                  "    (println x)))")
+  ;;          (move-to-for-let (str "(doseq [x [1 3]]\n"
+  ;;                                "  (println (* |x 5))\n"
+  ;;                                "  (let [x 7]\n"
+  ;;                                "    (println x)))") 'a))))
+
+  (testing "move to doseq :let when :let already exists"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [b 1"
+                   "            a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(for [x [1 2 3 4]\n      :let [b 1]]\n  |(* 2 x))" 'a))))
+  (testing "move to doseq :let with three :let bindings already present"
+    (is (= (h/code "(for [x [1 2 3 4]"
+                   "      :let [b 1"
+                   "            t :my-test"
+                   "            a (* 2 x)]]"
+                   "  a)")
+           (move-to-for-let "(for [x [1 2 3 4]\n      :let [b 1\n            t :my-test]]\n  |(* 2 x))" 'a))))
+  (testing "move to doseq :let with extra expressions in doseq"
+    (is (= (h/code "(doseq [x [1 2 3 4]"
+                   "        :let [a (* 2 x)]]"
+                   "  a"
+                   "  (+ x 5))")
+           (move-to-for-let "(doseq [x [1 2 3 4]]\n  |(* 2 x)\n  (+ x 5))" 'a))))
+  (testing "move to doseq :let with multiple replacements"
+    (is (= (h/code "(doseq [x [1 2 3 4]"
+                   "        :let [a (* 2 x)]]"
+                   "  a"
+                   "  a)")
+           (move-to-for-let "(doseq [x [1 2 3 4]]\n  |(* 2 x)\n  (* 2 x))" 'a))))
+  (testing "moving nested doseq inside a for"
+    (is (= (h/code "(for [y [1 3]"
+                   "      :let [a (doseq [x [1 3]] (println (* x y)))]]"
+                   " a)")
+           (move-to-for-let "(for [y [1 3]]\n |(doseq [x [1 3]] (println (* x y))))" 'a)))))
+
 (defn- introduce-let [code new-sym]
   (h/first-edit-as-root-string (transform/introduce-let (h/zloc-from-code code) new-sym)))
 
@@ -531,6 +657,483 @@
 
 (defn ^:private update-map [m f]
   (into {} (for [[k v] m] [k (f v)])))
+
+(defn- do-inline-function [code filepath]
+  (let [file-uri (h/file-uri filepath)
+        zloc     (h/load-code-and-zloc code file-uri)]
+    (transform/inline-function zloc
+                               file-uri
+                               (h/db))))
+
+(deftest inline-function-test
+  (testing "simple inline with no vars"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "5")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(defn my-num [] |5)\n"
+                                                    "(+ (my-num) 3)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple inline with no vars, multiple invocations"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "5")
+                          (h/code "5")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-num [] |5)\n"
+                                                    "(+ (my-num) 3)\n"
+                                                    "(+ (my-num) 3)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "simple inline with no vars, but has let with locals"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(let [a 1 b 2] a)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-fun [] |(let [a 1 b 2] a))\n"
+                                                    "(my-fun)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with several vars"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [my-a my-b my-c] (|+ my-a my-b my-c))\n"
+                                                    "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with long values"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 123456789 0 9876543210 55)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [a b c d] (|+ a b c d))\n"
+                                                    "(my-add 123456789 0 9876543210 55)\n")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with multiple call sites"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "(+ 15 13 16)")
+                          (h/code "(+ (/ x 5) (/ y 7) (/ 9 10))")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [my-a my-b my-c] (|+ my-a my-b my-c))\n"
+                                                    "(my-add 5 3 6)\n"
+                                                    "(my-add 15 13 16)\n"
+                                                    "(my-add (/ x 5) (/ y 7) (/ 9 10))")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with multiple lines"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(println \"my-a is\" 5)"
+                                  "(+ 5 3)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [my-a my-b]\n"
+                                                    "  (println \"my-a is\" my-a)"
+                                                    "  (|+ my-a my-b))\n"
+                                                    "(my-add 5 3)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with shadowed formal parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(let [y (+ 100 2)]"
+                                  "  (+ 6 y))")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(defn myfun [x y]\n"
+                                                    "  |(let [y (+ 100 2)]\n"
+                                                    "  (+ x y)))\n"
+                                                    "(myfun 6 7)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with function as parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(let [c 1] (+ c))")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(defn a [b]\n"
+                                                    "  |(let [c 1] (b c)))\n"
+                                                    "(a +)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline with multiple lines to let target (so needs indentation)"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(println \"my-a is\" 5)"
+                                  "  (+ 5 3)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [my-a my-b]\n"
+                                                    "  (println \"my-a is\" my-a)"
+                                                    "  (|+ my-a my-b))\n"
+                                                    "(let []\n"
+                                                    "  (my-add 5 3))")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with private metadata"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn ^:private my-add [my-a my-b my-c] (|+ my-a my-b my-c))\n"
+                                                    "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with type hints in argument list"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [^:integer my-a ^:integer my-b my-c] (|+ my-a my-b my-c))\n"
+                                                    "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with a doc string"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn ^:private my-add \"does my add\" [my-a my-b my-c] (|+ my-a my-b my-c))\n"
+                                                    "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline a fumction with a doc string and private metadata"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn ^:private my-add \"does my add\" [my-a my-b my-c] (|+ my-a my-b my-c))\n"
+                                                    "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with non-public defn-"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn- my-add [my-a my-b my-c] (|+ my-a my-b my-c))\n"
+                                                    "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "unused formal parameters are ignored when inlining a function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 3 10)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [my-a my-b my-c] (|+ my-b 10))\n"
+                                                    "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "order of parameters doesn't matter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 6 5 3)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [my-a my-b my-c] (|+ my-c my-a my-b))\n"
+                                                    "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "duplicate of parameter use in body"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 6 3 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [my-a my-b my-c]\n"
+                                                    "  (|+ my-c my-a my-b my-a my-c))\n"
+                                                    "(my-add 3 5 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "all comments, even first, are included"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ";; my comment"
+                            "  (println \"hello\" 4)"
+                            "  ;; a comment about hi"
+                            "  (println \"hi\")")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn test-c [a]\n"
+                                                    "  ;; |my comment\n"
+                                                    "  (println \"hello\" a)\n"
+                                                    "  ;; a comment about hi\n"
+                                                    "  (println \"hi\"))"
+                                                    ""
+                                                    "(let []\n"
+                                                    "  (test-c 4))"
+                                                    "")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "complex parameter is inserted into inlined body correctly"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ (* 6 6) 9)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(ns a)\n"
+                                                    "(defn my-add [x _y z]\n"
+                                                    "  (+ x |z))"
+                                                    "(my-add (* 6 6) :a 9)"
+                                                    "")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "a function with an empty body inlines as an empty string"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(defn my-empty []|)"
+                                                    "(my-empty)"
+                                                    "")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "when a function being inlined uses an & for varargs, trailing actual params become an array"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 1 (apply + [2 3 4]))")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(defn my-add [a & more-args]|\n"
+                                                    "  (+ a (apply + more-args)))\n"
+                                                    "(my-add 1 2 3 4)"
+                                                    "")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "when a function being inlined contains only an & param for varargs, it become an array"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(apply + [1 2 3 4])")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str "(defn my-add [& more-args]|\n"
+                                                    "  (apply + more-args))\n"
+                                                    "(my-add 1 2 3 4)"
+                                                    "")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline with type hints in arg list"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str  "(defn my-add \"does my add\" [^int my-a my-b my-c] (|+ my-a my-b my-c))\n"
+                                                     "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "inline function with -arity parens, but only single-arity"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code "(+ 5 3 6)")
+                          (h/code "")]
+                         (as-strings
+                           (do-inline-function (str  "(defn my-add ([my-a my-b my-c] (|+ my-a my-b my-c)))\n"
+                                                     "(my-add 5 3 6)")
+                                               filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "multi-arity inline function with parens is an error"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "cannot inline function", :code :invalid-params}}
+                         (do-inline-function (str  "(defn my-add\n"
+                                                   "  ([my-a my-b my-c] (|+ my-a my-b my-c))\n"
+                                                   "  ([my-a my-b] (+ my-a my-b)))\n"
+                                                   "(my-add 5 3 6)")
+                                             filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "should give an error if inline called for function with destructuring args"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "cannot inline function", :code :invalid-params}}
+                         (do-inline-function (str "(defn my-destr [{:keys [a]}]|"
+                                                  "  (println \"a is \" a))"
+                                                  "")
+                                             filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs")))
+
+(defn- check-if-inline-fn? [code]
+  (h/reset-components!)
+  (let [file-uri (h/file-uri "file:///a.clj")
+        zloc     (h/load-code-and-zloc code file-uri)]
+    (transform/can-inline-fn? zloc file-uri (h/db))))
+
+(deftest can-inline-function?-test
+  (testing "simple check if inline function is available"
+    (is (check-if-inline-fn? (str "(defn my-num |[] 5)\n"
+                                  "(+ (my-num) 3)"))))
+  (testing "inline function is unavailable outside of defn"
+    (is (not (check-if-inline-fn? (str "(ns a)\n"
+                                       "((fn [] |5))\n")))))
+  (testing "inline function is unavailable at toplevel"
+    (is (not
+          (check-if-inline-fn? (str "(ns a)\n"
+                                    "| ((fn [] 5))\n")))))
+  (testing "inline function is available for functions with a docstring"
+    (is
+      (check-if-inline-fn? (str "(defn my-doc-fn \"mydoc string\"\n"
+                                "  |([x] x))\n"
+                                "(my-doc-fn :a)"))))
+  (testing "inline function is unavailable when the function uses destructuring"
+    (is (not
+          (check-if-inline-fn? (str "(defn my-destr [{:keys [a]}]\n"
+                                    " | (println \"a is \" a))"
+                                    "(my-destr {:a 4})")))))
+  (testing "inline function is available for functions with single-arities"
+    (is
+      (check-if-inline-fn? (str "(defn my-singlearity\n"
+                                "  |([x] x))\n"
+                                "(my-singlearity :a)"))))
+  (testing "inline function is unavailable when there are multiple arities"
+    (is (not
+          (check-if-inline-fn? (str "(defn my-multiarity\n"
+                                    "  |([] :a)\n"
+                                    "  ([x] x))\n"
+                                    "(my-multiarity)")))))
+  (testing "inline function is available for functions with metadata"
+    (is
+      (check-if-inline-fn? (str "(defn ^:private my-private-fn [] | :a)\n"
+                                "(my-private-fn)"))))
+  (testing "inline function is unavailable when a call site uses threading"
+    (is (not
+          (check-if-inline-fn? (str "(defn my-fn [a b c] | (+ a b c))\n"
+                                    "(-> 5 (my-fn 2 5))")))))
+  (testing "inline function is unavailable when a call site uses partial"
+    (is (not
+          (check-if-inline-fn? (str "(defn my-fn [a b c] | (+ a b c))\n"
+                                    "((partial my-fn 2 3) 4)")))))
+  (testing "available when argument list includes just a variadic arg"
+    (is
+      (check-if-inline-fn? (str "(defn my-fn [& b] | (apply + b))\n"
+                                "(my-fn 2 1)"))))
+  (testing "available when argument list includes just a variadic arg and no actual params"
+    (is
+      (check-if-inline-fn? (str "(defn my-fn [& b] | (apply + b))\n"
+                                "(my-fn)"))))
+  (testing "available when argument list includes one normal arg and a variadic arg"
+    (is
+      (check-if-inline-fn? (str "(defn my-fn [a & b] | (apply (partial + a) b))\n"
+                                "(my-fn 2 1)"))))
+  (testing "unavailable when argument list includes one normal arg and a variadic arg but no actual params"
+    (is (not
+          (check-if-inline-fn? (str "(defn my-fn [a & b] | (apply (partial + a) b))\n"
+                                    "(my-fn)")))))
+  (testing "unavailable when argument list includes two normal args and a variadic arg but only one actual param"
+    (is (not
+          (check-if-inline-fn? (str "(defn my-fn [a b & c] | (apply (partial + a c) b))\n"
+                                    "(my-fn 2)")))))
+  ;; TODO: check if this works in the actual inlining
+  (testing "available when argument list includes a variadic arg with multiple values"
+    (is
+      (check-if-inline-fn? (str "(defn my-fn [a & b] | (apply (partial + a) b))\n"
+                                "(my-fn 1 2 3 4 5)"))))
+  (testing "available when argument list includes a variadic arg and argument count is equal to fewest args"
+    (is
+      (check-if-inline-fn? (str "(defn my-fn [a & b] | (apply (partial + a) b))\n"
+                                "(my-fn 2)"))))
+  (testing "unavailable when argument list includes two formal params, no variadic arg, and no actual parameters"
+    (is (not
+          (check-if-inline-fn? (str "(defn my-fn [a b] | (+ a b))\n"
+                                    "(my-fn 2)")))))
+  (testing "inline function is unavailable for functions inside namespace with incorrect URI"
+    (h/reset-components!)
+    (let [file-uri (h/file-uri "file:///a.clj")
+          zloc     (h/load-code-and-zloc (str "(ns some-ns)\n"
+                                              "(defn foo2 [] | :a)\n"
+                                              "(foo2)") file-uri)]
+      (is (not
+            (transform/can-inline-fn? zloc (h/file-uri "file:///project/src/some_ns.clj") (h/db)))))))
 
 (defn ^:private selection->position [code preserve-position]
   (let [replacement-pattern (if (= preserve-position :preserve-start)
@@ -1100,6 +1703,390 @@
       "file:///a.clj"
       "file:///a.cljc"
       "file:///a.cljs"))
+  (testing "extracts an expression with no variables in a thread first form with the threading parameter as the first parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t]"
+                            "  (-> t"
+                            "      (+ 1)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (-> y |(+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  (testing "extracts a threaded expression with comments in it to a new function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t]"
+                            "  (-> t"
+                            "      (+ 1)"
+                            "      ; my comment 2"
+                            "      (+ 2)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function (str "(defn x [y] 
+                                                        (-> y 
+                                                          ; my comment 1
+                                                          |(+ 1)
+                                                          ; my comment 2
+                                                          (+ 2)|))")
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  (testing "extracts in cursor mode after a comment ignores the comment"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo []"
+                            "  (println \"there\"))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function (str "(defn x []"
+                                                     "  ; prints hi\n"
+                                                     "  (println \"hi\")\n"
+                                                     "  ; prints there\n"
+                                                     " | (println \"there\"))")
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts in cursor mode from a first node that is a comment only extracts the comment and next expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo []"
+                            "  ; prints hi"
+                            "  ; and then there"
+                            "  (println \"hi\"))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function (str "(defn x []"
+                                                     "  ; prints |hi\n"
+                                                     "  ; and then there\n"
+                                                     "  (println \"hi\")\n"
+                                                     "  (println \"there\"))")
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a threaded expression to a function that uses metadata for privacy"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
+                      (= [(h/code
+                            ""
+                            "(defn ^:private foo [t]"
+                            "  (-> t"
+                            "      (+ 1)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (-> y |(+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a some-> threaded expression to a function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t]"
+                            "  (some-> t"
+                            "          (+ 1)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (some-> y |(+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a some->> threaded expression to a function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t]"
+                            "  (some->> t"
+                            "           (+ 1)))"
+                            "")
+                          (h/code "(foo)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (some->> y |(+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "when extracting only the first expression from a threaded-first expression, don't include the threading"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y]"
+                            "  y)"
+                            "")
+                          (h/code "(foo y)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (-> |y| (+ 1) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "when extracting several expressions from a threaded-first expression that includes the first expression, 
+            make the first expression first in the new threading and don't include the implicit threading variable in
+            the function"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y]"
+                            "  (-> y"
+                            "      (+ 1 y)))"
+                            "")
+                          (h/code "(foo y)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y] (-> |y (+ 1 y)| (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts an expression with two variables in a thread first form with the threading parameter as the first parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t y z]"
+                            "  (-> t"
+                            "      (+ 1 y z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> y |(+ 1 y z) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if a thread form selection has a leading comment, include it "
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y z]"
+                            "  (-> "
+                            "      ;; info about expr"
+                            "      y"
+                            "      (+ 1 y z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> |;; info about expr\n  y (+ 1 y z)| (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "if an expression is first in a threaded expression, use the expression"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y z]"
+                            "  (-> (+ 1 y)"
+                            "      (+ 1 y z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> |(+ 1 y) (+ 1 y z)| (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a selection with multiple variables in a thread first form with the threading parameter as the first parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t y z]"
+                            "  (-> t"
+                            "      (+ 1 y)"
+                            "      (+ 2 z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> y |(+ 1 y) (+ 2 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts a selection with multiple variables in a thread using a different threading variable if t is already used"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [th y t z]"
+                            "  (-> th"
+                            "      (+ 1 y t)"
+                            "      (+ 2 z)))"
+                            "")
+                          (h/code "(foo y t z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z t] (-> y |(+ 1 y t) (+ 2 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  (testing "extracts a selection with multiple variables in a thread using a different threading variable if t and other preconfigured options are already used"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [x y t th thd z]"
+                            "  (-> x"
+                            "      (+ 1 y t th thd)"
+                            "      (+ 2 z)))"
+                            "")
+                          (h/code "(foo y t th thd z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z t th thd] (-> y |(+ 1 y t th thd) (+ 2 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+
+  (testing "extracts a selection with multiple variables in a thread using a generated threading variable if t and all other preconfigured options are already used"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [x y t th thd z]"
+                            "  (-> x"
+                            "      (+ 1 y t th thd)"
+                            "      (+ 2 z)))"
+                            "")
+                          (h/code "(foo y t th thd z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z t th thd] (-> y |(+ 1 y t th thd) (+ 2 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts an expression with enough variables in a thread last form that the predefined threading 
+            parameter list is completely used so a generated threading parameter is used as the last parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [a b c t th thd x d genvar_t]"
+                            "  (->> genvar_t"
+                            "       (+ 1 a b c t th thd x d)))"
+                            "")
+                          (h/code "(foo a b c t th thd x d)")]
+                         (let [orig-gensym gensym]
+                           (as-strings
+                             (with-redefs [gensym (fn ([] (orig-gensym)) ([prefix] (symbol (str "genvar_" prefix))))]
+                               (do-extract-function "(defn xyz [myth a b c t th thd x d] (->> myth |(+ 1 a b c t th thd x d) (+ 2)))"
+                                                    "foo"
+                                                    filepath))))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  ;; TODO: put this back as before??
+  (testing "extracts an expression with several variables in a thread last form with the threading parameter as the last parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [a b c t]"
+                            "  (->> t"
+                            "       (+ 1 a b c)))"
+                            "")
+                          (h/code "(foo a b c)")]
+                         (as-strings
+                           (do-extract-function "(defn x [a b c] (->> y |(+ 1 a b c) (+ 2)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "extracts an expression with an additional variable in a thread-first form with the threading parameter as the first parameter"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [t z]"
+                            "  (-> t"
+                            "      (+ 1 z)))"
+                            "")
+                          (h/code "(foo z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (-> y |(+ 1 z)))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  ;; TODO: is this the right approach?  Other ideas include widening the selection to 
+  ;; include the whole -> form 
+  (testing "when selection includes the threading macro, ignore that macro"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= [(h/code
+                            ""
+                            "(defn- foo [y z]"
+                            "  (-> y"
+                            "      (+ 1 z)))"
+                            "")
+                          (h/code "(foo y z)")]
+                         (as-strings
+                           (do-extract-function "(defn x [y z] (|-> y (+ 1 z)|))"
+                                                "foo"
+                                                filepath))))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
+  (testing "when selection is just the threading macro, return an error"
+    (are [filepath] (do
+                      (h/reset-components!)
+                      (= {:error {:message "Can't extract a macro"
+                                  :code :invalid-params}}
+                         (do-extract-function "(defn x [y z] (|->| y (+ 1 z)))"
+                                              "foo"
+                                              filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
   (testing "simple extract"
     (are [filepath] (do
                       (h/reset-components!)
@@ -1125,11 +2112,22 @@
                        "  |(+ 1 a))")
                (do-extract-function "foo")
                as-strings))))
-  (testing "with-setting"
+  (testing "with :use-metadata-for-privacy? setting"
     (h/reset-components!)
     (swap! (h/db*) shared/deep-merge {:settings {:use-metadata-for-privacy? true}})
     (is (= [(h/code ""
                     "(defn ^:private foo []"
+                    "  (inc 1))"
+                    "")
+            (h/code "(foo)")]
+           (-> "(|inc 1)"
+               (do-extract-function "foo")
+               as-strings))))
+  (testing "with :private-by-default-on-extract? false"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:private-by-default-on-extract? false}})
+    (is (= [(h/code ""
+                    "(defn foo []"
                     "  (inc 1))"
                     "")
             (h/code "(foo)")]
@@ -1164,6 +2162,7 @@
     (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a]"
+                    "  ;; comment"
                     "  (+ 1 a))"
                     "")
             (h/code "(foo a)")]
@@ -1177,6 +2176,7 @@
     (h/reset-components!)
     (is (= [(h/code ""
                     "(defn- foo [a]"
+                    "  ;; comment"
                     "  (+ 1 a))"
                     "")
             (h/code "(foo a)")]
@@ -1374,7 +2374,8 @@
     (testing "when namespace is not required and not exists"
       (h/reset-components!)
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
-                                                                   (h/file-path "/project/test")}}})
+                                                                   (h/file-path "/project/test")}
+                                                   :clean {:ns-inner-blocks-indentation :next-line}}})
       (let [zloc (h/load-code-and-zloc "(ns foo) (|bar.baz/something)"
                                        (h/file-uri "file:///project/src/foo.clj"))
             {:keys [changes-by-uri resource-changes]} (transform/create-function zloc (h/file-uri "file:///project/src/foo.clj") (h/db))
@@ -1404,7 +2405,7 @@
 (defn- extract-to-def
   [code new-def-name]
   (let [zloc (h/zloc-from-code code)]
-    (transform/extract-to-def zloc new-def-name)))
+    (transform/extract-to-def zloc new-def-name (h/db))))
 
 (deftest extract-to-def-test
   (h/reset-components!)
@@ -1424,7 +2425,18 @@
           (h/code "new-value")]
          (-> "|{:a 1}"
              (extract-to-def nil)
-             as-strings))))
+             as-strings)))
+  (testing "with :private-by-default-on-extract? false"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:private-by-default-on-extract? false}})
+    (is (= [(h/code ""
+                    "(def foo"
+                    "  {:a 1})"
+                    "")
+            (h/code "foo")]
+           (-> "|{:a 1}"
+               (extract-to-def "foo")
+               as-strings)))))
 
 (deftest can-create-test?
   (testing "when on multiples functions"
@@ -1518,6 +2530,36 @@
                               "  (is (= 1 1)))"),
                  :range {:row 3 :col 1 :end-row 5 :end-col 1}}]}
               results-to-assert)))))
+    (testing "when the deftest already exists, navigates without editing"
+      (doseq [[label test-code expected-row]
+              [["unqualified deftest"
+                (h/code "(ns some.ns-test)"
+                        "(deftest some-other-test)"
+                        "(deftest foo-test"
+                        "  (is (= 1 1)))")
+                3]
+               ["qualified clojure.test/deftest"
+                (h/code "(ns some.ns-test)"
+                        "(clojure.test/deftest foo-test"
+                        "  (is (= 1 1)))")
+                2]]]
+        (testing label
+          (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src")
+                                                                       (h/file-path "/project/test")}}
+                                            :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
+                                            :project-root-uri (h/file-uri "file:///project")})
+          (with-redefs [shared/file-exists? #(not (string/ends-with? % "config.edn"))
+                        shared/slurp-uri (constantly test-code)]
+            (h/load-code-and-locs test-code (h/file-uri "file:///project/test/some/ns_test.clj"))
+            (let [zloc (h/load-code-and-zloc "(ns some.ns) (defn |foo [b] (+ 1 2))"
+                                             (h/file-uri "file:///project/src/some/ns.clj"))
+                  {:keys [changes-by-uri resource-changes
+                          show-document-after-edit]} (transform/create-test zloc (h/file-uri "file:///project/src/some/ns.clj") (h/db) (h/components))]
+              (is (= nil resource-changes))
+              (is (= nil changes-by-uri))
+              (is (= (h/file-uri "file:///project/test/some/ns_test.clj")
+                     (:uri show-document-after-edit)))
+              (is (= expected-row (get-in show-document-after-edit [:range :row]))))))))
     (testing "when the current source path is already a test"
       (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/project/src") (h/file-path "/project/test")}}
                                         :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}
@@ -2025,3 +3067,178 @@
         :range {:row 1 :col 1 :end-row 1 :end-col 1}}]
       (suppress-diagnostic (h/code "|zzz")
                            "unresolved-symbol"))))
+
+(deftest can-refer->as?-test
+  (testing "true when both :refer and :as present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer [baz]]))")]
+      (is (transform/can-refer->as? zloc))))
+  (testing "false when only :as present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b]))")]
+      (is (not (transform/can-refer->as? zloc)))))
+  (testing "false when only :refer present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :refer |[baz]]))")]
+      (is (not (transform/can-refer->as? zloc)))))
+  (testing "false when :refer :all present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer :all]))")]
+      (is (not (transform/can-refer->as? zloc)))))
+  (testing "false when :refer has no vector (malformed)"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer]))")]
+      (is (not (transform/can-refer->as? zloc))))))
+
+(deftest can-as->refer?-test
+  (testing "true when :as present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b]))")]
+      (is (transform/can-as->refer? zloc))))
+  (testing "false when no :as"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :refer |[baz]]))")]
+      (is (not (transform/can-as->refer? zloc)))))
+  (testing "false when :refer :all present"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer :all]))")]
+      (is (not (transform/can-as->refer? zloc)))))
+  (testing "false when :refer has no vector (malformed)"
+    (let [zloc (h/zloc-from-code "(ns foo (:require [bar :as |b :refer]))")]
+      (is (not (transform/can-as->refer? zloc))))))
+
+(deftest refer->as-test
+  (testing "single referred symbol used in body"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar :as b |:refer [baz]]))"
+                         ""
+                         "(baz)"))
+          result (transform/refer->as zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b]))"
+                     ""
+                     "(b/baz)")
+             (h/changes->code result (h/db))))))
+  (testing "multiple referred symbols"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar :as |b :refer [baz qux]]))"
+                         ""
+                         "(baz)"
+                         "(qux)"))
+          result (transform/refer->as zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b]))"
+                     ""
+                     "(b/baz)"
+                     "(b/qux)")
+             (h/changes->code result (h/db))))))
+  (testing "mixed usage - some aliased, some referred"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b :refer [baz]]))"
+                         ""
+                         "(baz)"
+                         "(b/qux)"))
+          result (transform/refer->as zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b]))"
+                     ""
+                     "(b/baz)"
+                     "(b/qux)")
+             (h/changes->code result (h/db))))))
+  (testing "does not rewrite same-named qualified usages from another namespace"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar :as b |:refer [baz]]"
+                         "   [other :as o]))"
+                         ""
+                         "(baz)"
+                         "(o/baz)"))
+          result (transform/refer->as zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b]"
+                     "   [other :as o]))"
+                     ""
+                     "(b/baz)"
+                     "(o/baz)")
+             (h/changes->code result (h/db)))))))
+
+(deftest as->refer-test
+  (testing "single aliased symbol used in body, no existing refer"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b]))"
+                         ""
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :refer [qux]]))"
+                     ""
+                     "(qux)")
+             (h/changes->code result (h/db))))))
+  (testing "single aliased symbol with existing refer merges symbols"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b :refer [baz]]))"
+                         ""
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :refer [baz qux]]))"
+                     ""
+                     "(qux)")
+             (h/changes->code result (h/db))))))
+  (testing "multiple aliased usages, no existing refer"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b]))"
+                         ""
+                         "(b/baz)"
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :refer [baz qux]]))"
+                     ""
+                     "(baz)"
+                     "(qux)")
+             (h/changes->code result (h/db))))))
+  (testing "multiple aliased usages with existing refer merges all"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b :refer [zap]]))"
+                         ""
+                         "(b/baz)"
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :refer [baz qux zap]]))"
+                     ""
+                     "(baz)"
+                     "(qux)")
+             (h/changes->code result (h/db))))))
+  (testing "preserves alias used by auto-resolved keywords"
+    (let [zloc (h/load-code-and-zloc
+                 (h/code "(ns foo"
+                         "  (:require"
+                         "   [bar |:as b]))"
+                         ""
+                         "::b/id"
+                         "(b/qux)"))
+          result (transform/as->refer zloc h/default-uri (h/db))]
+      (is (= (h/code "(ns foo"
+                     "  (:require"
+                     "   [bar :as b :refer [qux]]))"
+                     ""
+                     "::b/id"
+                     "(qux)")
+             (h/changes->code result (h/db)))))))

@@ -98,6 +98,7 @@ All commands expect the first three args to be `[document-uri, line, character]`
 |------|---------------------|---------------------------------------------------------------------------|-------|
 | √    | add-missing-import  | `[document-uri, line, character, import-name]`                            |       |
 | √    | add-missing-libspec |                                                                           |       |
+| √    | as-to-refer         |                                                                           |       |
 | √    | clean-ns            |                                                                           |       |
 | √    | cond->if-refactor   |                                                                           |       |
 | √    | cycle-coll          |                                                                           |       |
@@ -105,9 +106,11 @@ All commands expect the first three args to be `[document-uri, line, character]`
 | √    | expand-let          |                                                                           |       |
 | √    | extract-function    | `[document-uri, line, character, function-name]`                          |       |
 | √    | if->cond-refactor   |                                                                           |       |
+| √    | inline-function   |                                                                           |       |
 | √    | inline-symbol       |                                                                           |       |
 | √    | introduce-let       | `[document-uri, line, character, binding-name]`                           |       |
 | √    | move-to-let         | `[document-uri, line, character, binding-name]`                           |       |
+| √    | refer-to-as         |                                                                           |       |
 | √    | thread-first        |                                                                           |       |
 | √    | thread-first-all    |                                                                           |       |
 | √    | thread-last         |                                                                           |       |

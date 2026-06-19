@@ -72,8 +72,8 @@
               capabilities-markdown
               (is (= {:kind  "markdown"
                       :value (join [start-code
-                                    "a/foo"
-                                    "[x]"
+                                    "(a/foo"
+                                    " [x])"
                                     end-code
                                     ""
                                     "Some cool docs :foo"
@@ -83,8 +83,8 @@
                      (:contents (hover foo-row foo-col))))
               (is (= {:kind  "markdown"
                       :value (join [start-code
-                                    "a/foo"
-                                    "[x]"
+                                    "(a/foo"
+                                    " [x])"
                                     end-code
                                     ""
                                     "Some cool docs :foo"
@@ -97,8 +97,8 @@
                 settings-edits-warning
                 (is (= {:kind  "markdown"
                         :value (join [start-code
-                                      "a/foo"
-                                      "[x]"
+                                      "(a/foo"
+                                      " [x])"
                                       end-code
                                       ""
                                       "* includes additional edits"
@@ -114,7 +114,7 @@
           (with-db
             settings-one-line-deprecated
             (testing "plain"
-              (is (= [{:language "clojure" :value "a/foo [x]"}
+              (is (= [{:language "clojure" :value "(a/foo [x])"}
                       "Some cool docs :foo"
                       (h/file-path "/a.clj")]
                      (:contents (hover foo-row foo-col)))))
@@ -124,7 +124,7 @@
                 capabilities-markdown
                 (is (= {:kind  "markdown"
                         :value (join [start-code
-                                      "a/foo [x]"
+                                      "(a/foo [x])"
                                       end-code
                                       ""
                                       "Some cool docs :foo"
@@ -137,7 +137,7 @@
           (with-db
             settings-one-line
             (testing "plain"
-              (is (= [{:language "clojure" :value "a/foo [x]"}
+              (is (= [{:language "clojure" :value "(a/foo [x])"}
                       "Some cool docs :foo"
                       (h/file-path "/a.clj")]
                      (:contents (hover foo-row foo-col)))))
@@ -147,7 +147,7 @@
                 capabilities-markdown
                 (is (= {:kind  "markdown"
                         :value (join [start-code
-                                      "a/foo [x]"
+                                      "(a/foo [x])"
                                       end-code
                                       ""
                                       "Some cool docs :foo"
@@ -170,8 +170,8 @@
                 capabilities-markdown
                 (is (= {:kind  "markdown"
                         :value (join [start-code
-                                      "a/foo"
-                                      "[x]"
+                                      "(a/foo"
+                                      " [x])"
                                       end-code
                                       ""
                                       "Some cool docs :foo"])}
@@ -199,8 +199,8 @@
               capabilities-markdown
               (is (= {:kind  "markdown"
                       :value (join [start-code
-                                    "a/bar"
-                                    "[y]"
+                                    "(a/bar"
+                                    " [y])"
                                     end-code
                                     line-break
                                     (format "*[%s](%s)*"
@@ -209,8 +209,8 @@
                      (:contents (hover bar-row bar-col))))
               (is (= {:kind  "markdown"
                       :value (join [start-code
-                                    "a/bar"
-                                    "[y]"
+                                    "(a/bar"
+                                    " [y])"
                                     end-code
                                     line-break
                                     (format "*[%s](%s)*"
@@ -221,8 +221,8 @@
                 settings-edits-warning
                 (is (= {:kind  "markdown"
                         :value (join [start-code
-                                      "a/bar"
-                                      "[y]"
+                                      "(a/bar"
+                                      " [y])"
                                       end-code
                                       ""
                                       "* includes additional edits"
@@ -236,7 +236,7 @@
           (with-db
             settings-one-line-deprecated
             (testing "plain"
-              (is (= [{:language "clojure" :value "a/bar [y]"}
+              (is (= [{:language "clojure" :value "(a/bar [y])"}
                       (h/file-path "/a.clj")]
                      (:contents (hover bar-row bar-col)))))
 
@@ -245,7 +245,7 @@
                 capabilities-markdown
                 (is (= {:kind "markdown"
                         :value (join [start-code
-                                      "a/bar [y]"
+                                      "(a/bar [y])"
                                       end-code
                                       line-break
                                       (format "*[%s](%s)*"
@@ -260,7 +260,7 @@
                              "foo|")
                 [[foo-r foo-c]] (h/load-code-and-locs code)]
             (is (= [{:language "clojure"
-                     :value "a/foo [y x] [z w]"}
+                     :value "(a/foo [y x] [z w])"}
                     (h/file-path "/a.clj")]
                    (:contents (hover foo-r foo-c)))))))
       (testing "On function usage corner cases"
@@ -278,18 +278,18 @@
                  [bar-row bar-col]
                  [anon-row anon-col]] (h/load-code-and-locs code)]
             (is (= [{:language "clojure"
-                     :value "a/foo [x y]"}
+                     :value "(a/foo [x y])"}
                     "Some cool docs :foo"
                     (h/file-path "/a.clj")]
                    (:contents (hover foo-row foo-col))))
-            (is (= ["calling: clojure.core/->>"
+            (is (= ["calling: (clojure.core/->>)"
                     {:language "clojure"
-                     :value "a/bar [x y]"}
+                     :value "(a/bar [x y])"}
                     "Other cool docs :bar"
                     (h/file-path "/a.clj")]
                    (:contents (hover bar-row bar-col))))
             (is (= [{:language "clojure"
-                     :value "a/foo [x y]"}
+                     :value "(a/foo [x y])"}
                     "Some cool docs :foo"
                     (h/file-path "/a.clj")]
                    (:contents (hover anon-row anon-col))))
@@ -297,7 +297,7 @@
               (with-db
                 settings-hide-calling
                 (is (= [{:language "clojure"
-                         :value "a/bar [x y]"}
+                         :value "(a/bar [x y])"}
                         "Other cool docs :bar"
                         (h/file-path "/a.clj")]
                        (:contents (hover bar-row bar-col)))))))))
@@ -307,9 +307,9 @@
           (let [code (h/code "(ns a)"
                              "(defn |foo \"Some cool docs :foo\" [x y] x)")
                 [[foo-row foo-col]] (h/load-code-and-locs code)]
-            (is (= ["calling: clojure.core/defn"
+            (is (= ["calling: (clojure.core/defn)"
                     {:language "clojure"
-                     :value "a/foo [x y]"}
+                     :value "(a/foo [x y])"}
                     "Some cool docs :foo"
                     (h/file-path "/a.clj")]
                    (:contents (hover foo-row foo-col)))))))
@@ -317,7 +317,7 @@
         (let [_ (h/load-code-and-locs (h/code "(ns ^{:doc \"Some cool docstring\"} some-a)") (h/file-uri "file:///some_a.clj"))
               code-b (h/code "(ns some-b (:require [some-|a :as abc]))")
               [[row col]] (h/load-code-and-locs code-b (h/file-uri "file:///some_b.clj"))]
-          (is (= ["calling: :require"
+          (is (= ["calling: (:require)"
                   {:language "clojure"
                    :value "some-a"}
                   "Some cool docstring"

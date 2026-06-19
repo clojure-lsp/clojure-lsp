@@ -20,3 +20,4 @@
 ## Architecture
 - `lib/` contains core logic (features, handlers, analysis). `cli/` is the CLI wrapper.
 - Features in `lib/src/clojure_lsp/feature/`. Tests mirror structure in `lib/test/`.
+- Documentation in `docs/` folder

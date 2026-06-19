@@ -14,6 +14,7 @@
   (lsp/notify! (fixture/initialized-notification))
   (lsp/notify! (fixture/did-open-source-path-notification "definition/a.clj"))
   (lsp/notify! (fixture/did-open-source-path-notification "definition/b.clj"))
+  (lsp/notify! (fixture/did-open-source-path-notification "definition/c.clj"))
 
   (testing "common vars"
     (testing "find definition on same ns"
@@ -35,7 +36,15 @@
         {:uri (h/source-path->uri "definition/a.clj")
          :range {:start {:line 5 :character 6}
                  :end {:line 5 :character 22}}}
-        (lsp/request! (fixture/definition-request (h/source-path->uri "definition/b.clj") 3 4)))))
+        (lsp/request! (fixture/definition-request (h/source-path->uri "definition/b.clj") 3 4))))
+
+    (testing "find definition of fully qualified var without require"
+      (h/assert-submap
+        {:uri (h/source-path->uri "definition/a.clj")
+         :range {:start {:line 5 :character 6}
+                 :end {:line 5 :character 22}}}
+        (lsp/request! (fixture/definition-request
+                        (h/source-path->uri "definition/c.clj") 2 27)))))
 
   (testing "keywords"
     (testing "definition of local simple keyword is the keyword itself"
@@ -80,7 +89,7 @@
     (testing "LSP features work on external clojure opened files"
       (h/assert-submap
         {:language "clojure"
-         :value "[x]\n[x message]"}
+         :value "[x]\n [x message]"}
         (-> (lsp/request! (fixture/hover-external-uri-request uri 7612 5))
             :contents
             (get 1))))))
@@ -101,7 +110,7 @@
     (testing "LSP features work on external clojure opened files"
       (h/assert-submap
         {:language "clojure"
-         :value "[x]\n[x message]"}
+         :value "[x]\n [x message]"}
         (-> (lsp/request! (fixture/hover-external-uri-request uri 7612 5))
             :contents
             (get 1))))))
@@ -124,7 +133,7 @@
       (testing "LSP hover feature works on external clojure opened files"
         (h/assert-submap
           {:language "clojure"
-           :value "[x]\n[x message]"}
+           :value "[x]\n [x message]"}
           (-> (lsp/request! (fixture/hover-external-uri-request (h/escape-uri uri) 7612 5))
               :contents
               (get 1))))

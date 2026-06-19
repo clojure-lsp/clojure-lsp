@@ -80,8 +80,11 @@
 (defmethod run-command :extract-function [{:keys [row col end-row end-col loc loc-end uri args db]}]
   (apply r.transform/extract-function row col end-row end-col loc loc-end uri (concat args [db])))
 
-(defmethod run-command :extract-to-def [{:keys [loc args]}]
-  (apply r.transform/extract-to-def loc args))
+(defmethod run-command :inline-function [{:keys [loc uri args db]}]
+  (apply r.transform/inline-function loc uri (concat args [db])))
+
+(defmethod run-command :extract-to-def [{:keys [loc args db]}]
+  (apply r.transform/extract-to-def loc (concat args [db])))
 
 (defmethod run-command :get-in-more [{:keys [loc]}]
   (f.thread-get/get-in-more loc))
@@ -103,6 +106,9 @@
 
 (defmethod run-command :move-to-let [{:keys [loc uri db args]}]
   (apply r.transform/move-to-let loc uri db args))
+
+(defmethod run-command :move-to-for-let [{:keys [loc uri db args]}]
+  (apply r.transform/move-to-for-let loc uri db args))
 
 (defmethod run-command :thread-first [{:keys [loc db]}]
   (r.transform/thread-first loc db))
@@ -167,6 +173,12 @@
 (defmethod run-command :replace-refer-all-with-alias  [{:keys [loc uri db]}]
   (f.replace-refer-all/replace-with-alias loc uri db))
 
+(defmethod run-command :refer-to-as  [{:keys [loc uri db]}]
+  (r.transform/refer->as loc uri db))
+
+(defmethod run-command :as-to-refer  [{:keys [loc uri db]}]
+  (r.transform/as->refer loc uri db))
+
 (defmethod run-command :forward-slurp  [{:keys [uri loc row col]}]
   (f.paredit/forward-slurp uri loc row col))
 
@@ -224,7 +236,7 @@
   ;; had already hardcoded array values (such as Calva changing the new function name
   ;; in args[3]) won't need to change
   (let [[uri line character & args] arguments
-        selection? (= :extract-function command)
+        selection? (and (= :extract-function command) (> (count args) 2))
         line-end (if selection? (nth args 1) line)
         character-end (if selection? (nth args 2) character)
         fn-args (if selection? (drop-last 2 args) args)

@@ -82,15 +82,59 @@
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db)))))
   (testing "when it has a project root and not a source-path"
     (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
-                                                 :source-paths #{(h/file-uri "file:///user/project/bla")}}
+                                                 :source-paths #{(h/file-path "file:///user/project/bla")}}
                                       :project-root-uri (h/file-uri "file:///user/project")})
     (is (nil? (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db)))))
+  (testing "when has to guess namespace from uri and there is no project root or source path"
+    (h/reset-components!)
+    (is (= "bar" (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db) true))))
+  (testing "when has to guess namespace from uri and there is no project root or source path and uri has a space"
+    (h/reset-components!)
+    (is (= "bar" (shared/uri->namespace (h/file-uri "file:///user/project/%20src/foo/bar.clj") (h/db) true))))
+  (testing "when has to guess namespace from uri and there is no project root or source path and uri has a regex char"
+    (h/reset-components!)
+    (is (= "bar" (shared/uri->namespace (h/file-uri "file:///user/project/src+/foo/bar.clj") (h/db) true))))
+  (testing "when has to guess namespace from uri and there is a project root no source path"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true}
+                                      :project-root-uri (h/file-uri "file:///user/project")})
+    (is (= "foo.bar" (shared/uri->namespace (h/file-uri "file:///user/project/foo/bar.clj") (h/db) true))))
+
+  (testing "when has to guess namespace from uri and there is a source path that encompasses the uri"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")
+                                      :settings {:source-paths [(h/file-path "/path/to/Projects/clojure-lsp/lib/src")]}})
+    (is (= "foo.a" (shared/uri->namespace (h/file-uri "file:///path/to/Projects/clojure-lsp/lib/src/foo/a.clj") (h/db) true))))
+
+  (testing "when has to guess namespace from uri and there is a project root with ending slash, but no source path"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true}
+                                      :project-root-uri (h/file-uri "file:///user/project/")})
+    (is (= "foo.bar" (shared/uri->namespace (h/file-uri "file:///user/project/foo/bar.clj") (h/db) true))))
+  (testing "when has to guess namespace from uri and there is a project root but file uri isn't in source paths"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
+                                                 :source-paths #{(h/file-path "/user/project/bla")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")})
+    (is (= "foo.bar" (shared/uri->namespace (h/file-uri "file:///user/project/foo/bar.clj") (h/db) true))))
+  (testing "when has to guess namespace from uri and there is a project root with a uri that is inside the source paths"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
+                                                 :source-paths #{(h/file-path "/user/project/src")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")})
+    (is (= "foo.bar" (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db) true))))
   (testing "when it has a project root and a source-path"
     (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                  :source-paths #{(h/file-path "/user/project/src")}}
                                       :project-root-uri (h/file-uri "file:///user/project")})
     (is (= "foo.bar"
            (shared/uri->namespace (h/file-uri "file:///user/project/src/foo/bar.clj") (h/db)))))
+  (testing "when it has a project root with regex special chars and a source-path"
+    (swap! (h/db*) shared/deep-merge {:settings {:auto-add-ns-to-new-files? true
+                                                 :source-paths #{(h/file-path "/user.+/project/src")}}
+                                      :project-root-uri (h/file-uri "file:///user.+/project")})
+    (is (= "foo.bar"
+           (shared/uri->namespace (h/file-uri "file:///user.+/project/src/foo/bar.clj") (h/db)))))
   (testing "when it has a project root a source-path on mono repos"
     (swap! (h/db*) medley/deep-merge {:settings {:auto-add-ns-to-new-files? true
                                                  :source-paths #{(h/file-path "/user/project/src/clj")
@@ -146,7 +190,13 @@
                     :character 0}
             :end   {:line      0
                     :character 0}}
-           (shared/->range {:row 0 :end-row 0 :col 0 :end-col 0})))))
+           (shared/->range {:row 0 :end-row 0 :col 0 :end-col 0}))))
+  (testing "should tolerate elements without positions like java definitions"
+    (is (= {:start {:line      0
+                    :character 0}
+            :end   {:line      0
+                    :character 0}}
+           (shared/->range {:class "foo.Bar" :bucket :java-class-definitions})))))
 
 (def unescape-uri #'shared/unescape-uri)
 

@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.dep-graph :as dep-graph]
    [clojure-lsp.logger :as logger]
+   [clojure-lsp.producer :as producer]
    [clojure-lsp.queries :as q]
    [clojure-lsp.settings :as settings]
    [clojure-lsp.shared :as shared :refer [fast=]]
@@ -142,18 +143,27 @@
   {:uri uri
    :diagnostics []})
 
+(defn ^:private diagnostics-for-uris [uris publish-empty? db]
+  (let [all-diagnostics (->> uris
+                             (remove #(fast= :unknown (shared/uri->file-type %)))
+                             (map #(diagnostics-of-uri % db)))]
+    (if publish-empty?
+      all-diagnostics
+      (filter #(not-empty (:diagnostics %)) all-diagnostics))))
+
 (defn publish-diagnostics! [uri {:keys [db*] :as components}]
   (publish-diagnostic!* components (diagnostics-of-uri uri @db*)))
 
 (defn publish-all-diagnostics! [uris publish-empty? {:keys [db*] :as components}]
-  (let [db @db*
-        all-diagnostics (->> uris
-                             (remove #(fast= :unknown (shared/uri->file-type %)))
-                             (map #(diagnostics-of-uri % db)))
-        diagnostics (if publish-empty?
-                      all-diagnostics
-                      (filter #(not-empty (:diagnostics %)) all-diagnostics))]
-    (publish-all-diagnostics!* components diagnostics)))
+  (publish-all-diagnostics!* components (diagnostics-for-uris uris publish-empty? @db*)))
+
+(defn publish-all-diagnostics-directly!
+  "Publishes diagnostics for all uris straight to the producer, bypassing the
+  debounced diagnostics channel. Suited for one-shot bulk publishes such as
+  startup, where the per-uri debounce only adds latency."
+  [uris publish-empty? {:keys [db* producer]}]
+  (doseq [diagnostic (diagnostics-for-uris uris publish-empty? @db*)]
+    (producer/publish-diagnostic producer diagnostic)))
 
 (defn publish-empty-diagnostics! [uris components]
   (publish-all-diagnostics!* components (map empty-diagnostics-of-uri uris)))

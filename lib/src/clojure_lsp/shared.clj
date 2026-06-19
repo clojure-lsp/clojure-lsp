@@ -16,7 +16,7 @@
    [java.nio.charset StandardCharsets]
    [java.nio.file Paths]
    [java.security MessageDigest]
-   [java.util.regex Matcher]))
+   [java.util.regex Matcher Pattern]))
 
 (set! *warn-on-reflection* true)
 
@@ -365,32 +365,78 @@
     (ensure-ends-with-slash path)
     path))
 
+(defn ^:private filename-uri-part->namespace
+  "given a (native) filename, turn it into a namespace by lopping off
+   the extension, replacing slashes with dots, and replacing underscores
+   with dashes"
+  [filename]
+  (some-> filename
+          (->> (re-find #"^(.+)\.\S+$"))  ;; group everything except file extension
+          (nth 1)
+          (string/replace "/" ".")
+          (string/replace #"[_\s]" "-")))
+
+(defn ^:private guess-filename-from-root [uri project-root-uri]
+  (let [project-root-ending-with-slash (if (string/ends-with? project-root-uri "/") project-root-uri (str project-root-uri "/"))
+        quoted-project-root (Pattern/quote project-root-ending-with-slash)]
+    (second (re-matches (re-pattern (str quoted-project-root "(.*)")) uri))))
+
+(defn ^:private guess-filename-from-name [uri]
+  ;; take only the part after the last slash
+  (last (string/split uri #"/")))
+
+(defn ^:private to-uri-part
+  "converts a native filepath into a piece of a URI suitable for converting to a namespace
+   (should handle backslashes in windows due to converting to a file first)"
+  [native-filepath]
+  (some-> native-filepath
+          io/file
+          .getPath
+          (string/replace fs/file-separator "/")))
+
 (defn uri->namespace
-  [uri db]
-  (let [filename (uri->filename uri)
-        project-root-uri (:project-root-uri db)
-        source-paths (get-in db [:settings :source-paths])
-        in-project? (when project-root-uri
-                      (string/starts-with? uri project-root-uri))
-        file-type (uri->file-type uri)]
-    (when (and in-project? (not= :unknown file-type))
-      (->> source-paths
-           (map path->folder-with-slash)
-           (filename->source-paths filename)
-           (keep (fn [source-path]
-                   (some-> (relativize-filepath filename source-path)
-                           (->> (re-find #"^(.+)\.\S+$"))
-                           (nth 1)
-                           (string/replace (System/getProperty "file.separator") ".")
-                           (string/replace #"_" "-"))))
-           (reduce (fn [source-path-a source-path-b]
-                     (cond
-                       (not source-path-b) source-path-a
-                       (not source-path-a) source-path-b
-                       :else (if (> (count source-path-a)
-                                    (count source-path-b))
-                               source-path-b
-                               source-path-a))) nil)))))
+  ([uri db] (uri->namespace uri db false))
+  ([uri db guess-ns?]
+   (let [filename (uri->filename uri)
+         project-root-uri (:project-root-uri db)
+         source-paths (get-in db [:settings :source-paths])
+         in-project? (when project-root-uri
+                       (string/starts-with? uri project-root-uri))
+         file-type (uri->file-type uri)]
+     (cond
+       (and in-project? (not= :unknown file-type))
+       (or
+         (->> source-paths
+              (map path->folder-with-slash)
+              (filename->source-paths filename)
+              (keep (fn [source-path]
+                      (some-> (relativize-filepath filename source-path)
+                              (to-uri-part)
+                              filename-uri-part->namespace)))
+              (reduce (fn [source-path-a source-path-b]
+                        (cond
+                          (not source-path-b) source-path-a
+                          (not source-path-a) source-path-b
+                          :else (if (> (count source-path-a)
+                                       (count source-path-b))
+                                  source-path-b
+                                  source-path-a))) nil))
+         (when guess-ns?
+           (filename-uri-part->namespace (guess-filename-from-root uri project-root-uri))))
+
+       (and (not= :unknown file-type) guess-ns?)
+       (filename-uri-part->namespace (guess-filename-from-name uri))
+
+       :else
+       nil))))
+
+(defn uri->safe-namespace
+  ([uri db]
+   (uri->safe-namespace uri db false))
+  ([uri db guess-ns?]
+   (and (contains? #{:clj :cljs :cljc} (uri->file-type uri))
+        (not (get (:create-ns-blank-files-denylist db) uri))
+        (uri->namespace uri db guess-ns?))))
 
 (defn inside?
   "Checks if element `a` is inside element `b` scope."
@@ -424,8 +470,9 @@
    (inc (:character position))])
 
 (defn row-col->position [row col]
-  {:line (max 0 (dec row))
-   :character (max 0 (dec col))})
+  ;; nil row/col happens for elements without positions like java definitions
+  {:line (max 0 (dec (or row 1)))
+   :character (max 0 (dec (or col 1)))})
 
 (defn debounce-all
   "Debounce in channel with ms miliseconds returning all values."
@@ -542,7 +589,7 @@
 (def full-file-range
   (->range {:row 1 :col 1 :end-row 1000000 :end-col 1000000}))
 
-(defn ^:private paths->checksums
+(defn paths->checksums
   "Return a map with file's last modified timestamp by filename."
   [paths]
   (reduce

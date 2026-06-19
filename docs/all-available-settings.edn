@@ -40,6 +40,7 @@
         :decompile-jar-as-project? true}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true
+ :private-by-default-on-extract? true
  :use-metadata-for-privacy? false
  :auto-add-ns-to-new-files? true
  :keep-parens-when-threading? false
@@ -63,7 +64,7 @@
  :analysis {:keywords {:definitions true
                        :usages true}
             :java {:class-definitions true
-                   :member-definitions true}
+                   :member-definitions :lazy} ;; :lazy/:on-demand, true (eager) or false
             :symbols true}
  :otlp {:enabled false
         :config {}} ;; map with properties to configure opentelemetry log via timbre.

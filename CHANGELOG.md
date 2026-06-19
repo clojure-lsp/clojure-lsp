@@ -1,6 +1,46 @@
 # Changelog
 
 ## Unreleased
+- add missing namespace form, guessing at the name if outside of project sources, 
+  when adding a missing :require or :import via the Add Require code action.  #1734
+
+
+- Reduce memory usage of java class and member definitions analysis. #2314
+- Shrink db cache file considerably not serializing redundant analysis elements uri. #2315
+- Run the db cache write on a dedicated thread so the blocking write no longer ties up a core.async dispatch thread during startup. #2318
+- Skip re-analysis of unchanged source paths on warm startup by persisting the internal analysis, dep-graph, documents and clj-kondo findings in the db cache and only re-analyzing source files whose checksum changed. #2316
+- Optimize clj-kondo analysis ingestion with single-pass normalization using transients, a process-global filename->uri cache, and shallow batch merging. #2317
+- Scale the JVM server heap to a percentage of available RAM (`-XX:MaxRAMPercentage`) instead of a fixed `-Xmx`, matching the native image and avoiding out-of-memory on very large projects. #2313
+- Analyze external java member definitions lazily on first navigation/hover/completion instead of all up front, drastically reducing memory usage on projects with large dependency sets. Set `:analysis :java :member-definitions` to `true` to keep the previous eager behavior. #2313
+- Publish startup diagnostics directly and off the `initialize` critical path, so large projects become interactive much sooner (warm `initialize` dropped from ~73s to ~8s on a large monorepo, with diagnostics streaming in right after). #2326
+- Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
+- Bump clj-kondo to `2026.05.26-20260612.132029-18`.
+- Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292
+- Fix `cyclic-dependencies` linter falsely reporting cycles for `:as-alias` requires. #2108
+
+## 2026.05.05-12.58.26
+
+- Fix `cyclic-dependencies` linter falsely reporting cycles for `(require ...)` calls inside `(comment ...)` forms. #2107
+- Support find-definition for fully qualified vars even when the namespace is not explicitly required. #2028
+- Fix `create-test` code action appending a duplicate `deftest` when one with the matching name already exists, now navigating to the existing deftest instead. #2274
+- Change the default of `:clean :ns-inner-blocks-indentation` from `:next-line` to `:keep`, so `clean-ns` (including the automatic run after `add-missing-libspec`, `add-require-suggestion`, `add-missing-import`, and `move-form`) no longer reflows the `:require`/`:import` block when the user has not configured an indentation style. Users who want the previous behavior can set `:clean :ns-inner-blocks-indentation :next-line` explicitly. #2261
+- Fix `add-missing-require` refer suggestions leaking across languages, so a `.clj` file no longer offers refers defined only in `.cljs` files (and vice versa). #2271
+- Add `:private-by-default-on-extract?` setting to control whether extracted functions and defs are private by default. #2258
+- Measure performance of code actions
+- Avoid incorrect circular dependency errors from `:as-alias` by working around clj-depend bug.
+- Fix inline-def to work with defs with metas.
+- Bump clj-kondo to `2026.04.16-20260503.191510-9`.
+- bump up timeout for code action performance measurement, include p90 measurement #2236
+- implementation of inline function. #1827
+- Fix initialization crash when a source file has syntax errors (e.g. unbalanced parens) by using safe parser in unused-public-var linter's `:gen-class` check. #2242
+- Bump rewrite-clj to `1.2.54`.
+- implement move to :let refactoring #1732
+- Measure performance of didOpen and didChange
+- if code-action selection end-position args aren't provided, don't try to use them #2276
+- add unit tests for command actions location args #2279
+- New code actions: replace `:refer` with `:as` and replace `:as` with `:refer`, with support for merging into existing `:refer` vectors.
+
+## 2026.02.20-16.08.58
 
 - Add `as->` to the "Resolve macro as" list
 - New code actions: refactor cond to if, and refactor if to cond
@@ -8,22 +48,27 @@
 - Fix CLI format `:style/indent` support via project type flag.
 - Fix format `:style/indent` conflicts with core macros. #2197
 - Lots of bumps:
-  - clj-kondo: 2025.12.24-20251229.120141-5
+  - clj-kondo: 2026.01.19
   - rewrite-clj: 1.2.50 -> 1.2.51
   - clojure: 1.12.0 -> 1.12.4
   - core.async: 1.6.681 -> 1.8.741
-  - cljfmt: 0.15.5 -> 0.15.6
-  - babashka/fs: 0.5.28 -> 0.5.30
-  - babashka/sci: 0.9.45 -> 0.11.50
+  - cljfmt: 0.15.5 -> 0.16.0
+  - babashka/fs: 0.5.28 -> 0.5.31
+  - babashka/sci: 0.9.45 -> 0.12.51
   - babashka/cli: 0.8.65 -> 0.8.67
   - babashka/process: 0.5.22 -> 0.6.25
   - timbre: 6.7.0-alpha1 -> 6.8.0
   - clj-otel-api: 0.2.7 -> 0.2.10
-  - opentelemetry: 1.51.0 -> 1.57.0
+  - opentelemetry: 1.51.0 -> 1.59.0
   - bb.pods: -> ed5e1f3
   - lsp4clj: 1.13.1 -> 2.0.1
 - Add selection to Extract Function code action #2118
 - Fix replace-refer-all mangling unrelated symbols #2150
+- Add threading to Extract Function code action #2175
+- Fix unused-public-var :exclude-when-contains-meta not being considered for .lsp/config.edn.
+- Fix unused-public-var not working with :config-in-ns in kondo config.
+- Include reader functions in special cases for finding the last element in a container
+- Wrap hovered function definitions in parentheses.
 
 ## 2025.11.28-12.47.43
 
@@ -45,6 +90,7 @@
 - Fix `clojure-lsp/cyclic-dependencies` custom linter default level to be `error`.
 
 ## 2025.08.15-15.37.37
+
 - Docs
   - update neovim editor configuration for clojure lsp
 

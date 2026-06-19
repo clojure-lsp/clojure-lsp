@@ -1,7 +1,18 @@
 # Changelog
 
 ## Unreleased
+- add missing namespace form, guessing at the name if outside of project sources, 
+  when adding a missing :require or :import via the Add Require code action.  #1734
 
+
+- Reduce memory usage of java class and member definitions analysis. #2314
+- Shrink db cache file considerably not serializing redundant analysis elements uri. #2315
+- Run the db cache write on a dedicated thread so the blocking write no longer ties up a core.async dispatch thread during startup. #2318
+- Skip re-analysis of unchanged source paths on warm startup by persisting the internal analysis, dep-graph, documents and clj-kondo findings in the db cache and only re-analyzing source files whose checksum changed. #2316
+- Optimize clj-kondo analysis ingestion with single-pass normalization using transients, a process-global filename->uri cache, and shallow batch merging. #2317
+- Scale the JVM server heap to a percentage of available RAM (`-XX:MaxRAMPercentage`) instead of a fixed `-Xmx`, matching the native image and avoiding out-of-memory on very large projects. #2313
+- Analyze external java member definitions lazily on first navigation/hover/completion instead of all up front, drastically reducing memory usage on projects with large dependency sets. Set `:analysis :java :member-definitions` to `true` to keep the previous eager behavior. #2313
+- Publish startup diagnostics directly and off the `initialize` critical path, so large projects become interactive much sooner (warm `initialize` dropped from ~73s to ~8s on a large monorepo, with diagnostics streaming in right after). #2326
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
 - Bump clj-kondo to `2026.05.26-20260612.132029-18`.
 - Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292

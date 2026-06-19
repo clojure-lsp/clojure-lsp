@@ -185,7 +185,10 @@
               internal-uris (dep-graph/internal-uris db)
               settings (settings/all db)]
           (when (settings/get db [:lint-project-files-after-startup?] true)
-            (f.diagnostic/publish-all-diagnostics! internal-uris false components))
+            (async/thread
+              (shared/logging-task
+                :internal/publish-all-diagnostics
+                (f.diagnostic/publish-all-diagnostics-directly! internal-uris false components))))
           (async/thread
             (startup/publish-task-progress producer (:refresh-clojuredocs post-startup-tasks) work-done-token)
             (f.clojuredocs/refresh-cache! db*)
@@ -259,7 +262,7 @@
                 count
                 (let [db @db*
                       [row col] (shared/position->row-col position)]
-                  (f.completion/completion (:uri text-document) row col db))))]
+                  (f.completion/completion (:uri text-document) row col db db*))))]
       (if (identical? :slow-but-accurate (get-in @db* [:settings :completion :analysis-type] :fast-but-stale))
         (process-after-changes
           components (:uri text-document)
@@ -285,12 +288,25 @@
     (let [[row col] (shared/position->row-col position)]
       (f.rename/rename-from-position (:uri text-document) new-name row col @db*))))
 
+(defn ^:private ensure-cursor-java-members!
+  "When the cursor is on a java class/member usage and member definitions are
+  analyzed lazily, analyze the defining jar on demand so navigation/hover can
+  resolve the member."
+  [db* uri row col]
+  (when (lsp.kondo/lazy-java-member-definitions? @db*)
+    (let [element (q/find-element-under-cursor @db* uri row col)]
+      (when (and (identical? :java-class-usages (:bucket element))
+                 (:class element))
+        (f.java-interop/ensure-java-class-members-analyzed! db* (:class element))))))
+
 (defn definition [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task
     :lsp/definition
-    (let [db @db*
-          [row col] (shared/position->row-col position)]
-      (when-let [definition (q/find-definition-from-cursor db (:uri text-document) row col)]
+    (let [[row col] (shared/position->row-col position)
+          uri (:uri text-document)
+          _ (ensure-cursor-java-members! db* uri row col)
+          db @db*]
+      (when-let [definition (q/find-definition-from-cursor db uri row col)]
         (element->location db producer definition)))))
 
 (defn declaration [{:keys [db* producer]} {:keys [text-document position]}]
@@ -385,11 +401,12 @@
                  (producer/show-document-request producer)))
           edit)))))
 
-(defn hover [components {:keys [text-document position]}]
+(defn hover [{:keys [db*] :as components} {:keys [text-document position]}]
   (when-not (skip-feature-for-uri? :hover (:uri text-document) components)
     (shared/logging-task
       :lsp/hover
       (let [[row col] (shared/position->row-col position)]
+        (ensure-cursor-java-members! db* (:uri text-document) row col)
         (f.hover/hover (:uri text-document) row col components)))))
 
 (defn signature-help [components {:keys [text-document position _context]}]

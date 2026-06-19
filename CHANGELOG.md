@@ -25,7 +25,6 @@
   - rewrite-edn: 0.4.9 -> 0.5.9
   - transit-clj: 1.0.333 -> 1.1.357
   - tools.namespace: 1.5.0 -> 1.5.1
-  - babashka/fs: 0.5.31 -> 0.5.33
   - babashka/cli: 0.8.67 -> 0.11.72
   - matcher-combinators: 3.9.2 -> 3.10.0
   - promesa: 11.0.678 -> 12.0.0
@@ -33,7 +32,6 @@
   - nrepl: 1.5.2 -> 1.7.0
   - cider-nrepl: 0.58.0 -> 0.59.0
   - clj-async-profiler: 1.6.2 -> 1.7.0
-  - tools.build: v0.10.5 -> v0.10.14
   - deps-deploy: 0.2.2 -> 0.2.5
   - graal-build-time: 1.0.5 -> 1.0.6
 

@@ -708,6 +708,29 @@
       {:name 'foo :ns 'exec-ns :row 1 :col 14}
       (q/find-definition-from-cursor db (h/file-uri "file:///deps.edn") exec-fn-r exec-fn-c))))
 
+(deftest find-definition-from-cursor-with-fully-qualified-symbol-without-require
+  (h/load-code-and-locs "(ns some.foo) (def my-var 1)" (h/file-uri "file:///some/foo.clj"))
+  (let [[[usage-r usage-c]]
+        (h/load-code-and-locs (h/code "(ns other.bar)"
+                                      "some.foo/|my-var")
+                              (h/file-uri "file:///other/bar.clj"))
+        db (h/db)]
+    (h/assert-submap
+      {:name 'my-var :ns 'some.foo :uri (h/file-uri "file:///some/foo.clj")}
+      (q/find-definition-from-cursor db (h/file-uri "file:///other/bar.clj")
+                                     usage-r usage-c))))
+
+(deftest find-definition-from-cursor-with-non-fully-qualified-symbol-without-require
+  (h/load-code-and-locs "(ns some.foo) (def my-var 1)"
+                        (h/file-uri "file:///some/foo.clj"))
+  (let [[[usage-r usage-c]]
+        (h/load-code-and-locs (h/code "(ns other.bar)"
+                                      "|foo.my-var")
+                              (h/file-uri "file:///other/bar.clj"))
+        db (h/db)]
+    (is (nil? (q/find-definition-from-cursor
+                db (h/file-uri "file:///other/bar.clj") usage-r usage-c)))))
+
 (deftest find-definition-from-cursor-when-duplicate-from-external-analysis
   (let [_ (h/load-code-and-locs (h/code "(ns foo) (def bar)") "zipfile:///some.jar::some-jar.clj")
         _ (h/load-code-and-locs (h/code "(ns foo) (def bar)") (h/file-uri "file:///a.clj"))
@@ -899,7 +922,6 @@
                     ""
                     "(|Parent.)") (h/file-uri "file:///project/my/java_first_namespace.clj"))
           expected {:external? true
-                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
                     :class "my_class.Parent"
                     :uri (h/file-uri
                            (shared/filename->uri
@@ -922,7 +944,6 @@
                     ""
                     "(|Parent$Child.)") (h/file-uri "file:///project/my/java_second_namespace.clj"))
           expected {:external? true
-                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
                     :class "my_class.Parent$Child"
                     :uri (h/file-uri
                            (shared/filename->uri
@@ -945,7 +966,6 @@
                     ""
                     "(|ParentTwo$ChildTwo.)") (h/file-uri "file:///project/my/java_third_namespace.clj"))
           expected {:external? true
-                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
                     :class "my_class.ParentTwo$ChildTwo"
                     :uri (h/file-uri
                            (shared/filename->uri
@@ -1390,3 +1410,16 @@
                 :namespace-definitions 2}
      :external {}}
     (q/analysis-summary (h/db))))
+
+(deftest exclude-public-definition?-test
+  ;; See https://github.com/clojure-lsp/clojure-lsp/issues/2292 for the related bug.
+  (testing ":exclude-when-defined-by as a vector longer than the default set"
+    (let [extra-count (inc (count q/default-public-vars-defined-by-to-exclude))
+          settings {:linters {:clojure-lsp/unused-public-var
+                              {:exclude-when-defined-by
+                               (vec (repeatedly extra-count #(gensym 'some.ns/sym)))}}}
+          definition {:bucket :var-definitions
+                      :ns 'a
+                      :name 'b
+                      :defined-by 'clojure.core/defn}]
+      (is (false? (q/exclude-public-definition? settings definition))))))

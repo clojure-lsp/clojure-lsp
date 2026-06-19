@@ -58,7 +58,10 @@
     (db/read-and-update-cache!
       @db*
       (fn [db]
-        (update db :analysis merge (:analysis result))))))
+        ;; db-with-analysis keeps the cached dep-graph/documents in sync with the
+        ;; merged stub analysis, which load-db-cache! now reuses as-is.
+        (lsp.kondo/db-with-analysis db {:analysis (:analysis result)
+                                        :external? true})))))
 
 (defn generate-and-analyze-stubs!
   [settings db*]

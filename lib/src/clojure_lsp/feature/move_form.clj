@@ -48,7 +48,7 @@
                                       (:namespace-usages local-buckets)))
         remove-source-require? (and source-require (empty? other-source-usages))
         namespace-loc (edit/find-namespace file-loc)]
-    (if-let [add-to-ns-changes (f.add-missing-libspec/add-to-namespace* file-loc libspec db)]
+    (if-let [add-to-ns-changes (f.add-missing-libspec/add-to-namespace* file-loc uri libspec db)]
       (cond-> add-to-ns-changes
         remove-source-require?
         (update-in

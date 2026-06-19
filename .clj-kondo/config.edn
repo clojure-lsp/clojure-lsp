@@ -2,7 +2,8 @@
                 "babashka/fs"]
  :linters {:unresolved-var {:exclude [digest
                                       rewrite-clj.zip
-                                      rewrite-clj.node]}
+                                      rewrite-clj.node
+                                      rewrite-clj.paredit]}
            :unsorted-required-namespaces {:level :warning}}
  :lint-as {rewrite-clj.zip.subedit/edit->    clojure.core/->
            rewrite-clj.zip.subedit/subedit-> clojure.core/->

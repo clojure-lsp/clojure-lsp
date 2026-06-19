@@ -136,6 +136,11 @@
   (let [file (h/source-path->file path)]
     (did-open-notification (h/file->uri file) (slurp (.getAbsolutePath file)))))
 
+(defn did-close [path]
+  [:textDocument/didClose
+   {:textDocument
+    {:uri (h/source-path->uri path)}}])
+
 (defn did-change-notification [path version changes]
   [:textDocument/didChange
    {:textDocument {:uri (h/source-path->uri path)

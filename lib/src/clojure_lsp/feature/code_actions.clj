@@ -162,6 +162,13 @@
              :command   "move-to-let"
              :arguments [uri line character "new-binding"]}})
 
+(defn ^:private move-to-for-let-action [uri line character]
+  {:title   "Move to :let"
+   :kind    :refactor-extract
+   :command {:title     "Move to :let"
+             :command   "move-to-for-let"
+             :arguments [uri line character "new-binding"]}})
+
 (defn ^:private cycle-kwd-action [uri line character cycle-kwd-status]
   (let [title (if (= :from-auto-resolve-to-namespace (:status cycle-kwd-status))
                 "Change auto-resolved keyword to namespaced"
@@ -216,6 +223,13 @@
    :command {:title     "Extract function"
              :command   "extract-function"
              :arguments [uri line character "new-function" end-line end-character]}})
+
+(defn ^:private inline-function-action [uri line character]
+  {:title   "Inline function"
+   :kind    :refactor-inline
+   :command {:title     "Inline function"
+             :command   "inline-function"
+             :arguments [uri line character]}})
 
 (defn ^:private refactor-if->cond-action [uri line character]
   {:title   "Change nested if to cond"
@@ -383,6 +397,22 @@
              :command   "get-in-none"
              :arguments [uri line character]}})
 
+(defn ^:private refer->as-action [uri line character]
+  {:title   "Replace refer with as"
+   :kind    :refactor-rewrite
+   :command
+   {:title "Replace refer with as"
+    :command "refer-to-as"
+    :arguments [uri line character]}})
+
+(defn ^:private as->refer-action [uri line character]
+  {:title   "Replace as with refer"
+   :kind    :refactor-rewrite
+   :command
+   {:title "Replace as with refer"
+    :command "as-to-refer"
+    :arguments [uri line character]}})
+
 (defn all
   ([root-zloc uri row col diagnostics client-capabilities db]
    (all root-zloc uri row col nil nil diagnostics client-capabilities db))
@@ -416,6 +446,7 @@
          allow-drag-param-forward?* (future (f.drag-param/can-drag-forward? zloc uri db))
          can-promote-fn?* (future (r.transform/can-promote-fn? zloc))
          can-demote-fn?* (future (r.transform/can-demote-fn? zloc))
+         can-inline-fn?* (future (r.transform/can-inline-fn? zloc uri db))
          can-destructure-keys?* (future (f.destructure-keys/can-destructure-keys? zloc uri db))
          can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
          near-if?* (future (r.transform/near-if? zloc))
@@ -424,7 +455,10 @@
          inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
          cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
          can-add-let? (or (z/skip-whitespace z/right zloc)
-                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))]
+                          (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))
+         can-move-to-for-let?* (future (r.transform/can-move-to-:let? zloc))
+         can-refer->as?* (future (r.transform/can-refer->as? zloc))
+         can-as->refer?* (future (r.transform/can-as->refer? zloc))]
      (cond-> []
        (seq resolvable-refer-all-diagnostics)
        (into (replace-refer-all-actions uri resolvable-refer-all-diagnostics))
@@ -457,6 +491,9 @@
        (conj (move-to-let-action uri line character)
              (extract-function-action uri line character end-line end-character))
 
+       @can-move-to-for-let?*
+       (conj (move-to-for-let-action uri line character))
+
        @inside-function?*
        (conj (cycle-privacy-action uri line character))
 
@@ -465,6 +502,9 @@
 
        @can-demote-fn?*
        (conj (demote-fn-action uri line character))
+
+       @can-inline-fn?*
+       (conj (inline-function-action uri line character))
 
        @can-destructure-keys?*
        (conj (destructure-keys-action uri line character))
@@ -529,4 +569,10 @@
        (conj (create-test-action (:function-name-loc @can-create-test?*) uri line character))
 
        workspace-edit-capability?
-       (conj (clean-ns-action uri line character))))))
+       (conj (clean-ns-action uri line character))
+       (and workspace-edit-capability?
+            @can-refer->as?*)
+       (conj (refer->as-action uri line character))
+       (and workspace-edit-capability?
+            @can-as->refer?*)
+       (conj (as->refer-action uri line character))))))

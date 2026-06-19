@@ -7,6 +7,7 @@
    [clojure-lsp.feature.completion-snippet :as f.completion-snippet]
    [clojure-lsp.feature.format]
    [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -162,13 +163,13 @@
                                            documentation))))))
 
 (defn ^:private completion-item-with-alias-edit
-  [completion-item cursor-loc alias-to-add ns-to-add rcf-pos db]
+  [uri completion-item cursor-loc alias-to-add ns-to-add rcf-pos db]
   (let [zloc (cond-> cursor-loc
                rcf-pos edit/to-root
                rcf-pos (edit/find-at-pos
                          (:row rcf-pos) (:col rcf-pos)))
         edits (some-> zloc
-                      (f.add-missing-libspec/add-known-alias alias-to-add ns-to-add db)
+                      (f.add-missing-libspec/add-known-alias uri alias-to-add ns-to-add db)
                       r.transform/result)]
     (cond-> completion-item
       (seq edits) (assoc :additional-text-edits (mapv #(update % :range shared/->range)
@@ -197,7 +198,7 @@
                                :uri          uri}
                         (string? ns-to-add) (assoc :js-require true)))
     ;; client can't postpone the edit calculation, so do it now, even though it's expensive
-      (completion-item-with-alias-edit completion-item cursor-loc alias-to-add ns-to-add rcf-pos db))))
+      (completion-item-with-alias-edit uri completion-item cursor-loc alias-to-add ns-to-add rcf-pos db))))
 
 (defn ^:private generic-priority->specific-priority
   [element priority]
@@ -625,7 +626,7 @@
          items)
     items))
 
-(defn completion [uri row col db]
+(defn completion [uri row col db & [db*]]
   (let [root-zloc (parser/safe-zloc-of-file db uri)
         ;; (dec col) because we're completing what's behind the cursor
         cursor-loc (when-let [loc (some-> root-zloc (parser/to-pos row (dec col)))]
@@ -727,7 +728,12 @@
 
                       (and java-class-for-static-member
                            (supports-clj-core? uri))
-                      (into (with-java-static-member-definition-items matches-fn java-class-for-static-member cursor-value db))
+                      (into (with-java-static-member-definition-items
+                              matches-fn java-class-for-static-member cursor-value
+                              ;; analyze the class's jar members on demand when lazy
+                              (if db*
+                                (f.java-interop/ensure-java-static-members-analyzed! db* java-class-for-static-member)
+                                db)))
 
                       (and support-snippets?
                            simple-cursor?)
@@ -768,7 +774,7 @@
     (let [ns-to-add (if js-require
                       ns-to-add
                       (symbol ns-to-add))]
-      (completion-item-with-alias-edit item zloc (symbol alias-to-add) ns-to-add rcf-pos db))
+      (completion-item-with-alias-edit uri item zloc (symbol alias-to-add) ns-to-add rcf-pos db))
     item))
 
 (defn resolve-item [{:keys [data] :as item} db*]

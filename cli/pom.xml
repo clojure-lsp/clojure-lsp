@@ -4,7 +4,7 @@
   <packaging>jar</packaging>
   <groupId>com.github.clojure-lsp</groupId>
   <artifactId>clojure-lsp-server</artifactId>
-  <version>2026.02.20-16.08.58</version>
+  <version>2026.05.05-12.58.26</version>
   <name>clojure-lsp-server</name>
   <licenses>
     <license>
@@ -17,7 +17,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.12.4</version>
+      <version>1.12.5</version>
     </dependency>
     <dependency>
       <groupId>org.benf</groupId>
@@ -48,7 +48,7 @@
     <dependency>
       <groupId>rewrite-clj</groupId>
       <artifactId>rewrite-clj</artifactId>
-      <version>1.2.51</version>
+      <version>1.2.54</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -63,7 +63,7 @@
     <dependency>
       <groupId>clj-kondo</groupId>
       <artifactId>clj-kondo</artifactId>
-      <version>2026.01.19</version>
+      <version>2026.04.16-20260503.191510-9</version>
     </dependency>
     <dependency>
       <groupId>dev.weavejester</groupId>
@@ -93,7 +93,7 @@
     <dependency>
       <groupId>org.babashka</groupId>
       <artifactId>cli</artifactId>
-      <version>0.8.67</version>
+      <version>0.11.72</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>
@@ -108,7 +108,7 @@
     <dependency>
       <groupId>com.cognitect</groupId>
       <artifactId>transit-clj</artifactId>
-      <version>1.0.333</version>
+      <version>1.1.357</version>
     </dependency>
     <dependency>
       <groupId>anonimitoraf</groupId>
@@ -118,7 +118,7 @@
     <dependency>
       <groupId>funcool</groupId>
       <artifactId>promesa</artifactId>
-      <version>11.0.678</version>
+      <version>12.0.0</version>
     </dependency>
     <dependency>
       <groupId>org.babashka</groupId>
@@ -139,12 +139,12 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-exporter-otlp</artifactId>
-      <version>1.59.0</version>
+      <version>1.63.0</version>
     </dependency>
     <dependency>
       <groupId>babashka</groupId>
       <artifactId>fs</artifactId>
-      <version>0.5.31</version>
+      <version>0.5.33</version>
     </dependency>
     <dependency>
       <groupId>nrepl</groupId>
@@ -164,7 +164,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>core.async</artifactId>
-      <version>1.8.741</version>
+      <version>1.9.865</version>
     </dependency>
   </dependencies>
   <repositories>
@@ -188,6 +188,6 @@
     <url>https://github.com/clojure-lsp/clojure-lsp</url>
     <connection>scm:git:git://github.com/clojure-lsp/clojure-lsp.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/clojure-lsp/clojure-lsp.git</developerConnection>
-    <tag>2026.02.20-16.08.58</tag>
+    <tag>2026.05.05-12.58.26</tag>
   </scm>
 </project>

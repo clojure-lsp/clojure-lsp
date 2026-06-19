@@ -1,14 +1,14 @@
-{:deps {org.clojure/clojure {:mvn/version "1.12.4"}
+{:deps {org.clojure/clojure {:mvn/version "1.12.5"}
         rewrite-clj/rewrite-clj {:mvn/version "1.2.54"}
         borkdude/rewrite-edn {:mvn/version "0.4.9" :exclusions [rewrite-clj/rewrite-clj]}
-        org.clojure/core.async {:mvn/version "1.8.741"}
+        org.clojure/core.async {:mvn/version "1.9.865"}
         dev.weavejester/cljfmt {:mvn/version "0.16.4"
                                 :exclusions [rewrite-clj/rewrite-clj
                                              com.googlecode.java-diff-utils/diffutils]}
         com.googlecode.java-diff-utils/diffutils {:mvn/version "1.3.0"}
         medley/medley {:mvn/version "1.4.0"}
         anonimitoraf/clj-flx {:mvn/version "1.2.0"}
-        clj-kondo/clj-kondo {:mvn/version "2026.04.15"
+        clj-kondo/clj-kondo {:mvn/version "2026.05.26-20260612.132029-18"
                              #_#_:local/root "../../clj-kondo"
                              :exclude [com.cognitect/transit-clj
                                        babashka/fs]}
@@ -16,11 +16,11 @@
         ;; Work around https://github.com/fabiodomingues/clj-depend/issues/65
         ;; Can be removed, potentially, after https://github.com/fabiodomingues/clj-depend/pulls/66 is merged
         org.clojure/tools.namespace {:mvn/version "1.5.0"}
-        com.cognitect/transit-clj {:mvn/version "1.0.333"}
+        com.cognitect/transit-clj {:mvn/version "1.1.357"}
         com.github.clj-easy/stub {:mvn/version "0.2.3"}
         org.benf/cfr {:mvn/version "0.152"}
         io.forward/semver {:mvn/version "0.1.0"}
-        babashka/fs {:mvn/version "0.5.31"}
+        babashka/fs {:mvn/version "0.5.33"}
         org.babashka/sci {:mvn/version "0.12.51"}
         com.github.clojure-lsp/lsp4clj {:mvn/version "2.0.1"
                                         #_#_:local/root "../../lsp4clj"
@@ -30,7 +30,7 @@
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}
                                com.taoensso/timbre {:mvn/version "6.8.0"}
                                org.clojure/test.check {:mvn/version "1.1.3"}
-                               nubank/matcher-combinators {:mvn/version "3.9.2"}}
+                               nubank/matcher-combinators {:mvn/version "3.10.0"}}
                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                   :extra-paths ["test"]
                   :main-opts ["-m" "kaocha.runner"]}
@@ -42,7 +42,7 @@
                        :exec-fn cognitect.test-runner.api/test}
            :build {:extra-paths ["resources"]
                    :deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
-                                                         :tag "v0.10.5"
-                                                         :sha "2a21b7a"}
+                                                         :tag "v0.10.14"
+                                                         :sha "1176afd"}
                           slipset/deps-deploy {:mvn/version "0.2.2"}}
                    :ns-default build}}}

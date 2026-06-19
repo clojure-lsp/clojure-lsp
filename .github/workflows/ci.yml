@@ -170,8 +170,12 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - uses: actions/download-artifact@v4
-        name: clojure-lsp-native
+      - name: Download clojure-lsp-native (with retry)
+        uses: Wandalen/wretry.action@v3
+        with:
+          action: actions/download-artifact@v4
+          attempt_limit: 3
+          attempt_delay: 10000
 
       - name: Setup binary
         run: |
@@ -187,3 +191,36 @@ jobs:
 
       - name: Run integration tests
         run: bb integration-test
+
+  performance-test:
+    needs: graalvm-build
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clojure build tools
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: '1.12.0.1495'
+          lein: '2.9.1'
+          boot: '2.8.3'
+          bb: '0.9.161'
+
+      - name: Download clojure-lsp-native (with retry)
+        uses: Wandalen/wretry.action@v3
+        with:
+          action: actions/download-artifact@v4
+          attempt_limit: 3
+          attempt_delay: 10000
+
+      - name: Setup binary
+        run: |
+          cp -rf clojure-lsp-native/clojure-lsp cli/clojure-lsp
+          cp -rf clojure-lsp-native/clojure-lsp clojure-lsp
+          chmod +x cli/clojure-lsp
+          chmod +x clojure-lsp
+
+      - name: Run performance tests
+        run: bb performance-test

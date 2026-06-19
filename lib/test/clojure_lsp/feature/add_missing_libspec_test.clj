@@ -141,8 +141,11 @@
             "c.t.l"
             {"clojure.tools.logging" nil "clojure.tools.internal.logging" nil "project.tools.log" nil})))))
 
-(defn find-require-suggestions [code]
-  (f.add-missing-libspec/find-require-suggestions (h/load-code-and-zloc code) "file:///a.clj" (h/db)))
+(defn find-require-suggestions
+  ([code] (find-require-suggestions code "file:///a.clj"))
+  ([code uri]
+   (f.add-missing-libspec/find-require-suggestions
+     (h/load-code-and-zloc code uri) uri (h/db))))
 
 (deftest find-require-suggestions-test
   (testing "Suggested namespaces"
@@ -167,6 +170,29 @@
       [{:ns "project.some.cool.namespace"
         :refer "blow"}]
       (find-require-suggestions "|blow")))
+  (testing "Do not suggest refer from namespace defined in a different language"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns cljs.only.ns) (def blow 2)" "file:///only.cljs")
+    (h/load-code-and-locs "(ns clj.only.ns) (def blow 3)" "file:///only.clj")
+    (testing "from a .clj file we don't suggest a .cljs-only refer"
+      (h/assert-submaps
+        [{:ns "clj.only.ns" :refer "blow"}]
+        (find-require-suggestions "|blow" "file:///a.clj")))
+    (testing "from a .cljs file we don't suggest a .clj-only refer"
+      (h/assert-submaps
+        [{:ns "cljs.only.ns" :refer "blow"}]
+        (find-require-suggestions "|blow" "file:///a.cljs")))
+    (testing "from a .cljc file we suggest refers from both .clj and .cljs files"
+      (h/assert-submaps
+        #{{:ns "cljs.only.ns" :refer "blow"}
+          {:ns "clj.only.ns" :refer "blow"}}
+        (set (find-require-suggestions "|blow" "file:///a.cljc")))))
+  (testing "Do not suggest refer from a namespace defined only in a .cljc file when the current file is .clj and ns is not loadable on JVM"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns cljc.ns) (def blow 1)" "file:///cljc.cljc")
+    (h/assert-submaps
+      [{:ns "cljc.ns" :refer "blow"}]
+      (find-require-suggestions "|blow" "file:///a.clj")))
   (testing "Suggested core"
     (h/assert-submaps
       [{:ns "clojure.set" :alias "set"}
@@ -201,6 +227,15 @@
 
 (deftest add-missing-libspec-test
   (testing "aliases"
+    (testing "when namespace is missing, create namespace"
+      (h/reset-components!)
+      (h/load-code-and-locs "(ns b (:require [foo.s :as s]))" "file:///b.clj")
+      (is (= (h/code "(ns a \n  (:require\n    [foo.s :as s]))")
+             (-> "|s/thing"
+                 add-missing-libspec
+                 first
+                 :loc
+                 z/root-string))))
     (testing "known aliases in project"
       (h/reset-components!)
       (h/load-code-and-locs "(ns a (:require [foo.s :as s]))" "file:///b.clj")
@@ -262,6 +297,34 @@
                      "            [clojure.set :as set]))")
              (-> (h/code "(ns foo "
                          "  (:require [foo :as bar])) |set/subset?")
+                 add-missing-libspec
+                 as-str))))
+    (testing "preserves existing :same-line formatting without explicit setting"
+      (h/reset-components!)
+      (is (= (h/code "(ns foo "
+                     "  (:require [clojure.set :as set]"
+                     "            [foo :as bar]))")
+             (-> (h/code "(ns foo "
+                         "  (:require [foo :as bar])) |set/subset?")
+                 add-missing-libspec
+                 as-str))))
+    (testing "preserves existing :next-line formatting without explicit setting"
+      (h/reset-components!)
+      (is (= (h/code "(ns foo "
+                     "  (:require"
+                     "   [clojure.set :as set]"
+                     "   [foo :as bar]))")
+             (-> (h/code "(ns foo "
+                         "  (:require"
+                         "   [foo :as bar])) |set/subset?")
+                 add-missing-libspec
+                 as-str))))
+    (testing "creates multi-line block on empty ns without explicit setting"
+      (h/reset-components!)
+      (is (= (h/code "(ns foo "
+                     "  (:require"
+                     "    [clojure.set :as set]))")
+             (-> "(ns foo) |set/subset?"
                  add-missing-libspec
                  as-str))))
     (testing "with deprecated keep-require-at-start?"
@@ -334,6 +397,13 @@
   (f.add-missing-libspec/add-missing-import (h/load-code-and-zloc code) "file:///a.clj" import-name (h/db) {}))
 
 (deftest add-missing-import-test
+  (testing "when namespace form doesn't exist"
+    (is (= (h/code "(ns a "
+                   "  (:import"
+                   "    [java.util Date]))")
+           (-> "|Date."
+               (add-missing-import "java.util.Date")
+               as-root-str))))
   (testing "when there is no :import form"
     (is (= (h/code "(ns foo.bar "
                    "  (:import"
@@ -516,8 +586,13 @@
                        "  |Date.)")
                (add-missing-import-to-rcf "java.util.Date"))))))
 
-(defn add-require-suggestion [code chosen-ns chosen-alias chosen-refer js-require]
-  (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) "file:///a.clj" chosen-ns chosen-alias chosen-refer js-require (h/db) {}))
+(defn add-require-suggestion
+  ([code chosen-ns chosen-alias chosen-refer js-require]
+   (add-require-suggestion code (h/file-uri "file:///a.clj") chosen-ns chosen-alias chosen-refer js-require {}))
+  ([code uri chosen-ns chosen-alias chosen-refer js-require additional-db]
+   (h/reset-components!)
+   (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}} additional-db)
+   (f.add-missing-libspec/add-require-suggestion (h/zloc-from-code code) uri chosen-ns chosen-alias chosen-refer js-require (h/db) {})))
 
 (deftest add-require-suggestion-test
   (h/load-code-and-locs (h/code "(ns clojure.string) (defn split [])") "file:///clojure/string.clj")
@@ -558,7 +633,78 @@
     (testing "on invalid location"
       (is (nil? (-> (h/code "(ns foo.bar)"
                             "|;; comment")
-                    (add-require-suggestion "clojure.string" "str" nil nil))))))
+                    (add-require-suggestion "clojure.string" "str" nil nil)))))
+    (testing "when missing ns, create new namespace form based on filename"
+      (is (= (h/code "(ns a "
+                     "  (:require"
+                     "   [clojure.string :as str]))")
+             (-> (h/code
+                   ""
+                   "|str/a")
+                 (add-require-suggestion "clojure.string" "str" nil nil)
+                 as-root-str))))
+    (testing "when missing ns, don't create new namespace form if filename extension is unknown"
+      (is (nil?
+            (-> (h/code
+                  ""
+                  "|str/a")
+                (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/foo/a.my-clojure") "clojure.string" "str" nil nil
+                                        {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
+                as-root-str))))
+    (testing "adds newlines after ns form, for new namespace"
+      (is (= (h/code ""
+                     ""
+                     "")
+             (-> (h/code
+                   "(|str/a)")
+                 (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/foo/a.clj") "clojure.string" "str" nil nil
+                                         {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
+                 second
+                 :loc
+                 z/root-string))))
+    (testing "no new newlines added after ns form, when file has an existing namespace"
+      (is (nil?
+            (-> (h/code "(ns foo.a "
+                        "  (:require"
+                        "   [clojure.string :as str]))"
+                        ""
+                        "(|str/a)")
+                (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/foo/a.clj") "clojure.string" "str" nil nil
+                                        {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")})
+                second))))
+    (testing "subdirectory from project root, no ns -> uses subdir and filename as part of namespace"
+      (is (= (h/code "(ns foo.a "
+                     "  (:require"
+                     "   [clojure.string :as str]))")
+             (-> (h/code
+                   ""
+                   "|str/a")
+                 (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/foo/a.clj") "clojure.string" "str" nil nil
+                                         {:project-root-uri  (h/file-uri "file:///path/to/Projects/clojure-lsp")})
+                 as-root-str))))
+    (testing "from project source root, no ns -> uses subdir and filename to determine namespace"
+      (is (= (h/code "(ns foo.a "
+                     "  (:require"
+                     "   [clojure.string :as str]))")
+             (-> (h/code
+                   ""
+                   "|str/a")
+                 (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/lib/src/foo/a.clj") "clojure.string" "str" nil nil
+                                         {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")
+                                          :settings {:source-paths [(h/file-path "/path/to/Projects/clojure-lsp/lib/src")]}})
+                 as-root-str))))
+    (testing "from project source root, no ns -> use filename only to determine namespace"
+      (is (= (h/code "(ns a "
+                     "  (:require"
+                     "   [clojure.string :as str]))")
+             (-> (h/code
+                   ""
+                   "|str/a")
+                 (add-require-suggestion (h/file-uri "file:///path/to/Projects/clojure-lsp/lib/src/a.clj") "clojure.string" "str" nil nil
+                                         {:project-root-uri (h/file-uri "file:///path/to/Projects/clojure-lsp")
+                                          :settings {:source-paths [(h/file-path "/path/to/Projects/clojure-lsp/lib/src")]}})
+                 as-root-str)))))
+
   (testing "refer"
     (testing "on empty ns"
       (is (= (h/code "(ns foo.bar "
@@ -566,6 +712,14 @@
                      "   [clojure.string :refer [split]]))")
              (-> (h/code "(ns foo.bar)"
                          "|split")
+                 (add-require-suggestion "clojure.string" nil "split" nil)
+                 as-root-str))))
+    (testing "when missing ns, create new namespace form based on filename"
+      (is (= (h/code "(ns a "
+                     "  (:require"
+                     "   [clojure.string :refer [split]]))")
+             (-> (h/code
+                   "|split")
                  (add-require-suggestion "clojure.string" nil "split" nil)
                  as-root-str))))
     (testing "on non empty ns"

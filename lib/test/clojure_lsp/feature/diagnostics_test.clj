@@ -308,3 +308,25 @@
           :range
           {:start {:line 0 :character 1} :end {:line 2 :character 3}}}]
         (f.diagnostic/find-diagnostics (h/file-uri "file:///project/src/foo.clj") (h/db))))))
+
+(deftest publish-all-diagnostics-directly!-test
+  (testing "publishes diagnostics straight to the producer, bypassing the channel"
+    (h/reset-components!)
+    (let [uri (h/file-uri "file:///a.clj")
+          components (h/components)
+          diagnostic {:range {:start {:line 0 :character 0} :end {:line 0 :character 1}}
+                      :message "boom"
+                      :code "x"
+                      :severity 1
+                      :source "test"}]
+      (swap! (h/db*) assoc-in [:diagnostics :built-in uri] [diagnostic])
+      (f.diagnostic/publish-all-diagnostics-directly! [uri] false components)
+      (let [published (h/published-diagnostics components)]
+        (is (= 1 (count published)))
+        (is (= uri (:uri (first published))))
+        (is (= [diagnostic] (vec (:diagnostics (first published))))))))
+  (testing "skips uris with empty diagnostics when publish-empty? is false"
+    (h/reset-components!)
+    (let [components (h/components)]
+      (f.diagnostic/publish-all-diagnostics-directly! [(h/file-uri "file:///b.clj")] false components)
+      (is (= [] (h/published-diagnostics components))))))

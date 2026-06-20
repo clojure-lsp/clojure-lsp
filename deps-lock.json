@@ -3769,14 +3769,14 @@
       "hash": "sha256-6rULcjyeeEkPWDy5n7HUa8KA/xH9X4Ujub7XamTq8CM="
     },
     {
-      "mvn-path": "rewrite-clj/rewrite-clj/1.2.54/rewrite-clj-1.2.54.jar",
+      "mvn-path": "rewrite-clj/rewrite-clj/1.2.55/rewrite-clj-1.2.55.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-qBod9heheCfmqZMmQ3vlenJGD71aVZN8lgHcNSIlBtQ="
+      "hash": "sha256-SBd/pQKi/uWPYmSAyZ15sDeOc0npzvMtEzk8enSV8ck="
     },
     {
-      "mvn-path": "rewrite-clj/rewrite-clj/1.2.54/rewrite-clj-1.2.54.pom",
+      "mvn-path": "rewrite-clj/rewrite-clj/1.2.55/rewrite-clj-1.2.55.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-I1rB6S27ixvakgqICYZBkRNOJBVZJbHXNTJVyWBhgJU="
+      "hash": "sha256-uPnxLTu7VgzdPphjtlkMGwGiw/n1nei8td5dr1yEC6Q="
     },
     {
       "mvn-path": "s3-wagon-private/s3-wagon-private/1.3.5/s3-wagon-private-1.3.5.jar",

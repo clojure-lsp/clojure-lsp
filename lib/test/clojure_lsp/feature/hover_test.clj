@@ -1,7 +1,6 @@
 (ns clojure-lsp.feature.hover-test
   (:require
    [clojure-lsp.feature.hover :as f.hover]
-   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
    [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
@@ -25,16 +24,8 @@
 (def ^:private settings-no-clojuredocs {:settings {:hover {:clojuredocs false}}})
 (def ^:private settings-edits-warning {:settings {:completion {:additional-edits-warning-text "* includes additional edits"}}})
 
-(defmacro with-db [temp-config & body]
-  `(let [db-before# (h/db)]
-     (try
-       (swap! (h/db*) shared/deep-merge ~temp-config)
-       ~@body
-       (finally
-         (reset! (h/db*) db-before#)))))
-
 (deftest test-hover
-  (with-db
+  (h/with-db
     settings-no-clojuredocs
     (let [start-code "```clojure"
           end-code "```"
@@ -59,7 +50,7 @@
                     "Some cool docs :foo"
                     (h/file-path "/a.clj")]
                    (:contents (hover foo-row foo-col {:additional-text-edits? true}))))
-            (with-db
+            (h/with-db
               settings-edits-warning
               (is (= [{:language "clojure" :value "a/foo"}
                       {:language "clojure" :value "[x]"}
@@ -68,7 +59,7 @@
                       (h/file-path "/a.clj")]
                      (:contents (hover foo-row foo-col {:additional-text-edits? true}))))))
           (testing "markdown"
-            (with-db
+            (h/with-db
               capabilities-markdown
               (is (= {:kind  "markdown"
                       :value (join [start-code
@@ -93,7 +84,7 @@
                                             (h/file-path "/a.clj")
                                             (h/file-uri "file:///a.clj"))])}
                      (:contents (hover foo-row foo-col {:additional-text-edits? true}))))
-              (with-db
+              (h/with-db
                 settings-edits-warning
                 (is (= {:kind  "markdown"
                         :value (join [start-code
@@ -111,7 +102,7 @@
                        (:contents (hover foo-row foo-col {:additional-text-edits? true}))))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
-          (with-db
+          (h/with-db
             settings-one-line-deprecated
             (testing "plain"
               (is (= [{:language "clojure" :value "(a/foo [x])"}
@@ -120,7 +111,7 @@
                      (:contents (hover foo-row foo-col)))))
 
             (testing "markdown"
-              (with-db
+              (h/with-db
                 capabilities-markdown
                 (is (= {:kind  "markdown"
                         :value (join [start-code
@@ -134,7 +125,7 @@
                                               (h/file-uri "file:///a.clj"))])}
                        (:contents (hover foo-row foo-col))))))))
         (testing "hover arity-on-same-line? enabled"
-          (with-db
+          (h/with-db
             settings-one-line
             (testing "plain"
               (is (= [{:language "clojure" :value "(a/foo [x])"}
@@ -143,7 +134,7 @@
                      (:contents (hover foo-row foo-col)))))
 
             (testing "markdown"
-              (with-db
+              (h/with-db
                 capabilities-markdown
                 (is (= {:kind  "markdown"
                         :value (join [start-code
@@ -158,7 +149,7 @@
                        (:contents (hover foo-row foo-col))))))))
 
         (testing "hide-filename? enabled"
-          (with-db
+          (h/with-db
             settings-hide-file
             (testing "plain"
               (is (= [{:language "clojure" :value "a/foo"}
@@ -166,7 +157,7 @@
                       "Some cool docs :foo"]
                      (:contents (hover foo-row foo-col)))))
             (testing "markdown"
-              (with-db
+              (h/with-db
                 capabilities-markdown
                 (is (= {:kind  "markdown"
                         :value (join [start-code
@@ -187,7 +178,7 @@
                     {:language "clojure" :value "[y]"}
                     (h/file-path "/a.clj")]
                    (:contents (hover bar-row bar-col {:additional-text-edits? true}))))
-            (with-db
+            (h/with-db
               settings-edits-warning
               (is (= [{:language "clojure" :value "a/bar"}
                       {:language "clojure" :value "[y]"}
@@ -195,7 +186,7 @@
                       (h/file-path "/a.clj")]
                      (:contents (hover bar-row bar-col {:additional-text-edits? true}))))))
           (testing "markdown"
-            (with-db
+            (h/with-db
               capabilities-markdown
               (is (= {:kind  "markdown"
                       :value (join [start-code
@@ -217,7 +208,7 @@
                                             (h/file-path "/a.clj")
                                             (h/file-uri "file:///a.clj"))])}
                      (:contents (hover bar-row bar-col {:additional-text-edits? true}))))
-              (with-db
+              (h/with-db
                 settings-edits-warning
                 (is (= {:kind  "markdown"
                         :value (join [start-code
@@ -233,7 +224,7 @@
                        (:contents (hover bar-row bar-col {:additional-text-edits? true}))))))))
 
         (testing "show-docs-arity-on-same-line? enabled"
-          (with-db
+          (h/with-db
             settings-one-line-deprecated
             (testing "plain"
               (is (= [{:language "clojure" :value "(a/bar [y])"}
@@ -241,7 +232,7 @@
                      (:contents (hover bar-row bar-col)))))
 
             (testing "markdown"
-              (with-db
+              (h/with-db
                 capabilities-markdown
                 (is (= {:kind "markdown"
                         :value (join [start-code
@@ -253,7 +244,7 @@
                                               (h/file-uri "file:///a.clj"))])}
                        (:contents (hover bar-row bar-col)))))))))
       (testing "custom meta arglists"
-        (with-db
+        (h/with-db
           settings-one-line
           (let [code (h/code "(ns a)"
                              "(defn ^{:arglists '([y x] [z w])} foo [x y] x)"
@@ -264,7 +255,7 @@
                     (h/file-path "/a.clj")]
                    (:contents (hover foo-r foo-c)))))))
       (testing "On function usage corner cases"
-        (with-db
+        (h/with-db
           settings-one-line
           (let [code (h/code "(ns a)"
                              "(defn foo \"Some cool docs :foo\" [x y] x)"
@@ -294,7 +285,7 @@
                     (h/file-path "/a.clj")]
                    (:contents (hover anon-row anon-col))))
             (testing "hide-signature-call? enabled"
-              (with-db
+              (h/with-db
                 settings-hide-calling
                 (is (= [{:language "clojure"
                          :value "(a/bar [x y])"}
@@ -302,7 +293,7 @@
                         (h/file-path "/a.clj")]
                        (:contents (hover bar-row bar-col)))))))))
       (testing "On function definition"
-        (with-db
+        (h/with-db
           settings-one-line
           (let [code (h/code "(ns a)"
                              "(defn |foo \"Some cool docs :foo\" [x y] x)")
@@ -324,7 +315,7 @@
                   (h/file-path "/some_a.clj")]
                  (:contents (f.hover/hover (h/file-uri "file:///some_b.clj") row col (h/components)))))))
       (testing "recursing to find the docs through metadata"
-        (with-db
+        (h/with-db
           settings-one-line
           (let [code (h/code "(ns a)"
                              "(def ground \"Some cool docs\" 0)"

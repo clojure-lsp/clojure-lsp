@@ -36,6 +36,8 @@
   - deps-deploy: 0.2.2 -> 0.2.5
   - graal-build-time: 1.0.5 -> 1.0.6
 
+- Add optional `defaultLibrary` semantic token modifier for `clojure.core`/`cljs.core` functions and macros, controlled by the new `:semantic-tokens :default-library-for-core?` setting (default: `false`).
+
 ## 2026.05.05-12.58.26
 
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `(require ...)` calls inside `(comment ...)` forms. #2107

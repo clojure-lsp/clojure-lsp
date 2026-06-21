@@ -106,6 +106,14 @@
 (defn reset-components-before-test []
   (use-fixtures :each (fn [f] (reset-components!) (f))))
 
+(defmacro with-db [temp-config & body]
+  `(let [db-before# (db)]
+     (try
+       (swap! (db*) shared/deep-merge ~temp-config)
+       ~@body
+       (finally
+         (reset! (db*) db-before#)))))
+
 (defn take-or-timeout [c timeout-ms]
   (let [timeout (async/timeout timeout-ms)
         [val port] (async/alts!! [c timeout])]

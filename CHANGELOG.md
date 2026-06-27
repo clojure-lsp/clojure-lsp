@@ -37,6 +37,7 @@
   - graal-build-time: 1.0.5 -> 1.0.6
 - when sorting or removing :require or :import namespaces during ns organization, group comments and 
   clj-kondo directives along with them #1237
+- protect against write corruption when saving database cache #2330
 
 ## 2026.05.05-12.58.26
 

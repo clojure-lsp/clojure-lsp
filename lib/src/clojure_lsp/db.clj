@@ -6,7 +6,8 @@
    [clojure.java.io :as io]
    [cognitect.transit :as transit])
   (:import
-   [java.io IOException OutputStream]))
+   [java.io File IOException OutputStream]
+   [java.nio.file Files StandardCopyOption]))
 
 (set! *warn-on-reflection* true)
 
@@ -89,6 +90,16 @@
   [analysis]
   (update-analysis-elements analysis (fn [uri element] (assoc element :uri uri))))
 
+(defn ^:private move-file-atomically [^java.io.File from-file ^java.io.File to-file]
+  (Files/move (.toPath from-file)
+              (.toPath to-file)
+              (into-array [StandardCopyOption/ATOMIC_MOVE StandardCopyOption/REPLACE_EXISTING])))
+
+(defn ^:private create-temporary-file
+  "create a temporary file in the same directory as the existing cache file"
+  ^File [^File cache-file]
+  (File/createTempFile "clojure-lsp-db-tmp" ".transit.json" (io/file (.getParent cache-file))))
+
 (defn ^:private upsert-cache! [cache cache-file]
   (try
     (shared/logging-task
@@ -99,11 +110,18 @@
       :db/upsert-cache
       (io/make-parents cache-file)
       ;; https://github.com/cognitect/transit-clj/issues/43
-      (with-open [os ^OutputStream (no-flush-output-stream (io/output-stream cache-file))]
-        (let [writer (transit/writer os :json)
-              cache (cond-> cache
-                      (:analysis cache) (update :analysis remove-element-uris))]
-          (transit/write writer cache))))
+      (let [tmp-cache-file (create-temporary-file cache-file)]
+        ;; to avoid cache corruption when a write fails, save the cache to 
+        ;; a temporary file and atomically overwrite the original when done
+        (try
+          (with-open [tmp-os ^OutputStream (no-flush-output-stream (io/output-stream tmp-cache-file))]
+            (let [writer (transit/writer tmp-os :json)
+                  cache (cond-> cache
+                          (:analysis cache) (update :analysis remove-element-uris))]
+              (transit/write writer cache)))
+          (move-file-atomically tmp-cache-file cache-file)
+          (finally
+            (Files/deleteIfExists (.toPath tmp-cache-file))))))
     (catch Throwable e
       (logger/error db-logger-tag (str "Could not upsert db cache to " cache-file) e))))
 

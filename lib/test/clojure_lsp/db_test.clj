@@ -3,7 +3,9 @@
    [clojure-lsp.db :as db]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
-   [cognitect.transit :as transit]))
+   [cognitect.transit :as transit])
+  (:import
+   [java.io IOException]))
 
 (defn ^:private temp-cache-file []
   (doto (java.io.File/createTempFile "clojure-lsp.db-test" ".transit.json")
@@ -58,3 +60,21 @@
     (testing "cache with other version is ignored"
       (#'db/upsert-cache! {:version (dec db/version) :analysis {}} cache-file)
       (is (nil? (#'db/read-cache cache-file))))))
+
+(deftest cache-write-failure-test
+  (testing "when cache write fails, cache file should be unchanged"
+    (let [cache-file (temp-cache-file)]
+      (#'db/upsert-cache! {:version db/version :project-root "/original-project"} cache-file)
+      (with-redefs [transit/write (fn [_writer _cache]
+                                    (throw (IOException. "intentionally throwing exception to simulate transit/write failure")))]
+        (#'db/upsert-cache! {:version db/version :project-root "/modified-project"} cache-file)
+        (is (= {:version db/version :project-root "/original-project"}
+               (#'db/read-cache cache-file))))))
+  (testing "error during move of temporary file to cache file"
+    (let [cache-file (temp-cache-file)]
+      (#'db/upsert-cache! {:version db/version :project-root "/original-project"} cache-file)
+      (with-redefs [clojure-lsp.db/move-file-atomically (fn [_ _]
+                                                          (throw (IOException. "intentionally throwing exception to simulate file move failure")))]
+        (#'db/upsert-cache! {:version db/version :project-root "/modified-project"} cache-file)
+        (is (= {:version db/version :project-root "/original-project"}
+               (#'db/read-cache cache-file)))))))

@@ -17,9 +17,9 @@
       (let [[row col] a-start
             [row-stop col-stop] a-stop
             result (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":b" row col (h/db))]
-        (is (= {:changes {"file:///a.cljc" [{:new-text ":b", :range {:end {:character (dec col-stop)
-                                                                           :line (dec row-stop)}
-                                                                     :start {:character (dec col), :line (dec row)}}}]}}
+        (is (= {:changes {(h/file-uri "file:///a.cljc") [{:new-text ":b", :range {:end {:character (dec col-stop)
+                                                                                        :line (dec row-stop)}
+                                                                                  :start {:character (dec col), :line (dec row)}}}]}}
                result))))
 
     (testing "should rename local in destructure"

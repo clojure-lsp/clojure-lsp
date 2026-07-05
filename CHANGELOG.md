@@ -13,6 +13,7 @@
 - Scale the JVM server heap to a percentage of available RAM (`-XX:MaxRAMPercentage`) instead of a fixed `-Xmx`, matching the native image and avoiding out-of-memory on very large projects. #2313
 - Analyze external java member definitions lazily on first navigation/hover/completion instead of all up front, drastically reducing memory usage on projects with large dependency sets. Set `:analysis :java :member-definitions` to `true` to keep the previous eager behavior. #2313
 - Publish startup diagnostics directly and off the `initialize` critical path, so large projects become interactive much sooner (warm `initialize` dropped from ~73s to ~8s on a large monorepo, with diagnostics streaming in right after). #2326
+- Sanitize clj-kondo findings before caching, custom hooks can attach non-serializable data to findings breaking the cache write, and write the db cache atomically so a failed write never leaves a truncated cache behind. #2313
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
 - Bump clj-kondo to `2026.05.26-20260612.132029-18`.
 - Bump rewrite-clj to `1.2.55`.

@@ -30,6 +30,14 @@ jobs:
         id: check
         run: bb bump-clj-kondo
 
+      - name: Install Nix
+        if: steps.check.outputs.changed == 'true'
+        uses: cachix/install-nix-action@v17
+
+      - name: Update nix deps-lock
+        if: steps.check.outputs.changed == 'true'
+        run: nix develop --command deps-lock-update
+
       - name: Set up JDK
         if: steps.check.outputs.changed == 'true'
         uses: actions/setup-java@v3
@@ -67,7 +75,7 @@ jobs:
         run: |
           git config user.name "Clojure LSP Bot"
           git config user.email "ercdll1337+clojure-lsp@gmail.com"
-          git add lib/deps.edn CHANGELOG.md
+          git add lib/deps.edn CHANGELOG.md deps-lock.json
           git commit -m "Bump clj-kondo to ${{ steps.check.outputs.new-version }}"
           git push origin HEAD:master
 
@@ -79,11 +87,12 @@ jobs:
           add-paths: |
             lib/deps.edn
             CHANGELOG.md
+            deps-lock.json
           commit-message: Bump clj-kondo to ${{ steps.check.outputs.new-version }}
           committer: Clojure LSP Bot <ercdll1337+clojure-lsp@gmail.com>
           author: Clojure LSP Bot <ercdll1337+clojure-lsp@gmail.com>
           branch: bump-clj-kondo-snapshot
           title: Bump clj-kondo to ${{ steps.check.outputs.new-version }}
           body: |
-            Automatic bump to the latest clj-kondo snapshot failed the test gate, check the failed run for details:
+            Automatic clj-kondo snapshot bump failed, check the failed run for details:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

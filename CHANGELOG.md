@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- if supported by client, multi-file refactoring prompts for approval #2370
 
 ## 2026.07.06-14.34.19
 
@@ -40,6 +41,8 @@
   - clj-async-profiler: 1.6.2 -> 1.7.0
   - deps-deploy: 0.2.2 -> 0.2.5
   - graal-build-time: 1.0.5 -> 1.0.6
+- when sorting or removing :require or :import namespaces during ns organization, group comments and 
+  clj-kondo directives along with them #1237
 
 ## 2026.05.05-12.58.26
 

@@ -1,10 +1,9 @@
 # Changelog
 
 ## Unreleased
+
 - add missing namespace form, guessing at the name if outside of project sources, 
   when adding a missing :require or :import via the Add Require code action.  #1734
-
-
 - Reduce memory usage of java class and member definitions analysis. #2314
 - Shrink db cache file considerably not serializing redundant analysis elements uri. #2315
 - Run the db cache write on a dedicated thread so the blocking write no longer ties up a core.async dispatch thread during startup. #2318
@@ -19,6 +18,8 @@
 - Bump rewrite-clj to `1.2.55`.
 - Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `:as-alias` requires. #2108
+- when sorting or removing :require or :import namespaces during ns organization, group comments and clj-kondo directives along with them #1237
+- Auto generate clojure-lsp nightly builds given kondo master commits (nightlies).
 - Bumps:
   - clojure: 1.12.4 -> 1.12.5
   - core.async: 1.8.741 -> 1.9.865
@@ -36,8 +37,6 @@
   - clj-async-profiler: 1.6.2 -> 1.7.0
   - deps-deploy: 0.2.2 -> 0.2.5
   - graal-build-time: 1.0.5 -> 1.0.6
-- when sorting or removing :require or :import namespaces during ns organization, group comments and 
-  clj-kondo directives along with them #1237
 
 ## 2026.05.05-12.58.26
 

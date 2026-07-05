@@ -8,6 +8,7 @@ on:
       - 'deps-lock.json'
       - 'lib/resources/CLOJURE_LSP_VERSION'
       - 'lib/resources/CLOJURE_LSP_RELEASED_VERSION'
+      - '.github/workflows/bump_clj_kondo.yml'
       - '.github/workflows/bump_deps.yml'
       - '.github/workflows/bump_downstreams.yml'
       - '.github/workflows/ci.yml'

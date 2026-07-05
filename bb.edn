@@ -53,6 +53,8 @@
 
          release make/release
 
+         bump-clj-kondo bump-kondo/bump-clj-kondo
+
          deploy-clojars make/deploy-clojars
          deploy-clojars-standalone make/deploy-clojars-standalone
          deploy-clojars-test-helper make/deploy-clojars-test-helper

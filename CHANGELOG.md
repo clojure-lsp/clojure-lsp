@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.07.06-14.34.19
+
 - add missing namespace form, guessing at the name if outside of project sources, 
   when adding a missing :require or :import via the Add Require code action.  #1734
 - Reduce memory usage of java class and member definitions analysis. #2314

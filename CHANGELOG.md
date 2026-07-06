@@ -14,7 +14,7 @@
 - Publish startup diagnostics directly and off the `initialize` critical path, so large projects become interactive much sooner (warm `initialize` dropped from ~73s to ~8s on a large monorepo, with diagnostics streaming in right after). #2326
 - Sanitize clj-kondo findings before caching, custom hooks can attach non-serializable data to findings breaking the cache write, and write the db cache atomically so a failed write never leaves a truncated cache behind. #2313
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
-- Bump clj-kondo to `2026.05.26-20260612.132029-18`.
+- Bump clj-kondo to `2026.05.26-20260703.222101-23`.
 - Bump rewrite-clj to `1.2.55`.
 - Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `:as-alias` requires. #2108

@@ -59,6 +59,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
         run: |
-          if [ "$(gh pr view ${{ steps.pr.outputs.pull-request-number }} --json autoMergeRequest --jq '.autoMergeRequest')" = "null" ]; then
+          if [ "$(gh pr view ${{ steps.pr.outputs.pull-request-number }} --json autoMergeRequest --jq '.autoMergeRequest != null')" != "true" ]; then
             gh pr merge --auto --squash ${{ steps.pr.outputs.pull-request-number }}
           fi

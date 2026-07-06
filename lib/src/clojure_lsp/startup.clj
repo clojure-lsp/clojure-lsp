@@ -246,6 +246,24 @@
                            (lsp.kondo/db-with-analysis state-db {:analysis analysis
                                                                  :external? true}))))))))))
 
+(defn ^:private cache-safe-value?
+  "Whether x contains only plain data that transit can serialize. clj-kondo
+  hooks can attach arbitrary data to findings, e.g. copying node metadata
+  holding rewrite-clj nodes whose fields are functions."
+  [x]
+  (cond
+    (or (nil? x) (string? x) (keyword? x) (symbol? x) (number? x) (boolean? x)) true
+    (coll? x) (every? cache-safe-value? (seq x))
+    :else false))
+
+(defn ^:private cache-safe-findings [findings]
+  (when findings
+    (update-vals findings
+                 (fn [file-findings]
+                   (mapv (fn [finding]
+                           (into {} (filter (comp cache-safe-value? val)) finding))
+                         file-findings)))))
+
 (defn ^:private build-db-cache [db]
   (-> db
       (select-keys [:project-hash
@@ -265,7 +283,7 @@
               ;; clj-kondo findings are consumed by clean-ns/diagnostics and are
               ;; only produced by analysis, so persist them to survive a warm
               ;; startup that skips re-analyzing unchanged files.
-              :kondo-findings (get-in db [:diagnostics :clj-kondo])})))
+              :kondo-findings (cache-safe-findings (get-in db [:diagnostics :clj-kondo]))})))
 
 (defn ^:private upsert-db-cache! [db]
   (if (:api? db)

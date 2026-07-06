@@ -13,6 +13,7 @@ on:
       - 'docs/**'
       - 'images/**'
       - 'mkdocs.yml'
+      - '.github/workflows/bump_clj_kondo.yml'
       - '.github/workflows/bump_deps.yml'
       - '.github/workflows/bump_downstreams.yml'
       - '.github/workflows/nightly.yml'

@@ -6,7 +6,8 @@
    [clojure.java.io :as io]
    [cognitect.transit :as transit])
   (:import
-   [java.io IOException OutputStream]))
+   [java.io IOException OutputStream]
+   [java.nio.file CopyOption Files StandardCopyOption]))
 
 (set! *warn-on-reflection* true)
 
@@ -89,23 +90,37 @@
   [analysis]
   (update-analysis-elements analysis (fn [uri element] (assoc element :uri uri))))
 
-(defn ^:private upsert-cache! [cache cache-file]
+(defn ^:private atomic-move! [^java.io.File source ^java.io.File target]
   (try
-    (shared/logging-task
-      :db/manual-gc-before-update-db
-      ;; Reduce a little bit Out of memory exceptions when writing the cache for huge caches.
-      (System/gc))
-    (shared/logging-task
-      :db/upsert-cache
-      (io/make-parents cache-file)
-      ;; https://github.com/cognitect/transit-clj/issues/43
-      (with-open [os ^OutputStream (no-flush-output-stream (io/output-stream cache-file))]
-        (let [writer (transit/writer os :json)
-              cache (cond-> cache
-                      (:analysis cache) (update :analysis remove-element-uris))]
-          (transit/write writer cache))))
-    (catch Throwable e
-      (logger/error db-logger-tag (str "Could not upsert db cache to " cache-file) e))))
+    (Files/move (.toPath source) (.toPath target)
+                (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
+                                        StandardCopyOption/REPLACE_EXISTING]))
+    (catch java.nio.file.AtomicMoveNotSupportedException _
+      (Files/move (.toPath source) (.toPath target)
+                  (into-array CopyOption [StandardCopyOption/REPLACE_EXISTING])))))
+
+(defn ^:private upsert-cache! [cache cache-file]
+  (let [tmp-file (io/file (str cache-file ".tmp"))]
+    (try
+      (shared/logging-task
+        :db/manual-gc-before-update-db
+        ;; Reduce a little bit Out of memory exceptions when writing the cache for huge caches.
+        (System/gc))
+      (shared/logging-task
+        :db/upsert-cache
+        (io/make-parents cache-file)
+        ;; Write to a temp file and atomically move it over the previous cache,
+        ;; so a failed or interrupted write never leaves a truncated cache behind.
+        ;; https://github.com/cognitect/transit-clj/issues/43
+        (with-open [os ^OutputStream (no-flush-output-stream (io/output-stream tmp-file))]
+          (let [writer (transit/writer os :json)
+                cache (cond-> cache
+                        (:analysis cache) (update :analysis remove-element-uris))]
+            (transit/write writer cache)))
+        (atomic-move! tmp-file (io/file cache-file)))
+      (catch Throwable e
+        (logger/error db-logger-tag (str "Could not upsert db cache to " cache-file) e)
+        (try (io/delete-file tmp-file true) (catch Exception _))))))
 
 (defn ^:private read-cache [cache-file]
   (try

@@ -12,6 +12,19 @@
    [clojure.java.io :as io]
    [clojure.test :refer [are deftest is testing]]))
 
+(deftest cache-safe-findings-test
+  (testing "nil findings stay nil"
+    (is (nil? (#'startup/cache-safe-findings nil))))
+  (testing "finding entries holding non-serializable values are dropped, plain data is kept"
+    ;; e.g. metabase hooks reg-finding! with the node meta, which includes
+    ;; :clj-kondo/ignore holding a rewrite-clj node whose :seq-fn is clojure.core/vec
+    (is (= {"file:///a.clj" [{:type :some-custom-linter :row 1 :message "boom"}
+                             {:type :unused-namespace :langs '() :level :warning}]}
+           (#'startup/cache-safe-findings
+            {"file:///a.clj" [{:type :some-custom-linter :row 1 :message "boom"
+                               :clj-kondo/ignore {:linters [{:tag :vector :seq-fn vec}]}}
+                              {:type :unused-namespace :langs '() :level :warning}]})))))
+
 (deftest consider-local-db-cache?-test
   (are [session-analysis-type cache-analysis-type result]
        (= result

@@ -1,0 +1,64 @@
+name: Bump clj-kondo
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [clj-kondo-snapshot]
+
+concurrency:
+  group: bump-clj-kondo
+
+jobs:
+  check-and-bump:
+    if: github.repository == 'clojure-lsp/clojure-lsp'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+
+      - name: Install Babashka
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          bb: '0.9.161'
+
+      - name: Check for new clj-kondo snapshot
+        id: check
+        run: bb bump-clj-kondo
+
+      - name: Install Nix
+        if: steps.check.outputs.changed == 'true'
+        uses: cachix/install-nix-action@v17
+
+      - name: Update nix deps-lock
+        if: steps.check.outputs.changed == 'true'
+        run: nix develop --command deps-lock-update
+
+      - name: Create Pull Request
+        id: pr
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+          add-paths: |
+            lib/deps.edn
+            CHANGELOG.md
+            deps-lock.json
+          commit-message: Bump clj-kondo to ${{ steps.check.outputs.new-version }}
+          committer: Clojure LSP Bot <ercdll1337+clojure-lsp@gmail.com>
+          author: Clojure LSP Bot <ercdll1337+clojure-lsp@gmail.com>
+          branch: bump-clj-kondo-snapshot
+          title: Bump clj-kondo to ${{ steps.check.outputs.new-version }}
+          body: Automated bump to the latest clj-kondo snapshot, merges automatically if CI passes.
+
+      - name: Enable auto-merge
+        if: steps.check.outputs.changed == 'true' && steps.pr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+        run: |
+          if [ "$(gh pr view ${{ steps.pr.outputs.pull-request-number }} --json autoMergeRequest --jq '.autoMergeRequest != null')" != "true" ]; then
+            gh pr merge --auto --squash ${{ steps.pr.outputs.pull-request-number }}
+          fi

@@ -58,3 +58,14 @@
     (testing "cache with other version is ignored"
       (#'db/upsert-cache! {:version (dec db/version) :analysis {}} cache-file)
       (is (nil? (#'db/read-cache cache-file))))))
+
+(deftest cache-write-failure-keeps-previous-cache-test
+  (let [cache-file (temp-cache-file)
+        good-cache {:version db/version :project-root "/project" :classpath ["/project/src"]}]
+    (#'db/upsert-cache! good-cache cache-file)
+    (testing "a write that fails mid-serialization does not truncate the previous cache"
+      ;; functions are not transit-serializable, so this write fails
+      (#'db/upsert-cache! (assoc good-cache :kondo-findings {"file:///a.clj" [{:linters vec}]})
+                          cache-file)
+      (is (= good-cache (#'db/read-cache cache-file)))
+      (is (not (.exists (io/file (str cache-file ".tmp"))))))))

@@ -8,19 +8,21 @@
 (h/reset-components-before-test)
 
 (deftest rename-simple-keywords
-  (let [[a-start _a-stop
+  (let [[a-start a-stop
          a-binding-start a-binding-stop
          a-local-usage-start a-local-usage-stop] (h/load-code-and-locs
                                                    "|:a| (let [{:keys [:|a|]} {}] |a|)"
                                                    (h/file-uri "file:///a.cljc"))]
-    (testing "should not rename plain keywords"
+    (testing "should rename unqualified keywords while skipping the rename for keywords with the same name in destructurings"
       (let [[row col] a-start
+            [row-stop col-stop] a-stop
             result (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":b" row col (h/db))]
-        (is (= {:error {:code :invalid-params
-                        :message "Can't rename - only namespaced keywords can be renamed."}}
+        (is (= {:changes {(h/file-uri "file:///a.cljc") [{:new-text ":b", :range {:end {:character (dec col-stop)
+                                                                                        :line (dec row-stop)}
+                                                                                  :start {:character (dec col), :line (dec row)}}}]}}
                result))))
 
-    (testing "should rename local in destructure but not keywords"
+    (testing "should rename local in destructure"
       (let [[row col] a-binding-start
             changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":b" row col (h/db)))]
         (is (= {(h/file-uri "file:///a.cljc")
@@ -120,7 +122,21 @@
           (h/code "|::hello-world|"
                   "|::hello-world|"
                   "|:hello/world|")
-          (h/file-uri "file:///b.cljc"))]
+          (h/file-uri "file:///b.cljc"))
+        [my-c-start my-c-stop] (h/load-code-and-locs
+                                 (h/code "#:my-ns{:my-c 1}"
+                                         "|:my-c|"
+                                         ":my-ns/my-c")
+                                 (h/file-uri "file:///c.cljc"))
+        [my-e1-start my-e1-stop
+         my-e2-start my-e2-stop] (h/load-code-and-locs
+                                   (h/code "{:my-d |:my-e|}"
+                                           "|:my-e|")
+                                   (h/file-uri "file:///d.cljc"))
+        [my-f1-start my-f1-stop
+         my-f2-start my-f2-stop] (h/load-code-and-locs
+                                   (h/code "(let [{|f| :g} {}] |f|)")
+                                   (h/file-uri "file:///e.cljc"))]
     (testing "renaming keywords renames correctly namespaced maps as well"
       (let [[row col] a-b-start
             changes (:changes (f.rename/rename-from-position (h/file-uri "file:///a.cljc") ":a/g" row col (h/db)))]
@@ -137,7 +153,24 @@
         (let [[row col] h3-start
               changes (:changes (f.rename/rename (h/file-uri "file:///b.cljc") "::hello-world" row col db/db))]
           (is (= {(h/file-uri "file:///b.cljc") [{:new-text "::hello-world" :range (h/->range h3-start h3-stop)}]}
-                 changes))))))
+                 changes))))
+    (testing "when renaming an unqualified keyword when a namespaced map has a similar keyword only the unqualified keyword should change"
+      (let [[row col] my-c-start
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///c.cljc") ":my-d" row col (h/db)))]
+        (is (= {(h/file-uri "file:///c.cljc") [{:new-text ":my-d" :range (h/->range my-c-start my-c-stop)}]}
+               changes))))
+    (testing "when renaming an unqualified keyword that is a keyword inside a map it should be renamed"
+      (let [[row col] my-e1-start
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///d.cljc") ":my-f" row col (h/db)))]
+        (is (= {(h/file-uri "file:///d.cljc") [{:new-text ":my-f" :range (h/->range my-e1-start my-e1-stop)}
+                                               {:new-text ":my-f" :range (h/->range my-e2-start my-e2-stop)}]}
+               changes))))
+    (testing "when renaming a local binding verify that an unqualified keyword with the same name in the destructuring isn't renamed"
+      (let [[row col] my-f1-start
+            changes (:changes (f.rename/rename-from-position (h/file-uri "file:///e.cljc") ":my-f" row col (h/db)))]
+        (is (= {(h/file-uri "file:///e.cljc") [{:new-text "my-f" :range (h/->range my-f1-start my-f1-stop)}
+                                               {:new-text "my-f" :range (h/->range my-f2-start my-f2-stop)}]}
+               changes))))))
 
 (deftest rename-namespaces
   (testing "when client has valid source-paths but no document-changes capability"
@@ -302,6 +335,13 @@
           result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:start {:line 0, :character 6}, :end {:line 0, :character 7}}
              result))))
+  (testing "should rename unqualified keywords"
+    (h/reset-components!)
+    (let [[[row col]] (h/load-code-and-locs "|:a")
+          result (f.rename/prepare-rename h/default-uri row col (h/db))]
+      (is (= {:end {:character 2, :line 0},
+              :start {:character 0, :line 0}}
+             result))))
   (testing "should not rename when on unnamed element"
     (h/reset-components!)
     (let [[[row col]] (h/load-code-and-locs "|[]")
@@ -315,13 +355,6 @@
           result (f.rename/prepare-rename h/default-uri row col (h/db))]
       (is (= {:error {:code :invalid-params
                       :message "Can't rename - no definition found."}}
-             result))))
-  (testing "should not rename plain keywords"
-    (h/reset-components!)
-    (let [[[row col]] (h/load-code-and-locs "|:a")
-          result (f.rename/prepare-rename h/default-uri row col (h/db))]
-      (is (= {:error {:code :invalid-params
-                      :message "Can't rename - only namespaced keywords can be renamed."}}
              result))))
   (testing "when client has valid source-paths but no document-changes capability"
     (h/reset-components!)

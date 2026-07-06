@@ -20,6 +20,9 @@
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `:as-alias` requires. #2108
 - when sorting or removing :require or :import namespaces during ns organization, group comments and clj-kondo directives along with them #1237
 - Auto generate clojure-lsp nightly builds given kondo master commits (nightlies).
+- when sorting or removing :require or :import namespaces during ns organization, group comments and 
+  clj-kondo directives along with them #1237
+- remove restriction on renaming unqualified keywords #2139
 - Bumps:
   - clojure: 1.12.4 -> 1.12.5
   - core.async: 1.8.741 -> 1.9.865

@@ -14,11 +14,10 @@ jobs:
   check-and-bump:
     if: github.repository == 'clojure-lsp/clojure-lsp'
     runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
 
       - name: Install Babashka
@@ -38,50 +37,10 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         run: nix develop --command deps-lock-update
 
-      - name: Set up JDK
+      - name: Create Pull Request
+        id: pr
         if: steps.check.outputs.changed == 'true'
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'adopt'
-          java-version: 17
-
-      - name: Install clojure build tools
-        if: steps.check.outputs.changed == 'true'
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: '1.12.0.1495'
-          lein: '2.9.1'
-          boot: '2.8.3'
-          bb: '0.9.161'
-
-      - name: Run unit tests
-        if: steps.check.outputs.changed == 'true'
-        run: bb test
-
-      - name: Check if namespaces have no diagnostics
-        if: steps.check.outputs.changed == 'true'
-        run: bb lint-diagnostics
-
-      - name: Generate embedded binary
-        if: steps.check.outputs.changed == 'true'
-        run: bb prod-cli
-
-      - name: Run integration tests
-        if: steps.check.outputs.changed == 'true'
-        run: bb integration-test
-
-      - name: Commit and push to master
-        if: steps.check.outputs.changed == 'true'
-        run: |
-          git config user.name "Clojure LSP Bot"
-          git config user.email "ercdll1337+clojure-lsp@gmail.com"
-          git add lib/deps.edn CHANGELOG.md deps-lock.json
-          git commit -m "Bump clj-kondo to ${{ steps.check.outputs.new-version }}"
-          git push origin HEAD:master
-
-      - name: Open PR when tests fail
-        if: failure() && steps.check.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v4.0.3
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
           add-paths: |
@@ -93,6 +52,13 @@ jobs:
           author: Clojure LSP Bot <ercdll1337+clojure-lsp@gmail.com>
           branch: bump-clj-kondo-snapshot
           title: Bump clj-kondo to ${{ steps.check.outputs.new-version }}
-          body: |
-            Automatic clj-kondo snapshot bump failed, check the failed run for details:
-            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          body: Automated bump to the latest clj-kondo snapshot, merges automatically if CI passes.
+
+      - name: Enable auto-merge
+        if: steps.check.outputs.changed == 'true' && steps.pr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.CLOJURE_LSP_BOT_TOKEN }}
+        run: |
+          if [ "$(gh pr view ${{ steps.pr.outputs.pull-request-number }} --json autoMergeRequest --jq '.autoMergeRequest')" = "null" ]; then
+            gh pr merge --auto --squash ${{ steps.pr.outputs.pull-request-number }}
+          fi

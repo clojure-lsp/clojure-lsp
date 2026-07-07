@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Bump clj-kondo to `2026.05.26-20260707.210738-25`.
+- Bump clj-kondo to `2026.05.26-20260707.223214-26`.
 
 ## 2026.07.06-14.34.19
 

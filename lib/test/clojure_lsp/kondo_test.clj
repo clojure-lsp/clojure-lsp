@@ -36,6 +36,29 @@
       (is (identical? (:type member-a) (:type member-b)))
       (is (identical? (:flags member-a) (:flags member-b))))))
 
+(deftest normalize-analysis-java-class-usages-ignore-hint-test
+  ;; https://github.com/clojure-lsp/clojure-lsp/issues/2380
+  ;; clj-kondo merges the expr metadata into java-class-usage elements, so a
+  ;; `#_{:clj-kondo/ignore [...]}` hint leaks rewrite-clj nodes holding
+  ;; functions, which transit cannot serialize when caching the db.
+  (let [clj-uri "file:///a.clj"
+        analysis {:java-class-usages [{:class "java.util.Date"
+                                       :uri clj-uri
+                                       :method-name "from"
+                                       :call true
+                                       :lang :clj
+                                       :clj-kondo/ignore {:row 2 :col 3 :end-row 2 :end-col 41
+                                                          :linters {:tag :vector :seq-fn vec}}
+                                       :clj-kondo/ignore-id :G__1234
+                                       :row 2 :col 42 :end-row 2 :end-col 57
+                                       :name-row 2 :name-col 43 :name-end-row 2 :name-end-col 52}]}
+        result (#'lsp.kondo/normalize-analysis false {} identity {} analysis)
+        element (first (get-in result [clj-uri :java-class-usages]))]
+    (testing "ignore hint metadata with unserializable values is dropped"
+      (is element)
+      (is (not (contains? element :clj-kondo/ignore)))
+      (is (not (contains? element :clj-kondo/ignore-id))))))
+
 (deftest canonicalize-java-analysis-test
   (let [clj-uri "file:///a.clj"
         clj-buckets {:var-definitions [{:name 'foo}]}

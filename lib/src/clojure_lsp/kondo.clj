@@ -224,8 +224,16 @@
                                   :alias-end-row :name-end-row
                                   :alias-end-col :name-end-col}))))
 
-    (:locals :local-usages :java-class-usages :symbols)
+    (:locals :local-usages :symbols)
     [(element-with-fallback-name-position element)]
+
+    ;; clj-kondo merges the expr metadata into these elements, which for forms
+    ;; preceded by a `#_{:clj-kondo/ignore [...]}` hint includes rewrite-clj
+    ;; nodes holding functions that break the transit db cache. #2380
+    :java-class-usages
+    [(-> element
+         (dissoc :clj-kondo/ignore :clj-kondo/ignore-id)
+         element-with-fallback-name-position)]
 
     :keywords
     (cond

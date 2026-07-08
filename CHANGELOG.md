@@ -3,6 +3,8 @@
 ## Unreleased
 - Bump clj-kondo to `2026.05.26-20260707.223214-26`.
 
+- Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
+
 ## 2026.07.06-14.34.19
 
 - add missing namespace form, guessing at the name if outside of project sources, 

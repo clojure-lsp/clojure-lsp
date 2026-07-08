@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- if supported by client, multi-file refactoring prompts for approval #2370
 
 - Bump clj-kondo to `2026.05.26-20260707.223214-26`.
 - Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
@@ -44,6 +45,8 @@
   - clj-async-profiler: 1.6.2 -> 1.7.0
   - deps-deploy: 0.2.2 -> 0.2.5
   - graal-build-time: 1.0.5 -> 1.0.6
+- when sorting or removing :require or :import namespaces during ns organization, group comments and 
+  clj-kondo directives along with them #1237
 
 ## 2026.05.05-12.58.26
 

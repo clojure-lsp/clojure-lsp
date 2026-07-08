@@ -524,15 +524,36 @@
       (str (.resolve project-root-path path))
       path)))
 
+(defn ^:private inject-confirm-annotations [changes]
+  (mapv (fn [change]
+          (cond-> change
+            (:edits change) (update :edits (fn [edits]
+                                             (mapv #(assoc % :annotation-id "confirmClojureLspRefactor") edits)))
+            (:kind change) (assoc :annotation-id "confirmClojureLspRefactor"))) changes))
+
 ;; TODO move to a better place
 (defn client-changes [changes db]
-  (if (or
-        (get-in db [:client-capabilities :workspace :workspace-edit :document-changes])
-        (get-in db [:client-capabilities :workspace :workspace-edit :resource-operations]))
-    {:document-changes changes}
-    {:changes (into {} (map (fn [{:keys [text-document edits]}]
-                              [(:uri text-document) edits])
-                            changes))}))
+  (let [document-changes-capability (get-in db [:client-capabilities :workspace :workspace-edit :document-changes])
+        resource-operations-capability (get-in db [:client-capabilities :workspace :workspace-edit :resource-operations])
+        change-annotation-support (get-in db [:client-capabilities :workspace :workspace-edit :change-annotation-support])]
+    (cond
+      ;; client has refactor review support, and is a multi-file refactoring
+      (and (or document-changes-capability resource-operations-capability)
+           change-annotation-support
+           (> (count changes) 1))
+      {:document-changes (inject-confirm-annotations changes)
+       :change-annotations {"confirmClojureLspRefactor" {:label "Confirm clojure-lsp refactor"
+                                                         "needsConfirmation" true}}}
+
+      ;; client supports create, delete, etc...
+      (or document-changes-capability resource-operations-capability)
+      {:document-changes changes}
+
+      ;; client can only handle basic text changes
+      :else
+      {:changes (into {} (map (fn [{:keys [text-document edits]}]
+                                [(:uri text-document) edits])
+                              changes))})))
 
 (defn ^:private clojure-lsp-version* []
   (string/trim (slurp (io/resource "CLOJURE_LSP_VERSION"))))

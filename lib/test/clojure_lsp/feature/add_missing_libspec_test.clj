@@ -209,7 +209,81 @@
   (testing "Invalid location"
     (h/assert-submaps
       []
-      (find-require-suggestions "|;; comment"))))
+      (find-require-suggestions "|;; comment")))
+  (testing "suggest without namespace, no usages"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my-ns-b) (def foo 42)" "file:///my-ns-b.clj")
+    (h/assert-submaps
+      [{:ns "my-ns-b", :refer "foo"}]
+      (find-require-suggestions "|foo")))
+  (testing "suggest without namespace, one usage"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my-ns-b) (def foo 42)" "file:///my-ns-b.clj")
+    (h/load-code-and-locs "(ns my-ns-c (:require [my-ns-b :as nsb]))" "file:///my-ns-c.clj")
+    (h/assert-submaps
+      [{:ns "my-ns-b", :refer "foo" :count 1}]
+      (find-require-suggestions "|foo")))
+  (testing "suggest without namespace, results should be reverse ordered"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my-ns-b1) (def foo 1)" "file:///my-ns-b1.clj")
+    (h/load-code-and-locs "(ns my-ns-b2) (def foo 2)" "file:///my-ns-b2.clj")
+    (h/load-code-and-locs "(ns my-ns-b3) (def foo 3)" "file:///my-ns-b3.clj")
+    (h/load-code-and-locs "(ns my-ns-c (:require [my-ns-b1 :as nsb1] [my-ns-b2 :as nsb2] [my-ns-b3 :as nsb3]))" "file:///my-ns-c.clj")
+    (h/load-code-and-locs "(ns my-ns-d (:require [my-ns-b1 :as nsb1] [my-ns-b2 :as nsb2]))" "file:///my-ns-d.clj")
+    (h/load-code-and-locs "(ns my-ns-e (:require [my-ns-b1 :as nsb1]))" "file:///my-ns-e.clj")
+    (h/assert-submaps
+      [{:count 3, :ns "my-ns-b1", :refer "foo"}
+       {:count 2, :ns "my-ns-b2", :refer "foo"}
+       {:count 1, :ns "my-ns-b3", :refer "foo"}]
+      (find-require-suggestions "fo|o")))
+  (testing "suggest without namespace, namespaces with different aliases are combined for a total count"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my-ns-b1) (def foo 1)" "file:///my-ns-b1.clj")
+    (h/load-code-and-locs "(ns my-ns-b2) (def foo 2)" "file:///my-ns-b2.clj")
+    (h/load-code-and-locs "(ns my-ns-b3) (def foo 3)" "file:///my-ns-b3.clj")
+    (h/load-code-and-locs "(ns my-ns-c (:require [my-ns-b1 :as nsb1a] [my-ns-b2 :as nsb2] [my-ns-b3 :as nsb3]))" "file:///my-ns-c.clj")
+    (h/load-code-and-locs "(ns my-ns-d (:require [my-ns-b1 :as nsb1b] [my-ns-b2 :as nsb2]))" "file:///my-ns-d.clj")
+    (h/load-code-and-locs "(ns my-ns-e (:require [my-ns-b1 :as nsb1c]))" "file:///my-ns-e.clj")
+    (h/assert-submaps
+      [{:count 3, :ns "my-ns-b1", :refer "foo"}
+       {:count 2, :ns "my-ns-b2", :refer "foo"}
+       {:count 1, :ns "my-ns-b3", :refer "foo"}]
+      (find-require-suggestions "fo|o")))
+  (testing "suggest common refer with usage count"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my-ns-d (:require [clojure.core.async :as async]))" "file:///b.clj")
+    (h/assert-submaps
+      [{:ns "clojure.core.async", :refer "go-loop" :count 1}]
+      (find-require-suggestions "|go-loop")))
+  (testing "suggest without namespace, results should be reverse ordered, zero count sorted to bottom"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my-ns-b1) (def foo 1)" "file:///my-ns-b1.clj")
+    (h/load-code-and-locs "(ns my-ns-b2) (def foo 2)" "file:///my-ns-b2.clj")
+    (h/load-code-and-locs "(ns my-ns-b3) (def foo 3)" "file:///my-ns-b3.clj")
+    (h/load-code-and-locs "(ns my-ns-c (:require [my-ns-b1 :as nsb1] [my-ns-b2 :as nsb2]))" "file:///my-ns-c.clj")
+    (h/load-code-and-locs "(ns my-ns-d (:require [my-ns-b1 :as nsb1] [my-ns-b2 :as nsb2]))" "file:///my-ns-d.clj")
+    (h/load-code-and-locs "(ns my-ns-e (:require [my-ns-b1 :as nsb1]))" "file:///my-ns-e.clj")
+    (h/assert-submaps
+      [{:count 3, :ns "my-ns-b1", :refer "foo"}
+       {:count 2, :ns "my-ns-b2", :refer "foo"}
+       {:ns "my-ns-b3", :refer "foo"}]
+      (find-require-suggestions "fo|o")))
+  (testing "suggest without namespace, no matches found"
+    (h/reset-components!)
+    (h/assert-submaps
+      []
+      (find-require-suggestions "fo|o")))
+  (testing "suggest with namespace, should include count and alias"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my-ns-b1) (def foo 1)" "file:///my-ns-b1.clj")
+    (h/load-code-and-locs "(ns my-ns-b2) (def foo 2)" "file:///my-ns-b2.clj")
+    (h/load-code-and-locs "(ns my-ns-b3) (def foo 3)" "file:///my-ns-b3.clj")
+    (h/load-code-and-locs "(ns my-ns-c (:require [my-ns-b1 :as nsb1] [my-ns-b2 :as nsb2]))" "file:///my-ns-c.clj")
+    (h/load-code-and-locs "(ns my-ns-d (:require [my-ns-b1 :as nsb1] [my-ns-b2 :as nsb2]))" "file:///my-ns-d.clj")
+    (h/load-code-and-locs "(ns my-ns-e (:require [my-ns-b1 :as nsb1]))" "file:///my-ns-e.clj")
+    (h/assert-submaps
+      [{:alias "nsb2", :count 1, :ns "my-ns-b2"}]
+      (find-require-suggestions "my-ns-b2/fo|o"))))
 
 (defn ^:private add-missing-libspec [code]
   (f.add-missing-libspec/add-missing-libspec (h/load-code-and-zloc code) "file:///a.clj" (h/db) {}))

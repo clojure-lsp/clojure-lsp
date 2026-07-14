@@ -81,7 +81,17 @@
       (h/code "(defmacro with-value [value] value)"
               "(with-value |1)"))
     (is (= []
-           (f.inlay-hints/hints (h/file-uri "file:///a.clj") full-range (h/components))))))
+           (f.inlay-hints/hints (h/file-uri "file:///a.clj") full-range (h/components)))))
+
+  (testing "omits hints when argument and parameter names match"
+    (let [[[_name-row _name-col]
+           [punctuation-row punctuation-col]] (h/load-code-and-locs
+                                                (h/code "(defn greet [name punctuation]"
+                                                        "  (str name punctuation))"
+                                                        "(let [name \"Ada\"]"
+                                                        "  (greet |name |\"!\"))"))]
+      (is (= [(hint punctuation-row punctuation-col "punctuation:")]
+             (f.inlay-hints/hints (h/file-uri "file:///a.clj") full-range (h/components)))))))
 
 (deftest requested-range
   (let [[[_first-row _first-col]

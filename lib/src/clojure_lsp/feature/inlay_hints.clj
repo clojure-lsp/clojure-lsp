@@ -64,6 +64,13 @@
        (not (fast= '_ parameter))
        (not (string/starts-with? (name parameter) "_"))))
 
+(defn ^:private argument-matches-parameter?
+  [argument-node parameter]
+  (when (n/symbol-node? argument-node)
+    (let [argument (n/sexpr argument-node)]
+      (and (symbol? argument)
+           (fast= (name parameter) (name argument))))))
+
 (defn ^:private position-in-range?
   [{:keys [line character]} {:keys [start end]}]
   (let [position [line character]
@@ -85,6 +92,7 @@
                          {:keys [row col]} (meta argument-node)
                          position (shared/row-col->position row col)]
                      (when (and (hintable-parameter? parameter)
+                                (not (argument-matches-parameter? argument-node parameter))
                                 (position-in-range? position range))
                        {:position position
                         :label (str parameter ":")

@@ -123,7 +123,7 @@
     <dependency>
       <groupId>org.babashka</groupId>
       <artifactId>sci</artifactId>
-      <version>0.13.52</version>
+      <version>0.13.53</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>

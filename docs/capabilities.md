@@ -46,6 +46,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | completionItem/resolve                 | √    |                                                                               |
 | textDocument/hover                     | √    |                                                                               |
 | textDocument/signatureHelp             | √    | Missing support for active parameter ATM                                      |
+| textDocument/inlayHint                 | √    | Parameter names for calls with one unambiguous arity                          |
 | textDocument/declaration               | √    | Show where the symbol was declared on the file, like alias/refer  definitions |
 | textDocument/definition                | √    |                                                                               |
 | textDocument/typeDefinition            |      |                                                                               |

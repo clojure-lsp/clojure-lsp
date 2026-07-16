@@ -330,6 +330,12 @@ See [below](#clojure-lsp-extra-commands) for screenshots.
 
 ![](images/features/signature-help.gif)
 
+### Inlay hints
+
+Shows parameter names before arguments when a function call matches one
+unambiguous arity. Macros, destructured parameters and intentionally unused
+parameters are omitted.
+
 ### Semantic tokens
 
 The LSP server is the best to say what is the semantic value of a token on the editor, semantic tokens allows server return to client all tokens of a buffer and how client show apply highlight.

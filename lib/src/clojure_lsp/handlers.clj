@@ -16,6 +16,7 @@
    [clojure-lsp.feature.folding :as f.folding]
    [clojure-lsp.feature.format :as f.format]
    [clojure-lsp.feature.hover :as f.hover]
+   [clojure-lsp.feature.inlay-hints :as f.inlay-hints]
    [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.feature.linked-editing-range :as f.linked-editing-range]
    [clojure-lsp.feature.project-tree :as f.project-tree]
@@ -414,6 +415,14 @@
     :lsp/signature-help
     (let [[row col] (shared/position->row-col position)]
       (f.signature-help/signature-help (:uri text-document) row col components))))
+
+(defn inlay-hints
+  [components {:keys [text-document range]}]
+  (when-not (skip-feature-for-uri? :inlay-hints (:uri text-document) components)
+    (process-after-changes
+      components (:uri text-document)
+      :lsp/inlay-hints
+      (f.inlay-hints/hints (:uri text-document) range components))))
 
 (defn formatting [components {:keys [text-document]}]
   (when-not (skip-feature-for-uri? :formatting (:uri text-document) components)

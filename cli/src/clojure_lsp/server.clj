@@ -317,6 +317,13 @@
        (conform-or-log ::coercer/signature-help-or-error)
        eventually))
 
+(defmethod jsonrpc.server/receive-request "textDocument/inlayHint" [_ components params]
+  (->> params
+       normalize-doc-uri
+       (handler/inlay-hints components)
+       (conform-or-log ::coercer/inlay-hints)
+       after-changes))
+
 (defmethod jsonrpc.server/receive-request "textDocument/formatting" [_ components params]
   (->> params
        normalize-doc-uri
@@ -495,6 +502,7 @@
      :declaration-provider true
      :implementation-provider true
      :signature-help-provider []
+     :inlay-hint-provider true
      :call-hierarchy-provider true
      :linked-editing-range-provider true
      :code-action-provider (vec (vals coercer/code-action-kind))

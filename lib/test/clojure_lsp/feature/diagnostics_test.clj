@@ -233,6 +233,7 @@
           (is (= (h/file-uri "file:///a.clj") uri))
           (is (= ["user/foo is called with 2 args but expects 1 or 3"
                   "user/bar is called with 1 arg but expects 0"
+                  "Expected: function, received: positive integer."
                   "user/bar is called with 1 arg but expects 0"
                   "user/bar is called with 3 args but expects 0"
                   "user/foo is called with 2 args but expects 1 or 3"
@@ -251,7 +252,8 @@
                                                         :diagnostics-chan mock-diagnostics-chan))
         (let [{:keys [uri diagnostics]} (h/take-or-timeout mock-diagnostics-chan 500)]
           (is (= h/default-uri uri))
-          (is (= ["user/foo is called with 2 args but expects 1"]
+          (is (= ["Expected: number, received: function."
+                  "user/foo is called with 2 args but expects 1"]
                  (map :message diagnostics))))))
     (testing "for schema defs"
       (h/reset-components!)

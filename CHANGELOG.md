@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Bump clj-kondo to `2026.05.26-20260717.101308-34`.
+- Bump clj-kondo to `2026.05.26-20260717.192407-36`.
 - Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
 - Fix completion error in deps.edn/project.clj when the map is transiently unbalanced while typing a new key. #2384
 

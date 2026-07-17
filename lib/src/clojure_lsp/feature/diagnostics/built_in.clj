@@ -173,8 +173,19 @@
                                 (q/var-usage-signature e)))))
                      nses-and-dependents)
         var-used? (fn [var-def]
-                    (some usages (q/var-definition-signatures var-def)))]
-    (remove var-used? var-definitions)))
+                    (some usages (q/var-definition-signatures var-def)))
+        used-var-definition-locations (into #{}
+                                            (comp
+                                              (filter var-used?)
+                                              (map q/var-definition-location-key))
+                                            var-definitions)
+        macro-var-used? (fn [var-def]
+                          (contains? used-var-definition-locations
+                                     (q/var-definition-location-key var-def)))]
+    (remove (fn [var-def]
+              (or (var-used? var-def)
+                  (macro-var-used? var-def)))
+            var-definitions)))
 
 (defn ^:private unused-public-vars [narrowed-db project-db settings]
   (when-not (identical? :off (get-in settings [:linters :clojure-lsp/unused-public-var :level] :info))

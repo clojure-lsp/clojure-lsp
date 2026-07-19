@@ -152,6 +152,16 @@
       "hash": "sha256-dfemP3pEENnLIaUTKMamxv1T8hI3bniv/k5s+87Ea3M="
     },
     {
+      "mvn-path": "borkdude/edamame/1.6.42/edamame-1.6.42.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-OrL72ww2BrDcSnDItafjxXkPqukvCYTxowO9myMp9t0="
+    },
+    {
+      "mvn-path": "borkdude/edamame/1.6.42/edamame-1.6.42.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-gdjOLfHpV/KmqqonaTAYruWhoa/WH1Pxdv45xlfQXZc="
+    },
+    {
       "mvn-path": "borkdude/graal.locking/0.0.2/graal.locking-0.0.2.jar",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-eFlpdVXBVNcgMM6zRTTPuqcKxLWJhAQdN4ULU733FF4="
@@ -257,16 +267,16 @@
       "hash": "sha256-KizCFbZGnpZ8TgK78NZZLyV2htN9BJ27Ifp32SZ7qfQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.05.26-SNAPSHOT/clj-kondo-2026.05.26-20260718.223733-38.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2026.05.26-SNAPSHOT/clj-kondo-2026.05.26-20260719.094537-39.jar",
       "snapshot": "clj-kondo-2026.05.26-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-C1AQYhcTzojAHnaqOc+gsPTNG0SexOtINHymxoyzgg4="
+      "hash": "sha256-zklp7f/4G9kIyySUSELHAOZiASaXuAO8Kym6Z5Vck6c="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.05.26-SNAPSHOT/clj-kondo-2026.05.26-20260718.223733-38.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2026.05.26-SNAPSHOT/clj-kondo-2026.05.26-20260719.094537-39.pom",
       "snapshot": "clj-kondo-2026.05.26-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-0hmgbJS1PMa1yNEz13Ni4G237taS9Nn/4ZxhzsB10Hk="
+      "hash": "sha256-pkhyql7kUQRao03x6/QjPNAvdoWIs9p8J+vHaR8K3/A="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -2457,6 +2467,16 @@
       "mvn-path": "org/babashka/sci/0.13.52/sci-0.13.52.pom",
       "mvn-repo": "https://repo.clojars.org/",
       "hash": "sha256-Ip+u3BRWnAVj00RKPe/blIvb9gmLfGFg9d1TgzAYYb0="
+    },
+    {
+      "mvn-path": "org/babashka/sci/0.15.56/sci-0.15.56.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-8rCIEZX+jNnCP6bAAbGf2fHKG6Ek5lf8VjzVXE+0r78="
+    },
+    {
+      "mvn-path": "org/babashka/sci/0.15.56/sci-0.15.56.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-O7RbGWG0jBIeHhttJrcrwRH1EdlTGo/N/hYL+e3mhxo="
     },
     {
       "mvn-path": "org/benf/cfr/0.152/cfr-0.152.jar",

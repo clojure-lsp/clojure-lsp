@@ -141,8 +141,7 @@
                  (map (fn [^File f]
                         (when (and (shared/file-exists? f)
                                    (not (shared/directory? f)))
-                          (let [uri (shared/filename->uri
-                                      (.getCanonicalPath f) db)]
+                          (let [uri (shared/filename->uri (.getCanonicalPath f) db)]
                             (when-let [ns (shared/uri->namespace uri db)]
                               [uri ns])))))
                  (remove nil?)

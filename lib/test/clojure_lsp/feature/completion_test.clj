@@ -753,6 +753,20 @@
                       f.completion-lib/fetch-github-clojure-libs! (constantly {})]
           (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") dep-2-r dep-2-c (h/db)))))))
 
+(deftest completing-clojure-deps-unbalanced-map
+  (testing "typing a new top-level key on a transiently-unbalanced map does not error (#2384)"
+    (let [[[row col]] (h/load-code-and-locs
+                        (h/code "{:paths [\"src\"]"
+                                " :a|"
+                                " :deps {org.clojure/clojure {:mvn/version \"1.12.0\"}"
+                                "        quil/quil {:mvn/version \"4.3.1563\"}}}")
+                        (h/file-uri "file:///some/my-project/deps.edn"))]
+      (reset! f.completion-lib/libs* f.completion-lib/initial-libs-value)
+      (with-redefs [f.completion-lib/fetch-clojars-libs! (constantly {})
+                    f.completion-lib/get-mvn-artifacts! (constantly {})
+                    f.completion-lib/fetch-github-clojure-libs! (constantly {})]
+        (is (coll? (f.completion/completion (h/file-uri "file:///some/my-project/deps.edn") row col (h/db))))))))
+
 (deftest completing-lein-lib-names
   (let [[[dep-1-r dep-1-c]
          [dep-2-r dep-2-c]

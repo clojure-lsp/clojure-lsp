@@ -87,8 +87,7 @@
                ns
                (str ":" ns "/" replacement-name)
 
-               ;; There shouldn't be another case, since renaming
-               ;; unqualified keywords is currently disallowed
+               ;; unqualified keyword - use replacement as is
                :else
                replacement)]
     (concat
@@ -222,8 +221,11 @@
     (mapv (partial rename-other replacement db) references)))
 
 (defn ^:private rename-status [db element]
-  (let [references (q/find-references db element true)
-        definition (q/find-definition db element)
+  (let [definition (q/find-definition db element)
+        raw-references (q/find-references db element true)
+        ;; Don't rename keywords inside a destructuring while renaming unqualified keywords 
+        references (cond->> raw-references
+                     (and definition (nil? (:ns definition))) (remove :keys-destructuring))
         client-capabilities (:client-capabilities db)
         source-paths (settings/get db [:source-paths])
         source-path (some-> (:uri definition)
@@ -254,11 +256,6 @@
            (not= 1 (count (q/find-all-project-namespace-definitions db (:name definition)))))
       {:error {:code :invalid-params
                :message "Can't rename - namespace is defined in multiple files."}}
-
-      (and (contains? #{:keyword-definitions :keyword-usages} (:bucket definition))
-           (not (:ns definition)))
-      {:error {:code :invalid-params
-               :message "Can't rename - only namespaced keywords can be renamed."}}
 
       :else
       {:result :success

@@ -6,7 +6,8 @@
    [clojure.java.io :as io]
    [cognitect.transit :as transit])
   (:import
-   [java.io IOException OutputStream]))
+   [java.io IOException OutputStream]
+   [java.nio.file CopyOption Files StandardCopyOption]))
 
 (set! *warn-on-reflection* true)
 
@@ -20,7 +21,7 @@
                                :custom nil}})
 (defonce db* (atom initial-db))
 
-(def version 13)
+(def version 17)
 
 (defn ^:private sqlite-db-file [project-root]
   (io/file (str project-root) ".lsp" ".cache" "sqlite.db"))
@@ -62,21 +63,64 @@
         (proxy-super flush)
         (proxy-super close)))))
 
-(defn ^:private upsert-cache! [cache cache-file]
+(defn ^:private update-analysis-elements [analysis f]
+  (reduce-kv
+    (fn [analysis uri buckets]
+      (assoc analysis uri
+             (reduce-kv
+               (fn [buckets bucket elements]
+                 (assoc buckets bucket (mapv (partial f uri) elements)))
+               buckets
+               buckets)))
+    analysis
+    analysis))
+
+(defn ^:private remove-element-uris
+  "Removes the redundant `:uri` of each analysis element before writing the
+  cache, shrinking the file considerably. The analysis map is already keyed
+  by uri, `restore-element-uris` re-assocs it on read."
+  [analysis]
+  (update-analysis-elements analysis (fn [_uri element] (dissoc element :uri))))
+
+(defn ^:private restore-element-uris
+  "Re-assocs the analysis map key as the `:uri` of each element of a read
+  cache, sharing a single String instance per uri. Transit caches map keys
+  but not string values, so serializing `:uri` inside elements would create
+  one String copy per element."
+  [analysis]
+  (update-analysis-elements analysis (fn [uri element] (assoc element :uri uri))))
+
+(defn ^:private atomic-move! [^java.io.File source ^java.io.File target]
   (try
-    (shared/logging-task
-      :db/manual-gc-before-update-db
-      ;; Reduce a little bit Out of memory exceptions when writing the cache for huge caches.
-      (System/gc))
-    (shared/logging-task
-      :db/upsert-cache
-      (io/make-parents cache-file)
-      ;; https://github.com/cognitect/transit-clj/issues/43
-      (with-open [os ^OutputStream (no-flush-output-stream (io/output-stream cache-file))]
-        (let [writer (transit/writer os :json)]
-          (transit/write writer cache))))
-    (catch Throwable e
-      (logger/error db-logger-tag (str "Could not upsert db cache to " cache-file) e))))
+    (Files/move (.toPath source) (.toPath target)
+                (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
+                                        StandardCopyOption/REPLACE_EXISTING]))
+    (catch java.nio.file.AtomicMoveNotSupportedException _
+      (Files/move (.toPath source) (.toPath target)
+                  (into-array CopyOption [StandardCopyOption/REPLACE_EXISTING])))))
+
+(defn ^:private upsert-cache! [cache cache-file]
+  (let [tmp-file (io/file (str cache-file ".tmp"))]
+    (try
+      (shared/logging-task
+        :db/manual-gc-before-update-db
+        ;; Reduce a little bit Out of memory exceptions when writing the cache for huge caches.
+        (System/gc))
+      (shared/logging-task
+        :db/upsert-cache
+        (io/make-parents cache-file)
+        ;; Write to a temp file and atomically move it over the previous cache,
+        ;; so a failed or interrupted write never leaves a truncated cache behind.
+        ;; https://github.com/cognitect/transit-clj/issues/43
+        (with-open [os ^OutputStream (no-flush-output-stream (io/output-stream tmp-file))]
+          (let [writer (transit/writer os :json)
+                cache (cond-> cache
+                        (:analysis cache) (update :analysis remove-element-uris))]
+            (transit/write writer cache)))
+        (atomic-move! tmp-file (io/file cache-file)))
+      (catch Throwable e
+        (logger/error db-logger-tag (str "Could not upsert db cache to " cache-file) e)
+        (try (io/delete-file tmp-file true) (catch Exception _))))))
 
 (defn ^:private read-cache [cache-file]
   (try
@@ -86,7 +130,8 @@
         (let [cache (with-open [is (io/input-stream cache-file)]
                       (transit/read (transit/reader is :json)))]
           (when (= version (:version cache))
-            cache))
+            (cond-> cache
+              (:analysis cache) (update :analysis restore-element-uris))))
         (logger/error db-logger-tag (str "No cache DB file found for " cache-file))))
     (catch Throwable e
       (logger/error db-logger-tag "Could not load global cache from DB" e))))

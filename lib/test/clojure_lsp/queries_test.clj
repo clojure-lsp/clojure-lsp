@@ -922,7 +922,6 @@
                     ""
                     "(|Parent.)") (h/file-uri "file:///project/my/java_first_namespace.clj"))
           expected {:external? true
-                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
                     :class "my_class.Parent"
                     :uri (h/file-uri
                            (shared/filename->uri
@@ -945,7 +944,6 @@
                     ""
                     "(|Parent$Child.)") (h/file-uri "file:///project/my/java_second_namespace.clj"))
           expected {:external? true
-                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
                     :class "my_class.Parent$Child"
                     :uri (h/file-uri
                            (shared/filename->uri
@@ -968,7 +966,6 @@
                     ""
                     "(|ParentTwo$ChildTwo.)") (h/file-uri "file:///project/my/java_third_namespace.clj"))
           expected {:external? true
-                    :name-row 0 :name-col 0 :name-end-row 0 :name-end-col 0
                     :class "my_class.ParentTwo$ChildTwo"
                     :uri (h/file-uri
                            (shared/filename->uri

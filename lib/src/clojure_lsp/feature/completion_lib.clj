@@ -3,6 +3,7 @@
    [cheshire.core :as json]
    [clojure-lsp.http :as http]
    [clojure-lsp.logger :as logger]
+   [clojure-lsp.parser :as parser]
    [clojure-lsp.shared :as shared :refer [fast=]]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -35,14 +36,14 @@
                               (some-> cursor-loc z/prev z/sexpr)))
         #:dep{:type :version
               :coordinate :mvn/version
-              :lib (z/sexpr (z/prev (z/up cursor-loc)))}
+              :lib (parser/safe-zloc-sexpr (z/prev (z/up cursor-loc)))}
 
         ;; inside :git/tag string
         (fast= :git/tag (when (some-> cursor-loc z/prev z/tag (= :token))
                           (some-> cursor-loc z/prev z/sexpr)))
         #:dep{:type :version
               :coordinate :git/tag
-              :lib (z/sexpr (z/prev (z/up cursor-loc)))}
+              :lib (parser/safe-zloc-sexpr (z/prev (z/up cursor-loc)))}
 
         ;; inside {} without coordinate
         (some-> cursor-loc z/prev z/string symbol qualified-symbol?)
@@ -50,8 +51,7 @@
               :lib (some-> cursor-loc z/prev z/string symbol)}
 
         ;; inside {} without coordinate
-        (and (some-> cursor-loc z/prev z/prev z/sexpr-able?)
-             (some-> cursor-loc z/prev z/prev z/sexpr symbol?)
+        (and (some-> cursor-loc z/prev z/prev parser/safe-zloc-sexpr symbol?)
              (some-> cursor-loc z/prev z/prev z/string symbol qualified-symbol?))
         #:dep{:type :version
               :lib (some-> cursor-loc z/prev z/prev z/string symbol)}
@@ -59,24 +59,24 @@
         ;; lib name
         (and (some-> cursor-loc z/prev z/prev z/sexpr-able?)
              (contains? #{:deps :extra-deps :replace-deps}
-                        (some-> cursor-loc z/up z/prev z/sexpr)))
+                        (some-> cursor-loc z/up z/prev parser/safe-zloc-sexpr)))
         #:dep{:type :name})
 
       :leiningen
       (cond
         ;; lib version
         (and (contains? #{:dependencies :managed-dependencies :plugins :pom-plugins :extensions}
-                        (some-> cursor-loc z/up z/up z/prev z/sexpr))
-             (some-> cursor-loc z/sexpr string?))
+                        (some-> cursor-loc z/up z/up z/prev parser/safe-zloc-sexpr))
+             (some-> cursor-loc parser/safe-zloc-sexpr string?))
         #:dep{:type :version
               :coordinate :mvn/version
-              :lib (some-> cursor-loc z/leftmost z/sexpr symbol)}
+              :lib (some-> cursor-loc z/leftmost parser/safe-zloc-sexpr symbol)}
 
         ;; lib name
         (or (contains? #{:dependencies :managed-dependencies :plugins :pom-plugins :extensions}
-                       (some-> cursor-loc z/up z/prev z/sexpr))
+                       (some-> cursor-loc z/up z/prev parser/safe-zloc-sexpr))
             (contains? #{:dependencies :managed-dependencies :plugins :pom-plugins :extensions}
-                       (some-> cursor-loc z/up z/up z/prev z/sexpr)))
+                       (some-> cursor-loc z/up z/up z/prev parser/safe-zloc-sexpr)))
         #:dep{:type :name}))))
 
 (def initial-libs-value {:loading false :libs nil})

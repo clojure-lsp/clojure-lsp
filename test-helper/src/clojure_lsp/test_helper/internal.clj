@@ -43,10 +43,12 @@
 
 (defn code [& strings] (string/join "\n" strings))
 
-(defrecord TestProducer []
+(defrecord TestProducer [diagnostics*]
   producer/IProducer
   (refresh-code-lens [_this])
-  (publish-diagnostic [_this _diagnostic])
+  (publish-diagnostic [_this diagnostic]
+    (when diagnostics*
+      (swap! diagnostics* conj diagnostic)))
   (publish-workspace-edit [_this _edit])
   (publish-progress [_this _percentage _message _progress-token])
   (show-document-request [_this _document-request])
@@ -82,7 +84,7 @@
                      :env :unit-test
                      :project-analysis-type :project-and-shallow-analysis))
    :logger (->TestLogger)
-   :producer (->TestProducer)
+   :producer (->TestProducer (atom []))
    :current-changes-chan (async/chan 1)
    :diagnostics-chan (make-diagnostics-channel)
    :watched-files-chan (async/chan 1)
@@ -94,6 +96,11 @@
 (defn db* [] (:db* (components)))
 (defn producer [] (:producer (components)))
 (defn db [] (deref (db*)))
+
+(defn published-diagnostics
+  "Diagnostics published straight through the producer, bypassing the diagnostics chan."
+  ([] (published-diagnostics (components)))
+  ([components] (some-> components :producer :diagnostics* deref)))
 
 (defn reset-components! [] (reset! components* (make-components)))
 (defn reset-components-before-test []

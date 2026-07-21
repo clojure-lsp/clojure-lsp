@@ -3,10 +3,48 @@
 ## Unreleased
 
 - Show the defined value of a `def` on hover, so referencing a constant displays its value at the call-site. Can be disabled with `:hover :hide-defined-value?`. #2302
+- Bump clj-kondo to `2026.05.26-20260719.155617-46`.
+- Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
+- Fix completion error in deps.edn/project.clj when the map is transiently unbalanced while typing a new key. #2384
+
+## 2026.07.06-14.34.19
+
+- add missing namespace form, guessing at the name if outside of project sources, 
+  when adding a missing :require or :import via the Add Require code action.  #1734
+- Reduce memory usage of java class and member definitions analysis. #2314
+- Shrink db cache file considerably not serializing redundant analysis elements uri. #2315
+- Run the db cache write on a dedicated thread so the blocking write no longer ties up a core.async dispatch thread during startup. #2318
+- Skip re-analysis of unchanged source paths on warm startup by persisting the internal analysis, dep-graph, documents and clj-kondo findings in the db cache and only re-analyzing source files whose checksum changed. #2316
+- Optimize clj-kondo analysis ingestion with single-pass normalization using transients, a process-global filename->uri cache, and shallow batch merging. #2317
+- Scale the JVM server heap to a percentage of available RAM (`-XX:MaxRAMPercentage`) instead of a fixed `-Xmx`, matching the native image and avoiding out-of-memory on very large projects. #2313
+- Analyze external java member definitions lazily on first navigation/hover/completion instead of all up front, drastically reducing memory usage on projects with large dependency sets. Set `:analysis :java :member-definitions` to `true` to keep the previous eager behavior. #2313
+- Publish startup diagnostics directly and off the `initialize` critical path, so large projects become interactive much sooner (warm `initialize` dropped from ~73s to ~8s on a large monorepo, with diagnostics streaming in right after). #2326
+- Sanitize clj-kondo findings before caching, custom hooks can attach non-serializable data to findings breaking the cache write, and write the db cache atomically so a failed write never leaves a truncated cache behind. #2313
 - Added Performance integration tests for server initialization: Measuring Cold Start and Warm Start, ensuring that future changes don't regress the startup time of the LSP server.
-- Bump clj-kondo to `2026.05.25`.
 - Fix crash when using `:exclude-when-defined-by` as a vector and not a set. #2292
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `:as-alias` requires. #2108
+- when sorting or removing :require or :import namespaces during ns organization, group comments and clj-kondo directives along with them #1237
+- Auto generate clojure-lsp nightly builds given kondo master commits (nightlies).
+- remove restriction on renaming unqualified keywords #2139
+- Bumps:
+  - clojure: 1.12.4 -> 1.12.5
+  - core.async: 1.8.741 -> 1.9.865
+  - clj-kondo: `2026.05.26-20260703.222101-23`
+  - rewrite-clj: `1.2.55`
+  - cljfmt: 0.16.0 -> 0.16.4
+  - sci: 0.12.51 -> 0.13.52
+  - rewrite-edn: 0.4.9 -> 0.5.9
+  - transit-clj: 1.0.333 -> 1.1.357
+  - tools.namespace: 1.5.0 -> 1.5.1
+  - babashka/cli: 0.8.67 -> 0.11.72
+  - matcher-combinators: 3.9.2 -> 3.10.0
+  - promesa: 11.0.678 -> 12.0.0
+  - opentelemetry: 1.59.0 -> 1.63.0
+  - nrepl: 1.5.2 -> 1.7.0
+  - cider-nrepl: 0.58.0 -> 0.59.0
+  - clj-async-profiler: 1.6.2 -> 1.7.0
+  - deps-deploy: 0.2.2 -> 0.2.5
+  - graal-build-time: 1.0.5 -> 1.0.6
 
 ## 2026.05.05-12.58.26
 

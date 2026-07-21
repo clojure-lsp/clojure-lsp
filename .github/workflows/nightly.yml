@@ -13,6 +13,7 @@ on:
       - 'images/**'
       - 'mkdocs.yml'
       - 'deps-lock.json'
+      - '.github/workflows/bump_clj_kondo.yml'
       - '.github/workflows/bump_deps.yml'
       - '.github/workflows/bump_downstreams.yml'
       - '.github/workflows/ci.yml'

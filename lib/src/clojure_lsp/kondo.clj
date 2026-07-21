@@ -22,6 +22,31 @@
 
 (def clj-kondo-analysis-batch-size 120)
 
+(defonce ^:private filename->uri-cache
+  ;; Process-global cache for filename->uri, which otherwise re-pays a regex and
+  ;; a File->Path->URI conversion for every analysis element of every pass. Keyed
+  ;; by the uri-affecting settings so distinct projects/dbs don't collide.
+  (atom {}))
+
+(def ^:private filename->uri-cache-max 500000)
+
+(defn ^:private filename->uri-fn
+  "Returns a filename->uri fn backed by the process-global `filename->uri-cache`,
+  scoped to the db's uri-affecting settings."
+  [db]
+  (let [cache-key [(get-in db [:settings :dependency-scheme])
+                   (get-in db [:settings :uri-format])]]
+    (fn [filename]
+      (or (get-in @filename->uri-cache [cache-key filename])
+          (let [uri (shared/filename->uri filename db)]
+            (swap! filename->uri-cache update cache-key
+                   (fn [m]
+                     (let [m (or m {})]
+                       (if (>= (count m) filename->uri-cache-max)
+                         {filename uri}
+                         (assoc m filename uri)))))
+            uri)))))
+
 (defn ^:private project-config-dir [project-root-uri]
   ;; TODO: might be better to use clj-kondo.impl.core/config-dir, but it's not
   ;; yet part of the public kondo api.
@@ -55,11 +80,10 @@
           (logger/error (str err)))
         result))))
 
-(defn db-with-analysis
-  "Update `db` with normalized kondo analysis."
-  [db {:keys [analysis external?]}]
+(defn ^:private db-with-analysis*
+  [db {:keys [analysis external?]} merge-analysis]
   (-> db
-      (update :analysis merge analysis)
+      (update :analysis merge-analysis analysis)
       ;; Whenever the analysis is updated, we refresh the dep graph. This is the
       ;; only place this is done, so to keep the dep graph in sync with the
       ;; analysis, everything that puts analysis in the db must either call this
@@ -68,6 +92,20 @@
                                   analysis
                                   (not external?))))
 
+(defn db-with-analysis
+  "Update `db` with normalized kondo analysis, replacing any existing analysis
+  for the same uris."
+  [db results]
+  (db-with-analysis* db results merge))
+
+(defn db-with-merged-analysis
+  "Like `db-with-analysis` but merges new buckets into the existing per-uri
+  analysis instead of replacing it, so an additive pass (e.g. the lazy
+  java-member-definitions analysis) keeps buckets already present at a uri such
+  as java-class-definitions."
+  [db results]
+  (db-with-analysis* db results #(merge-with merge %1 %2)))
+
 (defn db-with-results
   "Update `db` with normalized kondo result."
   [db {:keys [findings config] :as results}]
@@ -75,6 +113,19 @@
       (db-with-analysis results)
       (update-in [:diagnostics :clj-kondo] merge findings)
       (shared/assoc-some :kondo-config config)))
+
+(defn db-without-uris
+  "Remove the given `uris` from the analysis, dep-graph, documents and kondo
+  diagnostics, keeping the dep-graph in sync."
+  [db uris]
+  (reduce (fn [db uri]
+            (-> db
+                (dep-graph/remove-doc uri)
+                (shared/dissoc-in [:documents uri])
+                (shared/dissoc-in [:analysis uri])
+                (shared/dissoc-in [:diagnostics :clj-kondo uri])))
+          db
+          uris))
 
 (defn ^:private element-with-fallback-name-position [element]
   (assoc element
@@ -101,10 +152,57 @@
 ;; some into two elements. As such, the buckets we get from clj-kondo aren't
 ;; exactly the same as the buckets we have in our db.
 
+(defn ^:private canonical-fn
+  "Returns a fn that returns a shared canonical instance for equal values,
+  pooling them in a mutable map."
+  []
+  (let [pool (java.util.HashMap.)]
+    (fn [v]
+      (if-let [pooled (.get pool v)]
+        pooled
+        (do (.put pool v v)
+            v)))))
+
+(def ^:private java-element-canonical-keys
+  [:uri :class :name :type :return-type :parameter-types :flags])
+
+(defn ^:private canonicalize-java-element
+  "Replaces highly duplicated values of java definition elements with a
+  canonical instance from the `canon` pool."
+  [canon element]
+  (reduce #(medley/update-existing %1 %2 canon)
+          element
+          java-element-canonical-keys))
+
+(defn canonicalize-java-analysis
+  "Canonicalizes java definition elements of a normalized analysis, sharing
+  equal values in a single instance to reduce memory usage. Useful after
+  reading analysis from the transit cache, which creates new instances even
+  for equal values."
+  [analysis]
+  (shared/logging-task
+    :internal/canonicalize-java-analysis
+    (let [canon (canonical-fn)
+          canonicalize-elements #(mapv (partial canonicalize-java-element canon) %)]
+      (reduce-kv
+        (fn [result uri buckets]
+          (if (or (:java-class-definitions buckets)
+                  (:java-member-definitions buckets))
+            (do
+              ;; pool the analysis key so elements share its uri instance
+              (canon uri)
+              (assoc result uri (-> buckets
+                                    (medley/update-existing :java-class-definitions canonicalize-elements)
+                                    (medley/update-existing :java-member-definitions canonicalize-elements))))
+            result))
+        analysis
+        analysis))))
+
 (defn ^:private element->normalized-elements
   [{:keys [bucket arglist-strs] :as element}
    keyword-definitions-enabled?
-   keyword-usages-enabled?]
+   keyword-usages-enabled?
+   canon]
   (case bucket
     :var-definitions
     [(-> element
@@ -126,8 +224,16 @@
                                   :alias-end-row :name-end-row
                                   :alias-end-col :name-end-col}))))
 
-    (:locals :local-usages :java-class-usages :symbols)
+    (:locals :local-usages :symbols)
     [(element-with-fallback-name-position element)]
+
+    ;; clj-kondo merges the expr metadata into these elements, which for forms
+    ;; preceded by a `#_{:clj-kondo/ignore [...]}` hint includes rewrite-clj
+    ;; nodes holding functions that break the transit db cache. #2380
+    :java-class-usages
+    [(-> element
+         (dissoc :clj-kondo/ignore :clj-kondo/ignore-id)
+         element-with-fallback-name-position)]
 
     :keywords
     (cond
@@ -141,13 +247,11 @@
            element-with-fallback-name-position
            (assoc :bucket :keyword-usages))])
 
+    ;; Unlike other elements, java definitions don't have name positions and
+    ;; are highly duplicated, so we canonicalize their values to save memory.
     (:java-member-definitions
      :java-class-definitions)
-    [(-> element
-         (assoc :name-row 0
-                :name-col 0
-                :name-end-row 0
-                :name-end-col 0))]
+    [(canonicalize-java-element canon element)]
 
     :var-usages
     [(cond-> element
@@ -160,15 +264,17 @@
 (defn ^:private valid-element?
   [{:keys [name bucket name-row name-col name-end-row name-end-col
            derived-name-location derived-location]}]
-  (and name-row
-       name-col
-       name-end-row
-       name-end-col
-       (not derived-name-location)
-       (not derived-location)
-       ;; #1510
-       (or (not (identical? :var-definitions bucket))
-           name)))
+  (or (identical? :java-class-definitions bucket)
+      (identical? :java-member-definitions bucket)
+      (and name-row
+           name-col
+           name-end-row
+           name-end-col
+           (not derived-name-location)
+           (not derived-location)
+           ;; #1510
+           (or (not (identical? :var-definitions bucket))
+               name))))
 
 (defn ^:private findings->analysis [findings]
   (shared/logging-task
@@ -197,26 +303,29 @@
       {}
       findings)))
 
-(defn ^:private normalize-analysis [external? settings findings analysis]
+(defn ^:private normalize-analysis [external? settings trade-filename-for-uri findings analysis]
   (let [keyword-definitions-enabled? (get-in settings [:analysis :keywords :definitions] true)
-        keyword-usages-enabled? (get-in settings [:analysis :keywords :usages] true)]
+        keyword-usages-enabled? (get-in settings [:analysis :keywords :usages] true)
+        canon (canonical-fn)]
     (shared/deep-merge
-      (reduce-kv
-        (fn [result kondo-bucket kondo-elements]
-          (transduce
-            (comp
-              (mapcat #(element->normalized-elements (assoc % :bucket kondo-bucket :external? external?) keyword-definitions-enabled? keyword-usages-enabled?))
-              (filter valid-element?))
-            (completing
-              (fn [result {:keys [uri bucket] :as element}]
-                ;; intentionally use element bucket, since it may have been
-                ;; normalized to something besides kondo-bucket
-                (update-in result [uri bucket] (fnil conj []) element)))
-            result
-            kondo-elements))
-        ;; TODO: Can result be a transient?
-        {}
-        analysis)
+      (persistent!
+        (reduce-kv
+          (fn [result kondo-bucket kondo-elements]
+            (transduce
+              (comp
+                (mapcat #(-> (assoc % :bucket kondo-bucket :external? external?)
+                             trade-filename-for-uri
+                             (element->normalized-elements keyword-definitions-enabled? keyword-usages-enabled? canon)))
+                (filter valid-element?))
+              (completing
+                (fn [result {:keys [uri bucket] :as element}]
+                  ;; intentionally use element bucket, since it may have been
+                  ;; normalized to something besides kondo-bucket
+                  (assoc! result uri (update (get result uri) bucket (fnil conj []) element))))
+              result
+              kondo-elements))
+          (transient {})
+          analysis))
       (findings->analysis findings))))
 
 (defn ^:private normalize
@@ -225,7 +334,7 @@
   [{:keys [analysis findings] :as kondo-results}
    {:keys [external? ensure-uris filter-analysis] :or {filter-analysis identity}}
    db]
-  (let [filename->uri (memoize #(shared/filename->uri % db))
+  (let [filename->uri (filename->uri-fn db)
         trade-filename-for-uri (fn [obj]
                                  (-> obj
                                      (assoc :uri (or (some-> (:filename obj) filename->uri)
@@ -238,8 +347,7 @@
                       (group-by :uri))
         analysis (->> analysis
                       filter-analysis
-                      (medley/map-vals #(map trade-filename-for-uri %))
-                      (normalize-analysis external? (settings/all db) findings)
+                      (normalize-analysis external? (settings/all db) trade-filename-for-uri findings)
                       (with-uris ensure-uris {}))
         findings (with-uris (keys analysis) [] findings)]
     (assoc kondo-results
@@ -288,6 +396,25 @@
        :file-analyzed-fn file-analyzed-fn}
       (with-additional-config settings)))
 
+(defn ^:private java-member-definitions-mode
+  "Resolves the `[:analysis :java :member-definitions]` setting to one of
+  `:eager` (analyze every dependency's java members up front), `:lazy` (analyze
+  a class's members on demand on first navigation/hover/completion) or `:off`.
+  Defaults to `:lazy` to keep the heavy java-member-definitions bucket out of
+  the upfront classpath analysis."
+  [settings]
+  (case (get-in settings [:analysis :java :member-definitions] :lazy)
+    true :eager
+    false :off
+    (:lazy :on-demand) :lazy
+    :lazy))
+
+(defn lazy-java-member-definitions?
+  "Whether external java member definitions are analyzed lazily (on demand)
+  instead of up front during the classpath scan."
+  [db]
+  (identical? :lazy (java-member-definitions-mode (settings/all db))))
+
 (defn ^:private config-for-internal-paths [paths db file-analyzed-fn]
   ;; source-paths analysis should always include all code data (full-analysis)
   (let [full-analysis? (not= :project-only (:project-analysis-type db))
@@ -298,7 +425,7 @@
                                        :keywords (and full-analysis? (get-in settings [:analysis :keywords] true))
                                        :protocol-impls full-analysis?
                                        :java-class-definitions (and full-analysis? (get-in settings [:analysis :java :class-definitions] true))
-                                       :java-member-definitions (and full-analysis? (get-in settings [:analysis :java :member-definitions] true))
+                                       :java-member-definitions (and full-analysis? (not= :off (java-member-definitions-mode settings)))
                                        :instance-invocations full-analysis?
                                        :java-class-usages full-analysis?
                                        :context [:clojure.test
@@ -317,7 +444,9 @@
                                        :arglists full-analysis?
                                        :protocol-impls full-analysis?
                                        :java-class-definitions (and full-analysis? (get-in settings [:analysis :java :class-definitions] true))
-                                       :java-member-definitions (and full-analysis? (get-in settings [:analysis :java :member-definitions] true))
+                                       ;; member-definitions default to lazy/on-demand for dependencies;
+                                       ;; only emit them up front when explicitly set to eager (true)
+                                       :java-member-definitions (and full-analysis? (identical? :eager (java-member-definitions-mode settings)))
                                        :var-definitions {:shallow true
                                                          :meta (var-definition-metas db settings)}}))))
 
@@ -353,7 +482,7 @@
                              :keywords (get-in settings [:analysis :keywords] true)
                              :protocol-impls true
                              :java-class-definitions (get-in settings [:analysis :java :class-definitions] true)
-                             :java-member-definitions (get-in settings [:analysis :java :member-definitions] true)
+                             :java-member-definitions (not= :off (java-member-definitions-mode settings))
                              :instance-invocations true
                              :java-class-usages true
                              :context [:clojure.test
@@ -389,6 +518,18 @@
         (normalize normalization-config db)
         (update-in [:diagnostics :clj-kondo] merge empty-findings))))
 
+(defn ^:private merge-batch-results
+  "Combine two normalized kondo result maps from disjoint path batches. Batches
+  never share uris, so a shallow per-key merge of the uri-indexed maps is
+  equivalent to a deep merge while avoiding its recursive rebuilds. Scalar and
+  config keys (`:external?`, `:config`, `:summary`) are identical across batches,
+  so the first batch's are kept."
+  [a b]
+  (-> a
+      (update :analysis merge (:analysis b))
+      (update :findings merge (:findings b))
+      (update-in [:diagnostics :clj-kondo] merge (get-in b [:diagnostics :clj-kondo]))))
+
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
@@ -413,7 +554,7 @@
            (map (fn [{:keys [index paths]}]
                   (logger/info logger-tag "Analyzing batch" (str index "/" batch-count))
                   (run-kondo-on-paths! paths db* normalization-config (partial file-analyzed-fn index batch-count))))
-           (reduce shared/deep-merge)))))
+           (reduce merge-batch-results)))))
 
 (defn run-kondo-on-reference-uris! [uris db*]
   (let [db @db*
@@ -445,4 +586,24 @@
                                                                 :java-member-definitions])}]
     (-> (config-for-jdk-source paths db)
         (run-kondo! (str "paths " paths))
+        (normalize normalization-config db))))
+
+(defn ^:private config-for-jar-members [jar-path db]
+  {:lint [jar-path]
+   :skip-lint true
+   :config-dir (kondo-config-dir db)
+   :config {:output {:canonical-paths true}
+            :analysis {:java-class-definitions true
+                       :java-member-definitions true}}})
+
+(defn run-kondo-on-jar-members!
+  "Analyze a single dependency `jar-path` for its java member definitions,
+  used by the lazy/on-demand java analysis. Returns a normalized result keeping
+  only the `:java-member-definitions` bucket (class definitions are already
+  analyzed up front)."
+  [jar-path db]
+  (let [normalization-config {:external? true
+                              :filter-analysis #(select-keys % [:java-member-definitions])}]
+    (-> (config-for-jar-members jar-path db)
+        (run-kondo! (str "jar members " jar-path))
         (normalize normalization-config db))))

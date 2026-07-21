@@ -218,6 +218,7 @@
                            (foo 1 2))
                       (baz :p :q :r)
                       bar)
+                  #_{:clj-kondo/ignore [:constant-condition]}
                   (cond-> 0
                     int? (bar :a :b)
                     false (foo)

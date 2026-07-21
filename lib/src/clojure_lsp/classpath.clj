@@ -141,7 +141,7 @@
           (if (= retry-action chosen-action)
             (recur project-spec root-path producer)
             (do
-              (logger/warn logger-tag (format "Classpath lookup retry skipped by user"))
+              (logger/warn logger-tag "Classpath lookup retry skipped by user")
               paths))
           (producer/show-message producer (format "Classpath lookup failed when running `%s`. Some features may not work properly." command) :error error)))
       paths)))

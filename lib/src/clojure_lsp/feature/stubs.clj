@@ -28,7 +28,8 @@
 
 (defn ^:private generate-stubs! [namespaces settings db]
   (try
-    (if-let [classpath (string/join fs/path-separator (:classpath db))]
+    (if-let [classpath (some->> (seq (:classpath db))
+                                (string/join fs/path-separator))]
       (let [java-command (or (-> settings :stubs :generation :java-command)
                              "java")
             output-dir ^File (io/file (stubs-output-dir settings))]

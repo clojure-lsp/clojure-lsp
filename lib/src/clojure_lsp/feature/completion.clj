@@ -243,9 +243,9 @@
                        ns (conj (str (name ns) "/" (name (:name element))))
                        arglist-strs (conj (string/join " " arglist-strs))))))]
     (cond-> {:label (element->label element cursor-alias priority)
-             :priority (generic-priority->specific-priority element priority)}
+             :priority (generic-priority->specific-priority element priority)
+             :kind kind}
       deprecated (assoc :tags [1])
-      kind (assoc :kind kind)
       detail (assoc :detail detail)
       :always (completion-item-with-unresolved-documentation
                 {:name (-> element :name str)

@@ -245,7 +245,7 @@
     (cond-> {:label (element->label element cursor-alias priority)
              :priority (generic-priority->specific-priority element priority)}
       deprecated (assoc :tags [1])
-      kind (assoc :kind kind)
+      :always (assoc :kind kind)
       detail (assoc :detail detail)
       :always (completion-item-with-unresolved-documentation
                 {:name (-> element :name str)

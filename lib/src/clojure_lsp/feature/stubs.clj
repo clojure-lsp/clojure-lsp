@@ -28,8 +28,9 @@
 
 (defn ^:private generate-stubs! [namespaces settings db]
   (try
-    (if-let [classpath (string/join fs/path-separator (:classpath db))]
-      (let [java-command (or (-> settings :stubs :generation :java-command)
+    (if-let [classpath-entries (seq (:classpath db))]
+      (let [classpath (string/join fs/path-separator (:classpath db))
+            java-command (or (-> settings :stubs :generation :java-command)
                              "java")
             output-dir ^File (io/file (stubs-output-dir settings))]
         (delete-directory-recursive output-dir)

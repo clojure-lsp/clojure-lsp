@@ -17,8 +17,23 @@
 
 (def logger-tag "[clj-kondo]")
 
+(defn ^:private clj-kondo-pom-version
+  "Version from the clj-kondo artifact pom.properties on the classpath,
+  including the git sha for snapshot builds. Accurate for nightly builds,
+  unlike the CLJ_KONDO_VERSION resource which is only updated on releases."
+  []
+  (when-let [pom-properties (io/resource "META-INF/maven/clj-kondo/clj-kondo/pom.properties")]
+    (let [content (slurp pom-properties)
+          version (some-> (re-find #"(?m)^version=(.+)$" content) second string/trim)
+          revision (some-> (re-find #"(?m)^revision=(.+)$" content) second string/trim)]
+      (when version
+        (if (and revision (string/ends-with? version "-SNAPSHOT"))
+          (str version " (" (subs revision 0 (min 7 (count revision))) ")")
+          version)))))
+
 (defn clj-kondo-version []
-  (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
+  (or (clj-kondo-pom-version)
+      (string/trim (slurp (io/resource "CLJ_KONDO_VERSION")))))
 
 (def clj-kondo-analysis-batch-size 120)
 

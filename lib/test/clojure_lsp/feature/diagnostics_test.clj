@@ -235,7 +235,9 @@
                   "user/bar is called with 1 arg but expects 0"
                   "Expected: function, received: positive integer."
                   "user/bar is called with 1 arg but expects 0"
+                  "Condition always true"
                   "user/bar is called with 3 args but expects 0"
+                  "Condition always true"
                   "user/foo is called with 2 args but expects 1 or 3"
                   "user/bar is called with 1 arg but expects 0"]
                  (map :message diagnostics))))))

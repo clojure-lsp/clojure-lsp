@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Show the defined value of a `def` on hover, so referencing a constant displays its value at the call-site. Can be disabled with `:hover :hide-defined-value?`. #2302
 - Bump clj-kondo to `2026.05.26-20260719.155617-46`.
 - Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
 - Fix completion error in deps.edn/project.clj when the map is transiently unbalanced while typing a new key. #2384

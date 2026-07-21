@@ -287,6 +287,7 @@
   (testing "When element needs documentation and has a position"
     (h/assert-submap {:label "foo"
                       :documentation (h/code "a/foo"
+                                             "1"
                                              "Some docs"
                                              (h/file-path "/a.clj"))
                       :kind :variable}
@@ -301,6 +302,7 @@
   (testing "When element needs documentation and has a namespace"
     (h/assert-submap {:label "foo"
                       :documentation (h/code "a/foo"
+                                             "1"
                                              "Some docs"
                                              (h/file-path "/a.clj"))
                       :kind :function}
@@ -330,6 +332,7 @@
     (h/load-code-and-locs "(ns aaa)" (h/file-uri "file:///aaa.clj"))
     (h/assert-submap {:label "foo"
                       :documentation (h/code "a/foo"
+                                             "1"
                                              "* includes additional edits"
                                              "Some docs"
                                              (h/file-path "/a.clj"))

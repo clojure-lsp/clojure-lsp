@@ -31,9 +31,15 @@
           (str version " (" (subs revision 0 (min 7 (count revision))) ")")
           version)))))
 
-(defn clj-kondo-version []
+(def ^:private clj-kondo-version*
+  ;; Eager def so native images resolve it at image build time (Clojure classes
+  ;; are initialized at build time via clj-easy/graal-build-time), when the
+  ;; clj-kondo artifact resources are available on the classpath.
   (or (clj-kondo-pom-version)
-      (string/trim (slurp (io/resource "CLJ_KONDO_VERSION")))))
+      (some-> (io/resource "CLJ_KONDO_VERSION") slurp string/trim)))
+
+(defn clj-kondo-version []
+  clj-kondo-version*)
 
 (def clj-kondo-analysis-batch-size 120)
 

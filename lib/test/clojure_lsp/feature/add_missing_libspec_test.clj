@@ -222,6 +222,9 @@
   (assert (= 1 (count locs)))
   (z/string loc))
 
+(defn ^:private as-strs [locs]
+  (mapv #(z/string (:loc %)) locs))
+
 (defn ^:private as-root-str [[{:keys [loc]}]]
   (z/root-string loc))
 
@@ -895,3 +898,214 @@
     (is (= '["java.io.File"] (find-missing-imports "(ns a) (|File/of \"foo\")"))))
   (testing "when usage is invalid"
     (is (nil? (find-missing-imports "(ns a) |;; comment")))))
+
+(defn- use-alias-suggestion [code ns new-alias]
+  (f.add-missing-libspec/use-alias-suggestion (h/zloc-from-code code) ns new-alias))
+
+(deftest use-alias-suggestion-test
+  (testing "simple substitution"
+    (is (= ["[my.ns.xyz :as xyz]"
+            "xyz/my-func"]
+           (as-strs (use-alias-suggestion (h/code "(ns foo (:require [my.ns.xyz])) |my.ns.xyz/my-func") "my.ns.xyz" "xyz")))))
+  (testing "verify ranges"
+    (is (= [{:col 19, :end-col 30, :end-row 1, :row 1}
+            {:col 33, :end-col 50, :end-row 1, :row 1}]
+           (map :range (use-alias-suggestion (h/code "(ns foo (:require [my.ns.xyz])) |my.ns.xyz/my-func") "my.ns.xyz" "xyz")))))
+  (testing "substitution with libspec not in vector"
+    (is (= ["[my.ns.xyz :as xyz]"
+            "xyz/my-func"]
+           (as-strs (use-alias-suggestion (h/code "(ns foo (:require my.ns.xyz)) |my.ns.xyz/my-func") "my.ns.xyz" "xyz")))))
+  (testing "substitution with incomplete require"
+    (is (nil? (use-alias-suggestion (h/code "(ns foo (:require)) |my.ns.xyz/my-func") "my.ns.xyz" "xyz"))))
+  (testing "substitution with missing libspec"
+    (is (nil? (use-alias-suggestion (h/code "(ns foo (:require [clojure.string])) |my.ns.xyz/my-func") "my.ns.xyz" "xyz"))))
+  (testing "substitution with libspec that is missing actual alias (is incomplete)"
+    (is (= ["[my.ns.xyz :as xyz]"
+            "xyz/my-func"]
+           (as-strs (use-alias-suggestion (h/code "(ns foo (:require [my.ns.xyz :as])) |my.ns.xyz/my-func") "my.ns.xyz" "xyz")))))
+  (testing "substitution with libspec that has a refer but no alias"
+    (is (= ["[my.ns.xyz :as xyz :refer [abc]]"
+            "xyz/my-func"]
+           (as-strs (use-alias-suggestion (h/code "(ns foo (:require [my.ns.xyz :refer [abc]])) |my.ns.xyz/my-func") "my.ns.xyz" "xyz")))))
+  (testing "substitution with libspec that has an alias but also an out of order refer"
+    (is (= ["xyz/my-func"]
+           (as-strs (use-alias-suggestion (h/code "(ns foo (:require [my.ns.xyz :refer [abc] :as xyz])) |my.ns.xyz/my-func") "my.ns.xyz" "xyz")))))
+  (testing "require has :import as well as :require"
+    (is (= ["[my.ns.xyz :as xyz]" "xyz/my-func"]
+           (as-strs (use-alias-suggestion (h/code "(ns foo (:import [java.util AbstractList]) (:require [my.ns.xyz])) |my.ns.xyz/my-func")
+                                          "my.ns.xyz" "xyz")))))
+  (testing "require has :import as well as :require, check locations"
+    (is (= [{:col 54, :end-col 65, :end-row 1, :row 1} {:col 68, :end-col 85, :end-row 1, :row 1}]
+           (map :range (use-alias-suggestion (h/code "(ns foo (:import [java.util AbstractList]) (:require [my.ns.xyz])) |my.ns.xyz/my-func")
+                                             "my.ns.xyz" "xyz")))))
+  (testing "verify ranges when replacing libspec with libspec in a vector"
+    (is (= [{:col 31, :end-col 40, :end-row 1, :row 1} {:col 43, :end-col 60, :end-row 1, :row 1}]
+           (map :range (use-alias-suggestion (h/code "(ns foo (:require [my.ns.xyz] my.ns.abc)) |my.ns.xyz/my-func") "my.ns.abc" "abc")))))
+  (testing "when alias already exists, don't add it again"
+    (is (= ["xyz/my-func"]
+           (as-strs (use-alias-suggestion (h/code "(ns foo (:require [my.ns.xyz :as xyz])) |my.ns.xyz/my-func") "my.ns.xyz" "xyz"))))))
+
+(defn- find-alias-suggestions [code]
+  (f.add-missing-libspec/find-alias-suggestions (h/zloc-from-code code) "file:///a.clj" (h/db)))
+
+(deftest find-alias-suggestions-test
+
+  (testing "simple case - target should be an expression"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [my.ns.xyz :as xyz]))" "file:///b.clj")
+    (is (= [{:alias "xyz" :count 1 :ns "my.ns.xyz" :col 32 :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.xyz])) |my.ns.xyz/bar")))))
+  (testing "don't include aliases from Clojurescript even if they match"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my.ns.xyz-cs)" "file:///xyz-cs.cljs")
+    (h/load-code-and-locs "(ns my.ns.xyz)" "file:///xyz.clj")
+    (h/load-code-and-locs "(ns my.ns.b (:require [my.ns.xyz :as xyz])))" "file:///b.clj")
+    (h/load-code-and-locs "(ns my.ns.c (:require [my.ns.xyz-cs :as xyz])))" "file:///c.cljs")
+    (h/load-code-and-locs "(ns my.ns.d (:require [my.ns.xyz-cs :as xyz])))" "file:///d.cljs")
+    (is (= [{:alias "xyz" :count 1 :ns "my.ns.xyz" :col 32 :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.xyz])) |my.ns.xyz/bar")))))
+  (testing "don't include aliases from Clojurescript when in a Clojure file"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my.ns.xyz)" "file:///xyz.cljs")
+    (h/load-code-and-locs "(ns my.ns.xyz)" "file:///xyz.clj")
+    (h/load-code-and-locs "(ns my.ns.b (:require [my.ns.xyz :as xyz])))" "file:///b.clj")
+    (h/load-code-and-locs "(ns my.ns.c (:require [my.ns.xyz :as cs-xyz])))" "file:///c.cljs")
+    (h/load-code-and-locs "(ns my.ns.d (:require [my.ns.xyz :as cs-xyz])))" "file:///d.cljs")
+    ;; NOTE: two rows are included here because dep-graph/ns-aliases-for-langs returns 
+    ;; all languages for a package instead of filtering by the "langs" param passed to it.
+    ;; This isn't horrible, but the user will see inflated :count values.
+    (is (= [{:ns "my.ns.xyz", :alias "cs-xyz", :col 32, :count 2, :row 0}
+            {:ns "my.ns.xyz", :alias "xyz", :col 32, :count 1, :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.xyz])) |my.ns.xyz/bar")))))
+  (testing "don't include aliases from Clojurescript when in a Clojure file"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my.ns.xyz)" "file:///xyz.cljs")
+    (h/load-code-and-locs "(ns my.ns.xyz)" "file:///xyz.clj")
+    (h/load-code-and-locs "(ns my.ns.b (:require [my.ns.xyz :as xyz])))" "file:///b.clj")
+    (h/load-code-and-locs "(ns my.ns.c (:require [my.ns.xyz :as xyz])))" "file:///c.cljs")
+    (h/load-code-and-locs "(ns my.ns.d (:require [my.ns.xyz :as xyz])))" "file:///d.cljs")
+      ;; NOTE: :count here is 3 instead of 1 because dep-graph/ns-aliases-for-langs includes
+      ;; aliases from other languages in its returned :usages-count.
+      ;; This isn't horrible, but the user will see inflated :count values.
+    (is (= [{:alias "xyz" :count 3 :ns "my.ns.xyz" :col 32 :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.xyz])) |my.ns.xyz/bar")))))
+  (testing "ns has :import as well as :require"
+    (h/reset-components!)
+    (is (= [{:alias "m.n.xyz" :count nil :ns "my.ns.xyz" :col 67 :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:import [java.util AbstractList]) (:require [my.ns.xyz])) |my.ns.xyz/bar")))))
+  (testing "when target has empty namespace, nil results"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [clojure.set :as set]))" "file:///b.clj")
+    (is (nil?
+          (find-alias-suggestions (h/code "(ns foo (:require [clojure.set])) |subset?")))))
+  (testing "when target doesn't have namespace, nil results"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [clojure.set :as set]))" "file:///b.clj")
+    (is (nil?
+          (find-alias-suggestions (h/code "(ns foo (:require [clojure.set])) |/subset?")))))
+  (testing "when target is only a namespace, nil results"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [clojure.set :as set]))" "file:///b.clj")
+    (is (nil?
+          (find-alias-suggestions (h/code "(ns foo (:require [clojure.set])) cl|ojure.set")))))
+  (testing "when there are multiple aliases matching this namespace, return them in reverse sorted order"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [my.ns.xyz :as xyz]))" "file:///b.clj")
+    (h/load-code-and-locs "(ns c (:require [my.ns.xyz :as xyz]))" "file:///c.clj")
+    (h/load-code-and-locs "(ns d (:require [my.ns.xyz :as n.xyz]))" "file:///d.clj")
+    (h/load-code-and-locs "(ns e (:require [my.ns.xyz :as mn.xyz]))" "file:///e.clj")
+    (h/load-code-and-locs "(ns f (:require [my.ns.xyz :as mn.xyz]))" "file:///f.clj")
+    (h/load-code-and-locs "(ns g (:require [my.ns.xyz :as mn.xyz]))" "file:///g.clj")
+    (is (= [{:alias "mn.xyz" :count 3 :ns "my.ns.xyz" :col 32 :row 0}
+            {:alias "xyz" :count 2 :ns "my.ns.xyz" :col 32 :row 0}
+            {:alias "n.xyz" :count 1 :ns "my.ns.xyz" :col 32 :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.xyz])) |my.ns.xyz/subset?")))))
+  (testing "when there are multiple aliases matching this namespace, don't include duplicate aliases"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [clojure.set :as set]))" "file:///b.clj")
+    (h/load-code-and-locs "(ns c (:require [clojure.set :as set]))" "file:///c.clj")
+    (h/load-code-and-locs "(ns d (:require [clojure.set :as c.set]))" "file:///d.clj")
+    (h/load-code-and-locs "(ns e (:require [clojure.set :as cc.set]))" "file:///e.clj")
+    (h/load-code-and-locs "(ns f (:require [clojure.set :as cc.set]))" "file:///f.clj")
+    (h/load-code-and-locs "(ns g (:require [clojure.set :as cc.set]))" "file:///g.clj")
+    (is (= [{:alias "cc.set" :count 3 :ns "clojure.set" :col 34 :row 0}
+            {:alias "set" :count 2 :ns "clojure.set" :col 34 :row 0}
+            {:alias "c.set" :count 1 :ns "clojure.set" :col 34 :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require [clojure.set])) |clojure.set/subset?")))))
+  (testing "works with libspec that's not in a vector"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [clojure.set :as set]))" "file:///b.clj")
+    (is (= [{:alias "set" :count 1 :ns "clojure.set" :row 0 :col 32}]
+           (find-alias-suggestions (h/code "(ns foo (:require clojure.set)) |clojure.set/subset?")))))
+  (testing "if an alias is already used for a libspec with this namespace, only return that alias as a suggestion"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my.ns.my-str)" "file:///my-str.clj")
+    (h/load-code-and-locs "(ns my.ns.my-str2)" "file:///my-str2.clj")
+    (h/load-code-and-locs "(ns b (:require [my.ns.my-str :as str]))" "file:///b.clj")
+    (h/load-code-and-locs "(ns c (:require [my.ns.my-str :as str2]))" "file:///c.clj")
+    (is (= [{:alias "str" :count nil :ns "my.ns.my-str" :row 0 :col 43}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.my-str :as str])) |my.ns.my-str/xyz")))))
+  (testing "if an alias is already used for another namespace, don't return that other alias as a suggestion
+            even if it used in another file"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my.ns.my-str)" "file:///my-str.clj")
+    (h/load-code-and-locs "(ns my.ns.my-str2)" "file:///my-str2.clj")
+    (h/load-code-and-locs "(ns b (:require [my.ns.my-str :as str]))" "file:///b.clj")
+    (h/load-code-and-locs "(ns c (:require [my.ns.my-str2 :as str]))" "file:///c.clj")
+    (h/load-code-and-locs "(ns d (:require [my.ns.my-str2 :as str2]))" "file:///d.clj")
+    (is (= [{:alias "str2" :count 1 :ns "my.ns.my-str2" :row 0 :col 59}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.my-str :as str] [my.ns.my-str2])) |my.ns.my-str2/xyz")))))
+  (testing "if an alias is already used in another libspec with another namespace, fall back to a synthetic name"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my.ns.my-str)" "file:///my-str.clj")
+    (h/load-code-and-locs "(ns my.ns.my-str2)" "file:///my-str2.clj")
+    (h/load-code-and-locs "(ns b (:require [my.ns.my-str :as str]))" "file:///b.clj")
+    (h/load-code-and-locs "(ns c (:require [my.ns.my-str2 :as str]))" "file:///c.clj")
+    (is (= [{:alias "m.n.my-str2" :count nil :ns "my.ns.my-str2" :row 0 :col 59}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.my-str :as str] [my.ns.my-str2])) |my.ns.my-str2/includes?")))))
+  (testing "if an alias is already used in another libspec with another namespace and there is a common suggestion, fall back to 
+            a synthetic name"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns my.ns.my-str)" "file:///my-str.clj")
+    (h/load-code-and-locs "(ns b (:require [my.ns.my-str :as str]))" "file:///b.clj")
+    (is (= [{:alias "c.string" :count nil :ns "clojure.string" :row 0 :col 60}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.my-str :as str] [clojure.string])) |clojure.string/includes?")))))
+  (testing "a libspec doesn't include the actual alias (incomplete libspec)"
+    (h/reset-components!)
+    (is (= [{:alias "str" :count nil :ns "clojure.string" :row 0 :col 42}]
+           (find-alias-suggestions (h/code "(ns foo (:require [clojure.string :as ])) |clojure.string/includes?")))))
+  (testing "a libspec has a refer but no alias"
+    (h/reset-components!)
+    (is (= [{:alias "str" :count nil :ns "clojure.string" :row 0 :col 53}]
+           (find-alias-suggestions (h/code "(ns foo (:require [clojure.string :refer [split] ])) |clojure.string/includes?")))))
+  (testing "convoluted, but incomplete refer shouldn't brake suggestions by acting as an alias by blindly looking at third element in libspec vector"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [my.ns.xyz :as xyz]))" "file:///b.clj")
+    (is (= [{:alias "xyz" :count 1 :ns "my.ns.xyz" :row 0 :col 43}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.xyz :refer xyz])) |my.ns.xyz/foo")))))
+  (testing "if no aliases are used, falls back to common aliases"
+    (h/reset-components!)
+    (is (= [{:alias "set", :col 34, :count nil, :ns "clojure.set", :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require [clojure.set])) |clojure.set/subset?")))))
+  (testing "if no aliases are used and is not common alias, create alias suggesion from ns"
+    (h/reset-components!)
+    (is (= [{:alias "m.n.xyz", :col 32, :count nil, :ns "my.ns.xyz", :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require [my.ns.xyz])) |my.ns.xyz/my-func")))))
+  (testing "if a namespace is common (:count is nil) that alias should be sorted to the bottom of the suggestions"
+    (h/reset-components!)
+    (h/load-code-and-locs "(ns b (:require [clojure.string :as s]))" "file:///b.clj")
+    (is (= [{:alias "s", :col 35, :count 1, :ns "clojure.string", :row 0}
+            {:alias "str", :col 35, :count nil, :ns "clojure.string", :row 0}]
+           (find-alias-suggestions (h/code "(ns foo (:require clojure.string)) |clojure.string/join")))))
+  (testing "ns without :require doesn't fail"
+    (h/reset-components!)
+    (is (nil? (find-alias-suggestions (h/code "(ns foo) |clojure.set/subset?")))))
+  (testing "ns without matching libspec doesn't fail"
+    (h/reset-components!)
+    (is (nil?  (find-alias-suggestions (h/code "(ns foo [clojure.string :as string]) |clojure.set/subset?")))))
+  (testing "no target at cursor doesn't fail"
+    (h/reset-components!)
+    (is (nil?  (find-alias-suggestions (h/code "(ns foo [clojure.string :as string]) |")))))
+  (testing "comment at cursor doesn't fail"
+    (h/reset-components!)
+    (is (nil?  (find-alias-suggestions (h/code "(ns foo [clojure.string :as string]) ; |"))))))

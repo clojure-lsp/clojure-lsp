@@ -381,7 +381,12 @@
           as-alias-elems-xf)
         dep-graph))
 
-(defn ns-aliases-for-langs [{:keys [dep-graph]} langs]
+(defn ns-aliases-for-langs
+  "For the set of languages 'langs', returns namespace,alias,usage-count map
+   for each alias.  Note that all alias/namespace pairs are considered for the 
+   count, even those from languages not in 'langs', so if an alias/namespace exists in 
+   multiple languages, the returned usage-count will be inflated."
+  [{:keys [dep-graph]} langs]
   (into #{}
         (comp
           some-dependents-internal-xf

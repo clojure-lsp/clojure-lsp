@@ -39,6 +39,9 @@
 (defmethod run-command :add-require-suggestion [{:keys [loc uri args db components]}]
   (apply f.add-missing-libspec/add-require-suggestion loc uri (concat args [db components])))
 
+(defmethod run-command :swap-namespace-with-alias [{:keys [loc args]}]
+  (apply f.add-missing-libspec/swap-namespace-with-alias loc args))
+
 (defmethod run-command :clean-ns [{:keys [loc uri db]}]
   (f.clean-ns/clean-ns-edits loc uri db))
 

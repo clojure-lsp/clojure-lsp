@@ -288,6 +288,33 @@
                             :range {:start {:line 6 :character 2}}}] {}
                           (h/db)))))
 
+(deftest use-alias-suggestion-action-test
+  (h/load-code-and-locs (string/join "\n"
+                                     ["(ns foo"
+                                      "  (:require [my.ns.xyz]))"
+                                      "  my.ns.xyz/my-func"])
+                        (h/file-uri "file:///b.clj"))
+  (testing "when expression without fully qualified namespace"
+    (is (not-any? #(= (:title %) "Use alias '[my.ns.xyz :as m.n.xyz]'")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                      (h/file-uri "file:///b.clj")
+                                      1
+                                      2
+                                      []
+                                      {}
+                                      (h/db)))))
+  (testing "when expression has a fully qualified namespace"
+    (h/assert-contains-submaps
+      [{:title "Use alias '[my.ns.xyz :as m.n.xyz]'"
+        :command {:command "use-alias-suggestion"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                          (h/file-uri "file:///b.clj")
+                          3
+                          4
+                          []
+                          {}
+                          (h/db)))))
+
 (deftest inline-symbol-code-action
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
                              "(def bar 1)\n"

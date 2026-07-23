@@ -132,6 +132,19 @@
                          :arguments [uri (:line position) (:character position) missing-import]}})
        missing-imports))
 
+(defn ^:private require-alias-actions [uri require-renames]
+  (map (fn [{:keys [ns alias row col count]}]
+         {:title        (format "Use alias '[%s%s]'%s"
+                                ns
+                                (if alias (str " :as " alias) "")
+                                (if count (str " × " count) ""))
+          :kind         :quick-fix
+          :is-preferred true
+          :command      {:title     "Use alias suggestion"
+                         :command   "use-alias-suggestion"
+                         :arguments [uri row col ns alias]}})
+       require-renames))
+
 (defn ^:private change-colls-actions [uri line character other-colls]
   (map (fn [coll]
          {:title   (str "Change coll to " (name coll))
@@ -439,6 +452,7 @@
          missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
          missing-imports* (future (find-missing-imports resolvable-require-diagnostics db))
          require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
+         namespace-to-alias-options* (future (f.add-missing-libspec/find-alias-suggestions zloc uri db))
          can-sort-clauses?* (future (f.sort-clauses/can-sort? zloc uri db))
          allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
          allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
@@ -468,6 +482,11 @@
 
        (seq @require-suggestions*)
        (into (require-suggestion-actions uri @require-suggestions*))
+
+       (seq @namespace-to-alias-options*)
+       (into (require-alias-actions
+               uri
+               @namespace-to-alias-options*))
 
        @private-function-to-create*
        (conj (create-private-function-action uri @private-function-to-create*))

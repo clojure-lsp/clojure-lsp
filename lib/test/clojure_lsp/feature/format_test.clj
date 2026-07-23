@@ -32,6 +32,10 @@
     [:defn]                [[:inner 0]]
     [:form]                nil
 
+    ;; preserve vec sym spec
+    [[:block 0]]           [[:block 0]]
+    [[:inner 0]]           [[:inner 0]]
+
        ;; letfn
     [1 [[:defn]] :form]    [[:block 1] [:inner 2 0]]
        ;; defrecord

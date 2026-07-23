@@ -48,7 +48,7 @@
 
   See the details at https://docs.cider.mx/cider/indent_spec.html but a quick sketch follows.
   - Top-level numbers or keywords are shorthand for [x].
-  - The first element of the list is a number, `:defn` or `:form`.
+  - The first element of the list is a vector, number, `:defn` or `:form`.
     - Numbers give the number of special args (`[:block N]` in cljfmt)
     - `:defn` means indent like a `defn` (`[:inner 0]` in cljfmt)
     - `:form` means indent like a normal `(f a b)` form.
@@ -60,6 +60,7 @@
                               spec
                               [spec])
         sym-spec            (cond
+                              (vector? sym) sym
                               (number? sym) [:block sym]
                               (= sym :defn) [:inner 0])
         arg-specs           (keep-indexed arg-spec->cljfmt-arg args)

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Bump clj-kondo to `2026.05.26-20260722.185805-60`.
+- Bump clj-kondo to `2026.05.26-20260723.112001-61`.
 - Report the clj-kondo git sha on `--version` for snapshot builds, instead of a stale `-SNAPSHOT` version.
 - Fix unreachable "Classpath not found" error branch on stubs generation.
 - Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380

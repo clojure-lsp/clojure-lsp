@@ -288,6 +288,61 @@
                             :range {:start {:line 6 :character 2}}}] {}
                           (h/db)))))
 
+(deftest inline-function-code-action
+  (h/load-code (string/join "\n"
+                            ["(ns a)"
+                             "(defn my-add [my-a my-b my-c]"
+                             "  (+ my-a my-b my-c))"
+                             "(my-add 5 3 6)"])
+               (h/file-uri "file:///b.clj"))
+  (testing "when not in a function"
+    (is (not-any? #(= (:title %) "Inline function")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                      (h/file-uri "file:///b.clj")
+                                      1
+                                      3
+                                      [] {}
+                                      (h/db)))))
+  (testing "when in a function"
+    (h/assert-contains-submaps
+      [{:title "Inline function"
+        :command {:command "inline-function"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                          (h/file-uri "file:///b.clj")
+                          2
+                          3
+                          []
+                          {}
+                          (h/db)))))
+
+(deftest move-to-for-let-code-action
+  (h/load-code (string/join "\n"
+                            ["(for [x [1 2 3 4]"
+                             "      :let [a (* 2 x)]]"
+                             "  a)"
+                             "(xyz 1 2)"])
+               (h/file-uri "file:///b.clj"))
+  (testing "when not inside a form that allows :let"
+    (is (not-any? #(= (:title %) "Move to :let")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                      (h/file-uri "file:///b.clj")
+                                      4
+                                      3
+                                      []
+                                      {}
+                                      (h/db)))))
+  (testing "when inside a form that allows :let"
+    (h/assert-contains-submaps
+      [{:title "Move to :let"
+        :command {:command "move-to-for-let"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                          (h/file-uri "file:///b.clj")
+                          3
+                          3
+                          []
+                          {}
+                          (h/db)))))
+
 (deftest inline-symbol-code-action
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
                              "(def bar 1)\n"

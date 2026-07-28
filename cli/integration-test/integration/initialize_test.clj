@@ -81,7 +81,8 @@
                                             "thread-last"
                                             "thread-last-all"
                                             "unwind-all"
-                                            "unwind-thread"]}
+                                            "unwind-thread"
+                                            "use-alias-suggestion"]}
         :selectionRangeProvider true
         :signatureHelpProvider {:triggerCharacters []}
         :foldingRangeProvider true

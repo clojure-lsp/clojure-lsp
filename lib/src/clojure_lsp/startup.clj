@@ -78,13 +78,15 @@
   clj-kondo analyzes, including java sources used for java class/member
   definitions."
   [paths]
-  (into #{}
-        (comp
-          (mapcat #(file-seq (io/file %)))
-          (filter (fn [^File f] (.isFile f)))
-          (map (fn [^File f] (.getCanonicalPath f)))
-          (filter #(re-matches analyzable-source-file-regex %)))
-        paths))
+  (shared/logging-task
+    :startup/enumerate-source-files   ;; accessing the filesystem
+    (into #{}
+          (comp
+            (mapcat #(file-seq (io/file %)))
+            (filter (fn [^File f] (.isFile f)))
+            (map (fn [^File f] (.getCanonicalPath f)))
+            (filter #(re-matches analyzable-source-file-regex %)))
+          paths)))
 
 (defn ^:private analyze-source-paths!
   "Analyze source `paths` with clj-kondo and the project linters.
@@ -265,25 +267,27 @@
                          file-findings)))))
 
 (defn ^:private build-db-cache [db]
-  (-> db
-      (select-keys [:project-hash
-                    :settings-hash
-                    :kondo-config-hash
-                    :dependency-scheme
-                    :project-analysis-type
-                    :classpath
-                    :analysis
-                    :analysis-checksums
-                    :source-paths-checksums
-                    :dep-graph
-                    :documents])
-      (merge {:stubs-generation-namespaces (->> db :settings :stubs :generation :namespaces (map str) set)
-              :version db/version
-              :project-root (str (shared/uri->path (:project-root-uri db)))
+  (shared/logging-task
+    :startup/build-db-cache                ;; sanitizing kondo findings
+    (-> db
+        (select-keys [:project-hash
+                      :settings-hash
+                      :kondo-config-hash
+                      :dependency-scheme
+                      :project-analysis-type
+                      :classpath
+                      :analysis
+                      :analysis-checksums
+                      :source-paths-checksums
+                      :dep-graph
+                      :documents])
+        (merge {:stubs-generation-namespaces (->> db :settings :stubs :generation :namespaces (map str) set)
+                :version db/version
+                :project-root (str (shared/uri->path (:project-root-uri db)))
               ;; clj-kondo findings are consumed by clean-ns/diagnostics and are
               ;; only produced by analysis, so persist them to survive a warm
               ;; startup that skips re-analyzing unchanged files.
-              :kondo-findings (cache-safe-findings (get-in db [:diagnostics :clj-kondo]))})))
+                :kondo-findings (cache-safe-findings (get-in db [:diagnostics :clj-kondo]))}))))
 
 (defn ^:private upsert-db-cache! [db]
   (if (:api? db)

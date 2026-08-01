@@ -7,6 +7,7 @@
 - Fix unreachable "Classpath not found" error branch on stubs generation.
 - Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
 - Fix completion error in deps.edn/project.clj when the map is transiently unbalanced while typing a new key. #2384
+- Additional unit tests for code-actions for inline-function and move-to-for-let #2429
 
 ## 2026.07.06-14.34.19
 

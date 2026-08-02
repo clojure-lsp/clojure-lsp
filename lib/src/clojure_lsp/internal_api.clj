@@ -173,23 +173,25 @@
 (defn ^:private analyze!
   [{:keys [project-root settings log-path]}
    {:keys [db*] :as components}]
-  (try
-    (startup/initialize-project
-      (project-root->uri project-root @db*)
-      {:workspace {:workspace-edit {:document-changes true}}}
-      (settings/clean-client-settings {})
-      (merge (shared/assoc-some
-               {:lint-project-files-after-startup? false
-                :text-document-sync-kind :full}
-               :log-path log-path)
-             settings)
-      "clojure-lsp-api"
-      components)
-    true
-    (catch clojure.lang.ExceptionInfo e
-      (throw e))
-    (catch Exception e
-      (throw (ex-info "Error during project analysis" {:message e})))))
+  (shared/logging-task
+    :internal-api/initialize-project   ;; entire initialize phase
+    (try
+      (startup/initialize-project
+        (project-root->uri project-root @db*)
+        {:workspace {:workspace-edit {:document-changes true}}}
+        (settings/clean-client-settings {})
+        (merge (shared/assoc-some
+                 {:lint-project-files-after-startup? false
+                  :text-document-sync-kind :full}
+                 :log-path log-path)
+               settings)
+        "clojure-lsp-api"
+        components)
+      true
+      (catch clojure.lang.ExceptionInfo e
+        (throw e))
+      (catch Exception e
+        (throw (ex-info "Error during project analysis" {:message e}))))))
 
 (defn ^:private setup-project-and-full-deps-analysis! [options {:keys [db*] :as components}]
   (let [db @db*]

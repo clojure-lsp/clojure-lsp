@@ -328,71 +328,73 @@
 
   Otherwise, we download default OpenJDK source if setting is enabled."
   [db*]
-  (let [db @db*
-        jdk-dir-file (io/file (config/global-cache-dir) "jdk")
-        jdk-result-file (io/file jdk-dir-file "result")
-        installed-jdk-source-uri (read-installed-jdk-source-uri jdk-result-file)
-        {custom-jdk-source-uri :jdk-source-uri java-home :home-path} (settings/get db [:java])
-        local-jdk-source-file* (delay (find-local-jdk-source java-home))
-        download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
-        global-db (db/read-global-cache)
-        {:keys [result jdk-zip-file download-uri]} (jdk-analysis-decision
-                                                     installed-jdk-source-uri
-                                                     custom-jdk-source-uri
-                                                     local-jdk-source-file*
-                                                     download-jdk-source?)]
-    (io/make-parents jdk-result-file)
-    (case result
-      :jdk-already-installed
-      (logger/info java-logger-tag "JDK source already present on global LSP cache dir.")
+  (shared/logging-task
+    :java-interop/retrieve-jdk-source-and-analyze     ;; unzipping jdk and running kondo for it (kondo part is logged as well)
+    (let [db @db*
+          jdk-dir-file (io/file (config/global-cache-dir) "jdk")
+          jdk-result-file (io/file jdk-dir-file "result")
+          installed-jdk-source-uri (read-installed-jdk-source-uri jdk-result-file)
+          {custom-jdk-source-uri :jdk-source-uri java-home :home-path} (settings/get db [:java])
+          local-jdk-source-file* (delay (find-local-jdk-source java-home))
+          download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
+          global-db (db/read-global-cache)
+          {:keys [result jdk-zip-file download-uri]} (jdk-analysis-decision
+                                                       installed-jdk-source-uri
+                                                       custom-jdk-source-uri
+                                                       local-jdk-source-file*
+                                                       download-jdk-source?)]
+      (io/make-parents jdk-result-file)
+      (case result
+        :jdk-already-installed
+        (logger/info java-logger-tag "JDK source already present on global LSP cache dir.")
 
-      :automatic-local-jdk
-      (do
-        (logger/info java-logger-tag (format "Automatically found local JDK source zip at %s, extracting to global LSP cache dir..." jdk-zip-file))
-        (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
-        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
+        :automatic-local-jdk
+        (do
+          (logger/info java-logger-tag (format "Automatically found local JDK source zip at %s, extracting to global LSP cache dir..." jdk-zip-file))
+          (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
+          (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
 
-      :manual-local-jdk
-      (do
-        (logger/info java-logger-tag (format "Using provided local JDK source URI %s, extracting to global LSP cache dir..." jdk-zip-file))
-        (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
-        (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
+        :manual-local-jdk
+        (do
+          (logger/info java-logger-tag (format "Using provided local JDK source URI %s, extracting to global LSP cache dir..." jdk-zip-file))
+          (fs/unzip jdk-zip-file jdk-dir-file {:replace-existing true})
+          (spit jdk-result-file (shared/filename->uri (.getCanonicalPath ^File jdk-zip-file) db)))
 
-      :download-jdk
-      (do
-        (logger/info java-logger-tag "Downloading JDK source to global LSP cache dir...")
-        (when (download-jdk! download-uri jdk-dir-file)
-          (spit jdk-result-file download-uri)))
+        :download-jdk
+        (do
+          (logger/info java-logger-tag "Downloading JDK source to global LSP cache dir...")
+          (when (download-jdk! download-uri jdk-dir-file)
+            (spit jdk-result-file download-uri)))
 
       ;; else
-      (logger/warn java-logger-tag "Skipping download JDK source, setting `:java :download-jdk-source?` is disabled."))
+        (logger/warn java-logger-tag "Skipping download JDK source, setting `:java :download-jdk-source?` is disabled."))
 
     ;; keep only java packages
-    (doseq [file-dir (fs/list-dir jdk-dir-file)]
-      (when-not (or (string/starts-with? (str (fs/relativize jdk-dir-file file-dir)) "java")
-                    (= (str file-dir) (str jdk-result-file)))
-        (fs/delete-tree file-dir)))
+      (doseq [file-dir (fs/list-dir jdk-dir-file)]
+        (when-not (or (string/starts-with? (str (fs/relativize jdk-dir-file file-dir)) "java")
+                      (= (str file-dir) (str jdk-result-file)))
+          (fs/delete-tree file-dir)))
 
-    (cond
+      (cond
       ;; recheck uri is still valid and present
-      (not (read-installed-jdk-source-uri jdk-result-file))
-      (logger/warn java-logger-tag "JDK source not found, skipping java analysis.")
+        (not (read-installed-jdk-source-uri jdk-result-file))
+        (logger/warn java-logger-tag "JDK source not found, skipping java analysis.")
 
-      (and (= :jdk-already-installed result)
-           global-db)
-      (let [analysis (lsp.kondo/canonicalize-java-analysis (:analysis global-db))]
-        (swap! db* #(-> %
-                        (lsp.kondo/db-with-analysis {:analysis analysis
-                                                     :external? true})
-                        (update :analysis-checksums merge (:analysis-checksums global-db))))
-        (logger/info java-logger-tag "JDK source analysis cache loaded successfully."))
+        (and (= :jdk-already-installed result)
+             global-db)
+        (let [analysis (lsp.kondo/canonicalize-java-analysis (:analysis global-db))]
+          (swap! db* #(-> %
+                          (lsp.kondo/db-with-analysis {:analysis analysis
+                                                       :external? true})
+                          (update :analysis-checksums merge (:analysis-checksums global-db))))
+          (logger/info java-logger-tag "JDK source analysis cache loaded successfully."))
 
-      :else
-      (let [java-filenames (jdk-dir->java-filenames jdk-dir-file)
-            {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums java-filenames global-db @db*)]
-        (if (seq paths-not-on-checksum)
-          (do
-            (logger/info java-logger-tag "Analyzing JDK source via clj-kondo...")
-            (analyze-and-cache-jdk-source! paths-not-on-checksum new-checksums db*)
-            (logger/info java-logger-tag "JDK source analyzed and cached successfully."))
-          (logger/info java-logger-tag "JDK source cache loaded successfully."))))))
+        :else
+        (let [java-filenames (jdk-dir->java-filenames jdk-dir-file)
+              {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums java-filenames global-db @db*)]
+          (if (seq paths-not-on-checksum)
+            (do
+              (logger/info java-logger-tag "Analyzing JDK source via clj-kondo...")
+              (analyze-and-cache-jdk-source! paths-not-on-checksum new-checksums db*)
+              (logger/info java-logger-tag "JDK source analyzed and cached successfully."))
+            (logger/info java-logger-tag "JDK source cache loaded successfully.")))))))

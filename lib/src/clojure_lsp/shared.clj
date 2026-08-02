@@ -592,15 +592,17 @@
 (defn paths->checksums
   "Return a map with file's last modified timestamp by filename."
   [paths]
-  (reduce
-    (fn [cks path]
-      (let [file (io/file path)]
-        (if-let [checksum (and (file-exists? file)
-                               (.lastModified ^java.io.File file))]
-          (assoc cks path checksum)
-          cks)))
-    {}
-    paths))
+  (logging-task
+    :shared/paths->checksums   ;; accessing the filesystem
+    (reduce
+      (fn [cks path]
+        (let [file (io/file path)]
+          (if-let [checksum (and (file-exists? file)
+                                 (.lastModified ^java.io.File file))]
+            (assoc cks path checksum)
+            cks)))
+      {}
+      paths)))
 
 (defn generate-and-update-analysis-checksums [paths global-db db]
   (let [old-checksums (merge (:analysis-checksums global-db)

@@ -516,15 +516,17 @@
         (with-additional-config settings))))
 
 (defn ^:private run-kondo! [config err-hint]
-  (let [err-writer (java.io.StringWriter.)]
-    (try
-      (let [result (binding [*err* err-writer]
-                     (kondo/run! config))]
-        (when-not (string/blank? (str err-writer))
-          (logger/warn logger-tag (string/trim-newline (str err-writer))))
-        result)
-      (catch Exception e
-        (logger/error e (str logger-tag " error analysing " err-hint))))))
+  (shared/logging-task
+    :kondo/run-kondo!       ;; time each kondo run - useful for measuring startup batches, but also logs kondo timings for every edit
+    (let [err-writer (java.io.StringWriter.)]
+      (try
+        (let [result (binding [*err* err-writer]
+                       (kondo/run! config))]
+          (when-not (string/blank? (str err-writer))
+            (logger/warn logger-tag (string/trim-newline (str err-writer))))
+          result)
+        (catch Exception e
+          (logger/error e (str logger-tag " error analysing " err-hint)))))))
 
 (defn run-kondo-on-paths! [paths db* {:keys [external?] :as normalization-config} file-analyzed-fn]
   (let [db @db*

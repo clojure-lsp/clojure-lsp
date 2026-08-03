@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
+   [clojure-lsp.feature.cycle-namespaced-map :as f.cycle-namespaced-map]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.drag-param :as f.drag-param]
@@ -177,6 +178,16 @@
      :kind    :refactor-rewrite
      :command {:title     title
                :command   "cycle-keyword-auto-resolve"
+               :arguments [uri line character]}}))
+
+(defn ^:private cycle-namespaced-map-action [uri line character cycle-namespaced-map-status]
+  (let [title (if (= :from-map-to-namespaced (:status cycle-namespaced-map-status))
+                "Change map to namespaced map"
+                "Change namespaced map to map")]
+    {:title   title
+     :kind    :refactor-rewrite
+     :command {:title     title
+               :command   "cycle-namespaced-map"
                :arguments [uri line character]}}))
 
 (defn ^:private cycle-privacy-action [uri line character]
@@ -454,6 +465,7 @@
          can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
          inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
          cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
+         cycle-namespaced-map-status* (future (f.cycle-namespaced-map/cycle-namespaced-map-status zloc))
          can-add-let? (or (z/skip-whitespace z/right zloc)
                           (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))
          can-move-to-for-let?* (future (r.transform/can-move-to-:let? zloc))
@@ -486,6 +498,9 @@
 
        @cycle-kwd-status*
        (conj (cycle-kwd-action uri line character @cycle-kwd-status*))
+
+       @cycle-namespaced-map-status*
+       (conj (cycle-namespaced-map-action uri line character @cycle-namespaced-map-status*))
 
        can-add-let?
        (conj (move-to-let-action uri line character)

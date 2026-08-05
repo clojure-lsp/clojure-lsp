@@ -233,6 +233,159 @@ If you're interested in using the profiling tools in that file, you'll need to b
 
 Note that the performance of clojure-lsp is highly dependent on the size of its db. If you load a repl with `-A:build`, you'll have access to the debugging tools, but the db will be nearly empty. Follow the [steps][#the-clojure-way] above to connect to an nREPL which has a populated db.
 
+#### Automated Performance Testing
+
+clojure-lsp has unit tests to ensure that performance doesn't degrade with changes.  They can be run stand alone using `bb performance-test`.  Additionally, they are run by the continuous integration steps.
+
+The implementation files for the performance tests are in the cli/integration-test/performance folder.  These tests run various clojure-lsp tasks against the clojure-lsp codebase itself multiple times and report p50, p90, and p99 timings.  The tests fail if these timings exceed their respective preset values.
+
+#### Debugging with Flowstorm
+
+[Flowstorm](https://flow-storm.github.io/flow-storm-debugger/user_guide.html) is a "tracing debugger".  It records code flows and allows you to step through the flows later, after the code has run.  To do this, it instruments your Clojure code while compiling them, adding its own (invisible) hooks.
+
+The UI displays the code, stack, and local variables as you trace the code's flow.  Click backwards to retrace the flow.  You can also define a variable in the `user` space.  There are many other features, see the Flowstorm page for more.
+
+By creating a Flowstorm visualizer, you can directly see variables such as a rewrite-clj zloc without having to invoke z/string inside the REPL.
+
+When building with `bb debug-cli` clojure-lsp is created using ahead-of-time compilation of class files.  The resulting executable starts up quickly, but because the Clojure code has already been compiled Flowstorm can't instrument the Clojure at runtime.  To get around this, you'll have to run the clojure-lsp code in the slower, but more flexible, way - from the command line.
+
+To use Flowstorm with clojure-lsp, you need to
+1. configure clojure-lsp according to [The Clojure Way](#the-clojure-way)
+2. create a new executable script containing the clojure-lsp command line; save it in the project as bin/clojure-lsp-dev
+3. change your editor to use this new script
+
+##### clojure-lsp configuration to use Flowstorm
+
+Let's follow the convention and name the script clojure-lsp-dev.  The script will invoke clojure-lsp along with the options to include Flowstorm instrumenting and the Flowstorm GUI.
+
+```bash
+#!/usr/bin/env bash
+
+clj -Sdeps '{:aliases
+              {:lsp
+                {:extra-paths ["cli/dev"
+                               "lib/src"
+                               "cli/src"]
+                 :jvm-opts ["-XX:-OmitStackTraceInFastThrow"
+                            "-Dflowstorm.theme=dark"
+                            "-Dclojure.storm.instrumentOnlyPrefixes=clojure-lsp"]
+                 :classpath-overrides {org.clojure/clojure nil}  
+                 :extra-deps {com.github.flow-storm/clojure {:mvn/version "1.13.0-alpha5"}
+                              com.github.flow-storm/flow-storm-dbg {:mvn/version "4.7.0"}}
+                 :replace-deps
+                 {clojure-lsp/clojure-lsp {:local/root "./cli"}
+                  cider/cider-nrepl {:mvn/version "0.59.0"}}}}}' \
+                       -M:lsp -m clojure-lsp.main "$@"
+```
+
+<details>
+<summary> Explanation of the script </summary>
+The script runs the clojure command line, telling `clj` that the deps.edn data will follow (`-Sdeps`) on the command line.  Next there is a large quoted argument with the deps.edn data.  Following that is a command telling `clj` to use the lsp alias (`-Mlsp`) we supplied with the deps.edn argument.  And then the -m indicates the namespace for the main.
+
+The large deps.edn data argument is worth looking at chunk by chunk.
+```
+                {:extra-paths ["cli/dev"
+                               "lib/src"
+                               "cli/src"]
+
+```
+The lib/src and cli/src paths are where the sources for clojure-lsp live.  These need to be on the path for `clj` to find the clojure-lsp code.  The cli/dev folder contains some useful functions for debugging (debugging generally unrelated to Flowstorm).
+
+
+```
+                 :jvm-opts ["-XX:-OmitStackTraceInFastThrow"
+                            "-Dflowstorm.theme=dark"
+                            "-Dclojure.storm.instrumentOnlyPrefixes=clojure-lsp"]
+
+```
+
+This 
+- tells the JVM to use full stack traces (OmitStackTraceInFastThrow)
+- switches to the dark theme for Flowstorm (omit this line if you prefer the light theme)
+- tells Flowstorm to only instrument clojure-lsp code (to minimize in-process memory usage)
+
+```
+                 :classpath-overrides {org.clojure/clojure nil}  
+
+```
+Flowstorm will replace the standard clojure compiler so it can instrument the code.
+
+```
+                 :extra-deps {com.github.flow-storm/clojure {:mvn/version "1.13.0-alpha5"}
+                              com.github.flow-storm/flow-storm-dbg {:mvn/version "4.7.0"}}
+
+```
+
+These are Flowstorm's dependencies.  You should subsitute these with newer versions as Flowstorm makes new releases.
+
+```
+                 :replace-deps
+                 {clojure-lsp/clojure-lsp {:local/root "./cli"}
+                  cider/cider-nrepl {:mvn/version "0.59.0"}}}}}' \
+```
+The path to the cli folder for clojure-lsp itself and the REPL dependencies.
+
+</details>
+
+Finally, change your editor to use the new executable.  For Calva, you could change .vscode/settings.json to include the new script
+```
+{
+  "calva.clojureLspPath": "./bin/clojure-lsp-dev"
+}
+```
+For emacs, use `lsp-clojure-custom-server-command` as described [above](#the-clojure-way).
+
+
+##### Using Flowstorm with clojure-lsp
+
+1. Launch Flowstorm's GUI by evaluating `:dbg` in the REPL (see [The Clojure Way](#the-clojure-way) for configuring the REPL)
+2. Click the `Start/Stop recording` button in the upper left
+3. In the editor, exercise part of clojure-lsp in your editor; for instance, extract a function
+4. Click the `Start/Stop recording` button again to pause recording
+5. In the `Quick jump` window, type in the name of function you have targeted - `extract-function` in this case.  Choose clojure-lsp.refactor.transform/extract-function in the menu
+6. Click through the function via the `Step over to next expression in the current frame` button
+
+![Flowstorm with visualizer](./images/flowstorm-visualizer.png)
+
+Flowstorm has several built-in ways to display variables (map, seq, indexed) but often it helps to display a variable in a custom way.  For example, a zloc can be implemented as a vector, but it is usually easier to understand its meaning by seeing the string value.
+
+A visualizer for rewrite-clj can make it easy to see the string values for zloc or node files values.  See the [Flowstorm visualizer documentation](https://flow-storm.github.io/flow-storm-debugger/user_guide.html#_custom_visualizers) for detailed information.  An example follows
+
+```clojure
+(ns clojure-lsp.flowstorm-debug
+    (:require
+   [flow-storm.debugger.ui.data-windows.visualizers :as viz]
+   [flow-storm.runtime.values :as fs-values]
+   [rewrite-clj.zip :as z])
+  (:import
+   [javafx.scene.control Label]))
+
+(comment
+  (fs-values/register-data-aspect-extractor
+    {:id :zloc-extractor
+     :pred (fn [val _] (try (some? (z/node val)) (catch Exception _ false)))
+     :extractor (fn [zloc _] {:rewrite-clj/zloc zloc})})
+
+  (viz/register-visualizer
+    {:id :zloc-viz
+     :pred (fn [val] (some? (:rewrite-clj/zloc val)))
+     :on-create (fn [val]
+                  {:fx/node (Label. (z/string (:rewrite-clj/zloc val)))})})
+
+  (viz/add-default-visualizer
+    (fn [val] (try (some? (z/node (:val val))) (catch Exception _ false))) :zloc-viz)
+
+  :dbg
+  ; rtc
+  )
+```
+Save the file into `cli/dev/clojure_lsp/flowstorm_debug.clj` and evaluate the three methods.  You can use `:dbg` to launch the UI.  When the Data Window shows a zloc choose :zloc-viz in the dropdown and the display will show a string.  (See the image above)
+
+
+When you need to exit Flowstorm, simpily close it using the operating system's window manager.
+
+Flowstorm's instrumentation does slow down clojure-lsp.  If you are not using it, change your client from using `clojure-lsp-dev` back to `clojure-lsp`.
+
 ### Testing
 
 Run `bb tasks` for a list of available dev tasks.
@@ -283,3 +436,67 @@ Below are a few __hints__ to assist with writing test that work accross the diff
     1. Use `clojure-lsp.test-helper.internal/file-path`, `clojure-lsp.test-helper.internal/file->uri` with *nix paths. They are converted to the format expected by the OS.
         1. e.g. `(load-code (h/file-path "/aaa.clj")  "(ns aaa)")` instead of `(load-code "/aaa.clj" "(ns aaa)")` or `(load-code "c:\\aaa.clj" "(ns aaa)")`
 
+
+#### Code Coverage with Clofidence
+
+It is useful to run the [unit tests](#testing) with a code coverage tool to verify that the unit tests cover the new and modified code reasonably.
+
+[Clofidence](https://github.com/flow-storm/clofidence) is a code coverage tool based on Flowstorm.  It generates HTML output with the code color coded to indicate where coverage is good, missing, or low.
+
+To use Clofidence with clojure-lsp, you must
+1. modify deps.edn to include the Clofidence configuration
+2. change scripts/make.clj so it uses the newly added Clofidence configuration
+3. run the unit tests by the usual method, `bb test`
+4. open the generated index.html (`firefox lib/clofidence-output/index.html`)
+
+This is the page you'll see with index.html.  It lists all namespaces in the project with a stacked bar chart showing the code coverage percentage.
+
+![Clofidence overview page](./images/clofidence-overview.png)
+
+
+When you click on a namespace, you'll see the details of the code coverage.
+
+![Clofidence details page](./images/clofidence-details.png)
+
+
+The following diff (against commit id 11f7ff7) changes the clojure-lsp configuration to support Clofidence.  You may wish to update the flow-storm version.
+
+```
+diff --git a/lib/deps.edn b/lib/deps.edn
+index 569ef77c..0e9e5096 100644
+--- a/lib/deps.edn
++++ b/lib/deps.edn
+@@ -34,6 +34,15 @@
+                   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
+                   :extra-paths ["test"]
+                   :main-opts ["-m" "kaocha.runner"]}
++           :clofidence {:classpath-overrides {org.clojure/clojure nil}
++                        :extra-deps {com.github.flow-storm/clojure {:mvn/version "1.12.5"}
++                                      com.github.flow-storm/clofidence {:mvn/version "LATEST"}}
++                        :exec-fn clofidence.main/run
++                        :exec-args {:report-name "Hansel"
++                                    :test-fn kaocha.runner/-main*
++                                    :test-fn-args []}
++                        :jvm-opts ["-Dclojure.storm.instrumentOnlyPrefixes=hansel"
++                                   "-Dclojure.storm.instrumentSkipRegex=.*test.*"]}
+            :cognitest {:extra-paths ["test"]
+                        :extra-deps {clojure-lsp/test-helper {:local/root "../test-helper"}
+                                     io.github.cognitect-labs/test-runner
+diff --git a/scripts/make.clj b/scripts/make.clj
+index fd803036..0bf74d45 100644
+--- a/scripts/make.clj
++++ b/scripts/make.clj
+@@ -56,7 +56,7 @@
+
+ (defn ^:private unit-test [dir]
+   (println :running-unit-tests... dir)
+-  (clj! dir ["-M:test"])
++  (clj! dir ["-X:test:clofidence"])
+   (println))
+
+ (defn ^:private mv-here [file]
+```
+
+To remove the coverage output from Clofidence, remove the lib/clofidence-output folder (`rm -r lib/clofidence-output`).
+
+To remove the Clofidence configuration after applying the above patch, simply revert the `scripts/make.clj` and `lib/deps.edn` files.

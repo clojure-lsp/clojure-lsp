@@ -419,6 +419,44 @@
                           [] {}
                           (h/db)))))
 
+(deftest cycle-namespaced-map-code-action
+  (let [[[map-r map-c]
+         [namespaced-map-r namespaced-map-c]
+         [unqualified-map-r unqualified-map-c]]
+        (h/load-code-and-locs (h/code "(ns some-ns)"
+                                      "|{:foo/bar 1}"
+                                      "|#:foo{:bar 1}"
+                                      "|{:bar 1}")
+                              (h/file-uri "file:///a.clj"))]
+    (testing "when on a map with qualified keys"
+      (h/assert-contains-submaps
+        [{:title "Change map to namespaced map"
+          :command {:command "cycle-namespaced-map"}}]
+        (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                            (h/file-uri "file:///a.clj")
+                            map-r
+                            map-c
+                            [] {}
+                            (h/db))))
+    (testing "when on a namespaced map"
+      (h/assert-contains-submaps
+        [{:title "Change namespaced map to map"
+          :command {:command "cycle-namespaced-map"}}]
+        (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                            (h/file-uri "file:///a.clj")
+                            namespaced-map-r
+                            namespaced-map-c
+                            [] {}
+                            (h/db))))
+    (testing "when on a map without qualified keys"
+      (is (not-any? #(= (:command (:command %)) "cycle-namespaced-map")
+                    (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                        (h/file-uri "file:///a.clj")
+                                        unqualified-map-r
+                                        unqualified-map-c
+                                        [] {}
+                                        (h/db)))))))
+
 (deftest destructure-keys-code-action
   (let [[[non-local-r non-local-c]
          [local-r local-c]]

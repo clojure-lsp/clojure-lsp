@@ -37,6 +37,7 @@
                                             "cursor-info"
                                             "cycle-coll"
                                             "cycle-keyword-auto-resolve"
+                                            "cycle-namespaced-map"
                                             "cycle-privacy"
                                             "demote-fn"
                                             "destructure-keys"

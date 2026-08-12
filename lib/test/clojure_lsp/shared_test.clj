@@ -356,3 +356,249 @@
   (testing "when the dir-uri is absolute file URI"
     (is (= [(h/file-uri "file:///user/project/src/foo/bar.clj")]
            (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src/foo/bar.clj")] (h/db))))))
+
+(deftest client-changes-test
+  (testing "when client has refactor review support and is a multi-file change, then change annotations should be in edits"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:change-annotation-support {:groups-on-label true}
+                                                                    :document-changes true}}}})
+    (is (= {:change-annotations
+            {"confirmClojureLspRefactor" {:label "Confirm clojure-lsp refactor", "needsConfirmation" true}}
+            :document-changes
+            [{:edits [{:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+              :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+             {:edits [{:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                      {:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+              :text-document {:uri (h/file-uri "file:///b.clj")
+                              :version 3}}]}
+           (shared/client-changes [{:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                                    :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+                                   {:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                                            {:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+                                    :text-document {:uri (h/file-uri "file:///b.clj")
+                                                    :version 3}}] (h/db)))))
+  (testing "when client has refactor review support (via resource operations) and is a multi-file change,
+              then change annotations should be in edits"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:change-annotation-support {:groups-on-label true}
+                                                                    :resource-operations true}}}})
+    (is (= {:change-annotations
+            {"confirmClojureLspRefactor" {:label "Confirm clojure-lsp refactor", "needsConfirmation" true}}
+            :document-changes
+            [{:edits [{:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+              :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+             {:edits [{:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                      {:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+              :text-document {:uri (h/file-uri "file:///b.clj")
+                              :version 3}}]}
+           (shared/client-changes [{:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                                    :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+                                   {:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                                            {:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+                                    :text-document {:uri (h/file-uri "file:///b.clj")
+                                                    :version 3}}] (h/db)))))
+  (testing "change annotation support indication can be an empty map"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:change-annotation-support {}
+                                                                    :resource-operations true}}}})
+    (is (= {:change-annotations
+            {"confirmClojureLspRefactor" {:label "Confirm clojure-lsp refactor", "needsConfirmation" true}}
+            :document-changes
+            [{:edits [{:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+              :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+             {:edits [{:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                      {:annotation-id "confirmClojureLspRefactor"
+                       :new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+              :text-document {:uri (h/file-uri "file:///b.clj")
+                              :version 3}}]}
+           (shared/client-changes [{:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                                    :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+                                   {:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                                            {:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+                                    :text-document {:uri (h/file-uri "file:///b.clj")
+                                                    :version 3}}] (h/db)))))
+  (testing "when client has refactor review support and is a multi-file non-edit change,
+              then change annotations should also be in changes with a :kind section"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:change-annotation-support {:groups-on-label true}
+                                                                    :resource-operations true}}}})
+    (is (= {:change-annotations
+            {"confirmClojureLspRefactor" {:label "Confirm clojure-lsp refactor", "needsConfirmation" true}}
+            :document-changes
+            [{:annotation-id "confirmClojureLspRefactor"
+              :kind :rename
+              :old-uri  (h/file-uri "file:///original-a.clj")
+              :new-uri  (h/file-uri "file:///new-a.clj")}
+             {:annotation-id "confirmClojureLspRefactor"
+              :kind :rename
+              :old-uri  (h/file-uri "file:///original-b.clj")
+              :new-uri  (h/file-uri "file:///new-b.clj")}]}
+           (shared/client-changes
+             [{:kind :rename
+               :old-uri  (h/file-uri "file:///original-a.clj")
+               :new-uri  (h/file-uri "file:///new-a.clj")}
+              {:kind :rename
+               :old-uri  (h/file-uri "file:///original-b.clj")
+               :new-uri  (h/file-uri "file:///new-b.clj")}]
+             (h/db)))))
+  (testing "when client has refactor review support and is a multi-file change with mixed edits and other operations
+                then change annotations should be in both changes with :edits sections and :kind sections"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:change-annotation-support {:groups-on-label true}
+                                                                    :resource-operations true}}}})
+    (is (= {:change-annotations
+            {"confirmClojureLspRefactor" {:label "Confirm clojure-lsp refactor", "needsConfirmation" true}}
+            :document-changes
+            [{:annotation-id "confirmClojureLspRefactor"
+              :kind :rename
+              :old-uri  (h/file-uri "file:///original-a.clj")
+              :new-uri  (h/file-uri "file:///new-a.clj")}
+             {:annotation-id "confirmClojureLspRefactor"
+              :kind :rename
+              :old-uri  (h/file-uri "file:///original-b.clj")
+              :new-uri  (h/file-uri "file:///new-b.clj")}
+             {:edits [{:annotation-id "confirmClojureLspRefactor"
+                       :new-text "new-a", :range {:end {:character 24, :line 0}, :start {:character 4, :line 0}}}]
+              :text-document {:uri (h/file-uri "new-a.clj"), :version 0}}]}
+           (shared/client-changes
+             [{:kind :rename
+               :old-uri  (h/file-uri "file:///original-a.clj")
+               :new-uri  (h/file-uri "file:///new-a.clj")}
+              {:kind :rename
+               :old-uri  (h/file-uri "file:///original-b.clj")
+               :new-uri  (h/file-uri "file:///new-b.clj")}
+              {:edits [{:new-text "new-a", :range {:end {:character 24, :line 0}, :start {:character 4, :line 0}}}]
+               :text-document {:uri (h/file-uri "new-a.clj"), :version 0}}]
+             (h/db)))))
+  (testing "when client has refactor review support but only allows primitive changes and is a multi-file change, 
+                then should fall back to primitive text changes only and no refactoring review"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:change-annotation-support {:groups-on-label true}}}}})
+    (is (= {:changes {(h/file-uri "file:///a.clj") [{:new-text ":my-a-kw43"
+                                                     :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                      (h/file-uri "file:///b.clj")
+                      [{:new-text ":my-a-kw43", :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                       {:new-text ":my-a-kw43", :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]}}
+           (shared/client-changes [{:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                                    :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+                                   {:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                                            {:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+                                    :text-document {:uri (h/file-uri "file:///b.clj")
+                                                    :version 3}}] (h/db)))))
+  (testing "when client has refactor review support and change is only in one file, then no change annotations should be in edits
+            - files are changed without prompting"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:change-annotation-support {:groups-on-label true}
+                                                                    :document-changes true}}}})
+    (is (= {:document-changes
+            [{:edits [{:new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                      {:new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+              :text-document {:uri (h/file-uri "file:///b.clj")
+                              :version 3}}]}
+           (shared/client-changes [{:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                                            {:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+                                    :text-document {:uri (h/file-uri "file:///b.clj")
+                                                    :version 3}}] (h/db)))))
+  (testing "when client has only document changes support then there are no change annotations but response indicates document changes can be done"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:document-changes true}}}})
+    (is (= {:document-changes
+            [{:edits [{:new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+              :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+             {:edits [{:new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                      {:new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+              :text-document {:uri (h/file-uri "file:///b.clj")
+                              :version 3}}]}
+           (shared/client-changes [{:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                                    :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+                                   {:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                                            {:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+                                    :text-document {:uri (h/file-uri "file:///b.clj")
+                                                    :version 3}}] (h/db)))))
+  (testing "when client has only resource operations support then there are no change annotations but response indicates document changes can be done"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:client-capabilities
+                                      {:workspace {:workspace-edit {:resource-operations true}}}})
+    (is (= {:document-changes
+            [{:edits [{:new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+              :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+             {:edits [{:new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                      {:new-text ":my-a-kw43"
+                       :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+              :text-document {:uri (h/file-uri "file:///b.clj")
+                              :version 3}}]}
+           (shared/client-changes [{:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                                    :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+                                   {:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                                            {:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+                                    :text-document {:uri (h/file-uri "file:///b.clj")
+                                                    :version 3}}] (h/db)))))
+  (testing "when client has only simple text change support then there are no change annotations and response indicates 
+            that only text changes can be done"
+    (h/reset-components!)
+    (is (= {:changes {(h/file-uri "file:///a.clj") [{:new-text ":my-a-kw43"
+                                                     :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                      (h/file-uri "file:///b.clj")
+                      [{:new-text ":my-a-kw43", :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                       {:new-text ":my-a-kw43", :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]}}
+           (shared/client-changes [{:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 576}, :start {:character 0, :line 576}}}]
+                                    :text-document {:uri (h/file-uri "file:///a.clj"), :version 104}}
+                                   {:edits [{:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 12}, :start {:character 0, :line 12}}}
+                                            {:new-text ":my-a-kw43"
+                                             :range {:end {:character 10, :line 13}, :start {:character 0, :line 13}}}]
+                                    :text-document {:uri (h/file-uri "file:///b.clj")
+                                                    :version 3}}] (h/db))))))

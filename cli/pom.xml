@@ -93,7 +93,7 @@
     <dependency>
       <groupId>org.babashka</groupId>
       <artifactId>cli</artifactId>
-      <version>0.11.72</version>
+      <version>0.12.81</version>
     </dependency>
     <dependency>
       <groupId>borkdude</groupId>

@@ -127,7 +127,15 @@
     {:kind :rename
      :new-uri new-uri
      :old-uri old-uri}
-    (let [uri (:uri text-document)]
+    (let [uri (:uri text-document)
+          ;; Edit ranges refer to positions in the original document, so we
+          ;; apply them from the last position to the first one, ensuring an
+          ;; applied edit never invalidates the range of a pending one.
+          edits (->> edits
+                     (sort-by (juxt (comp :line :start :range)
+                                    (comp :character :start :range)))
+                     reverse
+                     vec)]
       (loop [edit-summary nil
              i 0]
         (if-let [edit (nth edits i nil)]

@@ -25,23 +25,23 @@
     {
       "lib": "io.github.clojure/tools.build",
       "url": "https://github.com/clojure/tools.build.git",
-      "rev": "c6c670a4ea82709d7f88aa3a9e35e0be76342417",
-      "tag": "v0.10.11",
-      "git-dir": "https/github.com/clojure/tools.build",
-      "hash": "sha256-pKEq/jJVD8JSSPFfxg5eJZmc+22T/60TtzEFwobJ7BU=",
-      "ancestor?": {
-        "2a21b7acb544d3d69de9b674adf99769b8687403": false
-      }
-    },
-    {
-      "lib": "io.github.clojure/tools.build",
-      "url": "https://github.com/clojure/tools.build.git",
       "rev": "2a21b7acb544d3d69de9b674adf99769b8687403",
       "tag": "v0.10.5",
       "git-dir": "https/github.com/clojure/tools.build",
       "hash": "sha256-4dsxlZyV57ivvS3ivUQl+xy/nWrLM0Dv6zMeYpF1rTQ=",
       "ancestor?": {
         "c6c670a4ea82709d7f88aa3a9e35e0be76342417": true
+      }
+    },
+    {
+      "lib": "io.github.clojure/tools.build",
+      "url": "https://github.com/clojure/tools.build.git",
+      "rev": "c6c670a4ea82709d7f88aa3a9e35e0be76342417",
+      "tag": "v0.10.11",
+      "git-dir": "https/github.com/clojure/tools.build",
+      "hash": "sha256-pKEq/jJVD8JSSPFfxg5eJZmc+22T/60TtzEFwobJ7BU=",
+      "ancestor?": {
+        "2a21b7acb544d3d69de9b674adf99769b8687403": false
       }
     },
     {
@@ -267,16 +267,16 @@
       "hash": "sha256-KizCFbZGnpZ8TgK78NZZLyV2htN9BJ27Ifp32SZ7qfQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20260804.153626-3.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20260820.165045-5.jar",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-YWz5IzR8vUEdvJko1TLB0ml9wrQLvzzM/PvhoPuZODk="
+      "hash": "sha256-agquPbeVPfchHs+AjgGg97WVDL83ioQvOrOnarUHOnw="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20260804.153626-3.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20260820.165045-5.pom",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-nDt9btuTUi5WFpPHAHzhnaDkevxZBygSvtWYSdn0xqE="
+      "hash": "sha256-Ckd8zTG0s+JPhBDzmFd3eEW1BQS3VUCY1FwSsjwbChk="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",

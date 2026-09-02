@@ -158,6 +158,54 @@
     (h/load-code-and-locs "(ns bar-test) (defn baz []) (baz)"
                           (h/file-uri "file:///project/test/bar_test.clj"))))
 
+(deftest unused-public-var-when-macro-produces-multiple-vars
+  (testing "when a macro produces multiple var-definitions at the same location"
+    (h/reset-components!)
+    (let [a-uri (h/file-uri "file:///project/src/a.clj")
+          _ (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
+                                  :settings {:source-paths [(h/file-path "/project/src")
+                                                            (h/file-path "/project/test")]}})
+          _ (h/load-code (h/code "(ns a)") a-uri)
+          _ (swap! (h/db*) update-in [:analysis a-uri :var-definitions]
+                   (fn [defs]
+                     (conj (vec defs)
+                           {:bucket :var-definitions
+                            :ns 'a
+                            :name 'Example1
+                            :name-row 1
+                            :name-col 8
+                            :name-end-row 1
+                            :name-end-col 16
+                            :row 1
+                            :col 8
+                            :end-row 1
+                            :end-col 16
+                            :uri a-uri
+                            :defined-by 'defthings}
+                           {:bucket :var-definitions
+                            :ns 'a
+                            :name 'Example2
+                            :name-row 1
+                            :name-col 8
+                            :name-end-row 1
+                            :name-end-col 16
+                            :row 1
+                            :col 8
+                            :end-row 1
+                            :end-col 16
+                            :uri a-uri
+                            :defined-by 'defthings})))
+          _ (h/load-code-and-locs (h/code "(ns b (:require [a]))"
+                                          "(a/Example1)")
+                                  (h/file-uri "file:///project/src/b.clj"))]
+      (testing "when one emitted var is used, none of the sibling defs are reported"
+        (h/assert-submaps
+          []
+          (lint!
+            [(h/file-uri "file:///project/src/a.clj")
+             (h/file-uri "file:///project/src/b.clj")]
+            {:linters {:clojure-lsp/unused-public-var {:level :info}}}))))))
+
 (deftest lint-project-public-vars
   (swap! (h/db*) merge {:project-root-uri (h/file-uri "file:///project")
                         :settings {:source-paths [(h/file-path "/project/src") (h/file-path "/project/cool-test")]}})

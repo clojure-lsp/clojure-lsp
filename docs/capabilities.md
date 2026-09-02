@@ -126,6 +126,8 @@ Emacs provides all those refactorings via [lsp-mode](https://emacs-lsp.github.io
 
 Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and character numbers.
 
+If the client supports LSP change annotation support, multi-file refactoring responses may include a {"needsConfirmation" true} so the client can prompt the user to approve refactorings.
+
 ### Custom methods
 
 `clojure-lsp` has some custom LSP methods that doesn't follow the protocol but aggregate value as a clojure IDE:

@@ -100,6 +100,17 @@
                      (edn/read-string {:readers {'re re-pattern}}
                                       (slurp (.getInputStream jar config-entry))))))))))
 
+(defn ^:private dir->config
+  [^java.io.File dir config-paths]
+  (mapv (fn [config-path]
+          (let [^java.io.File config-entry
+                (io/file dir "clojure-lsp.exports" config-path "config.edn")]
+            (when (.exists config-entry)
+              (logger/info "[classpath-config]" (format "Found config for '%s" config-path))
+              (edn/read-string {:readers {'re re-pattern}}
+                               (slurp config-entry)))))
+        config-paths))
+
 (defn deep-merge-considering-settings
   "Deep merge a with b checking for specific keys related to
   clojure-lsp settings to avoid wrong duplicated values."
@@ -140,17 +151,16 @@
 (defn ^:private resolve-from-classpath-config-paths-impl [classpath {:keys [classpath-config-paths]}]
   (when-let [cp-config-paths (and (coll? classpath-config-paths)
                                   (seq classpath-config-paths))]
-    (when-let [jar-files (->> classpath
-                              (filter #(string/ends-with? % ".jar"))
-                              distinct
-                              (map io/file)
-                              (filter shared/file-exists?))]
-      (when-let [configs (->> jar-files
-                              (map #(jar-file->config % cp-config-paths))
-                              flatten
-                              (remove nil?)
-                              seq)]
-        (reduce deep-merge-considering-settings configs)))))
+    (when-let [configs (->> classpath
+                            (map io/file)
+                            (filter shared/file-exists?)
+                            (map #(if (string/ends-with? (str %) ".jar")
+                                    (jar-file->config % cp-config-paths)
+                                    (dir->config      % cp-config-paths)))
+                            flatten
+                            (remove nil?)
+                            seq)]
+      (reduce deep-merge-considering-settings configs))))
 
 (defn classpath-config-paths? [{:keys [classpath-config-paths]}]
   (and (coll? classpath-config-paths)

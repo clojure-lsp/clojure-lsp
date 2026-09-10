@@ -11,6 +11,7 @@
 - Update development page with code coverage, performance, and debugging information #2431
 - Log more fine-grained timings for (mostly) initialization tasks to make solving user's performance issues easier #2433
 - Fix API/CLI rename corrupting files when a line contains multiple occurrences of the renamed symbol. #2450
+- Fix loading exported configs (`:classpath-config-paths`) from non-jar deps.
 
 ## 2026.07.06-14.34.19
 

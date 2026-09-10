@@ -91,6 +91,15 @@
       (is (= {:a 1 :b {:c 2 :d 3}}
              (config/resolve-from-classpath-config-paths ["/my/lib.jar"]
                                                          {:classpath-config-paths ["my/other-lib"]})))))
+  (testing "when lib is not a jar"
+    (with-redefs [shared/file-exists? (constantly true)
+                  config/dir->config (fn [dir cp-config-paths]
+                                       (when (and (= (h/file-path "/my/lib") (str dir))
+                                                  (= "my/other-lib" (first cp-config-paths)))
+                                         {:sample {:fake :config}}))]
+      (is (= {:sample {:fake :config}}
+             (config/resolve-from-classpath-config-paths ["/my/lib"]
+                                                         {:classpath-config-paths ["my/other-lib"]})))))
   (testing "when classpath-config-paths is provided and classpath has recursive libs with clojure-lsp config"
     (with-redefs [shared/file-exists? (constantly true)
                   config/jar-file->config (fn [jar cp-config-paths]

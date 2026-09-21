@@ -292,7 +292,7 @@
   (let [old-db @db*
         existing-uris (->> uris
                            distinct
-                           (filter #(shared/file-exists? (io/file (shared/uri->filename %))))) ;; we check if file still exists/should be linted
+                           (filter shared/uri-on-disk?))
         filenames (map shared/uri->filename existing-uris)
         kondo-result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
     (swap! db* (fn [state-db]
@@ -362,7 +362,7 @@
         external-filename? (shared/external-filename? filename source-paths)]
     (if external-filename?
       (f.diagnostic/publish-empty-diagnostics! [uri] components)
-      (when (not (shared/file-exists? (io/file filename)))
+      (when-not (shared/uri-on-disk? uri)
         (files-deleted db components [uri])))))
 
 (defn force-get-document-text

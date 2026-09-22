@@ -582,33 +582,60 @@
             (->> (dep-graph/ns-names-for-langs db langs)
                  (map (juxt str (constantly nil) (constantly nil) identity))))))
 
+(defn ^:private merge-ns-by-count
+  "joins a seq of namespace aliases and counts with a seq of suggested namespaces; duplicate
+   namespaces (due to unique aliases) have their counts combined and the resulting seq is
+   reverse sorted by total count"
+  [ns-alias-counts ns-suggestions]
+  (let [ns->count (reduce (fn [totals [ns _alias cnt]]
+                            (let [add-to-total (fnil + 0)             ;; fnil because starts with nothing
+                                  this-count (or cnt 0)]              ;; additional count for this namespace
+                              (update totals ns add-to-total this-count)))
+                          {}
+                          ns-alias-counts)]
+    (->> ns-suggestions
+         (map #(assoc % :count (get ns->count (:ns %) 0)))
+         (sort-by (comp - :count))
+         (map #(if (zero? (:count %))
+                 (dissoc % :count)
+                 %)))))
+
 (defn find-require-suggestions [zloc uri db]
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
           cursor-name-str (name cursor-sym)
           cursor-langs (shared/uri->available-langs uri)
+
+          ;; given the namespace, see what other modules :required for that namespace
+          alias-ns-counts (find-alias-ns-pairs db uri)
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
-                                  (find-alias-ns-pairs db uri))
+                                  alias-ns-counts)
+
+          ;; look up the namespaces used in this URI
           uri-nses (->> (get-in db [:analysis uri :namespace-definitions])
                         (map :name)
                         set)
+
+          ;; find suggestions from the namespace or symbol (if symbol include :refer instead of :alias)
           suggestions (if (namespace cursor-sym)
                         namespace-suggestions
                         (concat
                           namespace-suggestions
-                          (if-let [common-refer (get common-sym/common-refers->info (symbol cursor-name-str))]
-                            [{:ns (name common-refer)
-                              :refer cursor-name-str}]
-                            (into []
-                                  (comp
-                                    (remove #(uri-nses (:ns %)))
-                                    (filter #(= cursor-name-str (str (:name %))))
-                                    (filter #(some (q/elem-langs %) cursor-langs))
-                                    (map (fn [element]
-                                           {:ns (str (:ns element))
-                                            :refer cursor-name-str})))
-                                  (q/find-all-var-definitions db false)))))]
+                          (merge-ns-by-count
+                            alias-ns-counts
+                            (if-let [common-refer (get common-sym/common-refers->info (symbol cursor-name-str))]
+                              [{:ns (name common-refer)
+                                :refer cursor-name-str}]
+                              (into []
+                                    (comp
+                                      (remove #(uri-nses (:ns %)))
+                                      (filter #(= cursor-name-str (str (:name %))))
+                                      (filter #(some (q/elem-langs %) cursor-langs))
+                                      (map (fn [element]
+                                             {:ns (str (:ns element))
+                                              :refer cursor-name-str})))
+                                    (q/find-all-var-definitions db false))))))]
       suggestions)))
 
 (defn ^:private find-forms [zloc p?]

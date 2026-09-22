@@ -90,6 +90,7 @@ then those can be added at the project level.
 - clojure-lsp persist the external jars analysis in a `.lsp/.cache/` folder, if you have issues with some specific feature,
 try to remove that dir and restart the server.
 - If you have issues with macros, [double check your clj-kondo config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).
+- Check that the project root is set correctly with `lsp-clojure-server-info`. If it is incorrect, run `lsp-workspace-folders-remove`, then `lsp`.
 
 ### Missing `Add require...` on code actions when using CoC and (neo)vim
 

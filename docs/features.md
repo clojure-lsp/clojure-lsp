@@ -38,6 +38,12 @@ Below you can find all available features that clojure-lsp provides with example
 
 Also, it's possible to live rename symbols on the same buffer with `linkedEditingRange` feature.
 
+If a rename spans files, clojure-lsp can prompt the user to approve the changes if the client supports LSP's change annotation.  Refactoring within a file skips the prompt.
+
+![](images/features/refactor-change-annotations.gif)
+
+
+
 ### Document highlight on hover showing symbol usages
 
 ![](images/features/document-highlight.gif)

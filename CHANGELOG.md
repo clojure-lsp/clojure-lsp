@@ -1,12 +1,18 @@
 # Changelog
 
 ## Unreleased
+- if supported by client, multi-file refactoring prompts for approval #2370
 
-- Bump clj-kondo to `2026.05.26-20260722.094420-59`.
+- Bump clj-kondo to `2026.08.05-20260917.181739-9`.
+- Add new refactoring `cycle-namespaced-map`, e.g. `{:foo/bar 1}` -> `#:foo{:bar 1}` and vice-versa, available via code actions. #994
 - Report the clj-kondo git sha on `--version` for snapshot builds, instead of a stale `-SNAPSHOT` version.
 - Fix unreachable "Classpath not found" error branch on stubs generation.
 - Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
 - Fix completion error in deps.edn/project.clj when the map is transiently unbalanced while typing a new key. #2384
+- Update development page with code coverage, performance, and debugging information #2431
+- Log more fine-grained timings for (mostly) initialization tasks to make solving user's performance issues easier #2433
+- Fix API/CLI rename corrupting files when a line contains multiple occurrences of the renamed symbol. #2450
+- Show built-in documentation when hovering Clojure special forms. #2457
 - sort namespace suggestions when suggesting :refer #1997
 
 ## 2026.07.06-14.34.19
@@ -47,6 +53,8 @@
   - clj-async-profiler: 1.6.2 -> 1.7.0
   - deps-deploy: 0.2.2 -> 0.2.5
   - graal-build-time: 1.0.5 -> 1.0.6
+- when sorting or removing :require or :import namespaces during ns organization, group comments and 
+  clj-kondo directives along with them #1237
 
 ## 2026.05.05-12.58.26
 

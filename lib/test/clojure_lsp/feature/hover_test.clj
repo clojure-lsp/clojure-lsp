@@ -361,3 +361,52 @@
                        :value "a/story-4"}
                       (h/file-path "/a.clj")]
                      (:contents (hover story-4-row story-4-col)))))))))))
+
+(deftest test-hover-special-form
+  (let [code (h/code "(ns a)"
+                     "(|def foo 1)")
+        [[row col]] (h/load-code-and-locs code)]
+    (is (= [{:language "clojure"
+             :value "(def symbol doc-string? init?)"}
+            (str "Special Form\n\n"
+                 "Creates and interns a global var with the name\n"
+                 "  of symbol in the current namespace (*ns*) or locates such a var if\n"
+                 "  it already exists.  If init is supplied, it is evaluated, and the\n"
+                 "  root binding of the var is set to the resulting value.  If init is\n"
+                 "  not supplied, the root binding of the var is unaffected.\n\n"
+                 "Please see http://clojure.org/special_forms#def")
+            (h/file-path "/a.clj")]
+           (:contents (hover row col))))
+    (with-db
+      capabilities-markdown
+      (is (= {:kind "markdown"
+              :value (join ["```clojure"
+                            "(def symbol doc-string? init?)"
+                            "```"
+                            ""
+                            "Special Form"
+                            ""
+                            "Creates and interns a global var with the name"
+                            "of symbol in the current namespace (*ns*) or locates such a var if"
+                            "it already exists.  If init is supplied, it is evaluated, and the"
+                            "root binding of the var is set to the resulting value.  If init is"
+                            "not supplied, the root binding of the var is unaffected."
+                            ""
+                            "Please see http://clojure.org/special_forms#def"
+                            ""
+                            "----"
+                            ""
+                            (format "*[%s](%s)*"
+                                    (h/file-path "/a.clj")
+                                    (h/file-uri "file:///a.clj"))])}
+             (:contents (hover row col)))))))
+
+(deftest test-hover-special-form-name-collision
+  (let [code (h/code "(ns a)"
+                     "(let [if 1] |if)")
+        [[row col]] (h/load-code-and-locs code)]
+    (is (= ["calling: (clojure.core/let)"
+            {:language "clojure"
+             :value "if"}
+            (h/file-path "/a.clj")]
+           (:contents (hover row col))))))

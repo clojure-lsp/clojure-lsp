@@ -3,6 +3,7 @@
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
+   [clojure-lsp.feature.cycle-namespaced-map :as f.cycle-namespaced-map]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.development-info :as f.development-info]
    [clojure-lsp.feature.drag :as f.drag]
@@ -166,6 +167,9 @@
 
 (defmethod run-command :cycle-keyword-auto-resolve  [{:keys [loc uri db components]}]
   (f.cycle-keyword/cycle-keyword-auto-resolve loc uri db components))
+
+(defmethod run-command :cycle-namespaced-map  [{:keys [loc]}]
+  (f.cycle-namespaced-map/cycle-namespaced-map loc))
 
 (defmethod run-command :replace-refer-all-with-refer  [{:keys [loc args]}]
   (apply f.replace-refer-all/replace-with-refers loc args))

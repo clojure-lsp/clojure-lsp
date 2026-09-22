@@ -279,6 +279,13 @@
                                            :from         'sample-test.rename.a/my-func
                                            :to           'sample-test.rename.a/your-func
                                            :raw?         true}))))))
+  (testing "renaming a function with multiple occurrences on the same line"
+    (clean-api-db!)
+    (with-redefs [spit #(is (h/string= (slurp (replace-last %1 "src/sample_test" "fixtures/sample_test/api")) %2))]
+      (is (= 0 (:result-code (api/rename! {:project-root (io/file "../cli/integration-test/sample-test")
+                                           :from         'sample-test.rename.same-line/non-blank
+                                           :to           'sample-test.rename.same-line/present
+                                           :raw?         true}))))))
   (testing "renaming a namespace"
     (clean-api-db!)
     (is (= 0 (:result-code (api/rename! {:project-root (io/file "../cli/integration-test/sample-test")

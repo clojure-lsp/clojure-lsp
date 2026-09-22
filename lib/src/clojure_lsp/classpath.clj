@@ -42,12 +42,14 @@
       [project-dep-file])))
 
 (defn project-specs->hash [root-path settings]
-  (->> (:project-specs settings)
-       (filter (partial valid-project-spec? root-path))
-       (map (fn [{:keys [project-path]}]
-              (map md5 (project-root->project-dep-files (str root-path) project-path settings))))
-       flatten
-       (reduce str)))
+  (shared/logging-task
+    :classpath/project-specs->hash   ; every project file open and md5 computed
+    (->> (:project-specs settings)
+         (filter (partial valid-project-spec? root-path))
+         (map (fn [{:keys [project-path]}]
+                (map md5 (project-root->project-dep-files (str root-path) project-path settings))))
+         flatten
+         (reduce str))))
 
 (defn ^:private psh-cmd
   "Return the command vector that uses the PowerShell executable PSH to
@@ -101,27 +103,29 @@
   (let [command (string/join " " classpath-cmd)
         env-with-default (merge {} (System/getenv) env)]
     (logger/info logger-tag (format "Finding classpath via `%s`" command))
-    (try
-      (let [sep (re-pattern (System/getProperty "path.separator"))
-            {:keys [exit out err]} (apply shell (into classpath-cmd
-                                                      (cond-> [:dir (str root-path)]
-                                                        env (conj :env env-with-default))))]
-        (if (= 0 exit)
-          (let [paths (-> out
-                          string/split-lines
-                          last
-                          string/trim-newline
-                          (string/split sep))]
-            (logger/debug logger-tag "Classpath found, paths: " paths)
+    (shared/logging-task
+      :classpath/lookup-classpath    ;; time to find classpath
+      (try
+        (let [sep (re-pattern (System/getProperty "path.separator"))
+              {:keys [exit out err]} (apply shell (into classpath-cmd
+                                                        (cond-> [:dir (str root-path)]
+                                                          env (conj :env env-with-default))))]
+          (if (= 0 exit)
+            (let [paths (-> out
+                            string/split-lines
+                            last
+                            string/trim-newline
+                            (string/split sep))]
+              (logger/debug logger-tag "Classpath found, paths: " paths)
+              {:command command
+               :paths (set paths)})
             {:command command
-             :paths (set paths)})
+             :env env-with-default
+             :error err}))
+        (catch Exception e
           {:command command
            :env env-with-default
-           :error err}))
-      (catch Exception e
-        {:command command
-         :env env-with-default
-         :error (.getMessage e)}))))
+           :error (.getMessage e)})))))
 
 (defn ^:private lookup-classpath-handling-error! [project-spec root-path producer]
   (let [{:keys [command error env paths]} (lookup-classpath! root-path project-spec)

@@ -38,6 +38,12 @@ Below you can find all available features that clojure-lsp provides with example
 
 Also, it's possible to live rename symbols on the same buffer with `linkedEditingRange` feature.
 
+If a rename spans files, clojure-lsp can prompt the user to approve the changes if the client supports LSP's change annotation.  Refactoring within a file skips the prompt.
+
+![](images/features/refactor-change-annotations.gif)
+
+
+
 ### Document highlight on hover showing symbol usages
 
 ![](images/features/document-highlight.gif)
@@ -444,6 +450,7 @@ Arguments:
 | as       | add-require-suggestion       | Add require suggestion                    | `[file-uri,row,col,ns,alias,refer]`              | ✅                        | [![Screen recording of Add require suggestion](images/features/add-alias-suggestion.gif)](images/features/add-alias-suggestion.gif)                       |
 | cc       | cycle-coll                   | Cycle collection `(#{}, {}, [], ())`      | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                           |
 | ck       | cycle-keyword-auto-resolve   | Cycle keyword auto-resolve                | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Cycle keyword auto resolve](images/features/cycle-keyword-auto-resolve.gif)](images/features/cycle-keyword-auto-resolve.gif)       |
+| cm       | cycle-namespaced-map         | Cycle namespaced map, e.g. `{:foo/bar 1}` <-> `#:foo{:bar 1}` | `[file-uri,row,col]`         | ✅                        |                                                                                                                                                           |
 | cn       | clean-ns                     | Clean namespace                           | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of Clean namespace](images/features/clean-ns.gif)](images/features/clean-ns.gif)                                                      |
 | ci       | cond->if-refactor            | Refactor cond to if                         | `[file-uri,row,col]`                             | ✅                        | [![Screen recording of refactoring cond to if](images/features/cond-to-if.gif)](images/features/cond-to-if.gif)                                                      || cp       | cycle-privacy                | Cycle privacy of def/defn                 | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                           |
 | ct       | create-test                  | Create test                               | `[file-uri,row,col]`                             | ✅                        |                                                                                                                                                           |

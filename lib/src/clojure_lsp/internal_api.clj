@@ -127,7 +127,15 @@
     {:kind :rename
      :new-uri new-uri
      :old-uri old-uri}
-    (let [uri (:uri text-document)]
+    (let [uri (:uri text-document)
+          ;; Edit ranges refer to positions in the original document, so we
+          ;; apply them from the last position to the first one, ensuring an
+          ;; applied edit never invalidates the range of a pending one.
+          edits (->> edits
+                     (sort-by (juxt (comp :line :start :range)
+                                    (comp :character :start :range)))
+                     reverse
+                     vec)]
       (loop [edit-summary nil
              i 0]
         (if-let [edit (nth edits i nil)]
@@ -173,23 +181,25 @@
 (defn ^:private analyze!
   [{:keys [project-root settings log-path]}
    {:keys [db*] :as components}]
-  (try
-    (startup/initialize-project
-      (project-root->uri project-root @db*)
-      {:workspace {:workspace-edit {:document-changes true}}}
-      (settings/clean-client-settings {})
-      (merge (shared/assoc-some
-               {:lint-project-files-after-startup? false
-                :text-document-sync-kind :full}
-               :log-path log-path)
-             settings)
-      "clojure-lsp-api"
-      components)
-    true
-    (catch clojure.lang.ExceptionInfo e
-      (throw e))
-    (catch Exception e
-      (throw (ex-info "Error during project analysis" {:message e})))))
+  (shared/logging-task
+    :internal-api/initialize-project   ;; entire initialize phase
+    (try
+      (startup/initialize-project
+        (project-root->uri project-root @db*)
+        {:workspace {:workspace-edit {:document-changes true}}}
+        (settings/clean-client-settings {})
+        (merge (shared/assoc-some
+                 {:lint-project-files-after-startup? false
+                  :text-document-sync-kind :full}
+                 :log-path log-path)
+               settings)
+        "clojure-lsp-api"
+        components)
+      true
+      (catch clojure.lang.ExceptionInfo e
+        (throw e))
+      (catch Exception e
+        (throw (ex-info "Error during project analysis" {:message e}))))))
 
 (defn ^:private setup-project-and-full-deps-analysis! [options {:keys [db*] :as components}]
   (let [db @db*]
@@ -228,7 +238,8 @@
     :project-namespaces-only (setup-project-ns-only-analysis! options components)))
 
 (defn ^:private open-file! [uri components]
-  (f.file-management/load-document! uri (slurp uri) (:db* components))
+  (when (shared/uri-on-disk? uri)
+    (f.file-management/load-document! uri (slurp uri) (:db* components)))
   uri)
 
 (defn ^:private find-new-uri-checking-rename
@@ -255,35 +266,36 @@
        (re-matches ns-exclude-regex (str namespace))))
 
 (defn ^:private options->uris [{:keys [namespace filenames project-root] :as options} db]
-  (cond
-    (seq namespace)
-    (->> namespace
-         (mapcat (fn [namespace]
-                   (let [uris (dep-graph/ns-internal-uris db namespace)]
-                     (when-not (seq uris)
-                       (cli-println options "Namespace" namespace "not found"))
-                     uris))))
-    (seq filenames)
-    (->> filenames
-         (map (fn [^File filename-or-dir]
-                (if (.isAbsolute filename-or-dir)
-                  (io/file filename-or-dir)
-                  (io/file project-root filename-or-dir))))
-         (mapcat (fn [^File filename-or-dir]
-                   (if (shared/directory? filename-or-dir)
-                     (->> filename-or-dir
-                          file-seq
-                          (remove shared/directory?)
-                          (map #(.getCanonicalPath ^File %)))
-                     [(.getCanonicalPath filename-or-dir)])))
-         (map #(shared/filename->uri % db))
-         seq)
-    :else
-    (into #{}
-          (comp
-            (filter #(contains? shared/valid-langs (shared/uri->file-type %)))
-            (remove #(exclude-ns? options %)))
-          (dep-graph/internal-uris db))))
+  (->> (cond
+         (seq namespace)
+         (->> namespace
+              (mapcat (fn [namespace]
+                        (let [uris (dep-graph/ns-internal-uris db namespace)]
+                          (when-not (seq uris)
+                            (cli-println options "Namespace" namespace "not found"))
+                          uris))))
+         (seq filenames)
+         (->> filenames
+              (map (fn [^File filename-or-dir]
+                     (if (.isAbsolute filename-or-dir)
+                       (io/file filename-or-dir)
+                       (io/file project-root filename-or-dir))))
+              (mapcat (fn [^File filename-or-dir]
+                        (if (shared/directory? filename-or-dir)
+                          (->> filename-or-dir
+                               file-seq
+                               (remove shared/directory?)
+                               (map #(.getCanonicalPath ^File %)))
+                          [(.getCanonicalPath filename-or-dir)])))
+              (map #(shared/filename->uri % db))
+              seq)
+         :else
+         (into #{}
+               (comp
+                 (filter #(contains? shared/valid-langs (shared/uri->file-type %)))
+                 (remove #(exclude-ns? options %)))
+               (dep-graph/internal-uris db)))
+       (filter shared/uri-on-disk?)))
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)

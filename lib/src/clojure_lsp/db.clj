@@ -137,9 +137,12 @@
       (logger/error db-logger-tag "Could not load global cache from DB" e))))
 
 (defn upsert-local-cache! [{:keys [project-root] :as project-cache} db]
-  (remove-old-sqlite-db-file! project-root)
-  (remove-old-datalevin-db-file! db)
-  (upsert-cache! project-cache (transit-local-db-file db)))
+  (shared/logging-task
+    :db/upsert-local-cache!
+    (do
+      (remove-old-sqlite-db-file! project-root)
+      (remove-old-datalevin-db-file! db)
+      (upsert-cache! project-cache (transit-local-db-file db)))))
 
 (defn read-local-cache [project-root db]
   (let [project-analysis (read-cache (transit-local-db-file db))]

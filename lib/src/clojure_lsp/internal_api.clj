@@ -238,7 +238,8 @@
     :project-namespaces-only (setup-project-ns-only-analysis! options components)))
 
 (defn ^:private open-file! [uri components]
-  (f.file-management/load-document! uri (slurp uri) (:db* components))
+  (when (shared/uri-on-disk? uri)
+    (f.file-management/load-document! uri (slurp uri) (:db* components)))
   uri)
 
 (defn ^:private find-new-uri-checking-rename
@@ -265,35 +266,36 @@
        (re-matches ns-exclude-regex (str namespace))))
 
 (defn ^:private options->uris [{:keys [namespace filenames project-root] :as options} db]
-  (cond
-    (seq namespace)
-    (->> namespace
-         (mapcat (fn [namespace]
-                   (let [uris (dep-graph/ns-internal-uris db namespace)]
-                     (when-not (seq uris)
-                       (cli-println options "Namespace" namespace "not found"))
-                     uris))))
-    (seq filenames)
-    (->> filenames
-         (map (fn [^File filename-or-dir]
-                (if (.isAbsolute filename-or-dir)
-                  (io/file filename-or-dir)
-                  (io/file project-root filename-or-dir))))
-         (mapcat (fn [^File filename-or-dir]
-                   (if (shared/directory? filename-or-dir)
-                     (->> filename-or-dir
-                          file-seq
-                          (remove shared/directory?)
-                          (map #(.getCanonicalPath ^File %)))
-                     [(.getCanonicalPath filename-or-dir)])))
-         (map #(shared/filename->uri % db))
-         seq)
-    :else
-    (into #{}
-          (comp
-            (filter #(contains? shared/valid-langs (shared/uri->file-type %)))
-            (remove #(exclude-ns? options %)))
-          (dep-graph/internal-uris db))))
+  (->> (cond
+         (seq namespace)
+         (->> namespace
+              (mapcat (fn [namespace]
+                        (let [uris (dep-graph/ns-internal-uris db namespace)]
+                          (when-not (seq uris)
+                            (cli-println options "Namespace" namespace "not found"))
+                          uris))))
+         (seq filenames)
+         (->> filenames
+              (map (fn [^File filename-or-dir]
+                     (if (.isAbsolute filename-or-dir)
+                       (io/file filename-or-dir)
+                       (io/file project-root filename-or-dir))))
+              (mapcat (fn [^File filename-or-dir]
+                        (if (shared/directory? filename-or-dir)
+                          (->> filename-or-dir
+                               file-seq
+                               (remove shared/directory?)
+                               (map #(.getCanonicalPath ^File %)))
+                          [(.getCanonicalPath filename-or-dir)])))
+              (map #(shared/filename->uri % db))
+              seq)
+         :else
+         (into #{}
+               (comp
+                 (filter #(contains? shared/valid-langs (shared/uri->file-type %)))
+                 (remove #(exclude-ns? options %)))
+               (dep-graph/internal-uris db)))
+       (filter shared/uri-on-disk?)))
 
 (defn ^:private analyze-project-and-deps!* [options components]
   (setup-api! components)

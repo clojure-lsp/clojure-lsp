@@ -345,6 +345,17 @@
         "file:/c:/c.clj"
         "file:///c:/c.clj"))))
 
+(deftest uri-on-disk?
+  (let [path (fs/create-temp-file {:prefix "clojure-lsp-uri-on-disk-" :suffix ".clj"})
+        uri (shared/filename->uri (str (fs/canonicalize path)) (h/db))]
+    (try
+      (is (true? (shared/uri-on-disk? uri)))
+      (fs/delete path)
+      (is (false? (shared/uri-on-disk? uri)))
+      (finally
+        (when (fs/exists? path)
+          (fs/delete path))))))
+
 (deftest dir-uris->file-uris-test
   (testing "when the dir-uri is a dir inside source-path"
     (with-redefs [fs/glob (constantly [(h/file-path "/user/project/src/foo/bar.clj")

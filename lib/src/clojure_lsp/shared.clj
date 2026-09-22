@@ -246,6 +246,9 @@
           (str (uri->canonical-path (URI. jar-uri-path)) ":" nested-file)
           (uri-obj->filepath (escape-uri uri-obj)))))))
 
+(defn uri-on-disk? [uri]
+  (file-exists? (io/file (uri->filename uri))))
+
 (defn ensure-jarfile [uri db]
   (let [jar-scheme? (fast= "jar" (get db [:settings :dependency-scheme]))]
     (if (or jar-scheme?

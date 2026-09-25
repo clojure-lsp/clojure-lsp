@@ -310,7 +310,7 @@
       (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
                           (h/file-uri "file:///b.clj")
                           3
-                          4
+                          4))))
 (deftest inline-function-code-action
   (h/load-code (string/join "\n"
                             ["(ns a)"

@@ -14,6 +14,7 @@
 - Fix API/CLI rename corrupting files when a line contains multiple occurrences of the renamed symbol. #2450
 - Show built-in documentation when hovering Clojure special forms. #2457
 - sort namespace suggestions when suggesting :refer #1997
+- Add code action to replace fully-qualified namespace with alias, and add :as to the :require form #1810
 
 ## 2026.07.06-14.34.19
 

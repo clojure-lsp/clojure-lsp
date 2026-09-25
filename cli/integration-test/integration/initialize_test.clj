@@ -77,6 +77,7 @@
                                             "sort-clauses"
                                             "sort-map"
                                             "suppress-diagnostic"
+                                            "swap-namespace-with-alias"
                                             "thread-first"
                                             "thread-first-all"
                                             "thread-last"

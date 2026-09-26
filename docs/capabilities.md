@@ -16,7 +16,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | window/showMessage                     | √    |                                                                               |
 | window/showMessageRequest              | √    |                                                                               |
 | window/logMessage                      |      |                                                                               |
-| window/workDoneProgress/create         |      |                                                                               |
+| window/workDoneProgress/create         | √    | Reports progress of analyzing external file changes                           |
 | window/workDoneProgress/cancel         |      |                                                                               |
 | telemetry/event                        |      |                                                                               |
 | client/registerCapability              | √    |                                                                               |

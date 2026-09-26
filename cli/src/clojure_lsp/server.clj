@@ -159,6 +159,23 @@
                    (conform-or-log ::coercer/show-document-request)
                    (jsonrpc.server/send-request server "window/showDocument"))))))
 
+  (create-work-done-progress [_this progress-token]
+    (jsonrpc.server/discarding-stdout
+      (if (get-in @db* [:client-capabilities :window :work-done-progress])
+        (let [request (jsonrpc.server/send-request server "window/workDoneProgress/create" {:token progress-token})
+              response (jsonrpc.server/deref-or-cancel request 10e3 ::timeout)]
+          (cond
+            (= ::timeout response)
+            (do (logger/error ":create-work-done-progress No response from client after 10 seconds while creating work done progress.")
+                false)
+
+            (:error response)
+            (do (logger/warn ":create-work-done-progress Client refused to create work done progress:" (:error response))
+                false)
+
+            :else true))
+        false)))
+
   (publish-progress [_this percentage message progress-token]
     (jsonrpc.server/discarding-stdout
       ;; ::coercer/notify-progress
@@ -619,7 +636,9 @@
       (fn [watched-files]
         (shared/logging-task
           :internal/analyze-watched-files
-          (f.file-management/analyze-watched-files! watched-files components))))))
+          (producer/with-work-done-progress
+            producer "Analyzing external file changes"
+            #(f.file-management/analyze-watched-files! watched-files components)))))))
 
 (defn ^:private monitor-server-logs [log-ch]
   ;; NOTE: if this were moved to `initialize`, after timbre has been configured,

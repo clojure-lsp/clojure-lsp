@@ -53,9 +53,7 @@
   (when (and (f.completion-lib/dep-file? uri)
              (not (:libs @f.completion-lib/libs*))
              (not (:api? @db*)))
-    (producer/publish-progress producer nil "Fetching libs for completion" "fetch-libs")
-    (f.completion-lib/fetch-libs!)
-    (producer/publish-progress producer 100 nil "fetch-libs")))
+    (producer/with-work-done-progress producer "Fetching libs for completion" f.completion-lib/fetch-libs!)))
 
 (defn ^:private set-xor [a b]
   (into (set/difference a b)

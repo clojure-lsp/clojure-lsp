@@ -66,6 +66,7 @@
   (refresh-code-lens [_this])
   (publish-diagnostic [_this _diagnostic])
   (publish-workspace-edit [_this _edit])
+  (create-work-done-progress [_this _progress-token] false)
 
   (publish-progress [_this percentage message _progress-token]
     (when-not (:raw? options)

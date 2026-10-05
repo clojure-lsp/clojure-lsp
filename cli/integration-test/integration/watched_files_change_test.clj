@@ -70,4 +70,53 @@
     (is (match? (m/in-any-order
                   [{:uri (h/source-path->uri b-file-path)}
                    {:uri (h/source-path->uri a-file-path)}])
+                (lsp/request! (fixture/references-request a-file-path 2 6)))))
+
+  (testing "Without client support, no work done progress is created"
+    (is (not (lsp/client-received-server-request? "window/workDoneProgress/create")))))
+
+(defn ^:private client-awaits-watched-files-progress
+  "Awaits a server-initiated work done progress for watched file changes, from
+  its creation to its end."
+  []
+  (let [{:keys [token]} (lsp/client-awaits-server-request "window/workDoneProgress/create")]
+    (is (string? token))
+    (is (match? {:token token
+                 :value {:kind "begin"
+                         :title "Analyzing external file changes"}}
+                (lsp/client-awaits-server-notification :$/progress)))
+    (is (match? {:token token
+                 :value {:kind "end"}}
+                (lsp/client-awaits-server-notification :$/progress)))))
+
+(deftest watched-file-changes-with-work-done-progress
+  (lsp/start-process!)
+  (lsp/request! (fixture/initialize-request
+                  {:initializationOptions fixture/default-init-options
+                   :capabilities {:window {:workDoneProgress true}}}))
+  (lsp/notify! (fixture/initialized-notification))
+  (lsp/mock-response "window/workDoneProgress/create" nil)
+  (lsp/notify! (fixture/did-open-source-path-notification a-file-path))
+
+  (testing "Before removal, the file to be removed is a reference"
+    (is (match? (m/in-any-order
+                  [{:uri (h/source-path->uri b-file-path)}
+                   {:uri (h/source-path->uri a-file-path)}])
+                (lsp/request! (fixture/references-request a-file-path 2 6)))))
+
+  (lsp/notify! (fixture/did-change-watched-files [[b-file-path :deleted]]))
+
+  (testing "Removal is reported as work done progress, right after which the reference is gone"
+    (client-awaits-watched-files-progress)
+    (is (match? (m/in-any-order
+                  [{:uri (h/source-path->uri a-file-path)}])
+                (lsp/request! (fixture/references-request a-file-path 2 6)))))
+
+  (lsp/notify! (fixture/did-change-watched-files [[b-file-path :created]]))
+
+  (testing "Creation is reported as work done progress, right after which the reference is back"
+    (client-awaits-watched-files-progress)
+    (is (match? (m/in-any-order
+                  [{:uri (h/source-path->uri b-file-path)}
+                   {:uri (h/source-path->uri a-file-path)}])
                 (lsp/request! (fixture/references-request a-file-path 2 6))))))

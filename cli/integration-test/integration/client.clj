@@ -36,6 +36,11 @@
 (defprotocol IMockClient
   (mock-response [this method body]))
 
+(defn ^:private keyname [method]
+  (if (keyword? method)
+    (str (namespace method) "/" (name method))
+    method))
+
 (defn ^:private format-log
   [{:keys [client-id]} color msg params]
   (string/join " "
@@ -128,7 +133,7 @@
   (receive-request [this _ {:keys [id method] :as req}]
     (protocols.endpoint/log this :magenta "received request:" req)
     (swap! received-requests conj req)
-    (when-let [mock-resp (get @mock-responses (keyword method))]
+    (when-let [[_ mock-resp] (find @mock-responses method)]
       (let [resp (jsonrpc.responses/response id mock-resp)]
         (protocols.endpoint/log this :magenta "sending mock response:" resp)
         resp)))
@@ -137,7 +142,7 @@
     (swap! received-notifications conj notif))
   IMockClient
   (mock-response [_this method body]
-    (swap! mock-responses assoc method body)))
+    (swap! mock-responses assoc (keyname method) body)))
 
 (defonce client-id (atom 0))
 
@@ -157,8 +162,6 @@
 (def start protocols.endpoint/start)
 (def shutdown protocols.endpoint/shutdown)
 (def send-notification protocols.endpoint/send-notification)
-
-(defn ^:private keyname [key] (str (namespace key) "/" (name key)))
 
 (defn ^:private await-first-and-remove! [client pred coll-type]
   (let [coll* (coll-type client)]
@@ -198,6 +201,10 @@
                                      #(= method-str (:method %))
                                      :received-requests)]
     (:params msg)))
+
+(defn received-server-request? [client method]
+  (let [method-str (keyname method)]
+    (some #(= method-str (:method %)) @(:received-requests client))))
 
 (defn request-and-await-server-response! [client method body]
   (let [timeout-ms 180000

@@ -15,6 +15,8 @@
 - Show built-in documentation when hovering Clojure special forms. #2457
 - sort namespace suggestions when suggesting :refer #1997
 - Add code action to replace fully-qualified namespace with alias, and add :as to the :require form #1810
+- Report the processing of external file changes (`workspace/didChangeWatchedFiles`) as server-initiated work done progress (`window/workDoneProgress/create`), ending only once dependent files are re-analyzed, so clients can wait for those changes to be fully processed. Deletions are now processed in the same debounced batch as creations and changes instead of immediately, and a file re-created within that batch is analyzed rather than removed.
+- Fix the "Fetching libs for completion" progress never showing up in clients, as its token was never created via `window/workDoneProgress/create`.
 
 ## 2026.07.06-14.34.19
 

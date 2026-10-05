@@ -50,6 +50,7 @@
     (when diagnostics*
       (swap! diagnostics* conj diagnostic)))
   (publish-workspace-edit [_this _edit])
+  (create-work-done-progress [_this _progress-token] false)
   (publish-progress [_this _percentage _message _progress-token])
   (show-document-request [_this _document-request])
   (show-message-request [_this _message _type _actions])

@@ -142,24 +142,14 @@
       "hash": "sha256-XBwijxopsG0KfQNJD15k+vcTo8YWcpi6Fxz/wzz57Rg="
     },
     {
-      "mvn-path": "borkdude/edamame/1.5.39/edamame-1.5.39.jar",
+      "mvn-path": "borkdude/edamame/1.6.43/edamame-1.6.43.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-6Dyg+WLFgMXJyNAJZ2mLP9DQAiR+N+T0bDODucKdiFU="
+      "hash": "sha256-DcvjeNXFet7wNw1YjDPOYKy6k7bxVD5NR23BOnfOnkw="
     },
     {
-      "mvn-path": "borkdude/edamame/1.5.39/edamame-1.5.39.pom",
+      "mvn-path": "borkdude/edamame/1.6.43/edamame-1.6.43.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-dfemP3pEENnLIaUTKMamxv1T8hI3bniv/k5s+87Ea3M="
-    },
-    {
-      "mvn-path": "borkdude/edamame/1.6.42/edamame-1.6.42.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-OrL72ww2BrDcSnDItafjxXkPqukvCYTxowO9myMp9t0="
-    },
-    {
-      "mvn-path": "borkdude/edamame/1.6.42/edamame-1.6.42.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-gdjOLfHpV/KmqqonaTAYruWhoa/WH1Pxdv45xlfQXZc="
+      "hash": "sha256-LkE+cLwJCY5DDZah1fDOaL9xB9EV4pSNJPSbbFs5Nfc="
     },
     {
       "mvn-path": "borkdude/graal.locking/0.0.2/graal.locking-0.0.2.jar",
@@ -267,16 +257,16 @@
       "hash": "sha256-KizCFbZGnpZ8TgK78NZZLyV2htN9BJ27Ifp32SZ7qfQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.113554-11.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.215755-13.jar",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-RWo93M7z+fDS53UBfe/Q0FzDnEPLMf8NphT0BXuMiF4="
+      "hash": "sha256-HdOVIdcs77dg5LCfQeAMYQVba4YVjcWeiRC81kIaHDI="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.113554-11.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.215755-13.pom",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-XHAjGs70tZkLdwYiOizL9fzSj2qW0DayXXCIgJDvJBk="
+      "hash": "sha256-9K029vDiAuI6U76NDDvpiDoMgM4KdX99iMFqVvZ4rMA="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",

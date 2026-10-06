@@ -3,7 +3,7 @@
 ## Unreleased
 - if supported by client, multi-file refactoring prompts for approval #2370
 
-- Bump clj-kondo to `2026.08.05-20261006.113554-11`.
+- Bump clj-kondo to `2026.08.05-20261006.215755-13`.
 - Add new refactoring `cycle-namespaced-map`, e.g. `{:foo/bar 1}` -> `#:foo{:bar 1}` and vice-versa, available via code actions. #994
 - Report the clj-kondo git sha on `--version` for snapshot builds, instead of a stale `-SNAPSHOT` version.
 - Fix unreachable "Classpath not found" error branch on stubs generation.

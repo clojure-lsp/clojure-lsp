@@ -267,16 +267,16 @@
       "hash": "sha256-KizCFbZGnpZ8TgK78NZZLyV2htN9BJ27Ifp32SZ7qfQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261005.123138-10.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.113554-11.jar",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-4rpZ8UF53RulZiwrEX9dbcbXLFBSQO8s6MW3Z4kZ6kE="
+      "hash": "sha256-RWo93M7z+fDS53UBfe/Q0FzDnEPLMf8NphT0BXuMiF4="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261005.123138-10.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.113554-11.pom",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-46hf/cQi1yZR/FfN+Gw7CCPjguu1P04UKzxnbgYenxU="
+      "hash": "sha256-XHAjGs70tZkLdwYiOizL9fzSj2qW0DayXXCIgJDvJBk="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -3549,6 +3549,16 @@
       "hash": "sha256-Um8fldp392+PeJKT1GrZb54N14hJXpnnO8Phd/96DFA="
     },
     {
+      "mvn-path": "org/ow2/asm/asm/9.10.1/asm-9.10.1.jar",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-7YJdEKsTmcjAy2aeaIzwyMgmKbTIOZtYNSto6SyhD8s="
+    },
+    {
+      "mvn-path": "org/ow2/asm/asm/9.10.1/asm-9.10.1.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-4bHDgyyjrAqeVjxAX0x2ARi1VWpJINruFAWIhhl+CU0="
+    },
+    {
       "mvn-path": "org/ow2/asm/asm/9.2/asm-9.2.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-udT+TXGTjfOIOfDspCqqpkz4sxPWeNoDbwyzyhmbR/U="
@@ -3557,16 +3567,6 @@
       "mvn-path": "org/ow2/asm/asm/9.2/asm-9.2.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-37EqGyJL8Bvh/WBAIEZviUJBvLZF3M45Xt2M1vilDfQ="
-    },
-    {
-      "mvn-path": "org/ow2/asm/asm/9.7/asm-9.7.jar",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-rfRtXjSUC98Ujs3Sap7o7qlElqcgNP9xQQZrPupcTp0="
-    },
-    {
-      "mvn-path": "org/ow2/asm/asm/9.7/asm-9.7.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-3gARXx2E86Cy7jpLb2GS0Gb4bRhdZ7nRUi8sgP6sXwA="
     },
     {
       "mvn-path": "org/ow2/ow2/1.5.1/ow2-1.5.1.pom",

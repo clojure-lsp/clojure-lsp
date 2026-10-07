@@ -666,7 +666,14 @@
                                         (or (string/starts-with? (namespace cursor-value) ":")
                                             (and (string/starts-with? (namespace cursor-value) "??_")
                                                  (string/ends-with? (namespace cursor-value) "_??"))))
-            matches-fn (partial matches-cursor? cursor-value)
+            auto-keyword-value? (and keyword-value?
+                                     (qualified-keyword? cursor-value)
+                                     (fast= "?_current-ns_?" (namespace cursor-value)))
+            matches-fn (if auto-keyword-value?
+                         (partial matches-cursor?
+                                  (keyword (str (:from cursor-element))
+                                           (name cursor-value)))
+                         (partial matches-cursor? cursor-value))
             {caller-usage-row :row caller-usage-col :col} (some-> cursor-op z/node meta)
             caller-var-definition (when (and caller-usage-row caller-usage-col)
                                     (q/find-definition-from-cursor db uri caller-usage-row caller-usage-col))

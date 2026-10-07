@@ -17,29 +17,60 @@
 
 (def logger-tag "[clj-kondo]")
 
-(defn ^:private clj-kondo-pom-version
-  "Version from the clj-kondo artifact pom.properties on the classpath,
-  including the git sha for snapshot builds. Accurate for nightly builds,
-  unlike the CLJ_KONDO_VERSION resource which is only updated on releases."
+(defn ^:private clj-kondo-pom-properties
+  "Version and git revision from the clj-kondo artifact pom.properties on the
+  classpath. Accurate for nightly builds, unlike the CLJ_KONDO_VERSION resource
+  which is only updated on releases."
   []
   (when-let [pom-properties (io/resource "META-INF/maven/clj-kondo/clj-kondo/pom.properties")]
-    (let [content (slurp pom-properties)
-          version (some-> (re-find #"(?m)^version=(.+)$" content) second string/trim)
-          revision (some-> (re-find #"(?m)^revision=(.+)$" content) second string/trim)]
-      (when version
-        (if (and revision (string/ends-with? version "-SNAPSHOT"))
-          (str version " (" (subs revision 0 (min 7 (count revision))) ")")
-          version)))))
+    (let [content (slurp pom-properties)]
+      {:version (some-> (re-find #"(?m)^version=(.+)$" content) second string/trim)
+       :revision (some-> (re-find #"(?m)^revision=(.+)$" content) second string/trim)})))
 
-(def ^:private clj-kondo-version*
+(defn ^:private snapshot-with-revision? [{:keys [version revision]}]
+  (boolean (and version revision (string/ends-with? version "-SNAPSHOT"))))
+
+(defn ^:private clj-kondo-pom-version
+  "Version from the clj-kondo pom properties, including the git sha for
+  snapshot builds."
+  [{:keys [version revision] :as pom-properties}]
+  (when version
+    (if (snapshot-with-revision? pom-properties)
+      (str version " (" (subs revision 0 (min 7 (count revision))) ")")
+      version)))
+
+(def ^:private clj-kondo-pom-properties*
   ;; Eager def so native images resolve it at image build time (Clojure classes
   ;; are initialized at build time via clj-easy/graal-build-time), when the
   ;; clj-kondo artifact resources are available on the classpath.
-  (or (clj-kondo-pom-version)
-      (some-> (io/resource "CLJ_KONDO_VERSION") slurp string/trim)))
+  (clj-kondo-pom-properties))
+
+(def ^:private clj-kondo-resource-version*
+  (some-> (io/resource "CLJ_KONDO_VERSION") slurp string/trim))
+
+(def ^:private clj-kondo-version*
+  (or (clj-kondo-pom-version clj-kondo-pom-properties*)
+      clj-kondo-resource-version*))
 
 (defn clj-kondo-version []
   clj-kondo-version*)
+
+(defn clj-kondo-coordinate
+  "The tools.deps coordinate of the clj-kondo bundled in clojure-lsp. Snapshot
+  builds use the git revision, as a -SNAPSHOT version resolves to whatever the
+  latest snapshot is."
+  []
+  (let [{:keys [version revision] :as pom-properties} clj-kondo-pom-properties*]
+    (cond
+      (snapshot-with-revision? pom-properties)
+      {:git/url "https://github.com/clj-kondo/clj-kondo"
+       :git/sha revision}
+
+      version
+      {:mvn/version version}
+
+      clj-kondo-resource-version*
+      {:mvn/version clj-kondo-resource-version*})))
 
 (def clj-kondo-analysis-batch-size 120)
 
@@ -405,6 +436,17 @@
 (defn ^:private kondo-config-dir [db]
   (settings/get db [:kondo-config-dir] (some-> db :project-root-uri project-config-dir)))
 
+(defn project-kondo-config
+  "The clj-kondo config resolved for the project config dir, as a clj-kondo run
+  would return it minus the run `:config` overrides, without running clj-kondo."
+  [db]
+  (let [err (java.io.StringWriter.)]
+    (binding [*err* err]
+      (let [result (kondo/resolve-config (some-> (kondo-config-dir db) io/file))]
+        (when-not (string/blank? (str err))
+          (logger/warn logger-tag (string/trim-newline (str err))))
+        result))))
+
 (defn ^:private config-for-paths [paths file-analyzed-fn db settings]
   (-> {:cache true
        :parallel true
@@ -515,6 +557,50 @@
                                         lang))
         (with-additional-config settings))))
 
+(defn run-options
+  "The clj-kondo `run!` options clojure-lsp uses for `step`, without running
+  clj-kondo, so the run can be reproduced outside clojure-lsp. `step` is one of
+  `:copy-configs`, `:external-paths` and `:internal-paths`, which take
+  `paths`, or `:single-file`, which takes the `uri` of a file linted via stdin."
+  [step db {:keys [paths uri]}]
+  (case step
+    :copy-configs (config-for-copy-configs paths db)
+    :external-paths (config-for-external-paths paths db nil)
+    :internal-paths (config-for-internal-paths paths db nil)
+    :single-file (config-for-single-file uri (atom db))))
+
+(def ^:private cli-ignored-run-options
+  ;; progress callback, doesn't change clj-kondo results
+  #{:file-analyzed-fn})
+
+(def ^:private cli-supported-run-options
+  #{:lint :lang :filename :cache :cache-dir :parallel :config-dir :copy-configs :skip-lint :config})
+
+(defn run-options->cli-args
+  "Translates clj-kondo `run!` options into the equivalent clj-kondo CLI args,
+  returning under `:unsupported` the options with no CLI equivalent. Each lint
+  path is a separate arg, avoiding the max size of a single arg."
+  [options]
+  (let [path-separator-regex (re-pattern (java.util.regex.Pattern/quote (System/getProperty "path.separator")))
+        lint-paths (mapcat #(string/split (str %) path-separator-regex) (:lint options))
+        config (when-let [config (:config options)]
+                 (binding [*print-namespace-maps* false]
+                   (pr-str config)))]
+    {:args (cond-> []
+             (:lang options) (conj "--lang" (name (:lang options)))
+             (:filename options) (conj "--filename" (str (:filename options)))
+             (false? (:cache options)) (conj "--cache" "false")
+             (:cache-dir options) (conj "--cache-dir" (str (:cache-dir options)))
+             (:parallel options) (conj "--parallel")
+             (:config-dir options) (conj "--config-dir" (str (:config-dir options)))
+             (:copy-configs options) (conj "--copy-configs")
+             (:skip-lint options) (conj "--skip-lint")
+             config (conj "--config" config)
+             (seq lint-paths) (into (cons "--lint" lint-paths)))
+     :unsupported (->> (keys options)
+                       (remove (into cli-supported-run-options cli-ignored-run-options))
+                       set)}))
+
 (defn ^:private run-kondo! [config err-hint]
   (shared/logging-task
     :kondo/run-kondo!       ;; time each kondo run - useful for measuring startup batches, but also logs kondo timings for every edit
@@ -553,13 +639,19 @@
       (update :findings merge (:findings b))
       (update-in [:diagnostics :clj-kondo] merge (get-in b [:diagnostics :clj-kondo]))))
 
+(defn path-batches
+  "Partitions `paths` in the batches `run-kondo-on-paths-batch!` runs clj-kondo
+  on, in order."
+  [paths]
+  (partition-all clj-kondo-analysis-batch-size paths))
+
 (defn run-kondo-on-paths-batch!
   "Run kondo on paths by partitioning the paths, with this we should call
   kondo more times but with fewer paths to analyze, improving memory."
   [paths normalization-config file-analyzed-fn db*]
   (let [total (count paths)
         batches (->> paths
-                     (partition-all clj-kondo-analysis-batch-size)
+                     path-batches
                      (map-indexed (fn [index batch-paths]
                                     {:index (inc index)
                                      :paths batch-paths})))

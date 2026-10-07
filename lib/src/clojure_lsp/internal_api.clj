@@ -6,6 +6,7 @@
    [clojure-lsp.diff :as diff]
    [clojure-lsp.feature.diagnostics :as f.diagnostic]
    [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.feature.kondo-repro :as f.kondo-repro]
    [clojure-lsp.feature.rename :as f.rename]
    [clojure-lsp.handlers :as handlers]
    [clojure-lsp.logger :as logger]
@@ -498,6 +499,49 @@
       {:result-code 1
        :message-fn (constantly (clojure.core/format "Output format %s not supported" format))})))
 
+(defn ^:private kondo-repro* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
+  (let [analysis-type (get-in options [:analysis :type] f.kondo-repro/default-analysis-type)]
+    (cond
+      (not (contains? f.kondo-repro/analysis-types analysis-type))
+      {:result-code 1
+       :message-fn (constantly (clojure.core/format "Analysis type %s not supported, use one of: %s"
+                                                    analysis-type
+                                                    (string/join ", " (sort f.kondo-repro/analysis-types))))}
+
+      (not (contains? #{nil :edn :json} format))
+      {:result-code 1
+       :message-fn (constantly (clojure.core/format "Output format %s not supported" format))}
+
+      :else
+      (do
+        (setup-api! components)
+        ;; Only settings and classpath are needed, so no clj-kondo run nor db
+        ;; cache write changes the caches that may be under investigation.
+        (swap! db* assoc :skip-db-cache-write? true)
+        (try
+          (setup-project-ns-only-analysis! options components)
+          (finally
+            (swap! db* dissoc :skip-db-cache-write?)))
+        (let [db @db*
+              uris (when (or (seq (:namespace options)) (seq (:filenames options)))
+                     (filter #(contains? shared/valid-langs (shared/uri->file-type %))
+                             (options->uris options db)))
+              data (f.kondo-repro/repro db {:analysis-type analysis-type :uris uris})]
+          (case format
+            :edn (let [edn-string (binding [*print-namespace-maps* false]
+                                    (pr-str data))]
+                   {:result-code 0
+                    :result data
+                    :message-fn (constantly edn-string)})
+            :json (let [json-string (json/generate-string data)]
+                    {:result-code 0
+                     :result json-string
+                     :message-fn (constantly json-string)})
+            (let [script (f.kondo-repro/->script data)]
+              {:result-code 0
+               :result script
+               :message-fn (constantly script)})))))))
+
 (defn analyze-project-and-deps! [options]
   (analyze-project-and-deps!* options (build-components options)))
 
@@ -521,3 +565,6 @@
 
 (defn dump [options]
   (dump* options (build-components options)))
+
+(defn kondo-repro [options]
+  (kondo-repro* options (build-components options)))

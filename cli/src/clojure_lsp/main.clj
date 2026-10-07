@@ -36,6 +36,7 @@
         "  rename               Rename a symbol and all references across the project, use --from and --to options."
         "  references           Find all references of a full qualified symbol across the project and/or dependencies, use --from option."
         "  dump (experimental)  Dump all project known data including classpath, source-paths, dep-graph and clj-kondo analysis data."
+        "  kondo-repro          Generate a script running clj-kondo like clojure-lsp does, to check if a diagnostic issue comes from clj-kondo."
         ""
         ;; "Run \"clojure-lsp help <command>\" for more information about a command."
         "See https://clojure-lsp.io/settings/ for detailed documentation."]
@@ -173,7 +174,7 @@
       {:action "listen" :options options}
 
       (and (= 1 (count arguments))
-           (#{"clean-ns" "diagnostics" "format" "rename" "references" "dump" "listen"} (first arguments)))
+           (#{"clean-ns" "diagnostics" "format" "rename" "references" "dump" "kondo-repro" "listen"} (first arguments)))
       {:action (first arguments) :options options}
 
       :else
@@ -210,7 +211,8 @@
                        options
                        [:from]
                        internal-api/references)
-        "dump" (internal-api/dump options))
+        "dump" (internal-api/dump options)
+        "kondo-repro" (internal-api/kondo-repro options))
       (catch clojure.lang.ExceptionInfo e
         (ex-data e)))))
 

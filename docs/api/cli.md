@@ -34,7 +34,21 @@ Available commands:
   rename               Rename a symbol and all references across the project, use --from and --to options.
   references           Find all references of a full qualified symbol across the project and/or dependencies, use --from option.
   dump (experimental)  Dump all project known data including classpath, source-paths, dep-graph and clj-kondo analysis data.
+  kondo-repro          Generate a script running clj-kondo like clojure-lsp does, to check if a diagnostic issue comes from clj-kondo.
 
 See https://clojure-lsp.io/settings/ for detailed documentation.
 ```
+
+## kondo-repro
+
+`kondo-repro` prints a shell script that runs the clj-kondo CLI the same way clojure-lsp runs clj-kondo: same bundled clj-kondo version, options, config and order of runs of a startup without caches, followed by the lint done when opening the files passed via `--filenames` or `--namespace` in an editor. No analysis is done to generate it.
+
+```bash
+clojure-lsp kondo-repro --filenames src/my_project/foo.clj > repro.sh
+sh repro.sh
+```
+
+- By default it reproduces the server, use `--analysis '{:type :project-and-shallow-analysis}'` to reproduce the `diagnostics` command.
+- `--output '{:format :edn}'` or `:json` prints the steps as data instead.
+- Settings sent by your editor are not known by the CLI, pass them via `--settings` if any.
 

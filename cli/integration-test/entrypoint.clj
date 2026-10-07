@@ -30,7 +30,8 @@
     integration.api.format-test
     integration.api.rename-test
     integration.api.references-test
-    integration.api.dump-test])
+    integration.api.dump-test
+    integration.api.kondo-repro-test])
 
 ;; these tests reuse the integration-test.out log file
 (def namespaces-performance

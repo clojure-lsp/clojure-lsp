@@ -159,13 +159,19 @@
     (swap! db* (fn [state-db]
                  (lsp.kondo/db-with-results state-db namespace-definitions-result)))))
 
+(defn external-classpath-paths
+  "The `classpath` entries analyzed as external dependencies, i.e. the ones not
+  in the project `source-paths`."
+  [root-path source-paths classpath]
+  (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))]
+    (->> classpath
+         (remove (set source-paths-abs))
+         (remove (set source-paths)))))
+
 (defn ^:private analyze-external-classpath! [root-path source-paths classpath progress-token {:keys [db* producer]}]
   (logger/info logger-tag "Analyzing classpath for project root" (str root-path))
   (when classpath
-    (let [source-paths-abs (set (map #(shared/relativize-filepath % (str root-path)) source-paths))
-          external-paths (->> classpath
-                              (remove (set source-paths-abs))
-                              (remove (set source-paths)))
+    (let [external-paths (external-classpath-paths root-path source-paths classpath)
           {:keys [new-checksums paths-not-on-checksum]} (shared/generate-and-update-analysis-checksums external-paths nil @db*)
           batch-update-callback (fn [batch-index batch-count {:keys [total-files files-done]}]
                                   (let [task (-> (:analyzing-deps slow-tasks)
@@ -186,9 +192,20 @@
         (System/gc))
       (swap! db* assoc :full-scan-analysis-startup true))))
 
+(defn copy-kondo-configs?
+  "Whether the startup copies the clj-kondo configs exported by the classpath."
+  [settings db]
+  (and (get settings :copy-kondo-configs? true)
+       (not (= :project-namespaces-only (:project-analysis-type db)))))
+
+(defn external-classpath-analysis?
+  "Whether the startup analyzes the external classpath for the db analysis type."
+  [db]
+  (contains? #{:project-and-full-dependencies
+               :project-and-shallow-analysis} (:project-analysis-type db)))
+
 (defn ^:private copy-configs-from-classpath! [classpath settings db*]
-  (when (and (get settings :copy-kondo-configs? true)
-             (not (= :project-namespaces-only (:project-analysis-type @db*)))
+  (when (and (copy-kondo-configs? settings @db*)
              classpath)
     (when-let [{:keys [config]} (shared/logging-task
                                   :internal/copy-kondo-configs
@@ -295,12 +312,20 @@
     (async/thread
       (db/upsert-local-cache! (build-db-cache db) db))))
 
-(defn ^:private project-paths-to-analyze [db]
+(defn project-paths-to-analyze
+  "The project source paths plus the local clojure-lsp config file, analyzed as
+  internal paths."
+  [db]
   (concat
     (-> db :settings :source-paths)
     (let [local-config (config/local-project-config-file (:project-root-uri db))]
       (when (shared/file-exists? local-config)
         [(.getCanonicalPath local-config)]))))
+
+(defn project-source-files
+  "The project files analyzed with clj-kondo on a startup without cache."
+  [db]
+  (enumerate-source-files (project-paths-to-analyze db)))
 
 (defn initialize-project
   [project-root-uri
@@ -371,8 +396,7 @@
 
             (publish-task-progress producer (:copying-kondo slow-tasks) progress-token)
             (copy-configs-from-classpath! classpath settings db*)
-            (when (contains? #{:project-and-full-dependencies
-                               :project-and-shallow-analysis} (:project-analysis-type @db*))
+            (when (external-classpath-analysis? @db*)
               (publish-task-progress producer (:analyzing-deps slow-tasks) progress-token)
               (analyze-external-classpath! root-path (project-paths-to-analyze @db*) classpath progress-token components)))))
       (publish-task-progress producer (:resolving-config task-list) progress-token)
@@ -399,7 +423,8 @@
                               (do (analyze-source-paths-namespaces-only! (project-paths-to-analyze @db*) db* progress-fn)
                                   (not use-db-analysis?))
                               (analyze-source-paths! (project-paths-to-analyze @db*) db* progress-fn (not use-db-analysis?)))]
-        (when (or (not use-db-analysis?) source-changed?)
+        (when (and (or (not use-db-analysis?) source-changed?)
+                   (not (:skip-db-cache-write? @db*)))
           (logger/info logger-tag "Caching db for next startup...")
           (upsert-db-cache! @db*)))
       (swap! db* assoc :settings-auto-refresh? true)

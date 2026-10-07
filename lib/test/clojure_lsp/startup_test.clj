@@ -9,6 +9,7 @@
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.startup :as startup]
+   [clojure-lsp.test-helper.internal :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [are deftest is testing]]))
 
@@ -24,6 +25,29 @@
             {"file:///a.clj" [{:type :some-custom-linter :row 1 :message "boom"
                                :clj-kondo/ignore {:linters [{:tag :vector :seq-fn vec}]}}
                               {:type :unused-namespace :langs '() :level :warning}]})))))
+
+(deftest external-classpath-paths-test
+  (let [src (h/file-path "/project/src")
+        test-path (h/file-path "/project/test")
+        dep-a (h/file-path "/deps/a.jar")
+        dep-b (h/file-path "/deps/b.jar")]
+    (testing "removes the project source paths, absolute or relative to the root"
+      (is (= [dep-a dep-b]
+             (startup/external-classpath-paths (h/file-path "/project")
+                                               [src test-path]
+                                               ["src" dep-a src "test" dep-b test-path]))))))
+
+(deftest copy-kondo-configs?-test
+  (is (true? (startup/copy-kondo-configs? {} {:project-analysis-type :project-and-full-dependencies})))
+  (is (false? (startup/copy-kondo-configs? {:copy-kondo-configs? false} {:project-analysis-type :project-and-full-dependencies})))
+  (is (false? (startup/copy-kondo-configs? {} {:project-analysis-type :project-namespaces-only}))))
+
+(deftest external-classpath-analysis?-test
+  (are [analysis-type result] (= result (startup/external-classpath-analysis? {:project-analysis-type analysis-type}))
+    :project-and-full-dependencies true
+    :project-and-shallow-analysis true
+    :project-only false
+    :project-namespaces-only false))
 
 (deftest consider-local-db-cache?-test
   (are [session-analysis-type cache-analysis-type result]

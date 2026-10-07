@@ -90,6 +90,7 @@ then those can be added at the project level.
 - clojure-lsp persist the external jars analysis in a `.lsp/.cache/` folder, if you have issues with some specific feature,
 try to remove that dir and restart the server.
 - If you have issues with macros, [double check your clj-kondo config](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#unrecognized-macros).
+- To check if a diagnostic comes from clj-kondo or clojure-lsp, run `clojure-lsp kondo-repro --filenames path/to/file.clj > repro.sh && sh repro.sh`, which runs the clj-kondo CLI the same way clojure-lsp does, with a new clj-kondo cache. If the last command reports the same diagnostic, it's probably a clj-kondo issue and the script is a repro to share. Otherwise it's clojure-lsp specific or a stale cache, run only the last command with `CACHE_DIR=.clj-kondo/.cache` to check it against your current clj-kondo cache. See [kondo-repro](api/cli.md#kondo-repro).
 
 ### Missing `Add require...` on code actions when using CoC and (neo)vim
 

@@ -127,6 +127,7 @@
     (is (= "clean-ns" (:action (#'main/parse ["clean-ns"]))))
     (is (= "rename" (:action (#'main/parse ["rename"]))))
     (is (= "dump" (:action (#'main/parse ["dump"]))))
+    (is (= "kondo-repro" (:action (#'main/parse ["kondo-repro"]))))
     (is (= nil (:action (#'main/parse ["clean-ns" "listen"])))))
   (testing "final options"
     (is (string? (:exit-message (#'main/parse ["--help"]))))

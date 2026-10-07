@@ -343,3 +343,67 @@
   (safe-process-message
     options
     (internal-api/dump options)))
+
+(defn kondo-repro
+  "Generate a POSIX shell script running the clj-kondo CLI the same way
+  clojure-lsp runs clj-kondo, useful to check whether a diagnostic issue comes
+  from clj-kondo or clojure-lsp.
+
+  The script uses the clj-kondo version bundled in clojure-lsp and reproduces
+  the options, config and order of the clj-kondo runs of a clojure-lsp startup
+  without caches, followed by the lint done when opening the given files in an
+  editor. No clj-kondo analysis is done to generate it.
+
+  **Options**
+  All options below are optional, using its default if not provided.
+
+  `:project-root` a java.io.File representing the project root.
+
+  `:namespace` a coll of symbols representing the namespaces to lint like when opened in an editor.
+
+  `:filenames` a coll of files to lint like when opened in an editor.
+
+  `:analysis` a map with options on which clojure-lsp analysis to reproduce, available values are:
+    `:type` keyword values: `project-only`, `project-and-shallow-analysis`, `project-and-full-dependencies`.
+    Default to `project-and-full-dependencies`, used by the server. The `diagnostics` command uses `project-and-shallow-analysis`.
+
+  `:output` a map with options on how the result should be printed, available values are:
+    `:format` `:edn` or `:json` to return the repro data instead of the script.
+
+  `settings` map of settings following https://clojure-lsp.io/settings/, include the settings your editor sends to clojure-lsp, if any.
+
+  **Output**
+
+  `result-code` an integer representing whether the action was successful, 0 means ok, 1 means error
+
+  `message-fn` a function of no arity to be called if want the result as a stringfied version.
+
+  `:result` the script, or when a `:format` is given:
+    `:clojure-lsp-version` and `:clj-kondo-version`.
+    `:clj-kondo-coordinate` the tools.deps coordinate of the bundled clj-kondo.
+    `:project-root` and the reproduced `:analysis-type`.
+    `:notes` things to consider when comparing results.
+    `:steps` the clj-kondo runs in order, each with an `:id`, `:description`, the clj-kondo CLI `:args` and the `:stdin` file when linting via stdin.
+
+  **Example**
+
+  ```clojure
+  (clojure-lsp.api/kondo-repro {:filenames [(io/file \"src/my_project/foo.clj\")]})
+  ```"
+  [{:keys [project-root settings namespace filenames analysis output] :as options}]
+  {:pre [(or (nil? project-root)
+             (and (instance? File project-root)
+                  (.exists ^File project-root)))
+         (or (nil? settings)
+             (map? settings))
+         (or (nil? namespace)
+             (coll? namespace))
+         (or (nil? filenames)
+             (coll? filenames))
+         (or (nil? (:type analysis))
+             (keyword? (:type analysis)))
+         (or (nil? (:format output))
+             (keyword? (:format output)))]}
+  (safe-process-message
+    options
+    (internal-api/kondo-repro options)))

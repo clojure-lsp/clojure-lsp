@@ -3,7 +3,9 @@
    [babashka.fs :as fs]
    [cheshire.core :as json]
    [clojure-lsp.api :as api]
+   [clojure-lsp.db :as db]
    [clojure-lsp.internal-api :as internal-api]
+   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.test-helper.internal :as h]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -397,3 +399,52 @@
                          :analysis {:type :project-and-full-dependencies}}))]
         (is result)
         (is (= 0 result-code))))))
+
+(deftest kondo-repro
+  (testing "when project-root is not a file"
+    (is (thrown? AssertionError
+                 (api/kondo-repro {:project-root "../cli/integration-test/sample-test"}))))
+  (testing "when analysis type is not supported"
+    (let [{:keys [result-code message-fn]} (api/kondo-repro {:project-root (io/file "../cli/integration-test/sample-test")
+                                                             :analysis {:type :project-namespaces-only}
+                                                             :raw? true})]
+      (is (= 1 result-code))
+      (is (string/includes? (message-fn) "not supported"))))
+  (testing "when output format is not supported"
+    (is (= 1 (:result-code (api/kondo-repro {:project-root (io/file "../cli/integration-test/sample-test")
+                                             :output {:format :yaml}
+                                             :raw? true})))))
+  (testing "generates a script linting the given file like the editor does"
+    (clean-api-db!)
+    (let [filename (str (fs/canonicalize (io/file "../cli/integration-test/sample-test/src/sample_test/api/diagnostics/a.clj")))
+          {:keys [result-code result]} (api/kondo-repro {:project-root (io/file "../cli/integration-test/sample-test")
+                                                         :filenames [(io/file "src/sample_test/api/diagnostics/a.clj")]
+                                                         :raw? true})]
+      (is (= 0 result-code))
+      (is (string/starts-with? result "#!/bin/sh"))
+      (is (string/includes? result " -M -m clj-kondo.main "))
+      (is (string/includes? result "--lint -"))
+      (is (string/includes? result filename))))
+  (testing "steps reproduce the clj-kondo runs of a clojure-lsp startup without caches"
+    (clean-api-db!)
+    (let [{:keys [result result-code]} (api/kondo-repro {:project-root (io/file "../cli/integration-test/sample-test")
+                                                         :analysis {:type :project-and-shallow-analysis}
+                                                         :output {:format :edn}
+                                                         :raw? true})
+          captured* (atom [])
+          run-kondo! @#'lsp.kondo/run-kondo!]
+      (is (= 0 result-code))
+      (is (= [:copy-configs :external-paths :internal-paths]
+             (distinct (map :id (:steps result)))))
+      (clean-api-db!)
+      (with-redefs [lsp.kondo/run-kondo! (fn [config err-hint]
+                                           (swap! captured* conj config)
+                                           (run-kondo! config err-hint))
+                    db/read-local-cache (constantly nil)
+                    db/upsert-local-cache! (constantly nil)]
+        ;; diagnostics uses the :project-and-shallow-analysis
+        (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                          :namespace '[sample-test.api.diagnostics.a]
+                          :raw? true}))
+      (is (= (mapv (comp :args lsp.kondo/run-options->cli-args) @captured*)
+             (mapv :args (:steps result)))))))

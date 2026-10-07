@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.shared :as shared]
+   [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]))
 
 (def ^:private uri "file:///my/foo/Bar.class")
@@ -130,6 +131,109 @@
       (let [replaced (lsp.kondo/db-with-analysis db results)]
         (is (nil? (get-in replaced [:analysis java-uri :java-class-definitions])))
         (is (= [member-def] (get-in replaced [:analysis java-uri :java-member-definitions])))))))
+
+(deftest run-options->cli-args-test
+  (testing "translates the options clojure-lsp uses"
+    (is (= {:args ["--lang" "cljc"
+                   "--filename" "/project/src/a.cljc"
+                   "--cache" "false"
+                   "--cache-dir" "/tmp/cache"
+                   "--parallel"
+                   "--config-dir" "/project/.clj-kondo"
+                   "--copy-configs"
+                   "--skip-lint"
+                   "--config" "{:output {:canonical-paths true}, :analysis {:context [:clojure.test]}}"
+                   "--lint" "/a.jar" "/b.jar" "src"]
+            :unsupported #{}}
+           (lsp.kondo/run-options->cli-args
+             {:lint [(str "/a.jar" (System/getProperty "path.separator") "/b.jar") "src"]
+              :lang :cljc
+              :filename "/project/src/a.cljc"
+              :cache false
+              :cache-dir "/tmp/cache"
+              :parallel true
+              :config-dir "/project/.clj-kondo"
+              :copy-configs true
+              :skip-lint true
+              :config {:output {:canonical-paths true}
+                       :analysis {:context [:clojure.test]}}
+              :file-analyzed-fn identity}))))
+  (testing "omits default and disabled options"
+    (is (= {:args ["--lint" "-"]
+            :unsupported #{}}
+           (lsp.kondo/run-options->cli-args {:lint ["-"]
+                                             :cache true
+                                             :parallel false
+                                             :copy-configs false
+                                             :skip-lint false
+                                             :config-dir nil}))))
+  (testing "keeps an empty lint path, as when all paths are ignored"
+    (is (= ["--lint" ""]
+           (:args (lsp.kondo/run-options->cli-args {:lint [""]})))))
+  (testing "returns options without CLI equivalent"
+    (is (= #{:custom-lint-fn}
+           (:unsupported (lsp.kondo/run-options->cli-args {:lint ["-"] :custom-lint-fn identity}))))))
+
+(deftest run-options-match-kondo-runs-test
+  ;; Drift guard: the options used to reproduce clj-kondo runs must be the ones
+  ;; clojure-lsp passes to clj-kondo.
+  (let [uri "file:///project/src/a.clj"
+        db {:env :unit-test
+            :project-root-uri "file:///project"
+            :project-analysis-type :project-and-full-dependencies
+            :settings {:kondo-config-dir "/project/.clj-kondo"
+                       :source-paths #{"/project/src"}}
+            :kondo-config {:linters {:clojure-lsp/unused-public-var {:exclude-when-contains-meta #{:my/meta}}}}}
+        captured* (atom [])
+        without-fns #(dissoc % :file-analyzed-fn)]
+    (with-redefs [lsp.kondo/run-kondo! (fn [config _] (swap! captured* conj config) {})]
+      (testing "copy configs"
+        (lsp.kondo/run-kondo-copy-configs! ["/a.jar" "/b.jar"] db)
+        (is (= (lsp.kondo/run-options :copy-configs db {:paths ["/a.jar" "/b.jar"]})
+               (last @captured*))))
+      (testing "external paths"
+        (lsp.kondo/run-kondo-on-paths! ["/a.jar"] (atom db) {:external? true} (fn [_]))
+        (is (= (without-fns (lsp.kondo/run-options :external-paths db {:paths ["/a.jar"]}))
+               (without-fns (last @captured*)))))
+      (testing "internal paths"
+        (lsp.kondo/run-kondo-on-paths! ["/project/src/a.clj"] (atom db) {:external? false} (fn [_]))
+        (is (= (without-fns (lsp.kondo/run-options :internal-paths db {:paths ["/project/src/a.clj"]}))
+               (without-fns (last @captured*)))))
+      (testing "single file via stdin"
+        (lsp.kondo/run-kondo-on-text! "(ns a)" uri (atom db))
+        (is (= (lsp.kondo/run-options :single-file db {:uri uri})
+               (last @captured*))))
+      (testing "external paths in batches"
+        (reset! captured* [])
+        (let [paths (mapv #(str "/dep-" % ".jar") (range 250))]
+          (lsp.kondo/run-kondo-on-paths-batch! paths {:external? true} (fn [& _]) (atom db))
+          (is (= 3 (count @captured*)))
+          (is (= (map #(without-fns (lsp.kondo/run-options :external-paths db {:paths %}))
+                      (lsp.kondo/path-batches paths))
+                 (map without-fns @captured*))))))
+    (testing "every option has a clj-kondo CLI equivalent"
+      (doseq [[step opts] {:copy-configs {:paths ["/a.jar"]}
+                           :external-paths {:paths ["/a.jar"]}
+                           :internal-paths {:paths ["/project/src/a.clj"]}
+                           :single-file {:uri uri}}]
+        (is (= #{} (:unsupported (lsp.kondo/run-options->cli-args (lsp.kondo/run-options step db opts))))
+            (str step))))))
+
+(deftest clj-kondo-coordinate-test
+  (testing "pins the bundled clj-kondo"
+    (let [coordinate (lsp.kondo/clj-kondo-coordinate)]
+      (is (or (:mvn/version coordinate)
+              (and (:git/url coordinate) (:git/sha coordinate))))
+      (when (:mvn/version coordinate)
+        (is (not (string/ends-with? (:mvn/version coordinate) "-SNAPSHOT"))))))
+  (testing "uses the git revision for snapshots"
+    (is (= {:git/url "https://github.com/clj-kondo/clj-kondo"
+            :git/sha "abc123"}
+           (with-redefs [lsp.kondo/clj-kondo-pom-properties* {:version "2026.01.01-SNAPSHOT" :revision "abc123"}]
+             (lsp.kondo/clj-kondo-coordinate))))
+    (is (= {:mvn/version "2026.01.01"}
+           (with-redefs [lsp.kondo/clj-kondo-pom-properties* {:version "2026.01.01" :revision "abc123"}]
+             (lsp.kondo/clj-kondo-coordinate))))))
 
 (deftest java-member-definitions-mode-test
   (testing "defaults to lazy/on-demand"

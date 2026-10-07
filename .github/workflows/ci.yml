@@ -114,6 +114,14 @@ jobs:
       - name: Run integration tests
         run: bb integration-test
 
+      - name: Upload integration server logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-server-log-jvm-${{ matrix.os }}-${{ matrix.jdk }}
+          path: cli/integration-test/sample-test/*.out
+          if-no-files-found: warn
+
       - name: Run babashka pod tests
         run: bb pod-test
 
@@ -192,6 +200,14 @@ jobs:
 
       - name: Run integration tests
         run: bb integration-test
+
+      - name: Upload integration server logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-server-log-graalvm
+          path: cli/integration-test/sample-test/*.out
+          if-no-files-found: warn
 
   performance-test:
     needs: graalvm-build

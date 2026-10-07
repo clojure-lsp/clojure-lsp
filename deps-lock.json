@@ -142,24 +142,14 @@
       "hash": "sha256-XBwijxopsG0KfQNJD15k+vcTo8YWcpi6Fxz/wzz57Rg="
     },
     {
-      "mvn-path": "borkdude/edamame/1.5.39/edamame-1.5.39.jar",
+      "mvn-path": "borkdude/edamame/1.6.43/edamame-1.6.43.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-6Dyg+WLFgMXJyNAJZ2mLP9DQAiR+N+T0bDODucKdiFU="
+      "hash": "sha256-DcvjeNXFet7wNw1YjDPOYKy6k7bxVD5NR23BOnfOnkw="
     },
     {
-      "mvn-path": "borkdude/edamame/1.5.39/edamame-1.5.39.pom",
+      "mvn-path": "borkdude/edamame/1.6.43/edamame-1.6.43.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-dfemP3pEENnLIaUTKMamxv1T8hI3bniv/k5s+87Ea3M="
-    },
-    {
-      "mvn-path": "borkdude/edamame/1.6.42/edamame-1.6.42.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-OrL72ww2BrDcSnDItafjxXkPqukvCYTxowO9myMp9t0="
-    },
-    {
-      "mvn-path": "borkdude/edamame/1.6.42/edamame-1.6.42.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-gdjOLfHpV/KmqqonaTAYruWhoa/WH1Pxdv45xlfQXZc="
+      "hash": "sha256-LkE+cLwJCY5DDZah1fDOaL9xB9EV4pSNJPSbbFs5Nfc="
     },
     {
       "mvn-path": "borkdude/graal.locking/0.0.2/graal.locking-0.0.2.jar",
@@ -267,16 +257,16 @@
       "hash": "sha256-KizCFbZGnpZ8TgK78NZZLyV2htN9BJ27Ifp32SZ7qfQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20260917.181739-9.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.215755-13.jar",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-3FhBDHGS9kSplOeviJEELaGqrB6Pwy1mHyIw39vGRdI="
+      "hash": "sha256-HdOVIdcs77dg5LCfQeAMYQVba4YVjcWeiRC81kIaHDI="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20260917.181739-9.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.215755-13.pom",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-RdTqZ63zfYdXFbmbZvEIt5Tl3MplwbdA27nimfgkkls="
+      "hash": "sha256-9K029vDiAuI6U76NDDvpiDoMgM4KdX99iMFqVvZ4rMA="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -3549,6 +3539,16 @@
       "hash": "sha256-Um8fldp392+PeJKT1GrZb54N14hJXpnnO8Phd/96DFA="
     },
     {
+      "mvn-path": "org/ow2/asm/asm/9.10.1/asm-9.10.1.jar",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-7YJdEKsTmcjAy2aeaIzwyMgmKbTIOZtYNSto6SyhD8s="
+    },
+    {
+      "mvn-path": "org/ow2/asm/asm/9.10.1/asm-9.10.1.pom",
+      "mvn-repo": "https://repo1.maven.org/maven2/",
+      "hash": "sha256-4bHDgyyjrAqeVjxAX0x2ARi1VWpJINruFAWIhhl+CU0="
+    },
+    {
       "mvn-path": "org/ow2/asm/asm/9.2/asm-9.2.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-udT+TXGTjfOIOfDspCqqpkz4sxPWeNoDbwyzyhmbR/U="
@@ -3557,16 +3557,6 @@
       "mvn-path": "org/ow2/asm/asm/9.2/asm-9.2.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-37EqGyJL8Bvh/WBAIEZviUJBvLZF3M45Xt2M1vilDfQ="
-    },
-    {
-      "mvn-path": "org/ow2/asm/asm/9.7/asm-9.7.jar",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-rfRtXjSUC98Ujs3Sap7o7qlElqcgNP9xQQZrPupcTp0="
-    },
-    {
-      "mvn-path": "org/ow2/asm/asm/9.7/asm-9.7.pom",
-      "mvn-repo": "https://repo1.maven.org/maven2/",
-      "hash": "sha256-3gARXx2E86Cy7jpLb2GS0Gb4bRhdZ7nRUi8sgP6sXwA="
     },
     {
       "mvn-path": "org/ow2/ow2/1.5.1/ow2-1.5.1.pom",

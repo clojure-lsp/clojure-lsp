@@ -17,8 +17,7 @@
    [clojure.core.async :as async]
    [clojure.java.io :as io]
    [clojure.set :as set]
-   [clojure.string :as string]
-   [medley.core :as medley]))
+   [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
 
@@ -54,9 +53,7 @@
   (when (and (f.completion-lib/dep-file? uri)
              (not (:libs @f.completion-lib/libs*))
              (not (:api? @db*)))
-    (producer/publish-progress producer nil "Fetching libs for completion" "fetch-libs")
-    (f.completion-lib/fetch-libs!)
-    (producer/publish-progress producer 100 nil "fetch-libs")))
+    (producer/with-work-done-progress producer "Fetching libs for completion" f.completion-lib/fetch-libs!)))
 
 (defn ^:private set-xor [a b]
   (into (set/difference a b)
@@ -288,25 +285,6 @@
                                      :text final-text
                                      :version version})))
 
-(defn analyze-watched-files! [uris {:keys [db* producer] :as components}]
-  (let [old-db @db*
-        existing-uris (->> uris
-                           distinct
-                           (filter shared/uri-on-disk?))
-        filenames (map shared/uri->filename existing-uris)
-        kondo-result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
-    (swap! db* (fn [state-db]
-                 (-> state-db
-                     (lsp.kondo/db-with-results kondo-result)
-                     (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uris! existing-uris %)))))
-    (f.diagnostic/publish-all-diagnostics! uris true components)
-    (producer/refresh-test-tree producer uris)
-    (doseq [uri uris]
-      (when (get-in @db* [:documents uri :v])
-        (when-let [text (shared/slurp-uri uri)]
-          (swap! db* assoc-in [:documents uri :text] text)))
-      (notify-references uri old-db @db* components))))
-
 (defn ^:private db-without-uri [state-db uri]
   (-> state-db
       (dep-graph/remove-doc uri)
@@ -317,8 +295,40 @@
 (defn ^:private files-deleted [old-db {:keys [db*] :as components} uris]
   (swap! db* #(reduce db-without-uri % uris))
   (f.diagnostic/publish-empty-diagnostics! uris components)
-  (doseq [uri uris]
-    (notify-references uri @db* old-db components)))
+  (into [] (keep #(notify-references % @db* old-db components)) uris))
+
+(defn ^:private analyze-files-on-disk! [uris {:keys [db* producer] :as components}]
+  (let [old-db @db*
+        filenames (map shared/uri->filename uris)
+        kondo-result (lsp.kondo/run-kondo-on-paths! filenames db* {:external? false} nil)]
+    (swap! db* (fn [state-db]
+                 (-> state-db
+                     (lsp.kondo/db-with-results kondo-result)
+                     (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uris! uris %)))))
+    (f.diagnostic/publish-all-diagnostics! uris true components)
+    (producer/refresh-test-tree producer uris)
+    (doseq [uri uris]
+      (when (get-in @db* [:documents uri :v])
+        (when-let [text (shared/slurp-uri uri)]
+          (swap! db* assoc-in [:documents uri :text] text))))
+    (into [] (keep #(notify-references % old-db @db* components)) uris)))
+
+(defn analyze-watched-files! [changes {:keys [db*] :as components}]
+  (let [old-db @db*
+        ;; The last event per uri decides, so a file deleted and re-created
+        ;; within the debounce window is analyzed rather than removed, keeping
+        ;; the state of a document opened in the meantime.
+        uri->last-type (into {} (map (juxt :uri :type)) changes)
+        deleted-uris (into [] (keep (fn [[uri type]] (when (identical? :deleted type) uri))) uri->last-type)
+        existing-uris (into [] (comp (remove (fn [[_ type]] (identical? :deleted type)))
+                                     (map key)
+                                     (filter shared/uri-on-disk?))
+                            uri->last-type)
+        deletion-analyses (when (seq deleted-uris)
+                            (files-deleted old-db components deleted-uris))
+        reference-analyses (when (seq existing-uris)
+                             (analyze-files-on-disk! existing-uris components))]
+    (run! async/<!! (concat deletion-analyses reference-analyses))))
 
 (defn ^:private dir-or-file-uri->analyzable-uris [uri db]
   ;; If the URI is for an entire directory that has been created/deleted, we
@@ -338,22 +348,13 @@
           files)))
 
 (defn did-change-watched-files
-  [changes
-   {:keys [db* watched-files-chan] :as components}]
+  [changes {:keys [db* watched-files-chan]}]
   (let [db @db*
-        observe-changed? (settings/get db [:compute-external-file-changes] true)
-        {:keys [created changed deleted]}
-        (->> changes
-             (group-by :type)
-             (medley/map-vals
-               (fn [changes]
-                 (mapcat #(dir-or-file-uri->analyzable-uris (:uri %) db) changes))))]
-    (doseq [created-or-changed (concat created (when observe-changed? changed))]
-      (async/>!! watched-files-chan created-or-changed))
-    (when (seq deleted)
-      (shared/logging-task
-        :internal/delete-watched-files
-        (files-deleted db components deleted)))))
+        observe-changed? (settings/get db [:compute-external-file-changes] true)]
+    (doseq [{:keys [uri type]} changes
+            :when (or observe-changed? (not (identical? :changed type)))
+            analyzable-uri (dir-or-file-uri->analyzable-uris uri db)]
+      (async/>!! watched-files-chan {:uri analyzable-uri :type type}))))
 
 (defn did-close [uri {:keys [db*] :as components}]
   (let [db @db*

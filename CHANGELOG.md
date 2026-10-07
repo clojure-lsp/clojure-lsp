@@ -4,7 +4,7 @@
 - Fix navigation and other LSP features inside dependency jars when clients send single-slash jar URLs, including escaped Calva URIs.
 - if supported by client, multi-file refactoring prompts for approval #2370
 
-- Bump clj-kondo to `2026.08.05-20260917.181739-9`.
+- Bump clj-kondo to `2026.08.05-20261006.215755-13`.
 - Add new refactoring `cycle-namespaced-map`, e.g. `{:foo/bar 1}` -> `#:foo{:bar 1}` and vice-versa, available via code actions. #994
 - Report the clj-kondo git sha on `--version` for snapshot builds, instead of a stale `-SNAPSHOT` version.
 - Fix unreachable "Classpath not found" error branch on stubs generation.
@@ -16,6 +16,8 @@
 - Show built-in documentation when hovering Clojure special forms. #2457
 - sort namespace suggestions when suggesting :refer #1997
 - Add code action to replace fully-qualified namespace with alias, and add :as to the :require form #1810
+- Report the processing of external file changes (`workspace/didChangeWatchedFiles`) as server-initiated work done progress (`window/workDoneProgress/create`), ending only once dependent files are re-analyzed, so clients can wait for those changes to be fully processed. Deletions are now processed in the same debounced batch as creations and changes instead of immediately, and a file re-created within that batch is analyzed rather than removed.
+- Fix the "Fetching libs for completion" progress never showing up in clients, as its token was never created via `window/workDoneProgress/create`.
 
 ## 2026.07.06-14.34.19
 

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fix navigation and other LSP features inside dependency jars when clients send single-slash jar URLs, including escaped Calva URIs.
 - if supported by client, multi-file refactoring prompts for approval #2370
 
 - Bump clj-kondo to `2026.08.05-20261006.215755-13`.

@@ -649,7 +649,11 @@
   ;; Technically jar:file is not a valid URI scheme. It's a Jar URL and must be
   ;; treated as such.
   (if (string/starts-with? uri "jar:")
-    (.toString (.getURL (jar-uri-string->jar-url-connection uri)))
+    (-> uri
+        jar-uri-string->jar-url-connection
+        .getURL
+        .toString
+        conform-uri-scheme)
     ;; unescape %3a%3a to ::
     (let [uri (URI. uri)]
       ;; normalize scheme:/some/path to scheme:///some/path

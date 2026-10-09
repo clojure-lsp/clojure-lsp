@@ -52,6 +52,17 @@ If a rename spans files, clojure-lsp can prompt the user to approve the changes 
 
 ![](images/features/hover-clojuredocs.png)
 
+### Inlay hints
+
+`textDocument/inlayHint` shows:
+
+- parameter names on a call with one unambiguous arity
+- map and vector destructuring, including keyword arguments from a trailing map
+- the selected arity when the function has more than one
+- the resolved namespace of an unqualified var from another namespace
+- Java parameter names or types, the selected overload, and the return type when that class's member definitions are already in the analysis
+- a Java class inferred from a local type hint, a literal, or a constructor at an instance call
+
 ### Java support
 
 To understand what is supported and how to configure it, check the [settings section](settings.md#java-support).
@@ -335,6 +346,12 @@ See [below](#clojure-lsp-extra-commands) for screenshots.
 ### Signature help
 
 ![](images/features/signature-help.gif)
+
+### Inlay hints
+
+Shows parameter names before arguments when a function call matches one
+unambiguous arity. Macros, destructured parameters and intentionally unused
+parameters are omitted.
 
 ### Semantic tokens
 

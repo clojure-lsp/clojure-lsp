@@ -86,6 +86,7 @@
                                             "unwind-thread"]}
         :selectionRangeProvider true
         :signatureHelpProvider {:triggerCharacters []}
+        :inlayHintProvider true
         :foldingRangeProvider true
         :codeActionProvider {:codeActionKinds ["quickfix"
                                                "refactor"

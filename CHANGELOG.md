@@ -1,9 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Add inlay hints for parameter names, the selected arity, the resolved namespace, map and vector destructuring, and Java method parameters, overloads, and return types when member definitions are already analyzed.
 - Prevent Java test fixtures from being written to the global JDK cache and rebuild caches missing analysis or checksums. #2285
 - if supported by client, multi-file refactoring prompts for approval #2370
-
 - Bump clj-kondo to `2026.08.05-20261006.215755-13`.
 - Add new refactoring `cycle-namespaced-map`, e.g. `{:foo/bar 1}` -> `#:foo{:bar 1}` and vice-versa, available via code actions. #994
 - Report the clj-kondo git sha on `--version` for snapshot builds, instead of a stale `-SNAPSHOT` version.
@@ -21,7 +21,7 @@
 
 ## 2026.07.06-14.34.19
 
-- add missing namespace form, guessing at the name if outside of project sources, 
+- add missing namespace form, guessing at the name if outside of project sources,
   when adding a missing :require or :import via the Add Require code action.  #1734
 - Reduce memory usage of java class and member definitions analysis. #2314
 - Shrink db cache file considerably not serializing redundant analysis elements uri. #2315
@@ -57,7 +57,7 @@
   - clj-async-profiler: 1.6.2 -> 1.7.0
   - deps-deploy: 0.2.2 -> 0.2.5
   - graal-build-time: 1.0.5 -> 1.0.6
-- when sorting or removing :require or :import namespaces during ns organization, group comments and 
+- when sorting or removing :require or :import namespaces during ns organization, group comments and
   clj-kondo directives along with them #1237
 
 ## 2026.05.05-12.58.26

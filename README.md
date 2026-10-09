@@ -43,6 +43,7 @@ You will get:
 - **Semantic tokens (syntax highlighting)**
 - **Call hierarchy**
 - **Java interop**
+- **Inlay hints**
 
 For all available documentation, check the official [website](https://clojure-lsp.io/).
 

@@ -558,9 +558,14 @@
             "::alp/f"
             "") (h/file-uri "file:///other/ns.clj"))
   (h/load-code-and-locs
-    (h/code "(ns other.ns (:require [some.alpaca :as alp]))"
+    (h/code "(ns someother.ns (:require [some.alpaca :as alp]))"
             "::alp/"
             "") (h/file-uri "file:///someother/ns.clj"))
+  (h/load-code-and-locs
+    (h/code "(ns fourth.ns)"
+            "(::skip-rule {})"
+            "::s"
+            "") (h/file-uri "file:///fourth/ns.clj"))
   (testing "return all matching reg keywords for that aliased keyword"
     (h/assert-submaps
       [{:label "::alp/foo" :kind :keyword}
@@ -571,7 +576,11 @@
       [{:label "::alp/bar" :kind :keyword}
        {:label "::alp/foo" :kind :keyword}
        {:label "::alp/foob" :kind :keyword}]
-      (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 7 (h/db)))))
+      (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 7 (h/db))))
+  (testing "return all keywords for auto-namespaced keyword"
+    (h/assert-submaps
+      [{:label ":fourth.ns/skip-rule" :kind :keyword}]
+      (f.completion/completion (h/file-uri "file:///fourth/ns.clj") 3 3 (h/db)))))
 
 (deftest completing-arg-keywords-from-function-definition
   (h/load-code-and-locs (h/code "(ns some.a) (defn my-api [{:keys [foo bar baz barz] :as bla}] 1)")

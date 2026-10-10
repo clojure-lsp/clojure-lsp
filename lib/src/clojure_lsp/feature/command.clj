@@ -207,11 +207,17 @@
 (defmethod run-command :forward  [{:keys [loc uri row col]}]
   (f.paredit/forward uri loc row col))
 
+(defmethod run-command :forward-sexp-or-up  [{:keys [loc uri row col]}]
+  (f.paredit/forward-sexp-or-up uri loc row col))
+
 (defmethod run-command :forward-select  [{:keys [loc uri row col]}]
   (f.paredit/forward-select uri loc row col))
 
 (defmethod run-command :backward  [{:keys [loc uri row col]}]
   (f.paredit/backward uri loc row col))
+
+(defmethod run-command :backward-sexp-or-up  [{:keys [loc uri row col]}]
+  (f.paredit/backward-sexp-or-up uri loc row col))
 
 (defmethod run-command :backward-select  [{:keys [loc uri row col]}]
   (f.paredit/backward-select uri loc row col))

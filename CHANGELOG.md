@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Add `backward-sexp-or-up` and `forward-sexp-or-up` Paredit commands.
 - Prevent Java test fixtures from being written to the global JDK cache and rebuild caches missing analysis or checksums. #2285
 - if supported by client, multi-file refactoring prompts for approval #2370
 

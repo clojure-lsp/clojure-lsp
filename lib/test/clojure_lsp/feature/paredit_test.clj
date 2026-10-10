@@ -8,9 +8,11 @@
   [paredit-fn code]
   (let [{{row :row col :col} :position zloc :zloc} (h/load-code-into-zloc-and-position code)]
     (if-let [transformations (paredit-fn h/default-uri zloc row col)]
-      (let [{{actual-row :row actual-col :col actual-end-col :end-col} :range} (:show-document-after-edit transformations)
-            result (h/changes->code (-> transformations :changes-by-uri first second) (h/db))]
-        (h/put-cursor-at result actual-row actual-col actual-end-col))
+      (if (:no-op? transformations)
+        code
+        (let [{{actual-row :row actual-col :col actual-end-col :end-col} :range} (:show-document-after-edit transformations)
+              result (h/changes->code (-> transformations :changes-by-uri first second) (h/db))]
+          (h/put-cursor-at result actual-row actual-col actual-end-col)))
       code)))
 
 (deftest forward-slurp-test
@@ -84,12 +86,37 @@
     "(-> foo (+ 1)  (+ 3)| str)" "(-> foo (+ 1) | (+ 3) str)"
     #_()))
 
+(deftest forward-sexp-or-up-test
+  (are [expected code] (= expected (pareditfy f.paredit/forward-sexp-or-up code))
+    "(inner (symbol|))" "(inner (sym|bol))"
+    "(inner (symbol)|)" "(inner (symbol|))"
+    "(inner (symbol)|)" "(inner |(symbol))"
+    "(inner| symbol)" "(|inner symbol)"
+    "(inner symbol|)" "(inner| symbol)"
+    "(inner symbol)|" "(inner symbol|)"
+    "(inner symbol )|" "(inner symbol |)"
+    "(inner)|" "(inner)|"
+    "(inner)|\n" "(inner)|\n"
+    "|" "|"
+    #_()))
+
 (deftest backward-test
   (are [expected code] (= expected (pareditfy f.paredit/backward code))
     "(let [|foo-bar (+ 1 2)])" "(let [foo-b|ar (+ 1 2)])"
     "[1 |[2 [] 5] 6]" "[1 [2 [] 5]| 6]"
     "{:foo |{:bar :b}}" "{:foo {:bar :b}|}"
     "(-> foo |(+ 1)  (+ 3) str)" "(-> foo (+ 1) | (+ 3) str)"
+    #_()))
+
+(deftest backward-sexp-or-up-test
+  (are [expected code] (= expected (pareditfy f.paredit/backward-sexp-or-up code))
+    "(inner (|symbol))" "(inner (sym|bol))"
+    "(inner |(symbol))" "(inner (|symbol))"
+    "(inner |(symbol))" "(inner (symbol)|)"
+    "(|inner symbol)" "(inner |symbol)"
+    "|(inner symbol)" "(|inner symbol)"
+    "|( inner symbol)" "(| inner symbol)"
+    "|" "|"
     #_()))
 
 (deftest forward-select-test

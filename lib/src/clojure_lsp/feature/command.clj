@@ -28,10 +28,10 @@
 (defmulti ^:private run-command :command)
 
 (defmethod ^{:deprecated "Use add-missing-import instead"} run-command :add-import-to-namespace [{:keys [loc uri args db components]}]
-  (apply f.add-missing-libspec/add-missing-import loc uri (concat args [db components])))
+  (f.add-missing-libspec/add-missing-import loc uri (first args) db components))
 
 (defmethod run-command :add-missing-import [{:keys [loc uri db args components]}]
-  (apply f.add-missing-libspec/add-missing-import loc uri (concat args [db components])))
+  (f.add-missing-libspec/add-missing-import loc uri (first args) db components))
 
 (defmethod run-command :add-missing-libspec [{:keys [loc uri db components]}]
   (f.add-missing-libspec/add-missing-libspec loc uri db components))

@@ -1805,3 +1805,34 @@
                              "))"
                              "async/chan"
                              "edn/read")))))
+
+(deftest clean-ns-empty-reader-conditional-branch-test
+  (testing "removing the only unused form of a branch removes the feature key too"
+    (test-clean-ns {}
+                   (h/code "(ns foo.bar"
+                           "  #?(:clj (:import (java.util.regex Pattern))"
+                           "     :cljs (:require-macros [other.zeta :refer [m]])))"
+                           "(m)")
+                   (h/code "(ns foo.bar"
+                           "  #?(:cljs (:require-macros [other.zeta :refer [m]])))"
+                           "(m)")
+                   true
+                   "file:///a.cljc"))
+  (testing "removing the only unused form of the last branch removes the feature key too"
+    (test-clean-ns {}
+                   (h/code "(ns foo.bar"
+                           "  #?(:clj (:require-macros [other.zeta :refer [m]])"
+                           "     :cljs (:import (java.util.regex Pattern))))"
+                           "(m)")
+                   (h/code "(ns foo.bar"
+                           "  #?(:clj (:require-macros [other.zeta :refer [m]])))"
+                           "(m)")
+                   true
+                   "file:///a.cljc"))
+  (testing "removing the only branch removes the whole reader conditional"
+    (test-clean-ns {}
+                   (h/code "(ns foo.bar"
+                           "  #?(:clj (:import (java.util.regex Pattern))))")
+                   (h/code "(ns foo.bar)")
+                   true
+                   "file:///a.cljc")))

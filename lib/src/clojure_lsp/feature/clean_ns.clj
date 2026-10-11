@@ -119,6 +119,28 @@
                         (concat before-comments [n comment]))
     [node]))
 
+(def ^:private reader-conditional-features
+  #{":clj" ":cljs" ":cljr" ":bb" ":default"})
+
+(defn ^:private remove-form-and-reader-conditional-key
+  "Removes the ns form at loc. When the form is a branch of a reader conditional,
+   also removes the feature key before it, and the conditional itself if no
+   branch is left."
+  [form-loc]
+  (let [in-reader-conditional? (fast= :reader-macro (some-> form-loc z/up z/up z/tag))
+        removed-loc (z/remove form-loc)]
+    (if in-reader-conditional?
+      (let [key-loc (if (and (fast= :token (z/tag removed-loc))
+                             (contains? reader-conditional-features (z/string removed-loc)))
+                      (z/remove removed-loc)
+                      removed-loc)]
+        (if (and (fast= :list (z/tag key-loc))
+                 (empty? (z/child-sexprs key-loc))
+                 (fast= :reader-macro (some-> key-loc z/up z/tag)))
+          (z/remove (z/up key-loc))
+          key-loc))
+      removed-loc)))
+
 (defn ^:private process-clean-ns
   [ns-loc remaining-nodes col keep-first-line-spacing form-type clean-ctx]
 
@@ -232,7 +254,7 @@
       (z/subedit-> ns-loc
                    (z/find-value z/next form-type)
                    (z/up)
-                   z/remove)
+                   remove-form-and-reader-conditional-key)
       (z/subedit-> ns-loc
                    (z/find-value z/next form-type)
                    (z/up)

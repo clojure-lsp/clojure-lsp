@@ -609,6 +609,14 @@
     (is (= ["\n(defn ^:private new-function [])\n" "new-function"] (promote-fn "|(fn [])")))
     (is (= ["\n(defn ^:private new-function [a] a)\n" "#(new-function a)"] (promote-fn "(let [a 1] |(fn [] a))")))))
 
+(deftest promote-fn-cljc-locals-test
+  (testing "a local captured by the fn is passed once in a .cljc file"
+    (h/reset-components!)
+    (let [uri (h/file-uri "file:///a.cljc")
+          zloc (h/load-code-and-zloc "(defn -some [pred coll] (reduce |(fn [ret x] (if (pred x) (reduced true) ret)) nil coll))" uri)]
+      (is (= ["\n(defn- step [pred ret x] (if (pred x) (reduced true) ret))\n" "#(step pred %1 %2)"]
+             (as-strings (transform/promote-fn zloc uri (h/db) "step")))))))
+
 (deftest can-promote-fn-test
   (are [code] (not (transform/can-promote-fn? (h/zloc-from-code code)))
     ;; non fn or literal

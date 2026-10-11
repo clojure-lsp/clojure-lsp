@@ -1241,7 +1241,8 @@
         ;; Prepend locals to param lists.
         ;; We prepend because it works whether replacing with `partial` or `#()`.
         used-locals (->> (q/find-local-usages-defined-outside-form db uri fn-form-meta)
-                         (map :name))
+                         (map :name)
+                         distinct)
         add-locals (fn [zloc]
                      ;; Navigate to the params node and prepend all the locals.
                      (reduce (fn [params-zloc used-local]

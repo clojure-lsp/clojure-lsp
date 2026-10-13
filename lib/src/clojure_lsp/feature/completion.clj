@@ -50,12 +50,12 @@
             (assoc m priority (inc (or (.indexOf ^clojure.lang.PersistentVector priority-order priority)
                                        0)))) {} priority-order))
 
-(defn ^:private keyword-element->str [{:keys [alias ns] :as element} cursor-alias priority]
+(defn ^:private keyword-element->str [{:keys [alias ns auto-resolved] :as element} cursor-alias priority]
   (let [alias (or alias
                   (when (fast= :alias-keyword priority)
                     cursor-alias))]
     (cond-> ":"
-      alias
+      (or alias auto-resolved)
       (str ":")
 
       (or alias ns)
@@ -292,7 +292,7 @@
   (comp
     (remove #(parser/same-range? cursor-element %)) ;; is the same keyword
     (filter (fn [{:keys [ns alias name] :as element}]
-              (or (matches-fn (keyword-element->str element nil nil))
+              (or (matches-fn (keyword-element->str (assoc element :auto-resolved nil) nil nil))
                   (and ns (matches-fn (str ns)))
                   (and alias (matches-fn (str alias)))
                   (and name (matches-fn name)))))))
@@ -475,7 +475,11 @@
                              identity)
                            (bucket-elems-xf :keyword-usages matches-fn cursor-element)
                            (map #(element->completion-item
-                                   %
+                                   ;; if auto-resolved, we don't want to include the
+                                   ;; namespace in the label, so strip it here
+                                   (if (:auto-resolved %)
+                                     (assoc % :ns nil)
+                                     %)
                                    nil
                                    (if (= (:from cursor-element) (:from %))
                                      :keyword-same-ns

@@ -579,7 +579,7 @@
       (f.completion/completion (h/file-uri "file:///someother/ns.clj") 2 7 (h/db))))
   (testing "return all keywords for auto-namespaced keyword"
     (h/assert-submaps
-      [{:label ":fourth.ns/skip-rule" :kind :keyword}]
+      [{:label "::skip-rule" :kind :keyword}]
       (f.completion/completion (h/file-uri "file:///fourth/ns.clj") 3 3 (h/db)))))
 
 (deftest completing-arg-keywords-from-function-definition

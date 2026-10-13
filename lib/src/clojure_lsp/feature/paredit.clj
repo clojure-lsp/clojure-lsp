@@ -9,6 +9,21 @@
   (let [sexpr-zloc (if (z/sexpr-able? zloc) zloc (z-move-fn zloc))]
     (meta (z/node sexpr-zloc))))
 
+(defn ^:private move-sexp-or-up-range [zloc row col z-move-fn edge-position-fn]
+  (when zloc
+    (let [current-range (meta (z/node zloc))
+          sexpr? (z/sexpr-able? zloc)
+          at-edge? (and sexpr?
+                        (= [row col] (edge-position-fn current-range)))
+          target-zloc (if (and sexpr? (not at-edge?))
+                        zloc
+                        (or (z-move-fn zloc)
+                            (let [parent-zloc (z/up zloc)]
+                              (when (and parent-zloc
+                                         (not= :forms (z/tag parent-zloc)))
+                                parent-zloc))))]
+      (some-> target-zloc z/node meta))))
+
 (defn forward [uri zloc _row _col]
   (let [range (move-range zloc z/right)]
     {:show-document-after-edit {:uri uri
@@ -16,6 +31,17 @@
                                 :range (assoc range
                                               :row (:end-row range)
                                               :col (:end-col range))}}))
+
+(defn forward-sexp-or-up
+  "Moves forward by sexpr, moving out of the enclosing form at its end."
+  [uri zloc row col]
+  (if-let [range (move-sexp-or-up-range zloc row col z/right (juxt :end-row :end-col))]
+    {:show-document-after-edit {:uri uri
+                                :take-focus true
+                                :range (assoc range
+                                              :row (:end-row range)
+                                              :col (:end-col range))}}
+    {:no-op? true}))
 
 (defn forward-select [uri zloc row col]
   (let [range (move-range zloc z/right)]
@@ -32,6 +58,17 @@
                                 :range (assoc range
                                               :end-row (:row range)
                                               :end-col (:col range))}}))
+
+(defn backward-sexp-or-up
+  "Moves backward by sexpr, moving out of the enclosing form at its beginning."
+  [uri zloc row col]
+  (if-let [range (move-sexp-or-up-range zloc row col z/left (juxt :row :col))]
+    {:show-document-after-edit {:uri uri
+                                :take-focus true
+                                :range (assoc range
+                                              :end-row (:row range)
+                                              :end-col (:col range))}}
+    {:no-op? true}))
 
 (defn backward-select [uri zloc row col]
   (let [range (move-range zloc z/left)]

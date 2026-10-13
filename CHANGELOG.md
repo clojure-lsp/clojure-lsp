@@ -60,6 +60,8 @@
 - when sorting or removing :require or :import namespaces during ns organization, group comments and 
   clj-kondo directives along with them #1237
 
+- Add optional `defaultLibrary` semantic token modifier for `clojure.core`/`cljs.core` functions and macros, controlled by the new `:semantic-tokens :default-library-for-core?` setting (default: `false`).
+
 ## 2026.05.05-12.58.26
 
 - Fix `cyclic-dependencies` linter falsely reporting cycles for `(require ...)` calls inside `(comment ...)` forms. #2107

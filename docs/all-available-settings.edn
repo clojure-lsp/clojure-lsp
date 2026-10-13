@@ -40,6 +40,7 @@
         :decompile-jar-as-project? true}
  :code-lens {:segregate-test-references true}
  :semantic-tokens? true
+ :semantic-tokens {:default-library-for-core? false}
  :private-by-default-on-extract? true
  :use-metadata-for-privacy? false
  :auto-add-ns-to-new-files? true

@@ -95,6 +95,11 @@
     (h/load-code-and-locs (code "(comment 1)"))
     (is (= [0 1 7 3 0]
            (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db)))))
+  (testing "macro core tokens with default-library-for-core?"
+    (h/load-code-and-locs (code "(comment 1)"))
+    (h/with-db {:settings {:semantic-tokens {:default-library-for-core? true}}}
+               (is (= [0 1 7 3 2]
+                      (semantic-tokens/full-tokens (h/file-uri "file:///a.clj") (h/db))))))
   (testing "function definition tokens"
     (h/load-code-and-locs (code "(def foo 1)"
                                 "foo"))

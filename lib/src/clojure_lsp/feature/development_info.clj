@@ -52,7 +52,7 @@
                         (shared/assoc-some
                           {:element e}
                           :definition (q/find-definition db e)
-                          :semantic-tokens (f.semantic-tokens/element->token-type e)))
+                          :semantic-tokens (f.semantic-tokens/element->token-type db e)))
                       elements))))
 
 (defn cursor-info-log [uri {:keys [producer db*]} row col]

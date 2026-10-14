@@ -473,23 +473,12 @@ jobs:
           boot: '2.8.3'
           bb: '0.9.161'
 
-      - name: Install MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-
       - name: Install GraalVM
-        uses: DeLaGuardo/setup-graalvm@master
+        uses: graalvm/setup-graalvm@v1
         with:
-          graalvm: 22.2.0
-          java: java11
-
-      - name: Install native-image component
-        run: |
-          gu.cmd install native-image
-
-      # see https://github.com/oracle/graal/issues/4340
-      - name: GraalVM workaround to support UPX compression
-        run: |
-          7z d "$env:JAVA_HOME\lib\svm\builder\svm.jar" com/oracle/svm/core/windows/WindowsImageHeapProviderFeature.class
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Windows native image
         env:
@@ -497,11 +486,6 @@ jobs:
           CLOJURE_LSP_XMX: "-J-Xmx7g"
         run: |
           bb native-cli
-
-      - name: Compress binary
-        uses: svenstaro/upx-action@v2
-        with:
-          file: clojure-lsp.exe
 
       - name: Zip binary
         run: |

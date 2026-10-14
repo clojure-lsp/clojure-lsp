@@ -45,7 +45,7 @@
 
 (defn local-cache-dir [db]
   (let [project-root (shared/uri->path (:project-root-uri db))
-        overwritten-path (some-> (get db [:settings :cache-path])
+        overwritten-path (some-> (get-in db [:settings :cache-path])
                                  io/file)
         default (io/file (str project-root) ".lsp" ".cache")]
     ^java.io.File (or overwritten-path default)))

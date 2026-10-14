@@ -1,8 +1,8 @@
 (ns clojure-lsp.test-helper.internal
   (:require
    [clojure-lsp.db :as db]
-   [clojure-lsp.feature.java-interop :as f.java-interop]
    [clojure-lsp.handlers :as handlers]
+   [clojure-lsp.kondo :as lsp.kondo]
    [clojure-lsp.logger :as logger]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.producer :as producer]
@@ -221,11 +221,11 @@
   (with-redefs [shared/file-exists? (constantly false)]
     (handlers/did-close (components) {:text-document {:uri uri}})))
 
-(defn load-java-path [uri]
-  (#'f.java-interop/analyze-and-cache-jdk-source!
-   [uri]
-   {}
-   (db*)))
+(defn load-java-path
+  "Load Java fixture analysis into the in-memory test database."
+  [uri]
+  (let [results (lsp.kondo/run-kondo-on-jdk-source! [uri] (db))]
+    (swap! (db*) lsp.kondo/db-with-results results)))
 
 (defn load-code-and-locs
   ([code] (load-code-and-locs code default-uri))

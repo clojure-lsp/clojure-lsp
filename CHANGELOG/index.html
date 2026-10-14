@@ -3380,12 +3380,8 @@
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
 <ul>
 <li>Prevent Java test fixtures from being written to the global JDK cache and rebuild caches missing analysis or checksums. #2285</li>
-<li>
-<p>if supported by client, multi-file refactoring prompts for approval #2370</p>
-</li>
-<li>
-<p>Bump clj-kondo to <code>2026.08.05-20261013.151754-14</code>.</p>
-</li>
+<li>if supported by client, multi-file refactoring prompts for approval #2370</li>
+<li>Bump clj-kondo to <code>2026.08.05-20261013.151754-14</code>.</li>
 <li>Add new refactoring <code>cycle-namespaced-map</code>, e.g. <code>{:foo/bar 1}</code> -&gt; <code>#:foo{:bar 1}</code> and vice-versa, available via code actions. #994</li>
 <li>Report the clj-kondo git sha on <code>--version</code> for snapshot builds, instead of a stale <code>-SNAPSHOT</code> version.</li>
 <li>Fix unreachable "Classpath not found" error branch on stubs generation.</li>
@@ -3399,6 +3395,7 @@
 <li>Add code action to replace fully-qualified namespace with alias, and add :as to the :require form #1810</li>
 <li>Report the processing of external file changes (<code>workspace/didChangeWatchedFiles</code>) as server-initiated work done progress (<code>window/workDoneProgress/create</code>), ending only once dependent files are re-analyzed, so clients can wait for those changes to be fully processed. Deletions are now processed in the same debounced batch as creations and changes instead of immediately, and a file re-created within that batch is analyzed rather than removed.</li>
 <li>Fix the "Fetching libs for completion" progress never showing up in clients, as its token was never created via <code>window/workDoneProgress/create</code>.</li>
+<li>Fix navigation and other LSP features inside dependency jars when clients send single-slash jar URLs, including escaped Calva URIs.</li>
 </ul>
 <h2 id="20260706-143419">2026.07.06-14.34.19<a class="headerlink" href="#20260706-143419" title="Permanent link">#</a></h2>
 <ul>
@@ -5222,7 +5219,7 @@ when multiple files are changed at same time (rename, iedit, etc).</li>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 13, 2026 15:43:51">October 13, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 14, 2026 15:57:53">October 14, 2026</span>
   </span>
 
     

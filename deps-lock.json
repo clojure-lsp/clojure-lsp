@@ -257,16 +257,16 @@
       "hash": "sha256-KizCFbZGnpZ8TgK78NZZLyV2htN9BJ27Ifp32SZ7qfQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261019.211627-33.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261019.214539-37.jar",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-fCvgwHxe8dbt4uXM3WY2x8M5+n8EzkuHG5LNONqFOVw="
+      "hash": "sha256-8VE4fdVkiAR+Adhv6fOUJs1SmW3sxjwzlRT5Uz61VKY="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261019.211627-33.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261019.214539-37.pom",
       "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-hODb47gVhiSH7SedAVw+eSfUPPKs4vRS50MIDB0NiOE="
+      "hash": "sha256-4TbJP+Lb0GP2BW8pAM7j/cRElMTPnTHEC0bR5ggTCQc="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",

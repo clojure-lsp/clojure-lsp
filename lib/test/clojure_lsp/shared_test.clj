@@ -312,6 +312,16 @@
              (shared/normalize-uri-from-client "jar:file%3A///C%3A/some/path/some.jar%21/some/file.clj")))
       (is (= "jar:file:///some/path/some.jar!/some/file.clj"
              (shared/normalize-uri-from-client "jar:file%3A///some/path/some.jar%21/some/file.clj"))))
+    (testing "single-slash jar URLs use the same URI as the analysis index"
+      (doseq [uri (if h/windows?
+                    ["jar:file:/C:/some/path/some.jar!/some/file.clj"
+                     "jar:file%3A/C%3A/some/path/some.jar%21/some/file.clj"]
+                    ["jar:file:/some/path/some.jar!/some/file.clj"
+                     "jar:file%3A/some/path/some.jar%21/some/file.clj"])]
+        (is (= (shared/filename->uri (h/file-path "/some/path/some.jar:some/file.clj")
+                                     {:settings {:dependency-scheme "jar"}})
+               (shared/normalize-uri-from-client uri))
+            (str "normalizes the dependency URI received from the client: " uri))))
     ;; with spaces
     ;; TODO: this fails because `(unescape-uri uri)` converts %20 to a space
     ;; character, which we don't want. But, we can't remove `(unescape-uri uri)`,

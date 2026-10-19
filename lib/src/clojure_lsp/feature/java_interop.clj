@@ -337,7 +337,10 @@
           {custom-jdk-source-uri :jdk-source-uri java-home :home-path} (settings/get db [:java])
           local-jdk-source-file* (delay (find-local-jdk-source java-home))
           download-jdk-source? (settings/get db [:java :download-jdk-source?] false)
-          global-db (db/read-global-cache)
+          global-db (let [cache (db/read-global-cache)]
+                      (when (and (seq (:analysis-checksums cache))
+                                 (seq (:analysis cache)))
+                        cache))
           {:keys [result jdk-zip-file download-uri]} (jdk-analysis-decision
                                                        installed-jdk-source-uri
                                                        custom-jdk-source-uri

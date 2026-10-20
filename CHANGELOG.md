@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Bump clj-kondo to `2026.10.21-20261020.083350-1`.
+- Bump clj-kondo to `2026.10.21-20261020.104243-2`.
 - Fix completion for auto-resolved keywords: `::foo`. #2488
 
 ## 2026.10.15-11.42.38

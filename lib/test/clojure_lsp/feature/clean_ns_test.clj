@@ -1455,6 +1455,16 @@
                      (h/code "(ns foo"
                              " (:require"
                              "  []))")))
+    (testing "require without libspecs is removed"
+      (test-clean-ns {}
+                     (h/code "(ns foo"
+                             " (:require))")
+                     (h/code "(ns foo)")))
+    (testing "import without classes is removed"
+      (test-clean-ns {}
+                     (h/code "(ns foo"
+                             " (:import))")
+                     (h/code "(ns foo)")))
     (testing "if a comment is above a libspec, it should stay with the libspec - sorted to top"
       (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo"

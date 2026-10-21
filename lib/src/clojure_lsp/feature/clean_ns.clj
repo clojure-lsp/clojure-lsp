@@ -437,11 +437,12 @@
 
 (defn ^:private calc-keep-first-line-spacing
   "Difference between end of :require/:import and start of next node,
-   nil if they are not on the same line."
+   nil if they are not on the same line or there is no next node."
   [form-type-loc]
   (let [require-meta (-> form-type-loc z/node meta)
-        right-meta (-> form-type-loc z/right z/node meta)]
-    (when (= (:row require-meta) (:row right-meta))
+        right-meta (some-> form-type-loc z/right z/node meta)]
+    (when (and right-meta
+               (= (:row require-meta) (:row right-meta)))
       (- (:col right-meta) (:end-col require-meta)))))
 
 (defn ^:private clean-requires

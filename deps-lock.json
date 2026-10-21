@@ -142,14 +142,24 @@
       "hash": "sha256-XBwijxopsG0KfQNJD15k+vcTo8YWcpi6Fxz/wzz57Rg="
     },
     {
-      "mvn-path": "borkdude/edamame/1.6.43/edamame-1.6.43.jar",
+      "mvn-path": "borkdude/edamame/1.5.39/edamame-1.5.39.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-DcvjeNXFet7wNw1YjDPOYKy6k7bxVD5NR23BOnfOnkw="
+      "hash": "sha256-6Dyg+WLFgMXJyNAJZ2mLP9DQAiR+N+T0bDODucKdiFU="
     },
     {
-      "mvn-path": "borkdude/edamame/1.6.43/edamame-1.6.43.pom",
+      "mvn-path": "borkdude/edamame/1.5.39/edamame-1.5.39.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-LkE+cLwJCY5DDZah1fDOaL9xB9EV4pSNJPSbbFs5Nfc="
+      "hash": "sha256-dfemP3pEENnLIaUTKMamxv1T8hI3bniv/k5s+87Ea3M="
+    },
+    {
+      "mvn-path": "borkdude/edamame/1.6.44/edamame-1.6.44.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-Cn5djZEUa3vtbvWu/PMBA3beRyGutFyGQ5qHZ7+JKBA="
+    },
+    {
+      "mvn-path": "borkdude/edamame/1.6.44/edamame-1.6.44.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-ltOoZclJOWsmk/iGbJvrDZWfHq+sBV8/AZjXkaIXDmk="
     },
     {
       "mvn-path": "borkdude/graal.locking/0.0.2/graal.locking-0.0.2.jar",
@@ -257,16 +267,16 @@
       "hash": "sha256-KizCFbZGnpZ8TgK78NZZLyV2htN9BJ27Ifp32SZ7qfQ="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.215755-13.jar",
-      "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.jar",
+      "mvn-path": "clj-kondo/clj-kondo/2026.10.21-SNAPSHOT/clj-kondo-2026.10.21-20261020.104243-2.jar",
+      "snapshot": "clj-kondo-2026.10.21-SNAPSHOT.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-HdOVIdcs77dg5LCfQeAMYQVba4YVjcWeiRC81kIaHDI="
+      "hash": "sha256-nvYbUrULtpyNuIoPeYEYlQrsKi4/qE/He8c/8QysLfM="
     },
     {
-      "mvn-path": "clj-kondo/clj-kondo/2026.08.05-SNAPSHOT/clj-kondo-2026.08.05-20261006.215755-13.pom",
-      "snapshot": "clj-kondo-2026.08.05-SNAPSHOT.pom",
+      "mvn-path": "clj-kondo/clj-kondo/2026.10.21-SNAPSHOT/clj-kondo-2026.10.21-20261020.104243-2.pom",
+      "snapshot": "clj-kondo-2026.10.21-SNAPSHOT.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-9K029vDiAuI6U76NDDvpiDoMgM4KdX99iMFqVvZ4rMA="
+      "hash": "sha256-CQm3rU0zCi8wWANC9Ex61ZlDiBDRs3Lbyu6ZubwWA2A="
     },
     {
       "mvn-path": "clj-zip-meta/clj-zip-meta/0.1.3/clj-zip-meta-0.1.3.jar",
@@ -1414,16 +1424,6 @@
       "hash": "sha256-YJHUrhR7iYZgeJqzvjcFXDrvQCP3n2r61tAdWbPuNEc="
     },
     {
-      "mvn-path": "io/replikativ/datalog-parser/0.2.30/datalog-parser-0.2.30.jar",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-oE0GlxS5ShlYM7Z7T3+yRmEl/rUXCgkhJUIv3sKqRyg="
-    },
-    {
-      "mvn-path": "io/replikativ/datalog-parser/0.2.30/datalog-parser-0.2.30.pom",
-      "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-nF6TSH3/YNIuUcylm2WXxNLDqBwGXnOnm01+Ih9qWVk="
-    },
-    {
       "mvn-path": "javax/activation/javax.activation-api/1.2.0/javax.activation-api-1.2.0.jar",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-Q/3vC1ts6zGwQksgi5MMdKtY+sLO63s/b9OuuLXKQ5M="
@@ -2459,14 +2459,14 @@
       "hash": "sha256-Ip+u3BRWnAVj00RKPe/blIvb9gmLfGFg9d1TgzAYYb0="
     },
     {
-      "mvn-path": "org/babashka/sci/0.15.56/sci-0.15.56.jar",
+      "mvn-path": "org/babashka/sci/0.15.59/sci-0.15.59.jar",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-8rCIEZX+jNnCP6bAAbGf2fHKG6Ek5lf8VjzVXE+0r78="
+      "hash": "sha256-8DG3Z3TFy5cLSx9lL8yt/1y6ib4bCt5dMqnzvWYP0No="
     },
     {
-      "mvn-path": "org/babashka/sci/0.15.56/sci-0.15.56.pom",
+      "mvn-path": "org/babashka/sci/0.15.59/sci-0.15.59.pom",
       "mvn-repo": "https://repo.clojars.org/",
-      "hash": "sha256-O7RbGWG0jBIeHhttJrcrwRH1EdlTGo/N/hYL+e3mhxo="
+      "hash": "sha256-q42hmj6Tqvbxx9Ypppvs7INtmTObypkJ/AhK/YS2j/E="
     },
     {
       "mvn-path": "org/benf/cfr/0.152/cfr-0.152.jar",
@@ -3567,6 +3567,16 @@
       "mvn-path": "org/ow2/ow2/1.5/ow2-1.5.pom",
       "mvn-repo": "https://repo1.maven.org/maven2/",
       "hash": "sha256-D4obEW52C4/mOJxRuE5LB6cPwRCC1Pk25FO1g91QtDs="
+    },
+    {
+      "mvn-path": "org/replikativ/datalog-parser/0.2.43/datalog-parser-0.2.43.jar",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-q/AchHCoTFQfPTTMGxvI2Mxvp/4ktDzoaspK5zytZ18="
+    },
+    {
+      "mvn-path": "org/replikativ/datalog-parser/0.2.43/datalog-parser-0.2.43.pom",
+      "mvn-repo": "https://repo.clojars.org/",
+      "hash": "sha256-kVaaCYu1UqRNWnDbQkw+M6Av4yHRZGMB+i4bV150cyw="
     },
     {
       "mvn-path": "org/slf4j/jcl-over-slf4j/1.7.36/jcl-over-slf4j-1.7.36.jar",

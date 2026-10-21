@@ -12,6 +12,7 @@
 - Fix `move-form` not adding to the destination the requires, refers and imports the moved form uses, reusing its aliases or qualifying the symbols on conflicts, and keeping the meaning of auto-resolved keywords. Refuse the move when one of those namespaces requires the destination. #2495
 - Fix `clean-ns` failing on a `:require` or `:import` without libspecs.
 - Fix `clean-ns` leaving a dangling feature keyword in reader conditionals when removing all the requires/imports of a branch. #2497
+- Fix `clean-ns` failing on `:import` reader conditionals whose first feature is not `:clj` or `:cljs`, like `#?(:bb ... :clj ...)`. #2496
 
 ## 2026.10.15-11.42.38
 

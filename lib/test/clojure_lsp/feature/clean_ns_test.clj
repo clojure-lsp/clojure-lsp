@@ -995,6 +995,42 @@
                              "#?(:clj (do Date))")
                      true
                      "file:///a.cljc"))
+    (testing "keep reader conditional whose first feature is not :clj or :cljs"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:bb (clojure.lang Associative)"
+                             "     :clj (clojure.lang Associative))"
+                             "  (java.util.regex Pattern)))"
+                             "Associative Pattern")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:bb (clojure.lang Associative)"
+                             "     :clj (clojure.lang Associative))"
+                             "  (java.util.regex Pattern)))"
+                             "Associative Pattern")
+                     true
+                     "file:///a.cljc"))
+    (testing "do not sort classes inside reader conditionals whose first feature is not :clj or :cljs"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:bb (java.util UUID Date)"
+                             "     :clj (java.util UUID Date))"
+                             "  #?@(:bb [(java.io Reader File)]"
+                             "      :clj [(java.io Reader File)])"
+                             "  (java.util.regex Pattern Matcher)))"
+                             "UUID Date Reader File Pattern")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:bb (java.util UUID Date)"
+                             "     :clj (java.util UUID Date))"
+                             "  #?@(:bb [(java.io Reader File)]"
+                             "      :clj [(java.io Reader File)])"
+                             "  (java.util.regex Pattern)))"
+                             "UUID Date Reader File Pattern")
+                     true
+                     "file:///a.cljc"))
     (testing "only used required alias in specific lang"
       (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"

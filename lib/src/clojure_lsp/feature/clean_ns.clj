@@ -500,6 +500,14 @@
       (process-clean-ns ns-loc removed-nodes col keep-first-line-spacing :require clean-ctx))
     ns-loc))
 
+(defn ^:private reader-conditional-body?
+  "Whether `zloc` is the list of a reader conditional, e.g. `(:bb a :clj b)` in
+  `#?(:bb a :clj b)` or `#?@(:bb [a] :clj [b])`, whatever its feature keywords are."
+  [zloc]
+  (and (z/list? zloc)
+       (fast= :reader-macro (some-> zloc z/up z/tag))
+       (contains? #{"?" "?@"} (some-> zloc z/up z/down z/string))))
+
 (defn ^:private package-import?
   [node]
   (and (or (z/vector? node)
@@ -578,10 +586,10 @@
       (if (and (get-in settings [:clean :sort :import] true)
                (get-in settings [:clean :sort :import-classes] true)
                (not remove-whole-package-import)
-               (not (some-> parent-node z/down z/sexpr #{:clj :cljs})) ;; reader conditionals node
+               (not (reader-conditional-body? parent-node)) ;; reader conditionals node
                (not= :uneval (some-> parent-node z/up z/next z/tag))
-               (not (some-> parent-node z/up z/next z/sexpr #{:clj :cljs})) ;; inside reader conditionals
-               (not (some-> parent-node z/up z/up z/next z/sexpr #{:clj :cljs})) ;; list of imports inside reader macros
+               (not (some-> parent-node z/up reader-conditional-body?)) ;; inside reader conditionals
+               (not (some-> parent-node z/up z/up reader-conditional-body?)) ;; list of imports inside reader macros
                (> (count classes) 1))
         (sorting-package-import-classes parent-node clean-ctx import-loc base-package classes settings node)
         node))

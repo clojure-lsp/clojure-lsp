@@ -1041,34 +1041,44 @@
                  (not (zero? (count fn-calls)))
                  (not (validate-all-arg-counts db uri fn-calls args)))))))))
 
-(defn ^:private extract-to-def-params [zloc]
+(defn ^:private extract-to-def-params [zloc uri db]
   ;; the expression that will be extracted
   (when-let [zloc (or (z/skip-whitespace z/right zloc)
                       (z/skip-whitespace z/up zloc))]
     ;; the top-level form it will be extracted from (possibly the same as zloc)
     (when-let [form-loc (edit/to-top zloc)]
       {:zloc zloc
-       :form-loc form-loc})))
+       :form-loc form-loc
+       ;; A top-level def can't reference locals bound outside the expression.
+       ;; In .cljc files each local has one usage per language, so dedupe the names.
+       :outside-locals (->> (q/find-local-usages-defined-outside-form db uri (meta (z/node zloc)))
+                            (map :name)
+                            (distinct))})))
 
-(defn can-extract-to-def? [zloc]
-  (boolean (extract-to-def-params zloc)))
+(defn can-extract-to-def? [zloc uri db]
+  (let [{:keys [form-loc outside-locals]} (extract-to-def-params zloc uri db)]
+    (boolean (and form-loc (empty? outside-locals)))))
 
-(defn extract-to-def [zloc def-name db]
-  (when-let [{:keys [zloc form-loc]} (extract-to-def-params zloc)]
-    (let [expr-node (z/node zloc)
-          expr-meta (meta expr-node)
+(defn extract-to-def [zloc uri def-name db]
+  (when-let [{:keys [zloc form-loc outside-locals]} (extract-to-def-params zloc uri db)]
+    (if (seq outside-locals)
+      {:error {:message (str "Can't extract to def, expression uses locals: "
+                             (string/join ", " outside-locals))
+               :code :invalid-params}}
+      (let [expr-node (z/node zloc)
+            expr-meta (meta expr-node)
 
-          def-name (or def-name "new-value")
-          private? (settings/get db [:private-by-default-on-extract?] true)
-          expr-edit (z/of-node (symbol def-name))
-          def-loc (-> (if private?
-                        (format "(def ^:private %s\n  )" def-name)
-                        (format "(def %s\n  )" def-name))
-                      z/of-string
-                      (z/append-child* expr-node))]
-      [(prepend-preserving-comment form-loc def-loc)
-       {:loc   expr-edit
-        :range expr-meta}])))
+            def-name (or def-name "new-value")
+            private? (settings/get db [:private-by-default-on-extract?] true)
+            expr-edit (z/of-node (symbol def-name))
+            def-loc (-> (if private?
+                          (format "(def ^:private %s\n  )" def-name)
+                          (format "(def %s\n  )" def-name))
+                        z/of-string
+                        (z/append-child* expr-node))]
+        [(prepend-preserving-comment form-loc def-loc)
+         {:loc   expr-edit
+          :range expr-meta}]))))
 
 (defn ^:private replace-sexprs [zloc replacements]
   (z/prewalk zloc z/sexpr-able?

@@ -87,8 +87,8 @@
 (defmethod run-command :inline-function [{:keys [loc uri args db]}]
   (apply r.transform/inline-function loc uri (concat args [db])))
 
-(defmethod run-command :extract-to-def [{:keys [loc args db]}]
-  (apply r.transform/extract-to-def loc (concat args [db])))
+(defmethod run-command :extract-to-def [{:keys [loc uri args db]}]
+  (apply r.transform/extract-to-def loc uri (concat args [db])))
 
 (defmethod run-command :get-in-more [{:keys [loc]}]
   (f.thread-get/get-in-more loc))

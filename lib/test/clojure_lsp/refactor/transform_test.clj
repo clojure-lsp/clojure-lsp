@@ -2420,9 +2420,11 @@
                result))))))
 
 (defn- extract-to-def
-  [code new-def-name]
-  (let [zloc (h/zloc-from-code code)]
-    (transform/extract-to-def zloc new-def-name (h/db))))
+  ([code new-def-name] (extract-to-def code new-def-name h/default-uri))
+  ([code new-def-name filepath]
+   (let [uri (h/file-uri filepath)
+         zloc (h/load-code-and-zloc code uri)]
+     (transform/extract-to-def zloc uri new-def-name (h/db)))))
 
 (deftest extract-to-def-test
   (h/reset-components!)
@@ -2453,6 +2455,42 @@
             (h/code "foo")]
            (-> "|{:a 1}"
                (extract-to-def "foo")
+               as-strings))))
+  (testing "when the expression uses locals bound outside it"
+    (testing "refuses, naming the locals"
+      (h/reset-components!)
+      (is (= {:error {:message "Can't extract to def, expression uses locals: x, y"
+                      :code :invalid-params}}
+             (extract-to-def (h/code "(defn f [x]"
+                                     "  (let [y 2]"
+                                     "    (+ |(* x y) 1)))")
+                             "xy"))))
+    (testing "on a bare local"
+      (h/reset-components!)
+      (is (= {:error {:message "Can't extract to def, expression uses locals: x"
+                      :code :invalid-params}}
+             (extract-to-def (h/code "(defn f [x]"
+                                     "  (inc |x))")
+                             "foo"))))
+    (testing "in a cljc file, names each local once"
+      (h/reset-components!)
+      (is (= {:error {:message "Can't extract to def, expression uses locals: x, y"
+                      :code :invalid-params}}
+             (extract-to-def (h/code "(defn f [x]"
+                                     "  (let [y 2]"
+                                     "    (+ |(* x y) 1)))")
+                             "xy"
+                             "file:///a.cljc")))))
+  (testing "when the expression only uses locals it binds itself"
+    (h/reset-components!)
+    (is (= [(h/code ""
+                    "(def ^:private inc-all"
+                    "  (fn [a] (inc a)))"
+                    "")
+            (h/code "inc-all")]
+           (-> (h/code "(defn f [xs]"
+                       "  (map |(fn [a] (inc a)) xs))")
+               (extract-to-def "inc-all")
                as-strings)))))
 
 (deftest can-create-test?

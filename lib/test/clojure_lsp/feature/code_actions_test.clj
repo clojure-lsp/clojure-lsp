@@ -775,7 +775,29 @@
                         1
                         1
                         [] {}
-                        (h/db))))
+                        (h/db)))
+  (testing "inside a function"
+    (let [[[locals-row locals-col] [literal-row literal-col]]
+          (h/load-code-and-locs (h/code "(defn f [x]"
+                                        "  (let [y 2]"
+                                        "    (+ |(* x y) |1)))")
+                                (h/file-uri "file:///b.clj"))]
+      (testing "when the expression uses locals bound outside it, don't show extract-to-def"
+        (is (not-any? #(= (:title %) "Extract to def")
+                      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                          (h/file-uri "file:///b.clj")
+                                          locals-row locals-col
+                                          [] {}
+                                          (h/db)))))
+      (testing "when the expression doesn't use outside locals, show extract-to-def"
+        (h/assert-contains-submaps
+          [{:title "Extract to def"
+            :command {:command "extract-to-def"}}]
+          (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                              (h/file-uri "file:///b.clj")
+                              literal-row literal-col
+                              [] {}
+                              (h/db)))))))
 
 (deftest create-private-function-code-action
   (h/load-code-and-locs (h/code "(ns some-ns)"

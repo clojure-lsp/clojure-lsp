@@ -15,6 +15,7 @@
 - Fix `clean-ns` failing on `:import` reader conditionals whose first feature is not `:clj` or `:cljs`, like `#?(:bb ... :clj ...)`. #2496
 - Fix `promote-fn` passing each local the `fn` closes over twice to the new `defn` in `.cljc` files. #2498
 - Fix namespace rename (`workspace/willRenameFiles`) not updating fully qualified usages of its vars, like `my.ns/foo`. #2499
+- Fix `extract-to-def` moving an expression that uses locals to a top-level def that can't resolve them: the code action is no longer offered for it and the command returns an error naming the locals. #2500
 
 ## 2026.10.15-11.42.38
 

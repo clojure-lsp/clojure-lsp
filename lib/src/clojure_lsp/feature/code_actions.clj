@@ -476,7 +476,7 @@
          can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
          near-if?* (future (r.transform/near-if? zloc))
          near-cond?* (future (r.transform/near-cond? zloc))
-         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
+         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc uri db))
          inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
          cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
          cycle-namespaced-map-status* (future (f.cycle-namespaced-map/cycle-namespaced-map-status zloc))

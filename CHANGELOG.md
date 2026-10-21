@@ -6,6 +6,8 @@
 - Fix completion for auto-resolved keywords: `::foo`. #2488
 - Add `backward-sexp-or-up` and `forward-sexp-or-up` Paredit commands.
 - Fix `move-form` removing the source namespace require from files that still use other vars of it through its alias. #1444
+- Fix `move-form` when the destination already uses the moved var: unqualify its usages instead of inserting a stray symbol at the start of the file, drop the source require it no longer needs and place the form before its first usage. Refuse the move when source and destination would require each other. #2494
+- Fix `move-form` removing the source namespace require from files that still use its alias in keywords, like `::a/foo`.
 - Fix `clean-ns` failing on a `:require` or `:import` without libspecs.
 
 ## 2026.10.15-11.42.38

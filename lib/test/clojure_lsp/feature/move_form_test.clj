@@ -227,4 +227,210 @@
         (is (= (:result c-code)
                (h/changes-by-uri->code results c-uri (h/db))))
         (is (= (:result d-code)
-               (h/changes-by-uri->code results d-uri (h/db))))))))
+               (h/changes-by-uri->code results d-uri (h/db)))))))
+
+  ;; https://github.com/clojure-lsp/clojure-lsp/issues/2494
+  (let [a-code {:initial (h/code "(ns apple)"
+                                 ""
+                                 "|(defn area [w h] (* w h))"
+                                 ""
+                                 "(defn other [] 1)")
+                :result (h/code "(ns apple)"
+                                ""
+                                "(defn other [] 1)")}
+        b-code {:initial (h/code "(ns bread"
+                                 "  (:require"
+                                 "   [apple :as a]))"
+                                 ""
+                                 "(defn box [] (a/area 2 3))")
+                :result (h/code "(ns bread)"
+                                ""
+                                "(defn area [w h] (* w h))"
+                                ""
+                                "(defn box [] (area 2 3))")}]
+    (testing "destination already using the moved var through the source alias"
+      (h/reset-components!)
+      (let [a-uri (h/file-uri "file:///a.clj")
+            b-uri (h/file-uri "file:///b.clj")
+            zloc (h/load-code-and-zloc (:initial a-code) a-uri)
+            _ (h/load-code-and-locs (:initial b-code) b-uri)
+            results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+        (is (= (:result a-code)
+               (h/changes-by-uri->code results a-uri (h/db))))
+        (is (= (:result b-code)
+               (h/changes-by-uri->code results b-uri (h/db))))))
+
+    (testing "destination already using the moved var through the source alias cljc"
+      (h/reset-components!)
+      (let [a-uri (h/file-uri "file:///a.cljc")
+            b-uri (h/file-uri "file:///b.cljc")
+            zloc (h/load-code-and-zloc (:initial a-code) a-uri)
+            _ (h/load-code-and-locs (:initial b-code) b-uri)
+            results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.cljc")))]
+        (is (= (:result a-code)
+               (h/changes-by-uri->code results a-uri (h/db))))
+        (is (= (:result b-code)
+               (h/changes-by-uri->code results b-uri (h/db)))))))
+
+  (testing "destination drops the source require when the source still uses the moved var"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})
+    (let [a-uri (h/file-uri "file:///a.clj")
+          b-uri (h/file-uri "file:///b.clj")
+          zloc (h/load-code-and-zloc (h/code "(ns apple)"
+                                             ""
+                                             "|(defn area [w h] (* w h))"
+                                             ""
+                                             "(defn square [x] (area x x))")
+                                     a-uri)
+          _ (h/load-code-and-locs (h/code "(ns bread"
+                                          "  (:require"
+                                          "   [apple :as a]))"
+                                          ""
+                                          "(defn box [] (a/area 2 3))")
+                                  b-uri)
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+      (is (= (h/code "(ns apple "
+                     "  (:require"
+                     "   [bread]))"
+                     ""
+                     "(defn square [x] (bread/area x x))")
+             (h/changes-by-uri->code results a-uri (h/db))))
+      (is (= (h/code "(ns bread)"
+                     ""
+                     "(defn area [w h] (* w h))"
+                     ""
+                     "(defn box [] (area 2 3))")
+             (h/changes-by-uri->code results b-uri (h/db))))))
+
+  (testing "destination keeps the source require when still using other source vars"
+    (h/reset-components!)
+    (let [a-uri (h/file-uri "file:///a.clj")
+          b-uri (h/file-uri "file:///b.clj")
+          zloc (h/load-code-and-zloc (h/code "(ns apple)"
+                                             "|(defn area [w h] (* w h))"
+                                             "(defn other [] 1)")
+                                     a-uri)
+          _ (h/load-code-and-locs (h/code "(ns bread (:require [apple :as a]))"
+                                          "(defn box [] (a/area 2 (a/other)))")
+                                  b-uri)
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+      (is (= (h/code "(ns apple)"
+                     "(defn other [] 1)")
+             (h/changes-by-uri->code results a-uri (h/db))))
+      (is (= (h/code "(ns bread (:require [apple :as a]))"
+                     ""
+                     "(defn area [w h] (* w h))"
+                     "(defn box [] (area 2 (a/other)))")
+             (h/changes-by-uri->code results b-uri (h/db))))))
+
+  (testing "destination referring the moved var drops the source require"
+    (h/reset-components!)
+    (let [a-uri (h/file-uri "file:///a.clj")
+          b-uri (h/file-uri "file:///b.clj")
+          zloc (h/load-code-and-zloc (h/code "(ns apple)"
+                                             "|(defn area [w h] (* w h))"
+                                             "(defn other [] 1)")
+                                     a-uri)
+          _ (h/load-code-and-locs (h/code "(ns bread (:require [apple :refer [area]]))"
+                                          "(defn box [] (area 2 3))")
+                                  b-uri)
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+      (is (= (h/code "(ns bread)"
+                     ""
+                     "(defn area [w h] (* w h))"
+                     "(defn box [] (area 2 3))")
+             (h/changes-by-uri->code results b-uri (h/db))))))
+
+  (testing "destination referring the moved var drops the refer when still using other source vars"
+    (h/reset-components!)
+    (let [a-uri (h/file-uri "file:///a.clj")
+          b-uri (h/file-uri "file:///b.clj")
+          zloc (h/load-code-and-zloc (h/code "(ns apple)"
+                                             "|(defn area [w h] (* w h))"
+                                             "(defn other [] 1)")
+                                     a-uri)
+          _ (h/load-code-and-locs (h/code "(ns bread (:require [apple :as a :refer [area]]))"
+                                          "(defn box [] (area 2 (a/other)))")
+                                  b-uri)
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+      (is (= (h/code "(ns bread (:require [apple :as a]))"
+                     ""
+                     "(defn area [w h] (* w h))"
+                     "(defn box [] (area 2 (a/other)))")
+             (h/changes-by-uri->code results b-uri (h/db))))))
+
+  (testing "destination gets the moved form before its first usage, keeping comments"
+    (h/reset-components!)
+    (let [a-uri (h/file-uri "file:///a.clj")
+          b-uri (h/file-uri "file:///b.clj")
+          zloc (h/load-code-and-zloc (h/code "(ns apple)"
+                                             "|(defn area [w h] (* w h))")
+                                     a-uri)
+          _ (h/load-code-and-locs (h/code "(ns bread (:require [apple :as a]))"
+                                          ""
+                                          "(def x 1)"
+                                          ""
+                                          ";; Box helper"
+                                          "(defn box [] (a/area 2 3))"
+                                          ""
+                                          "(defn crate [] (a/area 4 5))")
+                                  b-uri)
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+      (is (= (h/code "(ns bread)"
+                     ""
+                     "(def x 1)"
+                     ""
+                     "(defn area [w h] (* w h))"
+                     ""
+                     ";; Box helper"
+                     "(defn box [] (area 2 3))"
+                     ""
+                     "(defn crate [] (area 4 5))")
+             (h/changes-by-uri->code results b-uri (h/db))))))
+
+  (testing "destination keeps the source require when still using its alias in keywords"
+    (doseq [keyword-code ["(def m {::a/id 1})"
+                          "(def m #::a{:id 1})"]]
+      (h/reset-components!)
+      (let [a-uri (h/file-uri "file:///a.clj")
+            b-uri (h/file-uri "file:///b.clj")
+            zloc (h/load-code-and-zloc (h/code "(ns apple)"
+                                               "|(defn area [w h] (* w h))")
+                                       a-uri)
+            _ (h/load-code-and-locs (h/code "(ns bread (:require [apple :as a]))"
+                                            "(defn box [] (a/area 2 3))"
+                                            keyword-code)
+                                    b-uri)
+            results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+        (is (= (h/code "(ns bread (:require [apple :as a]))"
+                       ""
+                       "(defn area [w h] (* w h))"
+                       "(defn box [] (area 2 3))"
+                       keyword-code)
+               (h/changes-by-uri->code results b-uri (h/db)))
+            keyword-code))))
+
+  (testing "refuses to move when source and destination would require each other"
+    (doseq [dest-code [;; still uses other source vars
+                       (h/code "(ns bread (:require [apple :as a]))"
+                               "(defn box [] (a/area 2 (a/other)))")
+                       ;; still uses the source alias in keywords
+                       (h/code "(ns bread (:require [apple :as a]))"
+                               "(defn box [] {::a/id (a/area 2 3)})")
+                       ;; doesn't use the moved var, so its ns isn't touched
+                       (h/code "(ns bread (:require [apple :as a]))"
+                               "(defn box [] (a/other))")]]
+      (h/reset-components!)
+      (let [a-uri (h/file-uri "file:///a.clj")
+            b-uri (h/file-uri "file:///b.clj")
+            zloc (h/load-code-and-zloc (h/code "(ns apple)"
+                                               "|(defn area [w h] (* w h))"
+                                               "(defn other [] 1)"
+                                               "(defn square [x] (area x x))")
+                                       a-uri)
+            _ (h/load-code-and-locs dest-code b-uri)]
+        (is (= {:error {:message "Can't move area to bread: apple still uses it and bread requires apple, which would create a circular dependency."
+                        :code :invalid-request}}
+               (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))
+            dest-code)))))

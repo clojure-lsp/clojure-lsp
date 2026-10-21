@@ -39,8 +39,11 @@
                                           (not= (:name %) (:name def-to-move)))
                                     (:var-usages local-buckets))
 
+        ;; Any remaining usage of source-ns, whether through an alias, a refer
+        ;; or fully qualified, still needs the source require. Var-usages
+        ;; flagged `:refer` are the symbols inside the ns `:refer [...]` vector,
+        ;; not usages in code, so they are excluded.
         other-source-usages (filter #(and (not (:refer %))
-                                          (not (:alias %))
                                           (= (:to %) source-ns)
                                           (not= (:name %) (:name def-to-move)))
                                     (:var-usages local-buckets))

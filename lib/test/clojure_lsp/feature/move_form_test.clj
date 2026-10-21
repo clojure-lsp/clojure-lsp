@@ -163,4 +163,68 @@
         (is (= (:result e-code)
                e-results))
         (is (= (:result f-code)
-               f-results))))))
+               f-results)))))
+
+  ;; https://github.com/clojure-lsp/clojure-lsp/issues/1444
+  (let [a-code {:initial (h/code "(ns apple)"
+                                 "|(def bar 1)"
+                                 "(def qux 2)")
+                :result (h/code "(ns apple)"
+                                "(def qux 2)")}
+        b-code {:initial (h/code "(ns bread)")
+                :result (h/code "(ns bread)"
+                                ""
+                                "(def bar 1)")}
+        c-code {:initial (h/code "(ns crumb (:require [apple :as a]))"
+                                 "(a/bar 1)"
+                                 "(a/qux 2)")
+                :result (h/code "(ns crumb (:require [apple :as a]"
+                                "                    [bread]))"
+                                "(bread/bar 1)"
+                                "(a/qux 2)")}
+        d-code {:initial (h/code "(ns diner (:require [apple :as a :refer [bar]]))"
+                                 "(bar 1)"
+                                 "(a/qux 2)")
+                :result (h/code "(ns diner (:require [apple :as a]"
+                                "                    [bread :refer [bar]]))"
+                                "(bar 1)"
+                                "(a/qux 2)")}]
+    (testing "keeps source require when other source vars are used via alias"
+      (h/reset-components!)
+      (let [a-uri (h/file-uri "file:///a.clj")
+            b-uri (h/file-uri "file:///b.clj")
+            c-uri (h/file-uri "file:///c.clj")
+            d-uri (h/file-uri "file:///d.clj")
+            zloc (h/load-code-and-zloc (:initial a-code) a-uri)
+            _ (h/load-code-and-locs (:initial b-code) b-uri)
+            _ (h/load-code-and-locs (:initial c-code) c-uri)
+            _ (h/load-code-and-locs (:initial d-code) d-uri)
+            results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+        (is (= (:result a-code)
+               (h/changes-by-uri->code results a-uri (h/db))))
+        (is (= (:result b-code)
+               (h/changes-by-uri->code results b-uri (h/db))))
+        (is (= (:result c-code)
+               (h/changes-by-uri->code results c-uri (h/db))))
+        (is (= (:result d-code)
+               (h/changes-by-uri->code results d-uri (h/db))))))
+
+    (testing "keeps source require when other source vars are used via alias cljc"
+      (h/reset-components!)
+      (let [a-uri (h/file-uri "file:///a.cljc")
+            b-uri (h/file-uri "file:///b.cljc")
+            c-uri (h/file-uri "file:///c.cljc")
+            d-uri (h/file-uri "file:///d.cljc")
+            zloc (h/load-code-and-zloc (:initial a-code) a-uri)
+            _ (h/load-code-and-locs (:initial b-code) b-uri)
+            _ (h/load-code-and-locs (:initial c-code) c-uri)
+            _ (h/load-code-and-locs (:initial d-code) d-uri)
+            results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.cljc")))]
+        (is (= (:result a-code)
+               (h/changes-by-uri->code results a-uri (h/db))))
+        (is (= (:result b-code)
+               (h/changes-by-uri->code results b-uri (h/db))))
+        (is (= (:result c-code)
+               (h/changes-by-uri->code results c-uri (h/db))))
+        (is (= (:result d-code)
+               (h/changes-by-uri->code results d-uri (h/db))))))))

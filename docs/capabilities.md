@@ -96,7 +96,7 @@ All commands expect the first three args to be `[document-uri, line, character]`
 
 | done | command             | args                                                                      | notes |
 |------|---------------------|---------------------------------------------------------------------------|-------|
-| √    | add-missing-import  | `[document-uri, line, character, import-name]`                            |       |
+| √    | add-missing-import  | `[document-uri, line, character[, import-name]]`                          | Without `import-name`, imports the class under the cursor if found in the analysis. |
 | √    | add-missing-libspec |                                                                           |       |
 | √    | as-to-refer         |                                                                           |       |
 | √    | clean-ns            |                                                                           |       |

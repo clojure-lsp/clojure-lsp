@@ -449,3 +449,43 @@
                [{:old-uri old-uri
                  :new-uri new-uri}]
                (h/db)))))))
+
+(deftest analyze-reference-uris
+  (let [project-dir (fs/canonicalize (fs/create-temp-dir {:prefix "clojure-lsp-reference-uris"}))
+        src-dir (fs/create-dirs (fs/path project-dir "src"))
+        _ (fs/create-dirs (fs/path project-dir ".clj-kondo"))
+        a-file (fs/file src-dir "a.clj")
+        b-file (fs/file src-dir "b.clj")
+        c-file (fs/file src-dir "c.clj")]
+    (try
+      (swap! (h/db*) medley/deep-merge {:project-root-uri (shared/filename->uri (str project-dir) (h/db))
+                                        :settings {:source-paths #{(str src-dir)}}})
+      (let [a-uri (shared/filename->uri (str a-file) (h/db))
+            b-uri (shared/filename->uri (str b-file) (h/db))
+            c-uri (shared/filename->uri (str c-file) (h/db))
+            var-names (fn [uri]
+                        (into #{} (map :name) (get-in (h/db) [:analysis uri :var-definitions])))
+            kondo-finding-types (fn [uri]
+                                  (into #{} (map :type) (get-in (h/db) [:diagnostics :clj-kondo uri])))]
+        (spit a-file (h/code "(ns a)"
+                             "(defn foo [] 1)"))
+        (spit b-file (h/code "(ns b)"
+                             "(defn baz [] 1)"))
+        ;; a is open with unsaved changes, b is not open
+        (h/load-code (h/code "(ns a)"
+                             "(defn foo [] 1)"
+                             "(defn bar [x y] (+ x y))")
+                     a-uri)
+        (f.file-management/analyze-reference-uris! #{a-uri b-uri} (h/db*))
+        (testing "open documents are linted from their unsaved text"
+          (is (= '#{foo bar} (var-names a-uri))))
+        (testing "files that are not open are linted from disk"
+          (is (= '#{baz} (var-names b-uri))))
+        (testing "clj-kondo cache keeps the unsaved definitions of open documents"
+          (h/load-code (h/code "(ns c (:require [a]))"
+                               "(a/bar 1 2 3)")
+                       c-uri)
+          (is (= #{:invalid-arity} (kondo-finding-types c-uri))
+              "a/bar is known with its unsaved arity, so it's not reported as unresolved")))
+      (finally
+        (fs/delete-tree project-dir)))))

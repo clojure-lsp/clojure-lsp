@@ -133,11 +133,27 @@
                (or var-dependency-uris #{})
                (or kw-dependency-uris #{}))))
 
-(defn analyze-reference-uris! [uris db*]
-  (let [kondo-result (lsp.kondo/run-kondo-on-reference-uris! uris db*)]
+(defn analyze-reference-uris!
+  "Re-analyze `uris` with clj-kondo and the built-in linters.
+
+  Open documents are linted from their in-memory text, so their unsaved changes
+  are kept, both in the analysis and in clj-kondo's cache. The other files are
+  linted from disk in a single batch."
+  [uris db*]
+  (let [documents (:documents @db*)
+        open-uri->text (into {}
+                             (keep (fn [uri]
+                                     (when-let [text (get-in documents [uri :text])]
+                                       [uri text])))
+                             uris)
+        closed-uris (remove open-uri->text uris)
+        kondo-results (cond-> (mapv (fn [[uri text]]
+                                      (lsp.kondo/run-kondo-on-text! text uri db*))
+                                    open-uri->text)
+                        (seq closed-uris)
+                        (conj (lsp.kondo/run-kondo-on-reference-uris! closed-uris db*)))]
     (swap! db* (fn [state-db]
-                 (-> state-db
-                     (lsp.kondo/db-with-results kondo-result)
+                 (-> (reduce lsp.kondo/db-with-results state-db kondo-results)
                      (f.diagnostics.built-in/db-with-results #(f.diagnostics.built-in/analyze-uris! uris %)))))))
 
 (defn ^:private notify-references [uri db-before db-after {:keys [db* producer] :as components}]

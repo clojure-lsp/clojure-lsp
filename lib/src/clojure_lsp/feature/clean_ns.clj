@@ -47,6 +47,50 @@
           z/remove)
       new-node)))
 
+(defn ^:private reader-conditional-branch-value?
+  "Whether `zloc` is the value of a feature branch of a well-formed reader
+  conditional, e.g. `(:import ...)` in `#?(:clj (:import ...) :cljs (:require ...))`."
+  [zloc]
+  (when (and (fast= :reader-macro (some-> zloc z/up z/up z/tag))
+             (some-> zloc z/left z/node n/keyword-node?))
+    (let [node (z/node zloc)
+          forms (->> zloc z/up z/node n/children (remove n/printable-only?))]
+      (and (even? (count forms))
+           (odd? (count (take-while #(not (identical? node %)) forms)))))))
+
+(defn ^:private remove-reader-conditional-branch
+  "Removes the reader conditional branch whose value is at `zloc`, i.e. the value
+  and its feature keyword, removing the whole reader conditional when no other
+  branch is left."
+  [zloc]
+  ;; z/remove moves to the previous node, which is the feature keyword of the branch
+  (let [feature-loc (z/remove zloc)]
+    (if (or (z/left feature-loc)
+            (z/right feature-loc))
+      (z/remove feature-loc)
+      (-> feature-loc z/up z/up z/remove))))
+
+(defn ^:private remove-and-clean-reader-conditional
+  "Like `z/remove`, but keeps reader conditionals valid: when the node is the value
+  of a reader conditional branch, or the only form of a splicing reader conditional
+  branch, removes the whole branch, feature keyword included, and the reader
+  conditional itself when no other branch is left."
+  [zloc]
+  (cond
+    (reader-conditional-branch-value? zloc)
+    (remove-reader-conditional-branch zloc)
+
+    ;; e.g. `(:import ...)` in `#?@(:clj [(:import ...)] :cljs [...])`
+    (and (some-> zloc z/up z/vector?)
+         (not (z/left zloc))
+         (not (z/right zloc))
+         (fast= "?@" (some-> zloc z/up z/up z/up z/down z/string))
+         (reader-conditional-branch-value? (z/up zloc)))
+    (remove-reader-conditional-branch (z/up zloc))
+
+    :else
+    (z/remove zloc)))
+
 (defn ^:private find-after-libspec-comment
   "look for comment to the right of the libspec 'node' on the same line"
   [require-nodes idx libspec-node]
@@ -232,7 +276,7 @@
       (z/subedit-> ns-loc
                    (z/find-value z/next form-type)
                    (z/up)
-                   z/remove)
+                   remove-and-clean-reader-conditional)
       (z/subedit-> ns-loc
                    (z/find-value z/next form-type)
                    (z/up)
@@ -305,7 +349,7 @@
                         z/remove)]
         (if (> (count (z/child-sexprs (z/up ns-only))) 1)
           ns-only
-          (z/remove (z/up ns-only))))
+          (remove-and-clean-reader-conditional (z/up ns-only))))
       (-> node
           z/down
           (z/find-next-value ':refer)
@@ -362,7 +406,7 @@
   (-> libspec-zloc
       (remove-same-line-comment)
       (remove-interstitial-nodes)
-      z/remove))
+      remove-and-clean-reader-conditional))
 
 (defn ^:private remove-unused-duplicate-requires
   [node {:keys [uri db]}]

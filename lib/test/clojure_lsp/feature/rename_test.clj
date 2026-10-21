@@ -215,9 +215,13 @@
               :settings {:source-paths #{(h/file-path "/my-project/src") (h/file-path "/my-project/test")}}
               :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
       (h/load-code-and-locs (h/code "(ns foo.bar-baz (:require [clojure.spec.alpha :as s]))"
-                                    "(s/def ::foo 1)") (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
+                                    "(s/def ::foo 1)"
+                                    "(defn bar [])") (h/file-uri "file:///my-project/src/foo/bar_baz.clj"))
+      ;; Clients like Emacs and Calva send willRenameFiles when applying the
+      ;; rename file change, so any edit returned here would be applied twice.
       (h/load-code-and-locs (h/code "(ns foo.qux (:require [foo.bar-baz :as f]))"
-                                    ":foo.bar-baz/foo") (h/file-uri "file:///my-project/src/foo/qux.clj"))
+                                    ":foo.bar-baz/foo"
+                                    "(foo.bar-baz/bar)") (h/file-uri "file:///my-project/src/foo/qux.clj"))
       (is (= {:document-changes
               [{:kind "rename"
                 :old-uri (h/file-uri "file:///my-project/src/foo/bar_baz.clj")

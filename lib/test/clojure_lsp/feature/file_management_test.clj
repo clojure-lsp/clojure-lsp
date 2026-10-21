@@ -386,4 +386,66 @@
                (f.file-management/will-rename-files
                  [{:old-uri old-uri
                    :new-uri new-uri}]
-                 db)))))))
+                 db))))))
+  (testing "when other files use the namespace vars fully qualified"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+
+    (let [old-uri (h/file-uri "file:///user/project/src/my/ns.clj")
+          new-uri (h/file-uri "file:///user/project/src/my/new/ns.clj")
+          user-uri (h/file-uri "file:///user/project/src/my/user.clj")]
+      (h/load-code (h/code "(ns my.ns)"
+                           "(defn area [w h] (* w h))") old-uri)
+      (h/load-code (h/code "(ns my.user"
+                           "  (:require [my.ns :as s]))"
+                           "(s/area 1 2)"
+                           "(my.ns/area 5 6)") user-uri)
+      (is (= {:document-changes
+              [{:text-document {:version 0, :uri old-uri},
+                :edits
+                [{:range {:start {:line 0, :character 4}, :end {:line 0, :character 9}},
+                  :new-text "my.new.ns"}]}
+               {:text-document {:version 0, :uri user-uri},
+                :edits
+                [{:range {:start {:line 1, :character 13}, :end {:line 1, :character 18}},
+                  :new-text "my.new.ns"}
+                 {:range {:start {:line 3, :character 1}, :end {:line 3, :character 6}},
+                  :new-text "my.new.ns"}]}]}
+             (f.file-management/will-rename-files
+               [{:old-uri old-uri
+                 :new-uri new-uri}]
+               (h/db))))))
+  (testing "when other cljc files use the namespace vars fully qualified"
+    ;; cljc files are analyzed for each lang, but each usage must be edited once,
+    ;; as clients reject or double apply overlapping edits
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+
+    (let [old-uri (h/file-uri "file:///user/project/src/my/ns.cljc")
+          new-uri (h/file-uri "file:///user/project/src/my/new/ns.cljc")
+          user-uri (h/file-uri "file:///user/project/src/my/user.cljc")]
+      (h/load-code (h/code "(ns my.ns)"
+                           "(defn area [w h] (* w h))") old-uri)
+      (h/load-code (h/code "(ns my.user"
+                           "  (:require [my.ns :as s]))"
+                           "(s/area 1 2)"
+                           "(my.ns/area 5 6)") user-uri)
+      (is (= {:document-changes
+              [{:text-document {:version 0, :uri old-uri},
+                :edits
+                [{:range {:start {:line 0, :character 4}, :end {:line 0, :character 9}},
+                  :new-text "my.new.ns"}]}
+               {:text-document {:version 0, :uri user-uri},
+                :edits
+                [{:range {:start {:line 1, :character 13}, :end {:line 1, :character 18}},
+                  :new-text "my.new.ns"}
+                 {:range {:start {:line 3, :character 1}, :end {:line 3, :character 6}},
+                  :new-text "my.new.ns"}]}]}
+             (f.file-management/will-rename-files
+               [{:old-uri old-uri
+                 :new-uri new-uri}]
+               (h/db)))))))

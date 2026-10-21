@@ -8,6 +8,7 @@
 - Fix `move-form` removing the source namespace require from files that still use other vars of it through its alias. #1444
 - Fix `move-form` when the destination already uses the moved var: unqualify its usages instead of inserting a stray symbol at the start of the file, drop the source require it no longer needs and place the form before its first usage. Refuse the move when source and destination would require each other. #2494
 - Fix `move-form` removing the source namespace require from files that still use its alias in keywords, like `::a/foo`.
+- Fix `move-form` removing requires from the files using the moved var when they were unused in the source file.
 - Fix `clean-ns` failing on a `:require` or `:import` without libspecs.
 
 ## 2026.10.15-11.42.38

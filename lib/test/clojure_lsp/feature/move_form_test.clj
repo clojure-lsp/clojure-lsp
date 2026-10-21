@@ -433,4 +433,24 @@
         (is (= {:error {:message "Can't move area to bread: apple still uses it and bread requires apple, which would create a circular dependency."
                         :code :invalid-request}}
                (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))
-            dest-code)))))
+            dest-code))))
+
+  (testing "other files keep their requires unused in the source"
+    (h/reset-components!)
+    (let [a-uri (h/file-uri "file:///a.clj")
+          b-uri (h/file-uri "file:///b.clj")
+          c-uri (h/file-uri "file:///c.clj")
+          zloc (h/load-code-and-zloc (h/code "(ns apple (:require [clojure.string :as str]))"
+                                             "|(def bar 1)")
+                                     a-uri)
+          _ (h/load-code-and-locs (h/code "(ns bread)") b-uri)
+          _ (h/load-code-and-locs (h/code "(ns crumb (:require [apple :as a] [clojure.string :as str]))"
+                                          "(a/bar 1)"
+                                          "(str/join [])")
+                                  c-uri)
+          results (:changes-by-uri (move-form/move-form zloc a-uri (h/components) (h/file-path "/b.clj")))]
+      (is (= (h/code "(ns crumb (:require [bread]"
+                     "                    [clojure.string :as str]))"
+                     "(bread/bar 1)"
+                     "(str/join [])")
+             (h/changes-by-uri->code results c-uri (h/db)))))))

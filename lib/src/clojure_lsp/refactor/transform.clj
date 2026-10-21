@@ -1240,8 +1240,10 @@
                            (z/right)))
         ;; Prepend locals to param lists.
         ;; We prepend because it works whether replacing with `partial` or `#()`.
+        ;; In .cljc files each local has one usage per language, so dedupe the names.
         used-locals (->> (q/find-local-usages-defined-outside-form db uri fn-form-meta)
-                         (map :name))
+                         (map :name)
+                         (distinct))
         add-locals (fn [zloc]
                      ;; Navigate to the params node and prepend all the locals.
                      (reduce (fn [params-zloc used-local]

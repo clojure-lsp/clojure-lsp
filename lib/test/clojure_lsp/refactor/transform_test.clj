@@ -517,8 +517,10 @@
 
 (defn promote-fn
   ([code] (promote-fn code nil))
-  ([code provided-name]
-   (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri (h/db) provided-name))))
+  ([code provided-name] (promote-fn code provided-name h/default-uri))
+  ([code provided-name filepath]
+   (let [uri (h/file-uri filepath)]
+     (as-strings (transform/promote-fn (h/load-code-and-zloc code uri) uri (h/db) provided-name)))))
 
 (deftest promote-fn-test
   (testing "literal to fn"
@@ -588,6 +590,21 @@
       "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"    "(let [a 1] |(fn [element & args] (+ 1 a element args)))"
       ;; multi-arity
       "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"   "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"))
+  (testing "fn to defn with locals in clj, cljc and cljs files"
+    (are [filepath]
+         (do (h/reset-components!)
+             (= ["\n(defn- new-function [a b x] (+ 1 x a b b))\n" "#(new-function a b %1)"]
+                (promote-fn "(let [a 1 b 2] |(fn [x] (+ 1 x a b b)))" nil filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs")
+    (are [filepath]
+         (do (h/reset-components!)
+             (= ["\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"]
+                (promote-fn "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))" nil filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
   (testing "naming"
     (h/reset-components!)
     ;; previously named fn

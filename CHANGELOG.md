@@ -13,6 +13,7 @@
 - Fix `clean-ns` failing on a `:require` or `:import` without libspecs.
 - Fix `clean-ns` leaving a dangling feature keyword in reader conditionals when removing all the requires/imports of a branch. #2497
 - Fix `clean-ns` failing on `:import` reader conditionals whose first feature is not `:clj` or `:cljs`, like `#?(:bb ... :clj ...)`. #2496
+- Fix `promote-fn` passing each local the `fn` closes over twice to the new `defn` in `.cljc` files. #2498
 
 ## 2026.10.15-11.42.38
 

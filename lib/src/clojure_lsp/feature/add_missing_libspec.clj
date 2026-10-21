@@ -217,11 +217,15 @@
       (let [add-form-type? (not (z/find-value ns-zip z/next libspec-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next libspec-type)
             ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
-            col (if form-type-loc
-                  (-> form-type-loc z/rightmost z/node meta :col)
-                  (if (fast= :same-line ns-inner-blocks-indentation)
-                    2
-                    5))
+            ;; Nodes added by previous edits have no position, like when
+            ;; adding several libspecs to the same ns
+            col (or (some->> (some-> form-type-loc z/rightmost)
+                             (iterate z/left)
+                             (take-while some?)
+                             (some #(-> % z/node meta :col)))
+                    (if (fast= :same-line ns-inner-blocks-indentation)
+                      2
+                      5))
             {:keys [result-loc existing-import-package-by-full-package]}
             (modified-existing-libform ns-zip form-type-loc lib-sym refer-sym alias-sym class-sym)
             form-to-add (cond

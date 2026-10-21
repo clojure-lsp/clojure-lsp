@@ -316,6 +316,11 @@
           (mapcat #(ns-uris db %))
           (ms-distinct dependents))))
 
+(defn ns-depends-on?
+  "Whether `namespace` requires `dependency` directly."
+  [{:keys [dep-graph]} namespace dependency]
+  (contains? (get-in dep-graph [namespace :dependencies]) dependency))
+
 (defn ns-dependencies-uris [{:keys [dep-graph] :as db} namespace]
   (let [dependencies (get-in dep-graph [namespace :dependencies])]
     (into #{}

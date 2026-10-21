@@ -454,3 +454,236 @@
                      "(bread/bar 1)"
                      "(str/join [])")
              (h/changes-by-uri->code results c-uri (h/db)))))))
+
+(defn ^:private move-to-dest
+  "Moves the form at the `|` of `source-code` to `dest-code`, returning the
+  resulting code of both files, or the error. Other `files` can be given as
+  a map of filename to code."
+  [source-code dest-code & [{:keys [ext settings files] :or {ext "clj"}}]]
+  (h/reset-components!)
+  (when settings
+    (swap! (h/db*) shared/deep-merge {:settings settings}))
+  (doseq [[filename code] files]
+    (h/load-code-and-locs code (h/file-uri (str "file:///" filename))))
+  (let [source-uri (h/file-uri (str "file:///a." ext))
+        dest-uri (h/file-uri (str "file:///b." ext))
+        zloc (h/load-code-and-zloc source-code source-uri)
+        _ (h/load-code-and-locs dest-code dest-uri)
+        {:keys [changes-by-uri error]} (move-form/move-form zloc source-uri (h/components) (h/file-path (str "/b." ext)))]
+    (if error
+      {:error error}
+      {:source (h/changes-by-uri->code changes-by-uri source-uri (h/db))
+       :dest (h/changes-by-uri->code changes-by-uri dest-uri (h/db))})))
+
+;; https://github.com/clojure-lsp/clojure-lsp/issues/2495
+(deftest move-form-dependencies-test
+  (testing "adds the require of the libs the form uses through an alias"
+    (is (= (h/code "(ns bread "
+                   "  (:require"
+                   "   [clojure.string :as str]))"
+                   ""
+                   "(defn x [] 1)"
+                   ""
+                   "(defn shout [s] (str/upper-case s))")
+           (:dest (move-to-dest (h/code "(ns apple"
+                                        "  (:require"
+                                        "   [clojure.string :as str]))"
+                                        ""
+                                        "|(defn shout [s] (str/upper-case s))")
+                                (h/code "(ns bread)"
+                                        ""
+                                        "(defn x [] 1)")
+                                {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})))))
+
+  (testing "uses the alias the destination already has for the lib"
+    (is (= (h/code "(ns bread (:require [clojure.string :as string]))"
+                   "(defn x [] (string/join []))"
+                   ""
+                   "(defn shout [s] (string/upper-case s))")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.string :as str]))"
+                                        "|(defn shout [s] (str/upper-case s))")
+                                (h/code "(ns bread (:require [clojure.string :as string]))"
+                                        "(defn x [] (string/join []))"))))))
+
+  (testing "fully qualifies when the destination requires the lib without alias"
+    (is (= (h/code "(ns bread (:require [clojure.string]))"
+                   "(defn x [] (clojure.string/join []))"
+                   ""
+                   "(defn shout [s] (clojure.string/upper-case s))")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.string :as str]))"
+                                        "|(defn shout [s] (str/upper-case s))")
+                                (h/code "(ns bread (:require [clojure.string]))"
+                                        "(defn x [] (clojure.string/join []))"))))))
+
+  (testing "fully qualifies when the alias is taken in the destination"
+    (is (= (h/code "(ns bread (:require [clojure.string]"
+                   "                    [foo.str :as str]))"
+                   "(defn x [] (str/foo))"
+                   ""
+                   "(defn shout [s] (clojure.string/upper-case s))")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.string :as str]))"
+                                        "|(defn shout [s] (str/upper-case s))")
+                                (h/code "(ns bread (:require [foo.str :as str]))"
+                                        "(defn x [] (str/foo))"))))))
+
+  (testing "adds the refers the form uses"
+    (is (= (h/code "(ns bread "
+                   "  (:require"
+                   "   [clojure.string :refer [lower-case upper-case]]))"
+                   ""
+                   "(defn x [] 1)"
+                   ""
+                   "(defn shout [s] (upper-case (lower-case s)))")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.string :refer [lower-case upper-case]]))"
+                                        "|(defn shout [s] (upper-case (lower-case s)))")
+                                (h/code "(ns bread)"
+                                        ""
+                                        "(defn x [] 1)")
+                                {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})))))
+
+  (testing "adds the refers to the lib the destination already requires"
+    (is (= (h/code "(ns bread (:require [clojure.string :as string :refer [upper-case]]))"
+                   "(defn x [] (string/join []))"
+                   ""
+                   "(defn shout [s] (upper-case s))")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.string :refer [upper-case]]))"
+                                        "|(defn shout [s] (upper-case s))")
+                                (h/code "(ns bread (:require [clojure.string :as string]))"
+                                        "(defn x [] (string/join []))"))))))
+
+  (testing "qualifies the referred vars whose name is taken in the destination"
+    (is (= (h/code "(ns bread (:require [clojure.string :as string]))"
+                   "(defn upper-case [s] (string/join [s]))"
+                   ""
+                   "(defn shout [s] (string/upper-case s))")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.string :refer [upper-case]]))"
+                                        "|(defn shout [s] (upper-case s))")
+                                (h/code "(ns bread (:require [clojure.string :as string]))"
+                                        "(defn upper-case [s] (string/join [s]))"))))))
+
+  (testing "adds the require of the libs the form uses fully qualified"
+    (is (= (h/code "(ns bread "
+                   "  (:require"
+                   "   [clojure.set]))"
+                   ""
+                   "(defn x [] 1)"
+                   ""
+                   "(defn both [a b] (clojure.set/union a b))")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.set]))"
+                                        "|(defn both [a b] (clojure.set/union a b))")
+                                (h/code "(ns bread)"
+                                        ""
+                                        "(defn x [] 1)")
+                                {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})))))
+
+  (testing "adds the imports of the classes the form uses"
+    (is (= (h/code "(ns bread "
+                   "  (:import"
+                   "   [java.util Date UUID]))"
+                   ""
+                   "(defn x [] 1)"
+                   ""
+                   "(defn stamp ^Date [] [(Date.) (UUID/randomUUID) (java.io.File. \"f\")])")
+           (:dest (move-to-dest (h/code "(ns apple (:import [java.io File] [java.util Date UUID]))"
+                                        "|(defn stamp ^Date [] [(Date.) (UUID/randomUUID) (java.io.File. \"f\")])")
+                                (h/code "(ns bread)"
+                                        ""
+                                        "(defn x [] 1)")
+                                {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})))))
+
+  (testing "keeps the imports the destination already has"
+    (is (= (h/code "(ns bread (:import [java.util Date]))"
+                   "(defn x [] (Date.))"
+                   ""
+                   "(defn now [] (Date.))")
+           (:dest (move-to-dest (h/code "(ns apple (:import [java.util Date]))"
+                                        "|(defn now [] (Date.))")
+                                (h/code "(ns bread (:import [java.util Date]))"
+                                        "(defn x [] (Date.))"))))))
+
+  (testing "fully qualifies the classes whose name is taken in the destination"
+    (is (= (h/code "(ns bread (:import [java.sql Date]))"
+                   "(defn x [] (Date. 0))"
+                   ""
+                   "(defn now ^java.util.Date [] (java.util.Date.))")
+           (:dest (move-to-dest (h/code "(ns apple (:import [java.util Date]))"
+                                        "|(defn now ^Date [] (Date.))")
+                                (h/code "(ns bread (:import [java.sql Date]))"
+                                        "(defn x [] (Date. 0))"))))))
+
+  (testing "keeps the meaning of the auto-resolved keywords"
+    (is (= (h/code "(ns bread (:require [clojure.string :as string]))"
+                   "(defn x [] (string/join []))"
+                   ""
+                   "(defn ks [] [:apple/kw ::string/k :crumb/id ::own"
+                   "             #:apple{:a 1} #::string{:b 2} #:crumb{:c 3} #::{:d 4}"
+                   "             (string/join [])])")
+           (:dest (move-to-dest (h/code "(ns apple (:require [bread :as b] [clojure.string :as str] [crumb :as-alias c]))"
+                                        "|(defn ks [] [::kw ::str/k ::c/id ::b/own"
+                                        "             #::{:a 1} #::str{:b 2} #::c{:c 3} #::b{:d 4}"
+                                        "             (str/join [])])")
+                                (h/code "(ns bread (:require [clojure.string :as string]))"
+                                        "(defn x [] (string/join []))"))))))
+
+  (testing "keeps auto-resolved keywords using the alias added to the destination"
+    (is (= (h/code "(ns bread "
+                   "  (:require"
+                   "   [clojure.string :as str]))"
+                   ""
+                   "(defn x [] 1)"
+                   ""
+                   "(defn f [] [(str/join []) ::str/k])")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.string :as str]))"
+                                        "|(defn f [] [(str/join []) ::str/k])")
+                                (h/code "(ns bread)"
+                                        ""
+                                        "(defn x [] 1)")
+                                {:settings {:clean {:ns-inner-blocks-indentation :next-line}}})))))
+
+  (testing "adds the requires and imports the form uses in a single lang within reader conditionals"
+    (is (= (h/code "(ns bread "
+                   "  (:require"
+                   "   #?(:cljs [goog.string :as gstr])"
+                   "   [clojure.string :as str]) "
+                   "  (:import"
+                   "   #?(:clj [java.util Date])))"
+                   ""
+                   "(defn x [] 1)"
+                   ""
+                   "(defn shout [s]"
+                   "  #?(:clj (str (Date.) (str/upper-case s))"
+                   "     :cljs (gstr/format \"%s\" (str/upper-case s))))")
+           (:dest (move-to-dest (h/code "(ns apple"
+                                        "  (:require"
+                                        "   [clojure.string :as str]"
+                                        "   #?(:cljs [goog.string :as gstr]))"
+                                        "  #?(:clj (:import [java.util Date])))"
+                                        ""
+                                        "|(defn shout [s]"
+                                        "  #?(:clj (str (Date.) (str/upper-case s))"
+                                        "     :cljs (gstr/format \"%s\" (str/upper-case s))))")
+                                (h/code "(ns bread)"
+                                        ""
+                                        "(defn x [] 1)")
+                                {:ext "cljc"
+                                 :settings {:clean {:ns-inner-blocks-indentation :next-line}}})))))
+
+  (testing "adds the form requires while dropping the source one from the destination"
+    (is (= (h/code "(ns bread (:require [clojure.string :as str]))"
+                   ""
+                   "(defn area [w h] (str/join [w h]))"
+                   "(defn box [] (area 2 3))")
+           (:dest (move-to-dest (h/code "(ns apple (:require [clojure.string :as str]))"
+                                        "|(defn area [w h] (str/join [w h]))")
+                                (h/code "(ns bread (:require [apple :as a]))"
+                                        "(defn box [] (a/area 2 3))"))))))
+
+  (testing "refuses to move when a lib the form uses requires the destination"
+    (is (= {:error {:message "Can't move shout to bread: it uses crumb, which requires bread, so it would create a circular dependency."
+                    :code :invalid-request}}
+           (move-to-dest (h/code "(ns apple (:require [crumb :as c]))"
+                                 "|(defn shout [s] (c/loud s))")
+                         (h/code "(ns bread)"
+                                 "(defn x [] 1)")
+                         {:files {"c.clj" (h/code "(ns crumb (:require [bread :as b]))"
+                                                  "(defn loud [s] (b/x) s)")}})))))

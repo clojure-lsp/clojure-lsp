@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add `:navigation :include-protocol-impls-on-definition` so `textDocument/definition` can return protocol implementations, including `schema.core/defprotocol`. Off by default. #2527
 - Bump clj-kondo to `2026.10.27-20261026.141932-1`.
 - Fix completion for auto-resolved keywords: `::foo`. #2488
 - Add `backward-sexp-or-up` and `forward-sexp-or-up` Paredit commands.

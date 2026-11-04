@@ -8,6 +8,7 @@
  :paths-ignore-regex []
  :lint-project-files-after-startup? true
  :notify-references-on-file-change true
+ :navigation {:include-protocol-impls-on-definition false} ;; textDocument/definition also returns protocol impls
  :compute-external-file-changes true
  :diagnostics {:range-type :full}
  :linters {:clj-kondo {:level :on

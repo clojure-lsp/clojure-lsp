@@ -1144,6 +1144,176 @@
         :bucket :protocol-impls}]
       (q/find-implementations-from-cursor (h/db) (h/file-uri "file:///b.clj") 9 2))))
 
+(def ^:private protocol-method-definition
+  {:name 'something
+   :ns 'a
+   :protocol-name 'Foo
+   :bucket :var-definitions})
+
+(def ^:private protocol-method-impls
+  [{:impl-ns 'b
+    :protocol-ns 'a
+    :method-name 'something
+    :defined-by 'clojure.core/defrecord
+    :protocol-name 'Foo
+    :bucket :protocol-impls
+    :row 4 :col 2}
+   {:impl-ns 'b
+    :protocol-ns 'a
+    :method-name 'something
+    :defined-by 'clojure.core/defrecord
+    :protocol-name 'Foo
+    :bucket :protocol-impls
+    :row 7 :col 2}
+   {:impl-ns 'b
+    :protocol-ns 'a
+    :method-name 'something
+    :defined-by 'clojure.core/reify
+    :protocol-name 'Foo
+    :bucket :protocol-impls
+    :row 10 :col 32}])
+
+(deftest definition-elements-from-cursor-on-protocol-methods
+  (let [[[method-row method-col]]
+        (h/load-code-and-locs (h/code "(ns a)"
+                                      "(defprotocol Foo"
+                                      "  (|something []))"))
+        [[impl-row impl-col]
+         [call-row call-col]]
+        (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
+                                      "(defrecord FooImpl1 []"
+                                      " f/Foo"
+                                      " (|something [_] 123))"
+                                      "(defrecord FooImpl2 []"
+                                      " f/Foo"
+                                      " (^void something [_] 456))"
+                                      "(|f/something (->FooImpl1))"
+                                      "(f/something (->FooImpl2))"
+                                      "(defn make-foo [] (reify f/Foo (something [_] 123)))")
+                              (h/file-uri "file:///b.clj"))
+        db (h/db)
+        a-uri (h/file-uri "file:///a.clj")
+        b-uri (h/file-uri "file:///b.clj")
+        on {:include-protocol-impls? true}
+        off {:include-protocol-impls? false}]
+    (testing "several implementations from the protocol method"
+      (h/assert-submaps
+        (into [protocol-method-definition] protocol-method-impls)
+        (q/definition-elements-from-cursor db a-uri method-row method-col on)))
+    (testing "several implementations from a call"
+      (h/assert-submaps
+        (into [protocol-method-definition] protocol-method-impls)
+        (q/definition-elements-from-cursor db b-uri call-row call-col on)))
+    (testing "the option off keeps the protocol method"
+      (h/assert-submaps
+        [protocol-method-definition]
+        (q/definition-elements-from-cursor db a-uri method-row method-col off)))
+    (testing "an implementation still resolves to the protocol method"
+      (h/assert-submaps
+        [protocol-method-definition]
+        (q/definition-elements db
+                              (first (q/find-implementations-from-cursor db a-uri method-row method-col))
+                              on))
+      (h/assert-submaps
+        [protocol-method-definition]
+        (q/definition-elements-from-cursor db b-uri impl-row impl-col on)))))
+
+(deftest definition-elements-from-cursor-on-a-single-protocol-impl
+  (h/load-code-and-locs (h/code "(ns a)"
+                                "(defprotocol Foo"
+                                "  (something []))"))
+  (let [[[call-row call-col]]
+        (h/load-code-and-locs (h/code "(ns b (:require [a :as f]))"
+                                      "(defrecord FooImpl1 []"
+                                      " f/Foo"
+                                      " (something [_] 123))"
+                                      "(|f/something (->FooImpl1))")
+                              (h/file-uri "file:///b.clj"))]
+    (h/assert-submaps
+      [{:bucket :protocol-impls
+        :method-name 'something
+        :protocol-ns 'a
+        :protocol-name 'Foo
+        :defined-by 'clojure.core/defrecord}]
+      (q/definition-elements-from-cursor (h/db)
+                                         (h/file-uri "file:///b.clj")
+                                         call-row call-col
+                                         {:include-protocol-impls? true}))))
+
+(deftest definition-elements-from-cursor-on-schema-protocol-methods
+  (h/load-code-and-locs (h/code "(ns schema.core)"
+                                "(defmacro defprotocol [name & body])"
+                                "(defmacro defrecord [name fields & body])")
+                        (h/file-uri "file:///schema/core.clj"))
+  (let [[[method-row method-col]]
+        (h/load-code-and-locs (h/code "(ns a (:require [schema.core :as s]))"
+                                      "(s/defprotocol Foo"
+                                      "  (|something []))")
+                              (h/file-uri "file:///a.clj"))
+        [[call-row call-col]]
+        (h/load-code-and-locs (h/code "(ns b (:require [a :as f] [schema.core :as s]))"
+                                      "(s/defrecord FooImpl1 []"
+                                      " f/Foo"
+                                      " (something [_] 123))"
+                                      "(s/defrecord FooImpl2 []"
+                                      " f/Foo"
+                                      " (something [_] 456))"
+                                      "(|f/something (->FooImpl1))")
+                              (h/file-uri "file:///b.clj"))]
+    (testing "schema.core/defprotocol returns the method and each s/defrecord impl"
+      (h/assert-submaps
+        [{:name 'something
+          :ns 'a
+          :protocol-name 'Foo
+          :defined-by 'schema.core/defprotocol
+          :bucket :var-definitions}
+         {:impl-ns 'b
+          :protocol-ns 'a
+          :method-name 'something
+          :defined-by 'schema.core/defrecord
+          :protocol-name 'Foo
+          :bucket :protocol-impls}
+         {:impl-ns 'b
+          :protocol-ns 'a
+          :method-name 'something
+          :defined-by 'schema.core/defrecord
+          :protocol-name 'Foo
+          :bucket :protocol-impls}]
+        (q/definition-elements-from-cursor (h/db)
+                                           (h/file-uri "file:///a.clj")
+                                           method-row method-col
+                                           {:include-protocol-impls? true})))
+    (testing "a call of an s/defprotocol method returns the same elements"
+      (h/assert-submaps
+        [{:bucket :var-definitions
+          :defined-by 'schema.core/defprotocol
+          :protocol-name 'Foo}
+         {:bucket :protocol-impls
+          :defined-by 'schema.core/defrecord
+          :method-name 'something}
+         {:bucket :protocol-impls
+          :defined-by 'schema.core/defrecord
+          :method-name 'something}]
+        (q/definition-elements-from-cursor (h/db)
+                                           (h/file-uri "file:///b.clj")
+                                           call-row call-col
+                                           {:include-protocol-impls? true})))))
+
+(deftest definition-elements-from-cursor-on-a-plain-var
+  (let [[[usage-row usage-col]]
+        (h/load-code-and-locs (h/code "(ns a)"
+                                      "(defn bar [])"
+                                      "(|bar)"))]
+    (h/assert-submaps
+      [{:name 'bar
+        :ns 'a
+        :bucket :var-definitions
+        :defined-by 'clojure.core/defn}]
+      (q/definition-elements-from-cursor (h/db)
+                                         (h/file-uri "file:///a.clj")
+                                         usage-row usage-col
+                                         {:include-protocol-impls? true}))))
+
 (deftest find-implementations-from-cursor-defmulti
   (h/load-code-and-locs (h/code "(ns a)"
                                 "(defmulti foo :some-key)"))

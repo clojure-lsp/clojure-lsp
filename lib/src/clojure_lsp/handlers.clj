@@ -305,9 +305,15 @@
     (let [[row col] (shared/position->row-col position)
           uri (:uri text-document)
           _ (ensure-cursor-java-members! db* uri row col)
-          db @db*]
-      (when-let [definition (q/find-definition-from-cursor db uri row col)]
-        (element->location db producer definition)))))
+          db @db*
+          include-impls? (settings/get db [:navigation :include-protocol-impls-on-definition] false)]
+      (when-let [elements (seq (q/definition-elements-from-cursor
+                                 db uri row col
+                                 {:include-protocol-impls? include-impls?}))]
+        (let [locations (mapv #(element->location db producer %) elements)]
+          (if (= 1 (count locations))
+            (first locations)
+            locations))))))
 
 (defn declaration [{:keys [db* producer]} {:keys [text-document position]}]
   (shared/logging-task

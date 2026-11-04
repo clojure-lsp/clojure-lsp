@@ -424,6 +424,20 @@
 
 (defmethod find-declaration :default [_ _] nil)
 
+(def ^:private protocol-defining-vars
+  "Vars that introduce a protocol. Prismatic schema keeps
+  `schema.core/defprotocol` as `:defined-by`; clj-kondo does not rewrite it
+  to `clojure.core/defprotocol`."
+  '#{clojure.core/defprotocol
+     clojure.core/definterface
+     schema.core/defprotocol})
+
+(defn protocol-method?
+  "True for a var introduced as a method of defprotocol or definterface."
+  [element]
+  (and (:protocol-name element)
+       (some protocol-defining-vars (defined-bys element))))
+
 (defmulti find-implementations
   (fn [_db element]
     (:bucket element)))
@@ -432,16 +446,13 @@
   [db var-definition]
   (if-let [xf (cond
                 ;; protocol method definition
-                (and (some '#{clojure.core/defprotocol
-                              clojure.core/definterface} (defined-bys var-definition))
-                     (:protocol-name var-definition))
+                (protocol-method? var-definition)
                 (comp xf-analysis->protocol-impls
                       (xf-same-fqn (:ns var-definition) (:name var-definition)
                                    :protocol-ns :method-name))
 
                 ;; protocol name definition
-                (some '#{clojure.core/defprotocol
-                         clojure.core/definterface} (defined-bys var-definition))
+                (some protocol-defining-vars (defined-bys var-definition))
                 (comp xf-analysis->var-usages
                       (xf-same-fqn (:ns var-definition) (:name var-definition) :to))
 
@@ -659,6 +670,35 @@
   (try
     (when-let [element (find-element-under-cursor db uri row col)]
       (find-definition db element))
+    (catch Throwable e
+      (logger/error e "can't find definition"))))
+
+(defn definition-elements
+  "Elements `textDocument/definition` should return for `element`.
+
+  With `:include-protocol-impls?`, a protocol method declaration or call
+  returns its implementations. A single implementation is the only element,
+  so the client can jump straight to it. Several implementations are returned
+  after the protocol method. The cursor already on a `:protocol-impls`
+  element still resolves to that method."
+  [db element {:keys [include-protocol-impls?]}]
+  (let [definition (find-definition db element)
+        impls (when (and include-protocol-impls?
+                         definition
+                         (not (identical? :protocol-impls (:bucket element)))
+                         (protocol-method? definition))
+                (seq (find-implementations db definition)))]
+    (cond
+      (not definition) nil
+      (not impls) [definition]
+      (= 1 (count impls)) (vec impls)
+      :else (into [definition] impls))))
+
+(defn definition-elements-from-cursor
+  [db uri row col opts]
+  (try
+    (when-let [element (find-element-under-cursor db uri row col)]
+      (definition-elements db element opts))
     (catch Throwable e
       (logger/error e "can't find definition"))))
 

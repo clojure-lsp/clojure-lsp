@@ -16,6 +16,8 @@ Below you can find all available features that clojure-lsp provides with example
 
 ![](images/features/find-implementation.gif)
 
+Clients that go to a definition with `textDocument/definition` and do not send `textDocument/implementation` can opt in to the same protocol implementations with `:navigation :include-protocol-impls-on-definition`. That includes `schema.core/defprotocol`. See [settings](settings.md).
+
 ### Find a function/var declaration in the ns
 
 ![](images/features/find-declaration.gif)

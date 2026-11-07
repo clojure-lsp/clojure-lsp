@@ -434,12 +434,13 @@
          (map (fn [{:keys [item alias-to-add ns-to-add]}]
                 (completion-item-with-unresolved-alias-edit item cursor-loc alias-to-add ns-to-add db uri resolve-support))))))
 
-(defn ^:private with-elements-from-full-ns [db full-ns resolve-support]
+(defn ^:private with-elements-from-full-ns [db full-ns cursor-value matches-fn resolve-support]
   (into []
         (comp
           q/xf-analysis->var-definitions
           (filter #(and (= (:ns %) (symbol full-ns))
-                        (not (:private %))))
+                        (not (:private %))
+                        (or (simple-ident? cursor-value) (matches-fn (:name %)))))
           (map #(element->completion-item % full-ns :ns-definition resolve-support)))
         (q/ns-analysis db (symbol full-ns))))
 
@@ -719,7 +720,7 @@
                     :else
                     (cond-> []
                       cursor-full-ns?
-                      (into (with-elements-from-full-ns db cursor-value-or-ns resolve-support))
+                      (into (with-elements-from-full-ns db cursor-value-or-ns cursor-value matches-fn resolve-support))
 
                       (and cursor-value-or-ns
                            (not keyword-value?))

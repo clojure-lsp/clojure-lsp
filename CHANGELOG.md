@@ -4,6 +4,7 @@
 
 - Bump clj-kondo to `2026.10.27-20261026.141932-1`.
 - Fix completion for auto-resolved keywords: `::foo`. #2488
+- Fix completion of fully qualified vars, like `my.ns/foo`, offering every var of the namespace instead of the ones matching the typed name, which left out matching vars after the first 600 of a large namespace. #2529
 - Add `backward-sexp-or-up` and `forward-sexp-or-up` Paredit commands.
 - Fix `move-form` removing the source namespace require from files that still use other vars of it through its alias. #1444
 - Fix `move-form` when the destination already uses the moved var: unqualify its usages instead of inserting a stray symbol at the start of the file, drop the source require it no longer needs and place the form before its first usage. Refuse the move when source and destination would require each other. #2494

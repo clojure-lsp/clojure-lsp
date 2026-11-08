@@ -1,7 +1,7 @@
 {:paths ["scripts"
          "cli/integration-test"]
  :deps {borkdude/gh-release-artifact {:git/url "https://github.com/borkdude/gh-release-artifact"
-                                      :git/sha "4a9a74f0e50e897c45df8cc70684360eb30fce80"}
+                                      :git/sha "fee2e5094e647eb8524bd00c721bb728e72669a4"}
 
         medley/medley {:mvn/version "1.4.0"}
         com.github.clojure-lsp/lsp4clj {:mvn/version "2.0.1"

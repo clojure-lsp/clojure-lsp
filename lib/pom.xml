@@ -109,7 +109,7 @@
     <dependency>
       <groupId>babashka</groupId>
       <artifactId>fs</artifactId>
-      <version>0.5.31</version>
+      <version>0.5.34</version>
     </dependency>
     <dependency>
       <groupId>com.fabiodomingues</groupId>

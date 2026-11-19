@@ -22,6 +22,8 @@ All options:
       --filenames FILENAMES            Optional filenames to apply the action. Filenames can be either absolute/relatetive files or directories. This flag accepts filenames separated by comma or double colon.
       --ns-exclude-regex REGEX         Optional regex representing the namespaces to be excluded during a command
   -o, --output EDN                     Optional settings as edn on how the result should be printed. Check `clojure-lsp.api/diagnostics`/`clojure-lsp.api/dump` for all available options to this flag.
+      --diagnostics-level LEVEL        Minimum severity of the diagnostics to print: 'info', 'warning' or 'error'. Defaults to 'info'. Option for diagnostics
+      --fail-level LEVEL               Minimum severity of the printed diagnostics that makes the exit code non-zero: 'warning' or 'error'. Defaults to 'warning'. Option for diagnostics
       --from FROM                      Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename/references
       --to TO                          Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename
       --analysis EDN                   Optional settings as edn on how clojure-lsp should consider the analysis. Check `clojure-lsp.api/dump` for all available options to this flag.
@@ -29,7 +31,7 @@ All options:
 Available commands:
   listen (or empty)    Start clojure-lsp as server, listening to stdin.
   clean-ns             Organize ns form, removing unused requires/refers/imports and sorting alphabetically.
-  diagnostics          Analyze the project and find all diagnostics (warnings, errors).
+  diagnostics          Analyze the project and find all diagnostics (infos, warnings, errors).
   format               Format code using cljfmt.
   rename               Rename a symbol and all references across the project, use --from and --to options.
   references           Find all references of a full qualified symbol across the project and/or dependencies, use --from option.

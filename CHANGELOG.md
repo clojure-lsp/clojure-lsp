@@ -5,6 +5,7 @@
 - Bump clj-kondo to `2026.05.26-20260714.194311-27`.
 - Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
 - Fix completion error in deps.edn/project.clj when the map is transiently unbalanced while typing a new key. #2384
+- Add `--diagnostics-level` and `--fail-level` options to the `diagnostics` command and API, to filter printed diagnostics by severity and choose which severity makes it fail. #2542
 
 ## 2026.07.06-14.34.19
 

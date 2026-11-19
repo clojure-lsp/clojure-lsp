@@ -94,6 +94,22 @@
                 :errors ["Failed to validate \"--output }\": Invalid --output EDN"]}
     ["-o" "{:a {:b 1} :c 2}"] {:options {:output {:a {:b 1} :c 2}}
                                :errors nil}
+    ;; diagnostics-level
+    [] {:options {:diagnostics-level m/absent}}
+    ["--diagnostics-level" "info"] {:options {:diagnostics-level :info}
+                                    :errors nil}
+    ["--diagnostics-level" "warning"] {:options {:diagnostics-level :warning}
+                                       :errors nil}
+    ["--diagnostics-level" "error"] {:options {:diagnostics-level :error}
+                                     :errors nil}
+    ["--diagnostics-level" "hint"] {:errors ["Failed to validate \"--diagnostics-level :hint\": Must be one of: info, warning, error"]}
+    ;; fail-level
+    [] {:options {:fail-level m/absent}}
+    ["--fail-level" "warning"] {:options {:fail-level :warning}
+                                :errors nil}
+    ["--fail-level" "error"] {:options {:fail-level :error}
+                              :errors nil}
+    ["--fail-level" "info"] {:errors ["Failed to validate \"--fail-level :info\": Must be one of: warning, error"]}
     ;; from
     [] {:options {:from m/absent}}
     ["--from" "abc"] {:options {:from 'abc}

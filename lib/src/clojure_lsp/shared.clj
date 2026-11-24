@@ -664,7 +664,7 @@
     (some #(re-matches (re-pattern %) (fs/unixify path)) paths-ignore-regex)))
 
 (def test-locations-regex-default #{"_test\\.clj[a-z]?$"})
-(def clj-extensions-regex ".+.(edn|clj|cljs|cljc|bb|cljd|clj_kondo)$")
+(def clj-extensions-regex ".+\\.(edn|clj|cljs|cljc|bb|cljd|clj_kondo)$")
 (def clj-file-regex "**.{edn,clj,cljs,cljc,bb,cljd,clj_kondo}")
 
 (defn dir-uris->file-uris [dir-uris db]

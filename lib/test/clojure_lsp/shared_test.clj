@@ -374,6 +374,11 @@
       (is (= [(h/file-uri "file:///user/project/src/foo/bar.clj")
               (h/file-uri "file:///user/project/src/foo/baz.clj")]
              (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src")] (h/db))))))
+  (testing "when the dir-uri is a dir whose name ends like a clojure extension"
+    (with-redefs [fs/glob (constantly [(h/file-path "/user/project/src/clj/foo/bar.clj")])
+                  fs/canonicalize identity]
+      (is (= [(h/file-uri "file:///user/project/src/clj/foo/bar.clj")]
+             (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src/clj")] (h/db))))))
   (testing "when the dir-uri is absolute file URI"
     (is (= [(h/file-uri "file:///user/project/src/foo/bar.clj")]
            (shared/dir-uris->file-uris [(h/file-uri "file:///user/project/src/foo/bar.clj")] (h/db))))))

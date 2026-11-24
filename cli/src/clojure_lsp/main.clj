@@ -31,7 +31,7 @@
         "Available commands:"
         "  listen (or empty)    Start clojure-lsp as server, listening to stdin."
         "  clean-ns             Organize ns form, removing unused requires/refers/imports and sorting alphabetically."
-        "  diagnostics          Analyze the project and find all diagnostics (warnings, errors)."
+        "  diagnostics          Analyze the project and find all diagnostics (infos, warnings, errors)."
         "  format               Format code using cljfmt."
         "  rename               Rename a symbol and all references across the project, use --from and --to options."
         "  references           Find all references of a full qualified symbol across the project and/or dependencies, use --from option."
@@ -44,9 +44,15 @@
 (def ^:private trace-levels
   #{"off" "messages" "verbose"})
 
+(def ^:private diagnostics-levels
+  #{:info :warning :error})
+
+(def ^:private fail-levels
+  #{:warning :error})
+
 (def cli-spec
   {:order [:help :version :verbose :trace :trace-level :settings :log-path :dry :raw :project-root :namespace :filenames
-           :ns-exclude-regex :output :from :to :analysis]
+           :ns-exclude-regex :output :diagnostics-level :fail-level :from :to :analysis]
    :spec {:help {:alias :h
                  :desc "Print the available commands and its options"}
           :version {:desc "Print clojure-lsp version"}
@@ -102,6 +108,16 @@
                    :coerce #(try (edn/read-string %) (catch Exception _ %))
                    :validate {:pred map?
                               :ex-msg (fn [_] "Invalid --output EDN")}}
+          :diagnostics-level {:ref "<LEVEL>"
+                              :desc "Minimum severity of the diagnostics to print: 'info', 'warning' or 'error'. Defaults to 'info'. Option for diagnostics"
+                              :coerce :keyword
+                              :validate {:pred diagnostics-levels
+                                         :ex-msg (fn [_] "Must be one of: info, warning, error")}}
+          :fail-level {:ref "<LEVEL>"
+                       :desc "Minimum severity of the printed diagnostics that makes the exit code non-zero: 'warning' or 'error'. Defaults to 'warning'. Option for diagnostics"
+                       :coerce :keyword
+                       :validate {:pred fail-levels
+                                  :ex-msg (fn [_] "Must be one of: warning, error")}}
           :from {:ref "<FQNS>"
                  :desc "Full qualified symbol name or ns only, e.g. my-project/my-var. option for rename/references"
                  :coerce :symbol}

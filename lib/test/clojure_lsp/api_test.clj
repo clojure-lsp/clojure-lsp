@@ -122,6 +122,9 @@
         (is (= 0 (:result-code result)))
         (is (= "Nothing to clear!" (apply (:message-fn result) [])))))))
 
+(defn- diagnostics-severities [result]
+  (into #{} (comp (mapcat val) (map :severity)) (:diagnostics result)))
+
 (deftest diagnostics
   (testing "when project-root is not a file"
     (is (thrown? AssertionError
@@ -179,7 +182,66 @@
                                      :ns-exclude-regex #".*"
                                      :raw? true})]
         (is (= 0 (:result-code result)))
-        (is (= "No diagnostics found!" (apply (:message-fn result) [])))))))
+        (is (= "No diagnostics found!" (apply (:message-fn result) [])))))
+    (testing "when diagnostics-level is not a valid level"
+      (is (thrown? AssertionError
+                   (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :diagnostics-level :hint}))))
+    (testing "when fail-level is not a valid level"
+      (is (thrown? AssertionError
+                   (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :fail-level :info}))))
+    (testing "without diagnostics-level returns all severities"
+      (clean-api-db!)
+      (let [result (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :namespace '[sample-test.api.diagnostics.e]
+                                     :raw? true})]
+        (is (= 2 (:result-code result)))
+        (is (= #{2 3} (diagnostics-severities result)))))
+    (testing "with diagnostics-level warning removes infos"
+      (clean-api-db!)
+      (let [result (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :namespace '[sample-test.api.diagnostics.e]
+                                     :diagnostics-level :warning
+                                     :raw? true})]
+        (is (= 2 (:result-code result)))
+        (is (= #{2} (diagnostics-severities result)))
+        (is (= (str (h/file-path "src/sample_test/api/diagnostics/e.clj") ":4:3: warning: [redundant-let] Redundant let expression.")
+               (apply (:message-fn result) [])))))
+    (testing "with diagnostics-level error removes warnings and infos"
+      (clean-api-db!)
+      (let [result (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :namespace '[sample-test.api.diagnostics.a
+                                                  sample-test.api.diagnostics.e]
+                                     :diagnostics-level :error
+                                     :raw? true})]
+        (is (= 3 (:result-code result)))
+        (is (= #{1} (diagnostics-severities result)))
+        (is (= 1 (count (:diagnostics result))))))
+    (testing "with diagnostics-level above every diagnostic found"
+      (clean-api-db!)
+      (let [result (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :namespace '[sample-test.api.diagnostics.e]
+                                     :diagnostics-level :error
+                                     :raw? true})]
+        (is (= 0 (:result-code result)))
+        (is (= "No diagnostics found!" (apply (:message-fn result) [])))))
+    (testing "with fail-level error does not fail on warnings"
+      (clean-api-db!)
+      (let [result (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :namespace '[sample-test.api.diagnostics.e]
+                                     :fail-level :error
+                                     :raw? true})]
+        (is (= 0 (:result-code result)))
+        (is (= #{2 3} (diagnostics-severities result)))))
+    (testing "with fail-level error still fails on errors"
+      (clean-api-db!)
+      (let [result (api/diagnostics {:project-root (io/file "../cli/integration-test/sample-test")
+                                     :namespace '[sample-test.api.diagnostics.a
+                                                  sample-test.api.diagnostics.e]
+                                     :fail-level :error
+                                     :raw? true})]
+        (is (= 3 (:result-code result)))))))
 
 (deftest format!
   (testing "when project-root is not a file"

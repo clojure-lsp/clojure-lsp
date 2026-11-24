@@ -37,6 +37,15 @@
                                 "--namespace" "sample-test.api.diagnostics.d")]
         (is (string/includes? (slurp rdr) (format "%s:3:7: info: [clojure-lsp/unused-public-var] Unused public var 'sample-test.api.diagnostics.d/unused-public-var'"
                                                   (h/file-path "src/sample_test/api/diagnostics/d.clj")))))))
+  (testing "with diagnostics-level warning"
+    (with-open [rdr (lsp/cli! "diagnostics"
+                              "--project-root" h/root-project-path
+                              "--diagnostics-level" "warning"
+                              "--namespace" "sample-test.api.diagnostics.e")]
+      (let [result (slurp rdr)]
+        (is (string/includes? result (format "%s:4:3: warning: [redundant-let] Redundant let expression."
+                                             (h/file-path "src/sample_test/api/diagnostics/e.clj"))))
+        (is (not (string/includes? result "info:"))))))
   (testing "When output has canonical-paths as true"
     (with-open [rdr (lsp/cli! "diagnostics"
                               "--project-root" h/root-project-path

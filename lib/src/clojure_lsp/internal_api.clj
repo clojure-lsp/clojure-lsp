@@ -365,17 +365,37 @@
                  (assoc a uri diagnostics))
                {})))
 
-(defn ^:private diagnostics* [{{:keys [format]} :output :as options} {:keys [db*] :as components}]
+(defn ^:private diagnostics-at-least [diags-by-uri level]
+  (let [max-severity (shared/level->severity level)]
+    (reduce-kv (fn [acc uri diags]
+                 (let [diags (filterv #(<= (:severity %) max-severity) diags)]
+                   (cond-> acc
+                     (seq diags) (assoc uri diags))))
+               {}
+               diags-by-uri)))
+
+(defn ^:private diagnostics->result-code [diags fail-level]
+  (let [severities (into #{}
+                         (comp (map :severity)
+                               (filter #(<= % (shared/level->severity fail-level))))
+                         diags)]
+    (cond
+      (contains? severities 1) 3
+      (contains? severities 2) 2
+      :else 0)))
+
+(defn ^:private diagnostics* [{{:keys [format]} :output
+                               :keys [diagnostics-level fail-level]
+                               :or {diagnostics-level :info fail-level :warning}
+                               :as options}
+                              {:keys [db*] :as components}]
   (setup-api! components)
   (setup-project-and-clojure-only-deps-analysis! options components)
   (cli-println options "Finding diagnostics...")
   (let [db @db*
-        diags-by-uri (diagnostics-by-uri db options)
-        diags (mapcat val diags-by-uri)
-        errors? (some (comp #(= 1 %) :severity) diags)
-        warnings? (some (comp #(= 2 %) :severity) diags)]
+        diags-by-uri (diagnostics-at-least (diagnostics-by-uri db options) diagnostics-level)]
     (if (seq diags-by-uri)
-      {:result-code (cond errors? 3 warnings? 2 :else 0)
+      {:result-code (diagnostics->result-code (mapcat val diags-by-uri) fail-level)
        :message-fn (fn []
                      (case format
                        :edn (with-out-str (pr diags-by-uri))

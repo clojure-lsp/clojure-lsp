@@ -145,15 +145,23 @@
   `:output` a map with options on how the result should be printed, available values are:
     `:canonical-paths` a boolean if the path should be absolute or not, defaults to false.
 
+  `:diagnostics-level` the minimum severity of the diagnostics to be returned,
+  one of `:info`, `:warning` or `:error`, defaults to `:info`.
+
+  `:fail-level` the minimum severity of the returned diagnostics that makes the
+  result code non-zero, one of `:warning` or `:error`, defaults to `:warning`.
+
   `settings` map of settings following https://clojure-lsp.github.io/clojure-lsp/settings/
 
   **Example**
 
   ```clojure
   (clojure-lsp.api/diagnostics {:namespace '[my-project.foo my-project.bar]
-                                :output {:canonical-paths true}})
+                                :output {:canonical-paths true}
+                                :diagnostics-level :warning
+                                :fail-level :error})
   ```"
-  [{:keys [project-root namespace filenames settings] :as options}]
+  [{:keys [project-root namespace filenames settings diagnostics-level fail-level] :as options}]
   {:pre [(or (nil? project-root)
              (and (instance? File project-root)
                   (.exists ^File project-root)))
@@ -162,7 +170,11 @@
          (or (nil? filenames)
              (coll? filenames))
          (or (nil? settings)
-             (map? settings))]}
+             (map? settings))
+         (or (nil? diagnostics-level)
+             (contains? #{:info :warning :error} diagnostics-level))
+         (or (nil? fail-level)
+             (contains? #{:warning :error} fail-level))]}
   (safe-process-message
     options
     (internal-api/diagnostics options)))

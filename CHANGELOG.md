@@ -18,6 +18,7 @@
 - Fix `extract-to-def` moving an expression that uses locals to a top-level def that can't resolve them: the code action is no longer offered for it and the command returns an error naming the locals. #2500
 - Fix unsaved changes of open files being replaced by their contents on disk when re-analyzing the references of an edited file, causing false `unresolved-var` diagnostics and missing references. #2501
 - Fix `add-missing-import` command failing with an internal error when called without the optional import name, instead of importing the class under the cursor. #2502
+- Add `--diagnostics-level` and `--fail-level` options to the `diagnostics` command and API, to filter printed diagnostics by severity and choose which severity makes it fail. #2542
 
 ## 2026.10.15-11.42.38
 

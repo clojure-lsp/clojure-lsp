@@ -17,8 +17,29 @@
 
 (def logger-tag "[clj-kondo]")
 
+(defn ^:private clj-kondo-pom-version
+  "Version from the clj-kondo artifact pom.properties on the classpath,
+  including the git sha for snapshot builds. Accurate for nightly builds,
+  unlike the CLJ_KONDO_VERSION resource which is only updated on releases."
+  []
+  (when-let [pom-properties (io/resource "META-INF/maven/clj-kondo/clj-kondo/pom.properties")]
+    (let [content (slurp pom-properties)
+          version (some-> (re-find #"(?m)^version=(.+)$" content) second string/trim)
+          revision (some-> (re-find #"(?m)^revision=(.+)$" content) second string/trim)]
+      (when version
+        (if (and revision (string/ends-with? version "-SNAPSHOT"))
+          (str version " (" (subs revision 0 (min 7 (count revision))) ")")
+          version)))))
+
+(def ^:private clj-kondo-version*
+  ;; Eager def so native images resolve it at image build time (Clojure classes
+  ;; are initialized at build time via clj-easy/graal-build-time), when the
+  ;; clj-kondo artifact resources are available on the classpath.
+  (or (clj-kondo-pom-version)
+      (some-> (io/resource "CLJ_KONDO_VERSION") slurp string/trim)))
+
 (defn clj-kondo-version []
-  (string/trim (slurp (io/resource "CLJ_KONDO_VERSION"))))
+  clj-kondo-version*)
 
 (def clj-kondo-analysis-batch-size 120)
 
@@ -495,15 +516,17 @@
         (with-additional-config settings))))
 
 (defn ^:private run-kondo! [config err-hint]
-  (let [err-writer (java.io.StringWriter.)]
-    (try
-      (let [result (binding [*err* err-writer]
-                     (kondo/run! config))]
-        (when-not (string/blank? (str err-writer))
-          (logger/warn logger-tag (string/trim-newline (str err-writer))))
-        result)
-      (catch Exception e
-        (logger/error e (str logger-tag " error analysing " err-hint))))))
+  (shared/logging-task
+    :kondo/run-kondo!       ;; time each kondo run - useful for measuring startup batches, but also logs kondo timings for every edit
+    (let [err-writer (java.io.StringWriter.)]
+      (try
+        (let [result (binding [*err* err-writer]
+                       (kondo/run! config))]
+          (when-not (string/blank? (str err-writer))
+            (logger/warn logger-tag (string/trim-newline (str err-writer))))
+          result)
+        (catch Exception e
+          (logger/error e (str logger-tag " error analysing " err-hint)))))))
 
 (defn run-kondo-on-paths! [paths db* {:keys [external?] :as normalization-config} file-analyzed-fn]
   (let [db @db*

@@ -47,6 +47,50 @@
           z/remove)
       new-node)))
 
+(defn ^:private reader-conditional-branch-value?
+  "Whether `zloc` is the value of a feature branch of a well-formed reader
+  conditional, e.g. `(:import ...)` in `#?(:clj (:import ...) :cljs (:require ...))`."
+  [zloc]
+  (when (and (fast= :reader-macro (some-> zloc z/up z/up z/tag))
+             (some-> zloc z/left z/node n/keyword-node?))
+    (let [node (z/node zloc)
+          forms (->> zloc z/up z/node n/children (remove n/printable-only?))]
+      (and (even? (count forms))
+           (odd? (count (take-while #(not (identical? node %)) forms)))))))
+
+(defn ^:private remove-reader-conditional-branch
+  "Removes the reader conditional branch whose value is at `zloc`, i.e. the value
+  and its feature keyword, removing the whole reader conditional when no other
+  branch is left."
+  [zloc]
+  ;; z/remove moves to the previous node, which is the feature keyword of the branch
+  (let [feature-loc (z/remove zloc)]
+    (if (or (z/left feature-loc)
+            (z/right feature-loc))
+      (z/remove feature-loc)
+      (-> feature-loc z/up z/up z/remove))))
+
+(defn ^:private remove-and-clean-reader-conditional
+  "Like `z/remove`, but keeps reader conditionals valid: when the node is the value
+  of a reader conditional branch, or the only form of a splicing reader conditional
+  branch, removes the whole branch, feature keyword included, and the reader
+  conditional itself when no other branch is left."
+  [zloc]
+  (cond
+    (reader-conditional-branch-value? zloc)
+    (remove-reader-conditional-branch zloc)
+
+    ;; e.g. `(:import ...)` in `#?@(:clj [(:import ...)] :cljs [...])`
+    (and (some-> zloc z/up z/vector?)
+         (not (z/left zloc))
+         (not (z/right zloc))
+         (fast= "?@" (some-> zloc z/up z/up z/up z/down z/string))
+         (reader-conditional-branch-value? (z/up zloc)))
+    (remove-reader-conditional-branch (z/up zloc))
+
+    :else
+    (z/remove zloc)))
+
 (defn ^:private find-after-libspec-comment
   "look for comment to the right of the libspec 'node' on the same line"
   [require-nodes idx libspec-node]
@@ -232,7 +276,7 @@
       (z/subedit-> ns-loc
                    (z/find-value z/next form-type)
                    (z/up)
-                   z/remove)
+                   remove-and-clean-reader-conditional)
       (z/subedit-> ns-loc
                    (z/find-value z/next form-type)
                    (z/up)
@@ -305,7 +349,7 @@
                         z/remove)]
         (if (> (count (z/child-sexprs (z/up ns-only))) 1)
           ns-only
-          (z/remove (z/up ns-only))))
+          (remove-and-clean-reader-conditional (z/up ns-only))))
       (-> node
           z/down
           (z/find-next-value ':refer)
@@ -362,7 +406,7 @@
   (-> libspec-zloc
       (remove-same-line-comment)
       (remove-interstitial-nodes)
-      z/remove))
+      remove-and-clean-reader-conditional))
 
 (defn ^:private remove-unused-duplicate-requires
   [node {:keys [uri db]}]
@@ -437,11 +481,12 @@
 
 (defn ^:private calc-keep-first-line-spacing
   "Difference between end of :require/:import and start of next node,
-   nil if they are not on the same line."
+   nil if they are not on the same line or there is no next node."
   [form-type-loc]
   (let [require-meta (-> form-type-loc z/node meta)
-        right-meta (-> form-type-loc z/right z/node meta)]
-    (when (= (:row require-meta) (:row right-meta))
+        right-meta (some-> form-type-loc z/right z/node meta)]
+    (when (and right-meta
+               (= (:row require-meta) (:row right-meta)))
       (- (:col right-meta) (:end-col require-meta)))))
 
 (defn ^:private clean-requires
@@ -454,6 +499,14 @@
                             (remove-unused-requires clean-ctx col))]
       (process-clean-ns ns-loc removed-nodes col keep-first-line-spacing :require clean-ctx))
     ns-loc))
+
+(defn ^:private reader-conditional-body?
+  "Whether `zloc` is the list of a reader conditional, e.g. `(:bb a :clj b)` in
+  `#?(:bb a :clj b)` or `#?@(:bb [a] :clj [b])`, whatever its feature keywords are."
+  [zloc]
+  (and (z/list? zloc)
+       (fast= :reader-macro (some-> zloc z/up z/tag))
+       (contains? #{"?" "?@"} (some-> zloc z/up z/down z/string))))
 
 (defn ^:private package-import?
   [node]
@@ -533,10 +586,10 @@
       (if (and (get-in settings [:clean :sort :import] true)
                (get-in settings [:clean :sort :import-classes] true)
                (not remove-whole-package-import)
-               (not (some-> parent-node z/down z/sexpr #{:clj :cljs})) ;; reader conditionals node
+               (not (reader-conditional-body? parent-node)) ;; reader conditionals node
                (not= :uneval (some-> parent-node z/up z/next z/tag))
-               (not (some-> parent-node z/up z/next z/sexpr #{:clj :cljs})) ;; inside reader conditionals
-               (not (some-> parent-node z/up z/up z/next z/sexpr #{:clj :cljs})) ;; list of imports inside reader macros
+               (not (some-> parent-node z/up reader-conditional-body?)) ;; inside reader conditionals
+               (not (some-> parent-node z/up z/up reader-conditional-body?)) ;; list of imports inside reader macros
                (> (count classes) 1))
         (sorting-package-import-classes parent-node clean-ctx import-loc base-package classes settings node)
         node))

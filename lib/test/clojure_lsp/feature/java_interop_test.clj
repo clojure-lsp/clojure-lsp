@@ -1,12 +1,54 @@
 (ns clojure-lsp.feature.java-interop-test
   (:require
+   [babashka.fs :as fs]
+   [clojure-lsp.config :as config]
+   [clojure-lsp.db :as db]
    [clojure-lsp.feature.java-interop :as f.java-interop]
+   [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
    [medley.core :as medley]))
 
 (h/reset-components-before-test)
+
+(deftest load-java-path-does-not-write-global-cache-test
+  (with-redefs [db/read-and-update-global-cache! (fn [_]
+                                                   (is false "Test fixtures must not write the global JDK cache"))]
+    (h/load-java-path (str (fs/canonicalize "test/fixtures/java_interop/Parent.java"))))
+  (is (some #(= "my_class.Parent" (:class %))
+            (mapcat :java-class-definitions (vals (:analysis (h/db)))))))
+
+(deftest retrieve-jdk-source-with-incomplete-cache-test
+  (let [cache-dir (fs/create-temp-dir {:prefix "clojure-lsp-jdk-cache-test"})
+        jdk-dir (io/file (str cache-dir) "jdk")
+        java-file (io/file jdk-dir "java.base" "java" "net" "URI.java")
+        java-path (.getCanonicalPath java-file)
+        java-uri (shared/filename->uri java-path (h/db))
+        global-db* (atom {:version db/version
+                          :analysis {"file:///fixtures/Parent.java"
+                                     {:java-class-definitions [{:class "my_class.Parent"}]}}})]
+    (try
+      (io/make-parents java-file)
+      (spit java-file "package java.net; public class URI {}")
+      (spit (io/file jdk-dir "result") "file:///jdk/src.zip")
+      (with-redefs [config/global-cache-dir (constantly (io/file (str cache-dir)))
+                    db/read-global-cache #(deref global-db*)
+                    db/read-and-update-global-cache! #(swap! global-db* %)]
+        (testing "unrelated cached definitions do not skip JDK analysis"
+          (f.java-interop/retrieve-jdk-source-and-analyze! (h/db*))
+          (is (= "java.net.URI"
+                 (-> (h/db) :analysis (get java-uri) :java-class-definitions first :class)))
+          (is (contains? (:analysis-checksums @global-db*) java-path)))
+        (testing "the repaired cache is loaded on the next startup"
+          (h/reset-components!)
+          (with-redefs [f.java-interop/analyze-and-cache-jdk-source! (fn [& _]
+                                                                       (is false "A complete cache should be reused"))]
+            (f.java-interop/retrieve-jdk-source-and-analyze! (h/db*)))
+          (is (= "java.net.URI"
+                 (-> (h/db) :analysis (get java-uri) :java-class-definitions first :class)))))
+      (finally
+        (fs/delete-tree cache-dir)))))
 
 (deftest uri->translated-uri-test
   (testing "common files"

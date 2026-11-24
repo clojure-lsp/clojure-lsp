@@ -104,10 +104,17 @@
 (defn ^:private rename-ns-definition [replacement db reference]
   (let [ref-doc-uri (:uri reference)
         version (get-in db [:documents ref-doc-uri :v] 0)
-        text (if (contains? #{:keyword-definitions :keyword-usages} (:bucket reference))
+        bucket (:bucket reference)
+        text (if (contains? #{:keyword-definitions :keyword-usages} bucket)
                (str ":" replacement "/" (:name reference))
-               replacement)]
-    {:range (shared/->range reference)
+               replacement)
+        range-element (cond-> reference
+                        ;; Only the namespace part of a full qualified symbol, like `my.ns/foo`
+                        (identical? :var-usages bucket)
+                        (assoc :name-end-row (:name-row reference)
+                               :name-end-col (+ (:name-col reference)
+                                                (count (str (:to reference))))))]
+    {:range (shared/->range range-element)
      :new-text text
      :text-document {:version version :uri ref-doc-uri}}))
 
@@ -200,7 +207,9 @@
     (rename-usages-with-alias element replacement replacement-raw db references)
 
     (identical? :namespace-definitions (:bucket definition))
-    (mapv (partial rename-ns-definition replacement db) references)
+    (mapv (partial rename-ns-definition replacement db)
+          (concat references
+                  (q/find-full-qualified-var-usages db (:name definition))))
 
     (contains? #{:keyword-definitions :keyword-usages} (:bucket definition))
     (vec (mapcat (partial rename-keyword replacement replacement-raw db) references))

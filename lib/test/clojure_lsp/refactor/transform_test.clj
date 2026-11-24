@@ -517,8 +517,10 @@
 
 (defn promote-fn
   ([code] (promote-fn code nil))
-  ([code provided-name]
-   (as-strings (transform/promote-fn (h/load-code-and-zloc code) h/default-uri (h/db) provided-name))))
+  ([code provided-name] (promote-fn code provided-name h/default-uri))
+  ([code provided-name filepath]
+   (let [uri (h/file-uri filepath)]
+     (as-strings (transform/promote-fn (h/load-code-and-zloc code uri) uri (h/db) provided-name)))))
 
 (deftest promote-fn-test
   (testing "literal to fn"
@@ -588,6 +590,21 @@
       "\n(defn- new-function [a element & args] (+ 1 a element args))\n" "#(new-function a %1 %&)"    "(let [a 1] |(fn [element & args] (+ 1 a element args)))"
       ;; multi-arity
       "\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"   "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))"))
+  (testing "fn to defn with locals in clj, cljc and cljs files"
+    (are [filepath]
+         (do (h/reset-components!)
+             (= ["\n(defn- new-function [a b x] (+ 1 x a b b))\n" "#(new-function a b %1)"]
+                (promote-fn "(let [a 1 b 2] |(fn [x] (+ 1 x a b b)))" nil filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs")
+    (are [filepath]
+         (do (h/reset-components!)
+             (= ["\n(defn- new-function ([a x] (+ 1 x a)) ([a x y] (+ 1 x y a)))\n" "(partial new-function a)"]
+                (promote-fn "(let [a 1] |(fn ([x] (+ 1 x a)) ([x y] (+ 1 x y a))))" nil filepath)))
+      "file:///a.clj"
+      "file:///a.cljc"
+      "file:///a.cljs"))
   (testing "naming"
     (h/reset-components!)
     ;; previously named fn
@@ -2403,9 +2420,11 @@
                result))))))
 
 (defn- extract-to-def
-  [code new-def-name]
-  (let [zloc (h/zloc-from-code code)]
-    (transform/extract-to-def zloc new-def-name (h/db))))
+  ([code new-def-name] (extract-to-def code new-def-name h/default-uri))
+  ([code new-def-name filepath]
+   (let [uri (h/file-uri filepath)
+         zloc (h/load-code-and-zloc code uri)]
+     (transform/extract-to-def zloc uri new-def-name (h/db)))))
 
 (deftest extract-to-def-test
   (h/reset-components!)
@@ -2436,6 +2455,42 @@
             (h/code "foo")]
            (-> "|{:a 1}"
                (extract-to-def "foo")
+               as-strings))))
+  (testing "when the expression uses locals bound outside it"
+    (testing "refuses, naming the locals"
+      (h/reset-components!)
+      (is (= {:error {:message "Can't extract to def, expression uses locals: x, y"
+                      :code :invalid-params}}
+             (extract-to-def (h/code "(defn f [x]"
+                                     "  (let [y 2]"
+                                     "    (+ |(* x y) 1)))")
+                             "xy"))))
+    (testing "on a bare local"
+      (h/reset-components!)
+      (is (= {:error {:message "Can't extract to def, expression uses locals: x"
+                      :code :invalid-params}}
+             (extract-to-def (h/code "(defn f [x]"
+                                     "  (inc |x))")
+                             "foo"))))
+    (testing "in a cljc file, names each local once"
+      (h/reset-components!)
+      (is (= {:error {:message "Can't extract to def, expression uses locals: x, y"
+                      :code :invalid-params}}
+             (extract-to-def (h/code "(defn f [x]"
+                                     "  (let [y 2]"
+                                     "    (+ |(* x y) 1)))")
+                             "xy"
+                             "file:///a.cljc")))))
+  (testing "when the expression only uses locals it binds itself"
+    (h/reset-components!)
+    (is (= [(h/code ""
+                    "(def ^:private inc-all"
+                    "  (fn [a] (inc a)))"
+                    "")
+            (h/code "inc-all")]
+           (-> (h/code "(defn f [xs]"
+                       "  (map |(fn [a] (inc a)) xs))")
+               (extract-to-def "inc-all")
                as-strings)))))
 
 (deftest can-create-test?

@@ -58,5 +58,8 @@
 (defn client-awaits-server-request [method]
   (client/await-server-request *mock-client* method))
 
+(defn client-received-server-request? [method]
+  (client/received-server-request? *mock-client* method))
+
 (defn mock-response [method resp]
   (client/mock-response *mock-client* method resp))

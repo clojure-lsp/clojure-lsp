@@ -3,6 +3,7 @@
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.clean-ns :as f.clean-ns]
    [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
+   [clojure-lsp.feature.cycle-namespaced-map :as f.cycle-namespaced-map]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.development-info :as f.development-info]
    [clojure-lsp.feature.drag :as f.drag]
@@ -26,17 +27,21 @@
 
 (defmulti ^:private run-command :command)
 
-(defmethod ^{:deprecated "Use add-missing-import instead"} run-command :add-import-to-namespace [{:keys [loc uri args db components]}]
-  (apply f.add-missing-libspec/add-missing-import loc uri (concat args [db components])))
+(defmethod ^{:deprecated "Use add-missing-import instead"} run-command :add-import-to-namespace [{:keys [loc uri db components] [import-name] :args}]
+  (f.add-missing-libspec/add-missing-import loc uri import-name db components))
 
-(defmethod run-command :add-missing-import [{:keys [loc uri db args components]}]
-  (apply f.add-missing-libspec/add-missing-import loc uri (concat args [db components])))
+;; import-name is optional: when omitted, the class under the cursor is looked up.
+(defmethod run-command :add-missing-import [{:keys [loc uri db components] [import-name] :args}]
+  (f.add-missing-libspec/add-missing-import loc uri import-name db components))
 
 (defmethod run-command :add-missing-libspec [{:keys [loc uri db components]}]
   (f.add-missing-libspec/add-missing-libspec loc uri db components))
 
 (defmethod run-command :add-require-suggestion [{:keys [loc uri args db components]}]
   (apply f.add-missing-libspec/add-require-suggestion loc uri (concat args [db components])))
+
+(defmethod run-command :swap-namespace-with-alias [{:keys [loc args]}]
+  (apply f.add-missing-libspec/swap-namespace-with-alias loc args))
 
 (defmethod run-command :clean-ns [{:keys [loc uri db]}]
   (f.clean-ns/clean-ns-edits loc uri db))
@@ -83,8 +88,8 @@
 (defmethod run-command :inline-function [{:keys [loc uri args db]}]
   (apply r.transform/inline-function loc uri (concat args [db])))
 
-(defmethod run-command :extract-to-def [{:keys [loc args db]}]
-  (apply r.transform/extract-to-def loc (concat args [db])))
+(defmethod run-command :extract-to-def [{:keys [loc uri args db]}]
+  (apply r.transform/extract-to-def loc uri (concat args [db])))
 
 (defmethod run-command :get-in-more [{:keys [loc]}]
   (f.thread-get/get-in-more loc))
@@ -167,6 +172,9 @@
 (defmethod run-command :cycle-keyword-auto-resolve  [{:keys [loc uri db components]}]
   (f.cycle-keyword/cycle-keyword-auto-resolve loc uri db components))
 
+(defmethod run-command :cycle-namespaced-map  [{:keys [loc]}]
+  (f.cycle-namespaced-map/cycle-namespaced-map loc))
+
 (defmethod run-command :replace-refer-all-with-refer  [{:keys [loc args]}]
   (apply f.replace-refer-all/replace-with-refers loc args))
 
@@ -200,11 +208,17 @@
 (defmethod run-command :forward  [{:keys [loc uri row col]}]
   (f.paredit/forward uri loc row col))
 
+(defmethod run-command :forward-sexp-or-up  [{:keys [loc uri row col]}]
+  (f.paredit/forward-sexp-or-up uri loc row col))
+
 (defmethod run-command :forward-select  [{:keys [loc uri row col]}]
   (f.paredit/forward-select uri loc row col))
 
 (defmethod run-command :backward  [{:keys [loc uri row col]}]
   (f.paredit/backward uri loc row col))
+
+(defmethod run-command :backward-sexp-or-up  [{:keys [loc uri row col]}]
+  (f.paredit/backward-sexp-or-up uri loc row col))
 
 (defmethod run-command :backward-select  [{:keys [loc uri row col]}]
   (f.paredit/backward-select uri loc row col))

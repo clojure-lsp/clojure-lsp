@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.clojuredocs :as f.clojuredocs]
    [clojure-lsp.feature.file-management :as f.file-management]
+   [clojure-lsp.feature.special-forms :as f.special-forms]
    [clojure-lsp.parser :as parser]
    [clojure-lsp.queries :as q]
    [clojure-lsp.refactor.edit :as edit]
@@ -65,6 +66,18 @@
                         (->> notes
                              (map #(str %))
                              (string/join "\n---\n"))))))
+
+(defn ^:private special-form->hover-docs
+  [{:keys [doc url]} sym-name markdown?]
+  (when doc
+    (string/join
+      "\n\n"
+      ["Special Form"
+       (if markdown?
+         (docstring->formatted-markdown doc)
+         doc)
+       (str "Please see http://clojure.org/"
+            (or url (str "special_forms#" sym-name)))])))
 
 (defn find-docstring
   "Find the doc string for the hovered symbol.
@@ -142,7 +155,7 @@
       (str "calling: " call))))
 
 (defn hover-documentation
-  [{sym-ns :ns sym-name :name :keys [doc uri return-type bucket] :as definition}
+  [{sym-ns :ns sym-name :name :keys [doc uri return-type bucket to] :as definition}
    db*
    {:keys [additional-text-edits? content-format-capability-path]}
    & [calling]]
@@ -154,16 +167,28 @@
         hide-filename? (settings/get db [:hover :hide-file-location?])
         additional-edits-warning-text (settings/get db [:completion :additional-edits-warning-text])
         join-char (if arity-on-same-line? " " "\n ")
-        signatures (hover-signatures definition join-char)
+        special-form (when (and (= :var-usages bucket)
+                                (= 'clojure.core to)
+                                (not sym-ns)
+                                (#{:clj :cljc} (shared/uri->file-type uri)))
+                       (f.special-forms/special-form-doc sym-name))
+        special-form-signatures (some->> (:forms special-form)
+                                         (map pr-str)
+                                         (string/join join-char))
+        signatures (or (hover-signatures definition join-char)
+                       special-form-signatures)
         sym (cond-> ""
               return-type (str return-type " ")
               sym-ns (str sym-ns "/")
               sym-name (str sym-name))
-        sym-line (if signatures
-                   (str "(" sym join-char signatures ")")
-                   sym)
+        sym-line (if special-form-signatures
+                   special-form-signatures
+                   (if signatures
+                     (str "(" sym join-char signatures ")")
+                     sym))
         markdown? (some #{"markdown"} content-formats)
-        doc-line (find-docstring db markdown? uri doc 0)
+        doc-line (or (special-form->hover-docs special-form sym-name markdown?)
+                     (find-docstring db markdown? uri doc 0))
         clojuredocs (or (f.clojuredocs/find-hover-docs-for sym-name sym-ns db*)
                         (when (and sym-ns (#{:cljs :cljc} (shared/uri->file-type uri)))
                           (f.clojuredocs/find-hover-docs-for
@@ -197,11 +222,13 @@
       (cond-> []
         calling
         , (conj (calling-line calling markdown?))
-        sym
+        (and sym
+             (not special-form-signatures))
         , (conj {:language "clojure"
                  :value (str (if arity-on-same-line? sym-line sym))})
         (and signatures
-             (not arity-on-same-line?))
+             (or (not arity-on-same-line?)
+                 special-form-signatures))
         , (conj {:language "clojure"
                  :value (str signatures)})
         (and additional-text-edits? additional-edits-warning-text)

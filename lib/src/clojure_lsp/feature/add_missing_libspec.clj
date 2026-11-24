@@ -217,11 +217,15 @@
       (let [add-form-type? (not (z/find-value ns-zip z/next libspec-type))
             form-type-loc (z/find-value (zsub/subzip ns-loc) z/next libspec-type)
             ns-inner-blocks-indentation (resolve-ns-inner-blocks-identation db)
-            col (if form-type-loc
-                  (-> form-type-loc z/rightmost z/node meta :col)
-                  (if (fast= :same-line ns-inner-blocks-indentation)
-                    2
-                    5))
+            ;; Nodes added by previous edits have no position, like when
+            ;; adding several libspecs to the same ns
+            col (or (some->> (some-> form-type-loc z/rightmost)
+                             (iterate z/left)
+                             (take-while some?)
+                             (some #(-> % z/node meta :col)))
+                    (if (fast= :same-line ns-inner-blocks-indentation)
+                      2
+                      5))
             {:keys [result-loc existing-import-package-by-full-package]}
             (modified-existing-libform ns-zip form-type-loc lib-sym refer-sym alias-sym class-sym)
             form-to-add (cond
@@ -582,33 +586,60 @@
             (->> (dep-graph/ns-names-for-langs db langs)
                  (map (juxt str (constantly nil) (constantly nil) identity))))))
 
+(defn ^:private merge-ns-by-count
+  "joins a seq of namespace aliases and counts with a seq of suggested namespaces; duplicate
+   namespaces (due to unique aliases) have their counts combined and the resulting seq is
+   reverse sorted by total count"
+  [ns-alias-counts ns-suggestions]
+  (let [ns->count (reduce (fn [totals [ns _alias cnt]]
+                            (let [add-to-total (fnil + 0)             ;; fnil because starts with nothing
+                                  this-count (or cnt 0)]              ;; additional count for this namespace
+                              (update totals ns add-to-total this-count)))
+                          {}
+                          ns-alias-counts)]
+    (->> ns-suggestions
+         (map #(assoc % :count (get ns->count (:ns %) 0)))
+         (sort-by (comp - :count))
+         (map #(if (zero? (:count %))
+                 (dissoc % :count)
+                 %)))))
+
 (defn find-require-suggestions [zloc uri db]
   (when-let [cursor-sym (safe-sym zloc)]
     (let [cursor-namespace-str (namespace cursor-sym)
           cursor-name-str (name cursor-sym)
           cursor-langs (shared/uri->available-langs uri)
+
+          ;; given the namespace, see what other modules :required for that namespace
+          alias-ns-counts (find-alias-ns-pairs db uri)
           namespace-suggestions (find-namespace-suggestions
                                   (or cursor-namespace-str cursor-name-str)
-                                  (find-alias-ns-pairs db uri))
+                                  alias-ns-counts)
+
+          ;; look up the namespaces used in this URI
           uri-nses (->> (get-in db [:analysis uri :namespace-definitions])
                         (map :name)
                         set)
+
+          ;; find suggestions from the namespace or symbol (if symbol include :refer instead of :alias)
           suggestions (if (namespace cursor-sym)
                         namespace-suggestions
                         (concat
                           namespace-suggestions
-                          (if-let [common-refer (get common-sym/common-refers->info (symbol cursor-name-str))]
-                            [{:ns (name common-refer)
-                              :refer cursor-name-str}]
-                            (into []
-                                  (comp
-                                    (remove #(uri-nses (:ns %)))
-                                    (filter #(= cursor-name-str (str (:name %))))
-                                    (filter #(some (q/elem-langs %) cursor-langs))
-                                    (map (fn [element]
-                                           {:ns (str (:ns element))
-                                            :refer cursor-name-str})))
-                                  (q/find-all-var-definitions db false)))))]
+                          (merge-ns-by-count
+                            alias-ns-counts
+                            (if-let [common-refer (get common-sym/common-refers->info (symbol cursor-name-str))]
+                              [{:ns (name common-refer)
+                                :refer cursor-name-str}]
+                              (into []
+                                    (comp
+                                      (remove #(uri-nses (:ns %)))
+                                      (filter #(= cursor-name-str (str (:name %))))
+                                      (filter #(some (q/elem-langs %) cursor-langs))
+                                      (map (fn [element]
+                                             {:ns (str (:ns element))
+                                              :refer cursor-name-str})))
+                                    (q/find-all-var-definitions db false))))))]
       suggestions)))
 
 (defn ^:private find-forms [zloc p?]
@@ -686,3 +717,122 @@
           (:js-require suggestion)
           db
           components)))))
+
+(defn ^:private synthesize-alias-suggestion [cursor-namespace]
+  (let [ns-parts (string/split cursor-namespace #"\.")
+        ns-initials (map (comp str first) (butlast ns-parts))
+        ns-last (last ns-parts)]
+    (string/join "." (concat ns-initials [ns-last]))))
+
+(defn ^:private matching-unique-ns?
+  "returns true if this namespace is a match and its alias is not already a used alias"
+  [ns found-aliases alias->info-pair]
+  (and (fast= (str (val alias->info-pair)) ns)
+       (not (contains? found-aliases (str (key alias->info-pair))))))
+
+(defn ^:private generate-ns->loc-info [loc]
+  (if (z/vector? loc)
+    {:ns (z/string (some-> loc z/down))
+     :as (some-> (z/find (z/down loc) z/right #(fast= :as (z/sexpr %)))
+                 z/right z/string)
+     :loc loc}
+    {:ns (z/string loc)
+     :loc loc}))
+
+(defn ^:private find-require [ns-loc]
+  (z/find (some-> ns-loc z/down z/right) z/right #(fast= :require (z/sexpr (z/down %)))))
+
+(defn find-alias-suggestions
+  "if zloc has a fully qualified namespace, returns a list of suggestions for aliases; nil otherwise"
+  [zloc uri db]
+
+  (when-let [cursor-sym (safe-sym zloc)]
+    (when-let [cursor-namespace (namespace cursor-sym)]
+      (let [ns-loc (edit/find-namespace zloc)
+            req-ref-loc (find-require ns-loc)
+            libspec-start-loc (some-> req-ref-loc z/down)
+            ns->alias-info  (reduce #(let [ns-loc (generate-ns->loc-info %2)] (assoc %1 (:ns ns-loc) ns-loc))
+                                    {}
+                                    (take-while some? (iterate z/right (z/right libspec-start-loc))))
+            libspec-match-loc (get-in ns->alias-info [cursor-namespace :loc])
+            alias-loc (when (vector? libspec-match-loc)
+                        (some-> (z/find (z/down libspec-match-loc) z/right #(fast= :as (z/sexpr %)))
+                                z/right))
+            preexisting-alias (z/string alias-loc)]
+
+        (cond
+
+          ;; found the libspec, it doesn't yet have an alias, so find suggestions
+          (and libspec-match-loc (nil? alias-loc))
+          (let [ns->aliases (group-by (comp str :to) (dep-graph/ns-aliases-for-langs db (shared/uri->available-langs uri)))
+                matching-aliases (get ns->aliases cursor-namespace)
+                found-aliases (set (map (comp str :alias) matching-aliases))
+                common-aliases (map #(hash-map :alias (str (key %)))
+                                    (filter #(matching-unique-ns? cursor-namespace found-aliases %) common-sym/common-alias->info))
+                all-aliases (concat matching-aliases common-aliases)
+                aliases-in-use (set (remove nil? (map :as (vals ns->alias-info))))
+                suggested-aliases (remove #(contains? aliases-in-use (str (:alias %))) all-aliases)
+                alias-suggestions (sort-by :count #(compare %2 %1) (map #(hash-map :ns cursor-namespace
+                                                                                   :alias (str (:alias %))
+                                                                                   :count (:usages-count %)
+                                                                                   :row (dec (:row (meta (z/node zloc))))
+                                                                                   :col (dec (:col (meta (z/node zloc))))) suggested-aliases))]
+            ;; return the suggestions found above - if none were found, synthesize a new alias
+            (if (seq alias-suggestions)
+              alias-suggestions
+              [{:row (dec (:row (meta (z/node zloc))))
+                :col (dec (:col (meta (z/node zloc))))
+                :count nil
+                :ns cursor-namespace
+                :alias (synthesize-alias-suggestion cursor-namespace)}]))
+
+          ;; alias already existed, reuse it
+          preexisting-alias
+          [{:row (dec (:row (meta (z/node zloc))))
+            :col (dec (:col (meta (z/node zloc))))
+            :count nil
+            :ns cursor-namespace
+            :alias preexisting-alias}])))))
+
+(defn ^:private matching-libspec-loc? [target-ns libspec-loc]
+  (fast= target-ns (z/string (if (fast= :vector (z/tag libspec-loc)) (z/down libspec-loc) libspec-loc))))
+
+(defn ^:private find-or-create-libspec [chosen-alias libspec-match-loc cursor-namespace alias-loc]
+  (let [libspec-ns (if (z/vector? libspec-match-loc)
+                     (z/down libspec-match-loc)
+                     (some-> (z/replace libspec-match-loc (n/vector-node [(n/token-node (symbol cursor-namespace))]))
+                             z/down))
+        libspec-w-alias (when-not alias-loc
+                          (z/right (if (fast= :as (z/sexpr (z/rightmost libspec-ns)))
+                                     (z/insert-right (z/right libspec-ns)
+                                                     (n/token-node (symbol chosen-alias)))
+                                     (z/insert-right libspec-ns
+                                                     (n/forms-node [(n/keyword-node :as)
+                                                                    (n/spaces 1)
+                                                                    (n/token-node (symbol chosen-alias))])))))
+        replaced-libspec (z/up libspec-w-alias)]
+    replaced-libspec))
+
+(defn swap-namespace-with-alias
+  "applies the chosen alias suggestion to the target zloc and potentially changes the libspec to include the new alias"
+  [zloc target-ns chosen-alias]
+
+  (when-let [cursor-sym (safe-sym zloc)]
+    (let [cursor-namespace (namespace cursor-sym)
+          new-target (z/replace zloc (n/token-node (symbol (str chosen-alias "/" (name cursor-sym)))))
+          ns-loc (edit/find-namespace new-target)
+          require-loc (find-require ns-loc)
+          libspec-start-loc (some-> require-loc z/down)]
+      (when-let [libspec-match-loc (first (filter #(matching-libspec-loc? target-ns %1)
+                                                  (take-while some? (iterate z/right libspec-start-loc))))]
+        (let [alias-loc (when (vector? libspec-match-loc) (some-> (z/find (z/down libspec-match-loc) z/right #(fast= :as (z/sexpr %))) z/right))
+              replaced-libspec (find-or-create-libspec chosen-alias libspec-match-loc cursor-namespace alias-loc)]
+
+          ;; replace either just the namespace at the target loc, or replace the target loc and add an alias to the libspec 
+          (if alias-loc
+            [{:range (meta (z/node zloc))
+              :loc new-target}]
+            [{:range (meta (z/node libspec-match-loc))
+              :loc replaced-libspec}
+             {:range (meta (z/node zloc))
+              :loc new-target}]))))))

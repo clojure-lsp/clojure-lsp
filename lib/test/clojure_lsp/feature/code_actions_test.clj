@@ -288,6 +288,88 @@
                             :range {:start {:line 6 :character 2}}}] {}
                           (h/db)))))
 
+(deftest swap-namespace-with-alias-action-test
+  (h/load-code-and-locs (string/join "\n"
+                                     ["(ns foo"
+                                      "  (:require [my.ns.xyz]))"
+                                      "  my.ns.xyz/my-func"])
+                        (h/file-uri "file:///b.clj"))
+  (testing "when expression without fully qualified namespace"
+    (is (not-any? #(= (:title %) "Use alias '[my.ns.xyz :as m.n.xyz]'")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                      (h/file-uri "file:///b.clj")
+                                      1
+                                      2
+                                      []
+                                      {}
+                                      (h/db)))))
+  (testing "when expression has a fully qualified namespace"
+    (h/assert-contains-submaps
+      [{:title "Swap namespace with alias '[my.ns.xyz :as m.n.xyz]'"
+        :command {:command "swap-namespace-with-alias"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                          (h/file-uri "file:///b.clj")
+                          3
+                          4
+                          []
+                          {}
+                          (h/db)))))
+
+(deftest inline-function-code-action
+  (h/load-code (string/join "\n"
+                            ["(ns a)"
+                             "(defn my-add [my-a my-b my-c]"
+                             "  (+ my-a my-b my-c))"
+                             "(my-add 5 3 6)"])
+               (h/file-uri "file:///b.clj"))
+  (testing "when not in a function"
+    (is (not-any? #(= (:title %) "Inline function")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                      (h/file-uri "file:///b.clj")
+                                      1
+                                      3
+                                      [] {}
+                                      (h/db)))))
+  (testing "when in a function"
+    (h/assert-contains-submaps
+      [{:title "Inline function"
+        :command {:command "inline-function"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                          (h/file-uri "file:///b.clj")
+                          2
+                          3
+                          []
+                          {}
+                          (h/db)))))
+
+(deftest move-to-for-let-code-action
+  (h/load-code (string/join "\n"
+                            ["(for [x [1 2 3 4]"
+                             "      :let [a (* 2 x)]]"
+                             "  a)"
+                             "(xyz 1 2)"])
+               (h/file-uri "file:///b.clj"))
+  (testing "when not inside a form that allows :let"
+    (is (not-any? #(= (:title %) "Move to :let")
+                  (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                      (h/file-uri "file:///b.clj")
+                                      4
+                                      3
+                                      []
+                                      {}
+                                      (h/db)))))
+  (testing "when inside a form that allows :let"
+    (h/assert-contains-submaps
+      [{:title "Move to :let"
+        :command {:command "move-to-for-let"}}]
+      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                          (h/file-uri "file:///b.clj")
+                          3
+                          3
+                          []
+                          {}
+                          (h/db)))))
+
 (deftest inline-symbol-code-action
   (h/load-code-and-locs (str "(ns other-ns (:require [some-ns :as sns]))\n"
                              "(def bar 1)\n"
@@ -418,6 +500,44 @@
                           5
                           [] {}
                           (h/db)))))
+
+(deftest cycle-namespaced-map-code-action
+  (let [[[map-r map-c]
+         [namespaced-map-r namespaced-map-c]
+         [unqualified-map-r unqualified-map-c]]
+        (h/load-code-and-locs (h/code "(ns some-ns)"
+                                      "|{:foo/bar 1}"
+                                      "|#:foo{:bar 1}"
+                                      "|{:bar 1}")
+                              (h/file-uri "file:///a.clj"))]
+    (testing "when on a map with qualified keys"
+      (h/assert-contains-submaps
+        [{:title "Change map to namespaced map"
+          :command {:command "cycle-namespaced-map"}}]
+        (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                            (h/file-uri "file:///a.clj")
+                            map-r
+                            map-c
+                            [] {}
+                            (h/db))))
+    (testing "when on a namespaced map"
+      (h/assert-contains-submaps
+        [{:title "Change namespaced map to map"
+          :command {:command "cycle-namespaced-map"}}]
+        (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                            (h/file-uri "file:///a.clj")
+                            namespaced-map-r
+                            namespaced-map-c
+                            [] {}
+                            (h/db))))
+    (testing "when on a map without qualified keys"
+      (is (not-any? #(= (:command (:command %)) "cycle-namespaced-map")
+                    (f.code-actions/all (zloc-of (h/file-uri "file:///a.clj"))
+                                        (h/file-uri "file:///a.clj")
+                                        unqualified-map-r
+                                        unqualified-map-c
+                                        [] {}
+                                        (h/db)))))))
 
 (deftest destructure-keys-code-action
   (let [[[non-local-r non-local-c]
@@ -655,7 +775,29 @@
                         1
                         1
                         [] {}
-                        (h/db))))
+                        (h/db)))
+  (testing "inside a function"
+    (let [[[locals-row locals-col] [literal-row literal-col]]
+          (h/load-code-and-locs (h/code "(defn f [x]"
+                                        "  (let [y 2]"
+                                        "    (+ |(* x y) |1)))")
+                                (h/file-uri "file:///b.clj"))]
+      (testing "when the expression uses locals bound outside it, don't show extract-to-def"
+        (is (not-any? #(= (:title %) "Extract to def")
+                      (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                                          (h/file-uri "file:///b.clj")
+                                          locals-row locals-col
+                                          [] {}
+                                          (h/db)))))
+      (testing "when the expression doesn't use outside locals, show extract-to-def"
+        (h/assert-contains-submaps
+          [{:title "Extract to def"
+            :command {:command "extract-to-def"}}]
+          (f.code-actions/all (zloc-of (h/file-uri "file:///b.clj"))
+                              (h/file-uri "file:///b.clj")
+                              literal-row literal-col
+                              [] {}
+                              (h/db)))))))
 
 (deftest create-private-function-code-action
   (h/load-code-and-locs (h/code "(ns some-ns)"

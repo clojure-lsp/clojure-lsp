@@ -2,10 +2,44 @@
 
 ## Unreleased
 
-- Bump clj-kondo to `2026.05.26-20260714.194311-27`.
+- Bump clj-kondo to `2026.10.27-20261124.191018-4`.
+- Fix completion for auto-resolved keywords: `::foo`. #2488
+- Add `backward-sexp-or-up` and `forward-sexp-or-up` Paredit commands.
+- Fix `move-form` removing the source namespace require from files that still use other vars of it through its alias. #1444
+- Fix `move-form` when the destination already uses the moved var: unqualify its usages instead of inserting a stray symbol at the start of the file, drop the source require it no longer needs and place the form before its first usage. Refuse the move when source and destination would require each other. #2494
+- Fix `move-form` removing the source namespace require from files that still use its alias in keywords, like `::a/foo`.
+- Fix `move-form` removing requires from the files using the moved var when they were unused in the source file.
+- Fix `move-form` not adding to the destination the requires, refers and imports the moved form uses, reusing its aliases or qualifying the symbols on conflicts, and keeping the meaning of auto-resolved keywords. Refuse the move when one of those namespaces requires the destination. #2495
+- Fix `clean-ns` failing on a `:require` or `:import` without libspecs.
+- Fix `clean-ns` leaving a dangling feature keyword in reader conditionals when removing all the requires/imports of a branch. #2497
+- Fix `clean-ns` failing on `:import` reader conditionals whose first feature is not `:clj` or `:cljs`, like `#?(:bb ... :clj ...)`. #2496
+- Fix `promote-fn` passing each local the `fn` closes over twice to the new `defn` in `.cljc` files. #2498
+- Fix namespace rename (`workspace/willRenameFiles`) not updating fully qualified usages of its vars, like `my.ns/foo`. #2499
+- Fix `extract-to-def` moving an expression that uses locals to a top-level def that can't resolve them: the code action is no longer offered for it and the command returns an error naming the locals. #2500
+- Fix unsaved changes of open files being replaced by their contents on disk when re-analyzing the references of an edited file, causing false `unresolved-var` diagnostics and missing references. #2501
+- Fix `add-missing-import` command failing with an internal error when called without the optional import name, instead of importing the class under the cursor. #2502
+- Add `--diagnostics-level` and `--fail-level` options to the `diagnostics` command and API, to filter printed diagnostics by severity and choose which severity makes it fail. #2542
+
+## 2026.10.15-11.42.38
+
+- Prevent Java test fixtures from being written to the global JDK cache and rebuild caches missing analysis or checksums. #2285
+- if supported by client, multi-file refactoring prompts for approval #2370
+- Bump clj-kondo to `2026.08.05-20261014.211514-15`.
+- Add new refactoring `cycle-namespaced-map`, e.g. `{:foo/bar 1}` -> `#:foo{:bar 1}` and vice-versa, available via code actions. #994
+- Report the clj-kondo git sha on `--version` for snapshot builds, instead of a stale `-SNAPSHOT` version.
+- Fix unreachable "Classpath not found" error branch on stubs generation.
 - Fix db cache write failure when a `#_{:clj-kondo/ignore [...]}` hint precedes java interop code, leaking non-serializable data into the analysis. #2380
 - Fix completion error in deps.edn/project.clj when the map is transiently unbalanced while typing a new key. #2384
-- Add `--diagnostics-level` and `--fail-level` options to the `diagnostics` command and API, to filter printed diagnostics by severity and choose which severity makes it fail. #2542
+- Update development page with code coverage, performance, and debugging information #2431
+- Log more fine-grained timings for (mostly) initialization tasks to make solving user's performance issues easier #2433
+- Fix API/CLI rename corrupting files when a line contains multiple occurrences of the renamed symbol. #2450
+- Show built-in documentation when hovering Clojure special forms. #2457
+- sort namespace suggestions when suggesting :refer #1997
+- Add code action to replace fully-qualified namespace with alias, and add :as to the :require form #1810
+- Report the processing of external file changes (`workspace/didChangeWatchedFiles`) as server-initiated work done progress (`window/workDoneProgress/create`), ending only once dependent files are re-analyzed, so clients can wait for those changes to be fully processed. Deletions are now processed in the same debounced batch as creations and changes instead of immediately, and a file re-created within that batch is analyzed rather than removed.
+- Fix the "Fetching libs for completion" progress never showing up in clients, as its token was never created via `window/workDoneProgress/create`.
+- Fix navigation and other LSP features inside dependency jars when clients send single-slash jar URLs, including escaped Calva URIs.
+- Bump GraalVM to 21 for the Windows native binary, in sync with the other archs. The Windows binary is no longer UPX compressed.
 
 ## 2026.07.06-14.34.19
 
@@ -45,6 +79,8 @@
   - clj-async-profiler: 1.6.2 -> 1.7.0
   - deps-deploy: 0.2.2 -> 0.2.5
   - graal-build-time: 1.0.5 -> 1.0.6
+- when sorting or removing :require or :import namespaces during ns organization, group comments and 
+  clj-kondo directives along with them #1237
 
 ## 2026.05.05-12.58.26
 

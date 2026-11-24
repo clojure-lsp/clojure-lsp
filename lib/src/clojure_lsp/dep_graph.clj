@@ -316,6 +316,11 @@
           (mapcat #(ns-uris db %))
           (ms-distinct dependents))))
 
+(defn ns-depends-on?
+  "Whether `namespace` requires `dependency` directly."
+  [{:keys [dep-graph]} namespace dependency]
+  (contains? (get-in dep-graph [namespace :dependencies]) dependency))
+
 (defn ns-dependencies-uris [{:keys [dep-graph] :as db} namespace]
   (let [dependencies (get-in dep-graph [namespace :dependencies])]
     (into #{}
@@ -381,7 +386,12 @@
           as-alias-elems-xf)
         dep-graph))
 
-(defn ns-aliases-for-langs [{:keys [dep-graph]} langs]
+(defn ns-aliases-for-langs
+  "For the set of languages 'langs', returns namespace,alias,usage-count map
+   for each alias.  Note that all alias/namespace pairs are considered for the 
+   count, even those from languages not in 'langs', so if an alias/namespace exists in 
+   multiple languages, the returned usage-count will be inflated."
+  [{:keys [dep-graph]} langs]
   (into #{}
         (comp
           some-dependents-internal-xf

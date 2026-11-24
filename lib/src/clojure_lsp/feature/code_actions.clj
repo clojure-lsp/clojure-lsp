@@ -2,6 +2,7 @@
   (:require
    [clojure-lsp.feature.add-missing-libspec :as f.add-missing-libspec]
    [clojure-lsp.feature.cycle-keyword :as f.cycle-keyword]
+   [clojure-lsp.feature.cycle-namespaced-map :as f.cycle-namespaced-map]
    [clojure-lsp.feature.destructure-keys :as f.destructure-keys]
    [clojure-lsp.feature.drag :as f.drag]
    [clojure-lsp.feature.drag-param :as f.drag-param]
@@ -132,6 +133,19 @@
                          :arguments [uri (:line position) (:character position) missing-import]}})
        missing-imports))
 
+(defn ^:private require-alias-actions [uri require-renames]
+  (map (fn [{:keys [ns alias row col count]}]
+         {:title        (format "Swap namespace with alias '[%s%s]'%s"
+                                ns
+                                (if alias (str " :as " alias) "")
+                                (if count (str " × " count) ""))
+          :kind         :quick-fix
+          :is-preferred true
+          :command      {:title     "Swap namespace with alias suggestion"
+                         :command   "swap-namespace-with-alias"
+                         :arguments [uri row col ns alias]}})
+       require-renames))
+
 (defn ^:private change-colls-actions [uri line character other-colls]
   (map (fn [coll]
          {:title   (str "Change coll to " (name coll))
@@ -177,6 +191,16 @@
      :kind    :refactor-rewrite
      :command {:title     title
                :command   "cycle-keyword-auto-resolve"
+               :arguments [uri line character]}}))
+
+(defn ^:private cycle-namespaced-map-action [uri line character cycle-namespaced-map-status]
+  (let [title (if (= :from-map-to-namespaced (:status cycle-namespaced-map-status))
+                "Change map to namespaced map"
+                "Change namespaced map to map")]
+    {:title   title
+     :kind    :refactor-rewrite
+     :command {:title     title
+               :command   "cycle-namespaced-map"
                :arguments [uri line character]}}))
 
 (defn ^:private cycle-privacy-action [uri line character]
@@ -439,6 +463,7 @@
          missing-requires* (future (find-missing-requires resolvable-require-diagnostics uri db))
          missing-imports* (future (find-missing-imports resolvable-require-diagnostics db))
          require-suggestions* (future (find-all-require-suggestions resolvable-require-diagnostics @missing-requires* uri db))
+         namespace-to-alias-options* (future (f.add-missing-libspec/find-alias-suggestions zloc uri db))
          can-sort-clauses?* (future (f.sort-clauses/can-sort? zloc uri db))
          allow-drag-backward?* (future (f.drag/can-drag-backward? zloc uri db))
          allow-drag-forward?* (future (f.drag/can-drag-forward? zloc uri db))
@@ -451,9 +476,10 @@
          can-restructure-keys?* (future (f.restructure-keys/can-restructure-keys? zloc uri db))
          near-if?* (future (r.transform/near-if? zloc))
          near-cond?* (future (r.transform/near-cond? zloc))
-         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc))
+         can-extract-to-def?* (future (r.transform/can-extract-to-def? zloc uri db))
          inline-symbol?* (future (f.inline-symbol/inline-symbol? uri row col db))
          cycle-kwd-status* (future (f.cycle-keyword/cycle-keyword-auto-resolve-status zloc))
+         cycle-namespaced-map-status* (future (f.cycle-namespaced-map/cycle-namespaced-map-status zloc))
          can-add-let? (or (z/skip-whitespace z/right zloc)
                           (when-not (edit/top? zloc) (z/skip-whitespace z/up zloc)))
          can-move-to-for-let?* (future (r.transform/can-move-to-:let? zloc))
@@ -468,6 +494,11 @@
 
        (seq @require-suggestions*)
        (into (require-suggestion-actions uri @require-suggestions*))
+
+       (seq @namespace-to-alias-options*)
+       (into (require-alias-actions
+               uri
+               @namespace-to-alias-options*))
 
        @private-function-to-create*
        (conj (create-private-function-action uri @private-function-to-create*))
@@ -486,6 +517,9 @@
 
        @cycle-kwd-status*
        (conj (cycle-kwd-action uri line character @cycle-kwd-status*))
+
+       @cycle-namespaced-map-status*
+       (conj (cycle-namespaced-map-action uri line character @cycle-namespaced-map-status*))
 
        can-add-let?
        (conj (move-to-let-action uri line character)

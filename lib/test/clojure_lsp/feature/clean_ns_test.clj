@@ -904,6 +904,133 @@
                              "#?(:clj (do Calendar Date DateTime)) File")
                      true
                      "file:///a.cljc"))
+    (testing "remove reader conditional branch after removing its unused import at ns level"
+      (test-clean-ns {}
+                     (h/code "(ns a.core"
+                             "  #?(:clj (:import (java.util.regex Pattern))"
+                             "     :cljs (:require-macros [a.util :refer [m]])))")
+                     (h/code "(ns a.core"
+                             "  #?(:cljs (:require-macros [a.util :refer [m]])))")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove last reader conditional branch after removing its unused import at ns level"
+      (test-clean-ns {}
+                     (h/code "(ns a.core"
+                             "  #?(:cljs (:require-macros [a.util :refer [m]])"
+                             "     :clj (:import (java.util.regex Pattern))))")
+                     (h/code "(ns a.core"
+                             "  #?(:cljs (:require-macros [a.util :refer [m]])))")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove reader conditional after removing all its branches at ns level"
+      (test-clean-ns {}
+                     (h/code "(ns a.core"
+                             "  #?(:clj (:import (java.util.regex Pattern))"
+                             "     :cljs (:require [a.util :as u])))")
+                     (h/code "(ns a.core)")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove reader conditional branch after removing its unused import"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:clj (java.util Date)"
+                             "     :cljs (goog.string StringBuffer))))"
+                             "#?(:clj (do Date))")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:clj (java.util Date))))"
+                             "#?(:clj (do Date))")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove first reader conditional branch after removing its unused import"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:cljs (goog.string StringBuffer)"
+                             "     :clj (java.util Date))))"
+                             "#?(:clj (do Date))")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:clj (java.util Date))))"
+                             "#?(:clj (do Date))")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove reader conditional branch after removing its unused require alias"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "  #?(:clj [other.zeta :as z]"
+                             "     :cljs [other.foo :as o])))"
+                             "#?(:clj z/zeta)")
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "  #?(:clj [other.zeta :as z])))"
+                             "#?(:clj z/zeta)")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove reader conditional branch after removing its unused require refer"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "  #?(:clj [other.zeta :refer [z]]"
+                             "     :cljs [other.foo :refer [o]])))"
+                             "#?(:clj z)")
+                     (h/code "(ns foo.bar"
+                             " (:require"
+                             "  #?(:clj [other.zeta :refer [z]])))"
+                             "#?(:clj z)")
+                     true
+                     "file:///a.cljc"))
+    (testing "remove splicing reader conditional branch after removing its unused import"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?@(:clj [(java.util Date)]"
+                             "      :cljs [(goog.string StringBuffer)])))"
+                             "#?(:clj (do Date))")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?@(:clj [(java.util Date)])))"
+                             "#?(:clj (do Date))")
+                     true
+                     "file:///a.cljc"))
+    (testing "keep reader conditional whose first feature is not :clj or :cljs"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:bb (clojure.lang Associative)"
+                             "     :clj (clojure.lang Associative))"
+                             "  (java.util.regex Pattern)))"
+                             "Associative Pattern")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:bb (clojure.lang Associative)"
+                             "     :clj (clojure.lang Associative))"
+                             "  (java.util.regex Pattern)))"
+                             "Associative Pattern")
+                     true
+                     "file:///a.cljc"))
+    (testing "do not sort classes inside reader conditionals whose first feature is not :clj or :cljs"
+      (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:bb (java.util UUID Date)"
+                             "     :clj (java.util UUID Date))"
+                             "  #?@(:bb [(java.io Reader File)]"
+                             "      :clj [(java.io Reader File)])"
+                             "  (java.util.regex Pattern Matcher)))"
+                             "UUID Date Reader File Pattern")
+                     (h/code "(ns foo.bar"
+                             " (:import"
+                             "  #?(:bb (java.util UUID Date)"
+                             "     :clj (java.util UUID Date))"
+                             "  #?@(:bb [(java.io Reader File)]"
+                             "      :clj [(java.io Reader File)])"
+                             "  (java.util.regex Pattern)))"
+                             "UUID Date Reader File Pattern")
+                     true
+                     "file:///a.cljc"))
     (testing "only used required alias in specific lang"
       (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo.bar"
@@ -1455,6 +1582,16 @@
                      (h/code "(ns foo"
                              " (:require"
                              "  []))")))
+    (testing "require without libspecs is removed"
+      (test-clean-ns {}
+                     (h/code "(ns foo"
+                             " (:require))")
+                     (h/code "(ns foo)")))
+    (testing "import without classes is removed"
+      (test-clean-ns {}
+                     (h/code "(ns foo"
+                             " (:import))")
+                     (h/code "(ns foo)")))
     (testing "if a comment is above a libspec, it should stay with the libspec - sorted to top"
       (test-clean-ns {:settings {:clean {:ns-inner-blocks-indentation :next-line}}}
                      (h/code "(ns foo"

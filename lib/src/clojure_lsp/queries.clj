@@ -883,6 +883,19 @@
         (filter #(= namespace (:to %)))
         (get-in db [:analysis uri :var-usages])))
 
+(defn find-full-qualified-var-usages
+  "Find the var usages written with the full `namespace` name, like `my.ns/foo`,
+  in the files of `namespace` and of the namespaces requiring it."
+  [db namespace]
+  (into []
+        (comp
+          xf-analysis->var-usages
+          (filter :full-qualified-symbol?)
+          (xf-same-ns namespace :to)
+          ;; cljc files have a usage per lang at the same position
+          (medley/distinct-by (juxt :uri :name-row :name-col)))
+        (ns-and-dependents-analysis db namespace)))
+
 (defn find-keyword-usages-by-keyword [db uri kwd-ns kwd-name]
   (into []
         (xf-same-fqn kwd-ns kwd-name)

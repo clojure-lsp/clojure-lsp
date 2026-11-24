@@ -1,5 +1,6 @@
 (ns clojure-lsp.feature.file-management-test
   (:require
+   [babashka.fs :as fs]
    [clojure-lsp.feature.file-management :as f.file-management]
    [clojure-lsp.shared :as shared]
    [clojure-lsp.test-helper.internal :as h]
@@ -132,7 +133,7 @@
           :uri h/default-uri}]
         (assoc (h/components)
                :watched-files-chan mock-watched-files-chan))
-      (is (= h/default-uri (h/take-or-timeout mock-watched-files-chan 1000)))))
+      (is (= {:uri h/default-uri :type :created} (h/take-or-timeout mock-watched-files-chan 1000)))))
   (testing "changed file"
     (let [mock-watched-files-chan (async/chan 1)]
       (f.file-management/did-change-watched-files
@@ -140,16 +141,15 @@
           :uri h/default-uri}]
         (assoc (h/components)
                :watched-files-chan mock-watched-files-chan))
-      (is (= h/default-uri (h/take-or-timeout mock-watched-files-chan 1000)))))
+      (is (= {:uri h/default-uri :type :changed} (h/take-or-timeout mock-watched-files-chan 1000)))))
   (testing "deleted file"
-    (let [mock-diagnostics-chan (async/chan 1)]
+    (let [mock-watched-files-chan (async/chan 1)]
       (f.file-management/did-change-watched-files
         [{:type :deleted
           :uri h/default-uri}]
         (assoc (h/components)
-               :diagnostics-chan mock-diagnostics-chan))
-      (is (= {:uri h/default-uri, :diagnostics []}
-             (h/take-or-timeout mock-diagnostics-chan 500)))))
+               :watched-files-chan mock-watched-files-chan))
+      (is (= {:uri h/default-uri :type :deleted} (h/take-or-timeout mock-watched-files-chan 1000)))))
   (testing "watched files ignored by source-path-ignore-regex"
     (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/target")
                                                                  (h/file-path "/src")}}
@@ -162,8 +162,45 @@
           :uri (h/file-uri "file:///project/src/a.clj")}]
         (assoc (h/components)
                :watched-files-chan mock-watched-files-chan))
-      (is (= (h/file-uri "file:///project/src/a.clj") (h/take-or-timeout mock-watched-files-chan 1000)))
+      (is (= {:uri (h/file-uri "file:///project/src/a.clj") :type :changed}
+             (h/take-or-timeout mock-watched-files-chan 1000)))
       (h/assert-no-take mock-watched-files-chan 500))))
+
+(deftest analyze-watched-files
+  (let [project-dir (fs/canonicalize (fs/create-temp-dir {:prefix "clojure-lsp-watched-files"}))
+        src-dir (fs/create-dirs (fs/path project-dir "src"))
+        _ (fs/create-dirs (fs/path project-dir ".clj-kondo"))
+        a-file (fs/file src-dir "a.clj")
+        b-file (fs/file src-dir "b.clj")]
+    (try
+      (swap! (h/db*) medley/deep-merge {:project-root-uri (shared/filename->uri (str project-dir) (h/db))
+                                        :settings {:source-paths #{(str src-dir)}}})
+      (let [a-uri (shared/filename->uri (str a-file) (h/db))
+            b-uri (shared/filename->uri (str b-file) (h/db))
+            a-unused-public-vars #(count (get-in (h/db) [:diagnostics :built-in a-uri]))]
+        (spit a-file (h/code "(ns a)"
+                             "(defn foo [] 1)"))
+        (spit b-file (h/code "(ns b (:require [a]))"
+                             "(a/foo)"))
+        (h/load-code (slurp a-file) a-uri)
+        (is (= 1 (a-unused-public-vars)) "a/foo is unused while b is unknown")
+        (testing "returns only after the files depending on a created file are re-analyzed"
+          (f.file-management/analyze-watched-files! [{:uri b-uri :type :created}] (h/components))
+          (is (= 0 (a-unused-public-vars)) "a/foo is used by b"))
+        (testing "a file deleted and re-created within one batch keeps its open document state"
+          (h/load-code (slurp b-file) b-uri)
+          (f.file-management/analyze-watched-files! [{:uri b-uri :type :deleted}
+                                                     {:uri b-uri :type :created}]
+                                                    (h/components))
+          (is (= 0 (get-in (h/db) [:documents b-uri :v])))
+          (is (= 0 (a-unused-public-vars)) "a/foo is still used by b"))
+        (testing "returns only after the files depending on a deleted file are re-analyzed"
+          (fs/delete b-file)
+          (f.file-management/analyze-watched-files! [{:uri b-uri :type :deleted}] (h/components))
+          (is (nil? (get-in (h/db) [:analysis b-uri])))
+          (is (= 1 (a-unused-public-vars)) "a/foo is unused again")))
+      (finally
+        (fs/delete-tree project-dir)))))
 
 (deftest var-dependency-reference-uris
   (swap! (h/db*) medley/deep-merge {:settings {:source-paths #{(h/file-path "/src")}}
@@ -349,4 +386,106 @@
                (f.file-management/will-rename-files
                  [{:old-uri old-uri
                    :new-uri new-uri}]
-                 db)))))))
+                 db))))))
+  (testing "when other files use the namespace vars fully qualified"
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+
+    (let [old-uri (h/file-uri "file:///user/project/src/my/ns.clj")
+          new-uri (h/file-uri "file:///user/project/src/my/new/ns.clj")
+          user-uri (h/file-uri "file:///user/project/src/my/user.clj")]
+      (h/load-code (h/code "(ns my.ns)"
+                           "(defn area [w h] (* w h))") old-uri)
+      (h/load-code (h/code "(ns my.user"
+                           "  (:require [my.ns :as s]))"
+                           "(s/area 1 2)"
+                           "(my.ns/area 5 6)") user-uri)
+      (is (= {:document-changes
+              [{:text-document {:version 0, :uri old-uri},
+                :edits
+                [{:range {:start {:line 0, :character 4}, :end {:line 0, :character 9}},
+                  :new-text "my.new.ns"}]}
+               {:text-document {:version 0, :uri user-uri},
+                :edits
+                [{:range {:start {:line 1, :character 13}, :end {:line 1, :character 18}},
+                  :new-text "my.new.ns"}
+                 {:range {:start {:line 3, :character 1}, :end {:line 3, :character 6}},
+                  :new-text "my.new.ns"}]}]}
+             (f.file-management/will-rename-files
+               [{:old-uri old-uri
+                 :new-uri new-uri}]
+               (h/db))))))
+  (testing "when other cljc files use the namespace vars fully qualified"
+    ;; cljc files are analyzed for each lang, but each usage must be edited once,
+    ;; as clients reject or double apply overlapping edits
+    (h/reset-components!)
+    (swap! (h/db*) shared/deep-merge {:settings {:source-paths #{(h/file-path "/user/project/src")}}
+                                      :project-root-uri (h/file-uri "file:///user/project")
+                                      :client-capabilities {:workspace {:workspace-edit {:document-changes true}}}})
+
+    (let [old-uri (h/file-uri "file:///user/project/src/my/ns.cljc")
+          new-uri (h/file-uri "file:///user/project/src/my/new/ns.cljc")
+          user-uri (h/file-uri "file:///user/project/src/my/user.cljc")]
+      (h/load-code (h/code "(ns my.ns)"
+                           "(defn area [w h] (* w h))") old-uri)
+      (h/load-code (h/code "(ns my.user"
+                           "  (:require [my.ns :as s]))"
+                           "(s/area 1 2)"
+                           "(my.ns/area 5 6)") user-uri)
+      (is (= {:document-changes
+              [{:text-document {:version 0, :uri old-uri},
+                :edits
+                [{:range {:start {:line 0, :character 4}, :end {:line 0, :character 9}},
+                  :new-text "my.new.ns"}]}
+               {:text-document {:version 0, :uri user-uri},
+                :edits
+                [{:range {:start {:line 1, :character 13}, :end {:line 1, :character 18}},
+                  :new-text "my.new.ns"}
+                 {:range {:start {:line 3, :character 1}, :end {:line 3, :character 6}},
+                  :new-text "my.new.ns"}]}]}
+             (f.file-management/will-rename-files
+               [{:old-uri old-uri
+                 :new-uri new-uri}]
+               (h/db)))))))
+
+(deftest analyze-reference-uris
+  (let [project-dir (fs/canonicalize (fs/create-temp-dir {:prefix "clojure-lsp-reference-uris"}))
+        src-dir (fs/create-dirs (fs/path project-dir "src"))
+        _ (fs/create-dirs (fs/path project-dir ".clj-kondo"))
+        a-file (fs/file src-dir "a.clj")
+        b-file (fs/file src-dir "b.clj")
+        c-file (fs/file src-dir "c.clj")]
+    (try
+      (swap! (h/db*) medley/deep-merge {:project-root-uri (shared/filename->uri (str project-dir) (h/db))
+                                        :settings {:source-paths #{(str src-dir)}}})
+      (let [a-uri (shared/filename->uri (str a-file) (h/db))
+            b-uri (shared/filename->uri (str b-file) (h/db))
+            c-uri (shared/filename->uri (str c-file) (h/db))
+            var-names (fn [uri]
+                        (into #{} (map :name) (get-in (h/db) [:analysis uri :var-definitions])))
+            kondo-finding-types (fn [uri]
+                                  (into #{} (map :type) (get-in (h/db) [:diagnostics :clj-kondo uri])))]
+        (spit a-file (h/code "(ns a)"
+                             "(defn foo [] 1)"))
+        (spit b-file (h/code "(ns b)"
+                             "(defn baz [] 1)"))
+        ;; a is open with unsaved changes, b is not open
+        (h/load-code (h/code "(ns a)"
+                             "(defn foo [] 1)"
+                             "(defn bar [x y] (+ x y))")
+                     a-uri)
+        (f.file-management/analyze-reference-uris! #{a-uri b-uri} (h/db*))
+        (testing "open documents are linted from their unsaved text"
+          (is (= '#{foo bar} (var-names a-uri))))
+        (testing "files that are not open are linted from disk"
+          (is (= '#{baz} (var-names b-uri))))
+        (testing "clj-kondo cache keeps the unsaved definitions of open documents"
+          (h/load-code (h/code "(ns c (:require [a]))"
+                               "(a/bar 1 2 3)")
+                       c-uri)
+          (is (= #{:invalid-arity} (kondo-finding-types c-uri))
+              "a/bar is known with its unsaved arity, so it's not reported as unresolved")))
+      (finally
+        (fs/delete-tree project-dir)))))

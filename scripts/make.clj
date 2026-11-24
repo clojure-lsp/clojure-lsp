@@ -1,5 +1,4 @@
 (ns make
-  (:refer-clojure :exclude [test])
   (:require
    [babashka.deps :as deps]
    [babashka.fs :as fs]

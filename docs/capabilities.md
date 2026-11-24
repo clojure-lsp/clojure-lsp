@@ -16,7 +16,7 @@ Below are all the currently supported LSP capabilities and their implementation 
 | window/showMessage                     | √    |                                                                               |
 | window/showMessageRequest              | √    |                                                                               |
 | window/logMessage                      |      |                                                                               |
-| window/workDoneProgress/create         |      |                                                                               |
+| window/workDoneProgress/create         | √    | Progress of external file changes analysis and of fetching libs for completion |
 | window/workDoneProgress/cancel         |      |                                                                               |
 | telemetry/event                        |      |                                                                               |
 | client/registerCapability              | √    |                                                                               |
@@ -96,7 +96,7 @@ All commands expect the first three args to be `[document-uri, line, character]`
 
 | done | command             | args                                                                      | notes |
 |------|---------------------|---------------------------------------------------------------------------|-------|
-| √    | add-missing-import  | `[document-uri, line, character, import-name]`                            |       |
+| √    | add-missing-import  | `[document-uri, line, character[, import-name]]`                          | Without `import-name`, imports the class under the cursor if found in the analysis. |
 | √    | add-missing-libspec |                                                                           |       |
 | √    | as-to-refer         |                                                                           |       |
 | √    | clean-ns            |                                                                           |       |
@@ -125,6 +125,8 @@ See Vim client section for an example.
 Emacs provides all those refactorings via [lsp-mode](https://emacs-lsp.github.io/lsp-mode/)  with the `lsp-clojure-` prefix.
 
 Other clients might provide a higher level interface to `workspace/executeCommand` you need to pass the path, line and character numbers.
+
+If the client supports LSP change annotation support, multi-file refactoring responses may include a {"needsConfirmation" true} so the client can prompt the user to approve refactorings.
 
 ### Custom methods
 

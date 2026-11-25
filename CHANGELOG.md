@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Bump clj-kondo to `2026.10.27-20261125.100035-5`.
+- Bump clj-kondo to `2026.10.27-20261125.111528-6`.
 - Fix completion for auto-resolved keywords: `::foo`. #2488
 - Add `backward-sexp-or-up` and `forward-sexp-or-up` Paredit commands.
 - Fix `move-form` removing the source namespace require from files that still use other vars of it through its alias. #1444

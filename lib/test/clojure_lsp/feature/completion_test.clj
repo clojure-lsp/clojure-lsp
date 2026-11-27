@@ -229,7 +229,8 @@
 (deftest completing-full-ns
   (h/load-code-and-locs
     (h/code "(ns alpaca.ns)"
-            "(def foo 1)"))
+            "(def foo 1)"
+            "(def bar 2)"))
   (let [[[full-ns-r full-ns-c]] (h/load-code-and-locs
                                   (h/code "(ns foo)"
                                           "(alpaca.ns/f|)") (h/file-uri "file:///b.clj"))]
